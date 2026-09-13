@@ -3,7 +3,8 @@ import type { PageContent } from "../Types";
 export const technicalDecisions: PageContent = {
   navTitle: "Technical decisions",
   title: "Technical decisions",
-  description: "Architecture, persistence, streaming, and execution decisions.",
+  seoTitle: "Architecture and layer decisions",
+  description: "How the extension is layered, how generations are owned and recovered, and how streaming, tools, and persistence are designed.",
   lead: "The extension separates domain state, DeepSeek transport, VS Code capabilities, and React rendering so safety rules remain authoritative in the extension host.",
   sections: [
     {
@@ -58,7 +59,7 @@ export const technicalDecisions: PageContent = {
         "SSE supports comments, CRLF, data fields with or without spaces, multiline events, decoder finalization, malformed JSON diagnostics, and reader cancellation.",
         "DeepSeek requests use normalized URLs, a 60-second per-attempt timeout, and at most three retries for transient failures while respecting Retry-After.",
         "Web search uses SearXNG. The default loopback endpoint is backed by a platform runtime whose version, size, and SHA-256 digest are pinned in the VSIX; compatible custom endpoints require HTTPS outside loopback and cannot contain credentials.",
-        "Settings, schema-v2 conversation history, and schema-3 generation checkpoints live under ~/.yrs-dpsk-copilot/. API credentials live separately in VS Code Secret Storage, keyed by normalized origin; only masked status reaches the webview. Checkpoints never contain a key, and incompatible history or checkpoint files are deleted without migration.",
+        "Settings, schema-v2 conversation history, and schema-3 generation checkpoints live under ~/.deepseek-agent/. API credentials live separately in VS Code Secret Storage, keyed by normalized origin; only masked status reaches the webview. Checkpoints never contain a key, and incompatible history or checkpoint files are deleted without migration.",
         "DeepSeek requests reject credential-bearing URLs, require HTTPS outside loopback, preserve the selected origin across redirects, and redact sensitive values from surfaced errors.",
         "Registered DeepSeek V4.1 Flash capabilities use a 1M-token total context and 384K maximum output. The configured output allowance defaults to 384,000 and reduces the input budget alongside a safety margin.",
         "Context has aggregate budgets, binary detection, staged and unstaged Git data, bounded AGENTS.md sources, and explicit untrusted-data delimiters.",

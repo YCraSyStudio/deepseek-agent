@@ -3,7 +3,8 @@ import type { PageContent } from "../Types";
 export const technicalDecisions: PageContent = {
   navTitle: "技术决策",
   title: "技术决策",
-  description: "架构、持久化、流式传输和执行方面的决策。",
+  seoTitle: "架构与技术决策",
+  description: "扩展的分层方式、生成任务的归属与恢复机制，以及流式传输、工具和持久化的设计。",
   lead: "扩展将领域状态、DeepSeek 传输、VS Code 能力和 React 渲染分离，使安全规则在扩展宿主中保持权威。",
   sections: [
     {
@@ -58,7 +59,7 @@ export const technicalDecisions: PageContent = {
         "SSE 支持注释、CRLF、带或不带空格的 data 字段、多行事件、解码器收尾、异常 JSON 诊断和 reader 取消。",
         "DeepSeek 请求使用规范化 URL，每次尝试超时 60 秒；对临时故障最多尝试三次，并遵守 Retry-After。",
         "网页搜索使用 SearXNG。默认 loopback 端点由平台运行时提供，其版本、大小和 SHA-256 摘要固定在 VSIX 中；兼容的自定义端点在非 loopback 环境必须使用 HTTPS，且不能包含凭据。",
-        "设置、schema-v2 会话历史和 schema-3 生成 checkpoint 保存在 ~/.yrs-dpsk-copilot/ 下。API 凭据按规范化来源单独保存在 VS Code Secret Storage 中，webview 只接收遮罩状态。checkpoint 绝不包含密钥，不兼容的历史或 checkpoint 文件会被直接删除，不进行迁移。",
+        "设置、schema-v2 会话历史和 schema-3 生成 checkpoint 保存在 ~/.deepseek-agent/ 下。API 凭据按规范化来源单独保存在 VS Code Secret Storage 中，webview 只接收遮罩状态。checkpoint 绝不包含密钥，不兼容的历史或 checkpoint 文件会被直接删除，不进行迁移。",
         "DeepSeek 请求拒绝带凭据的 URL，在非 loopback 环境强制 HTTPS，在重定向中保持所选来源，并从可见错误中移除敏感值。",
         "已注册的 DeepSeek V4.1 Flash 能力使用 1M Token 总上下文和 384K 最大输出。配置的输出预留默认为 384,000，并与安全余量一起减少输入预算。",
         "上下文具有总预算、二进制检测、Git staged 和 unstaged 数据、受限的 AGENTS.md 来源，以及明确的不受信任数据分隔符。",

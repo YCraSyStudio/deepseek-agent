@@ -75,7 +75,7 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
         </select>
       </div>
 
-      {/* Thinking Mode Toggle */}
+      {}
       <Toggle
         id="thinkingModeToggle"
         label={t("settings.reasoning.mode")}
@@ -86,7 +86,7 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
         }}
       />
 
-      {/* Reasoning effort, only when thinking mode is enabled. */}
+      {}
       {config.thinkingMode && (
         <div className="settingRow">
           <label htmlFor="reasoningEffort">{t("settings.reasoning.effort")}</label>

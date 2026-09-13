@@ -4,12 +4,10 @@ export type { ToolHostDocumentSymbol } from "@/application/ports";
 
 export interface CodeSymbol {
   name: string;
-  /** Name chained through its enclosing declarations, for example `Widget.render`. */
   qualifiedName: string;
   container?: string;
   kind: string;
   isContainer: boolean;
-  /** 1-based inclusive line range of the declaration. */
   startLine: number;
   endLine: number;
   signature: string;
@@ -17,7 +15,6 @@ export interface CodeSymbol {
 }
 
 const DECLARATION_KINDS = new Set([
-  // Module-level const/let bindings hold most arrow-function exports in TypeScript.
   "variable",
   "constant",
   "function",
@@ -49,7 +46,6 @@ const CONTAINER_KINDS = new Set([
   "object",
 ]);
 
-/** Keeps declarations worth reading, attaches nested members, and hoists skipped wrappers. */
 export function buildSymbolTree(roots: readonly ToolHostDocumentSymbol[], lines: readonly string[]): CodeSymbol[] {
   return buildLevel(roots, lines).map((symbol) => withContainer(symbol));
 }
@@ -123,7 +119,6 @@ function withContainer(symbol: CodeSymbol, container?: string): CodeSymbol {
   };
 }
 
-/** The declaration text up to and including the line that names the symbol. */
 function buildSignature(lines: readonly string[], startLine: number, nameLine: number): string {
   const lastLine = Math.min(Math.max(nameLine, startLine), startLine + 3);
   const text = lines

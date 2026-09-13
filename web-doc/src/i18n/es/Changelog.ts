@@ -3,9 +3,25 @@ import type { PageContent } from "../Types";
 export const changelog: PageContent = {
   navTitle: "Changelog",
   title: "Changelog",
-  description: "Cambios relevantes y estado preview.",
-  lead: "La preview 0.1.14 migra la extensión a DeepSeek V4.1 Flash y retira las opciones de modelo que DeepSeek ya no sirve.",
+  seoTitle: "Notas de versión y changelog",
+  description: "Todas las pre-versiones 0.1.x publicadas de YCraSy DeepSeek Agent con sus cambios visibles para el usuario.",
+  lead: "La preview 0.1.15 añade move_path y delete_path con aprobación respaldada por Git, devuelve DeepSeek V4 Pro con las preguntas de imagen delegadas a Flash e informa de la ventana de contexto con compactación a demanda.",
   sections: [
+    {
+      title: "0.1.15 herramientas de rutas, visión y ventana de contexto",
+      items: [
+        "Se añade la herramienta move_path: mueve o renombra un archivo o una carpeta completa dentro del espacio de trabajo y crea la carpeta padre del destino. El destino no puede existir, así que nada se sobrescribe por accidente, y un expectedBeforeHash opcional rechaza el movimiento si el archivo de origen cambió después de la previsualización.",
+        "Se añade la herramienta delete_path: elimina un archivo o, con recursive: true, una carpeta y todo su contenido. La ruta va a la papelera del sistema salvo que se pase permanent: true, y recursive nunca se deduce, así que borrar una carpeta sin él falla en lugar de llevarse su contenido por silencio.",
+        "Los cambios de ruta pueden decidirse ahora a partir de hechos de Git. En los modos de permisos automáticos, move_path y delete_path se saltan la revisión de seguridad cuando Git demuestra que el cambio se puede deshacer: la ruta está dentro de un repositorio, está rastreada, no está ignorada y no tiene cambios sin confirmar. Una ruta sin rastrear, ignorada, modificada o fuera de un repositorio conserva la confirmación que ya tenía, de modo que un borrado irreversible nunca se trata como una escritura rutinaria en el espacio de trabajo.",
+        "DeepSeek V4 Pro vuelve a estar disponible y sus imágenes se delegan a Flash. El registro de modelos ahora guarda indicadores de capacidad, así que la extensión sabe que V4 Pro no puede leer imágenes por sí mismo: una generación con Pro que lleva al menos un adjunto vivo recibe la herramienta analyze_images, que pregunta a Flash por los adjuntos nombrados en el mensaje actual, envía los identificadores de archivo de DeepSeek en vez de Base64 o rutas locales, desactiva el razonamiento, limita su propia salida a 8K tokens, rechaza archivos caducados o subidos a otro origen de API y atribuye el uso delegado a Flash en la fase vision_analysis. Una generación con Flash sigue leyendo las imágenes de forma nativa, tanto en el chat como en las rondas de herramientas.",
+        "El popover de uso muestra ahora la ventana de contexto y puede compactar a demanda. Informa del uso medido una vez enviada una petición, y de una estimación antes de eso, junto con el tamaño de la ventana, los límites blando y duro, el punto en el que empieza la compactación automática y cuántas compactaciones ha tenido la conversación. La acción Compactar contexto ejecuta una compactación manual e informa de los tokens liberados, o de que no había nada que compactar.",
+        "Se añade el esfuerzo de razonamiento low, entre off y high, para recortar el razonamiento a cambio de velocidad sin desactivarlo del todo.",
+        "El historial de conversaciones puede filtrarse y agruparse por espacio de trabajo, con una entrada Todos los espacios de trabajo, una cabecera por espacio de trabajo y el número de conversaciones de cada grupo.",
+        "Los resultados de terminal conservan su salida completa a la vista. La fila sigue mostrando una previsualización acotada, y un desplegable Ver salida conservada abre el stdout o el stderr que se guardó, de modo que un comando cuya previsualización parece truncada puede inspeccionarse sin volver a ejecutarlo.",
+        "Las sugerencias se dibujan desde una única capa en portal. Los anclajes data-tooltip los renderiza TooltipLayer, que cambia de lado y se alinea cuando la posición pedida no tiene sitio, así que las sugerencias sobreviven a los paneles que recortan sus hijos y a la barra lateral estrecha. Los selectores del compositor y select comparten ahora las mismas métricas de control, así que el menú de modelo coincide con el selector de permisos en lugar de arrastrar su propio borde y altura.",
+        "Las credenciales se eliminan del tráfico de herramientas. Los resultados de herramientas, los argumentos guardados de las llamadas y el contenido devuelto tras una confirmación pasan por una redacción que sustituye claves y patrones con forma de credencial por [REDACTED] antes de que el texto llegue al transcript, al registro de herramientas o a un checkpoint. La salida estructurada sigue siendo analizable, así que las rutas y los resultados que lee un consumidor de la herramienta no cambian.",
+      ],
+    },
     {
       title: "0.1.14 migración a DeepSeek V4.1 Flash",
       items: [

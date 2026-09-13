@@ -5,18 +5,18 @@ import { createHeadlessWebTools } from "@/infrastructure/browser/BrowserTools";
 import { HeadlessWebRuntime } from "@/infrastructure/browser/HeadlessWebRuntime";
 import { configureSearxngEngineSelection, fetchSearxngEngines } from "@/infrastructure/browser/SearxngSearch";
 import { BUILT_IN_TOOLS } from "@/infrastructure/tools/builtins";
-import { configureWebRuntimeDiagnostics } from "@/platform/vscode/tools/browser/Diagnostics";
-import { SearxngManager } from "@/platform/vscode/tools/browser/SearxngManager";
+import { configureWebRuntimeDiagnostics } from "@/vscode/tools/browser/Diagnostics";
+import { SearxngManager } from "@/vscode/tools/browser/SearxngManager";
 import {
   HistoryManager,
   SettingsManager,
-} from "@/platform/vscode/storage";
+} from "@/vscode/storage";
 import {
   VsCodeSecretStore,
   VsCodeSettingsRepository,
-} from "@/platform/vscode/storage/RepositoryAdapters";
-import { WebviewProvider } from "@/platform/vscode/webviews/WebviewProvider";
-import { DeepSeekModelProviderFactory } from "@/infrastructure/deepseek/DeepSeekModelProviderFactory";
+} from "@/vscode/storage/RepositoryAdapters";
+import { WebviewProvider } from "@/vscode/webviews/WebviewProvider";
+import { DeepSeekModelProviderFactory } from "@/infrastructure/deepseek/provider/DeepSeekModelProviderFactory";
 
 export class ExtensionCompositionRoot implements vscode.Disposable {
   readonly settings = new VsCodeSettingsRepository();
@@ -98,7 +98,6 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
       if (JSON.stringify(current) === JSON.stringify(catalog)) {return;}
       await this.settings.save({ searxngEngineCatalog: catalog });
     } catch {
-      // Search reports the actionable runtime error when invoked; catalog refresh is best-effort.
     }
   }
 }
@@ -108,11 +107,11 @@ function registerSearxngCommands(
   settings: VsCodeSettingsRepository,
 ): vscode.Disposable[] {
   return [
-    vscode.commands.registerCommand("yrs-dpsk-copilot.startSearxng", async () => {
+    vscode.commands.registerCommand("deepseek-agent.startSearxng", async () => {
       const endpoint = await searxngManager.resolve(settings.load().searxngUrl);
       await vscode.window.showInformationMessage(`SearXNG is running at ${endpoint}`);
     }),
-    vscode.commands.registerCommand("yrs-dpsk-copilot.stopSearxng", async () => {
+    vscode.commands.registerCommand("deepseek-agent.stopSearxng", async () => {
       await searxngManager.stopManaged();
       await vscode.window.showInformationMessage("Managed SearXNG stopped.");
     }),

@@ -11,11 +11,9 @@ pnpm-debug.log*
 # Build outputs
 dist/
 build/
-out/
 artifacts/
 !docs/
-deepseek-copilot.wiki/
-.vscode-test/
+deepseek-agent.wiki/
 coverage/
 .nyc_output/
 
@@ -29,8 +27,6 @@ web-doc/node_modules/
 
 # VS Code extension
 *.vsix
-.vscode-test/
-test-results/
 
 # Environment variables
 .env

@@ -7,10 +7,12 @@ import { listWorkspaceDefinition, listWorkspaceHandler, listWorkspaceMetadata } 
 import { createFileDefinition, createFileHandler, createFileMetadata, createFileHandlerForced } from "./fileSystem/CreateFile";
 import { editFileDefinition, editFileHandler, editFileMetadata, editFileHandlerForced } from "./fileSystem/EditFile";
 import { applyPatchDefinition, applyPatchHandler, applyPatchMetadata, applyPatchHandlerForced } from "./fileSystem/ApplyPatch";
+import { movePathDefinition, movePathHandler, movePathMetadata, movePathHandlerForced } from "./fileSystem/MovePath";
+import { deletePathDefinition, deletePathHandler, deletePathMetadata, deletePathHandlerForced } from "./fileSystem/DeletePath";
 import { terminalCommandDefinition, terminalCommandHandler, terminalCommandMetadata, terminalCommandHandlerForced } from "./terminal/TerminalCommand";
 import { compactContextDefinition, compactContextHandler, compactContextMetadata } from "./context/CompactContext";
+import { analyzeImagesTool } from "./vision/AnalyzeImages";
 
-/** Complete list of built-in tools. */
 export const BUILT_IN_TOOLS: RegisteredTool[] = [
   withEffect({ definition: compactContextDefinition, handler: compactContextHandler, metadata: compactContextMetadata }, "read-only"),
   withEffect({ definition: readFileDefinition, handler: readFileHandler, metadata: readFileMetadata }, "read-only"),
@@ -21,6 +23,9 @@ export const BUILT_IN_TOOLS: RegisteredTool[] = [
   withEffect({ definition: createFileDefinition, handler: createFileHandler, forcedHandler: createFileHandlerForced, metadata: createFileMetadata }, "workspace-mutation"),
   withEffect({ definition: editFileDefinition, handler: editFileHandler, forcedHandler: editFileHandlerForced, metadata: editFileMetadata }, "workspace-mutation"),
   withEffect({ definition: applyPatchDefinition, handler: applyPatchHandler, forcedHandler: applyPatchHandlerForced, metadata: applyPatchMetadata }, "workspace-mutation"),
+  withEffect({ definition: movePathDefinition, handler: movePathHandler, forcedHandler: movePathHandlerForced, metadata: movePathMetadata }, "workspace-mutation"),
+  withEffect({ definition: deletePathDefinition, handler: deletePathHandler, forcedHandler: deletePathHandlerForced, metadata: deletePathMetadata }, "workspace-mutation"),
+  withEffect(analyzeImagesTool, "external-effect"),
   withEffect({ definition: terminalCommandDefinition, handler: terminalCommandHandler, forcedHandler: terminalCommandHandlerForced, metadata: terminalCommandMetadata }, "workspace-mutation"),
 ];
 

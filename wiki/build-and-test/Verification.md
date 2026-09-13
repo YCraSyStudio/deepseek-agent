@@ -7,11 +7,11 @@
 Run:
 
 ```bash
-npm run compile
-npm run lint
-npm run build
-npm run test:unit
-npm run test:integration
+pnpm run compile
+pnpm run lint
+pnpm run build
+pnpm run test:unit
+pnpm run test:integration
 git diff --check
 ```
 
@@ -20,14 +20,14 @@ git diff --check
 Run in `web-doc`:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Manual validation
 
 In Extension Development Host:
 
-- open the DeepSeek Copilot sidebar.
+- open the YCraSy DeepSeek Agent sidebar.
 - save API key.
 - test connection.
 - send a message with streaming.

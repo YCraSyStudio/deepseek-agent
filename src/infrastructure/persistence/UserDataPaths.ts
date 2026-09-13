@@ -1,10 +1,10 @@
 import * as os from "node:os";
 import * as path from "node:path";
 
-const USER_DATA_DIRECTORY_NAME = ".yrs-dpsk-copilot";
+const USER_DATA_DIRECTORY_NAME = ".deepseek-agent";
 
 export function getUserDataDirectory(): string {
-  const testOverride = process.env.NODE_ENV === "test" ? process.env.DEEPSEEK_COPILOT_USER_DATA_DIR : undefined;
+  const testOverride = process.env.NODE_ENV === "test" ? process.env.DEEPSEEK_AGENT_USER_DATA_DIR : undefined;
   if (testOverride) {
     return path.resolve(testOverride);
   }

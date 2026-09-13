@@ -31,7 +31,7 @@ Concrete external integrations:
 
 Image attachments are uploaded through the DeepSeek Files API, and generation context passes only trusted file IDs to the provider; vision needs no built-in tool.
 
-## `src/platform/vscode`
+## `src/vscode`
 
 VS Code-specific adapters:
 

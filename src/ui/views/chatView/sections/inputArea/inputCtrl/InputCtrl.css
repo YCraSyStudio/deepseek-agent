@@ -144,7 +144,6 @@
 .inputComposerFooter {
   position: relative;
   min-width: 0;
-  /* Breathing room between the writing area and the toolbar row. */
   margin-top: 6px;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
@@ -202,7 +201,6 @@
   }
 }
 
-/* Collapse settings before the full toolbar needs to wrap. */
 @container chat-composer (max-width: 440px) {
   .inputComposerFooter {
     grid-template-columns: minmax(0, 1fr) auto;

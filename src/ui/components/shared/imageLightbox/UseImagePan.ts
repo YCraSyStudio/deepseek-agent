@@ -1,9 +1,7 @@
 import { useCallback, useRef, useState, type PointerEvent, type RefObject } from "react";
 
-/** Pointer distance, in pixels, that turns a click into a drag. */
 const DRAG_THRESHOLD_PX = 3;
 
-/** Pointer handlers that pan a scrollable lightbox viewport by dragging it. */
 export interface ImagePan {
   isPanning: boolean;
   handlers: {
@@ -12,7 +10,6 @@ export interface ImagePan {
     onPointerUp: (event: PointerEvent<HTMLDivElement>) => void;
     onPointerCancel: (event: PointerEvent<HTMLDivElement>) => void;
   };
-  /** Whether the interaction that just finished moved the image. */
   didDrag: () => boolean;
 }
 
@@ -24,13 +21,6 @@ interface DragState {
   top: number;
 }
 
-/**
- * Drag-to-pan for the image lightbox: pressing on the image and moving the mouse
- * scrolls the viewport, so a zoomed image can be explored without hunting for the
- * scrollbars. Touch pointers are left alone because they already scroll natively,
- * and a drag that moved anything is reported so the click that follows does not
- * close the viewer.
- */
 export function useImagePan(viewportRef: RefObject<HTMLDivElement | null>): ImagePan {
   const drag = useRef<DragState | null>(null);
   const moved = useRef(false);
@@ -51,7 +41,6 @@ export function useImagePan(viewportRef: RefObject<HTMLDivElement | null>): Imag
       };
       setIsPanning(true);
       event.currentTarget.setPointerCapture(event.pointerId);
-      // Keeps the drag from selecting text or starting a native image drag.
       event.preventDefault();
     },
     [viewportRef],

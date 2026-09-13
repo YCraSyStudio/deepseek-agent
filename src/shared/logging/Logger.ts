@@ -61,7 +61,7 @@ export function showDiagnostics(): void {
 
 export function createSanitizedSupportReport(metadata: Record<string, unknown>): string {
   return [
-    "Yar's DeepSeek Copilot support report",
+    "YCraSy DeepSeek Agent support report",
     JSON.stringify(sanitizeValue(metadata), null, 2),
     "",
     ...entries,

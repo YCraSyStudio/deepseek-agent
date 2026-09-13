@@ -5,6 +5,13 @@ import { useVsCode } from "../chatView/contexts";
 import "./HistoryView.css";
 import { t } from "@webview/i18n";
 import { beginNavigationRequest } from "@webview/NavigationRequests";
+import {
+  ALL_WORKSPACES,
+  buildHistoryRows,
+  collectWorkspaceOptions,
+  formatWorkspaceName,
+  type HistoryGroupOrder,
+} from "./HistoryGrouping";
 
 type SortOrder = "date_desc" | "date_asc" | "title_asc" | "title_desc";
 const PAGE_SIZE = 25;
@@ -13,7 +20,9 @@ function HistoryView() {
   const vscode = useVsCode();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [query, setQuery] = useState("");
+  const [workspaceFilter, setWorkspaceFilter] = useState(ALL_WORKSPACES);
   const [sortBy, setSortBy] = useState<SortOrder>("date_desc");
+  const [groupBy, setGroupBy] = useState<HistoryGroupOrder>("none");
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,16 +82,26 @@ function HistoryView() {
     return () => window.removeEventListener("message", handleMessage);
   }, [vscode, requestHistory]);
 
+  const workspaceOptions = useMemo(() => collectWorkspaceOptions(conversations), [conversations]);
+
+  useEffect(() => {
+    if (workspaceFilter !== ALL_WORKSPACES && !workspaceOptions.some((option) => option.uri === workspaceFilter)) {
+      setWorkspaceFilter(ALL_WORKSPACES);
+    }
+  }, [workspaceFilter, workspaceOptions]);
+
   const visibleConversations = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    const filtered = normalizedQuery
-      ? conversations.filter(
-          (conversation) =>
-            conversation.title.toLocaleLowerCase().includes(normalizedQuery) ||
-            conversation.workspaceUri.toLocaleLowerCase().includes(normalizedQuery),
-        )
-      : conversations;
-    return [...filtered].sort((a, b) => {
+    return conversations.filter((conversation) => {
+      if (workspaceFilter !== ALL_WORKSPACES && conversation.workspaceUri !== workspaceFilter) {return false;}
+      if (!normalizedQuery) {return true;}
+      return conversation.title.toLocaleLowerCase().includes(normalizedQuery) ||
+        conversation.workspaceUri.toLocaleLowerCase().includes(normalizedQuery);
+    });
+  }, [conversations, query, workspaceFilter]);
+
+  const visibleRows = useMemo(() => {
+    const sorted = [...visibleConversations].sort((a, b) => {
       switch (sortBy) {
         case "date_asc": return a.updatedAt - b.updatedAt;
         case "title_asc": return a.title.localeCompare(b.title);
@@ -90,13 +109,14 @@ function HistoryView() {
         case "date_desc": return b.updatedAt - a.updatedAt;
       }
     });
-  }, [conversations, query, sortBy]);
+    return buildHistoryRows(sorted, groupBy);
+  }, [visibleConversations, sortBy, groupBy]);
 
-  const pageCount = Math.max(1, Math.ceil(visibleConversations.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const paginatedConversations = visibleConversations.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedRows = visibleRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => setPage(1), [query, sortBy]);
+  useEffect(() => setPage(1), [query, sortBy, workspaceFilter, groupBy]);
   useEffect(() => {
     if (page > pageCount) {setPage(pageCount);}
   }, [page, pageCount]);
@@ -109,10 +129,39 @@ function HistoryView() {
           <input type="search" id="historySearch" placeholder={t("history.searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} />
           <span className="codicon codicon-search" aria-hidden="true" />
         </div>
+        <button
+          className="clearBtn"
+          type="button"
+          aria-label={t("history.deleteFilteredHistory")}
+          data-tooltip={t("history.deleteFilteredHistory")}
+          data-tooltip-align="end"
+          disabled={visibleConversations.length === 0 || isLoading}
+          onClick={() => vscode?.postMessage({ type: "deleteConversations", ids: visibleConversations.map((conversation) => conversation.id) })}
+        >
+          <span className="codicon codicon-trash" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="historyFilters" hidden={historyEnabled === false}>
+        <label className="srOnly" htmlFor="historyWorkspaceFilter">{t("history.filterByWorkspace")}</label>
+        <select
+          className="workspaceFilter"
+          id="historyWorkspaceFilter"
+          data-tooltip={t("history.filterByWorkspace")}
+          value={workspaceFilter}
+          onChange={(event) => setWorkspaceFilter(event.target.value)}
+        >
+          <option value={ALL_WORKSPACES}>{t("history.allWorkspaces")}</option>
+          {workspaceOptions.map((option) => (
+            <option key={option.uri} value={option.uri} title={option.label}>{`${option.label} (${option.count})`}</option>
+          ))}
+        </select>
         <label className="srOnly" htmlFor="historySort">{t("history.sortHistory")}</label>
         <select
           className="sortBy"
           id="historySort"
+          data-tooltip={t("history.sortHistory")}
+          data-tooltip-align="end"
           value={sortBy}
           onChange={(event) => {
             const order = parseSortOrder(event.target.value);
@@ -125,13 +174,16 @@ function HistoryView() {
           <option value="title_desc">{t("history.titleZA")}</option>
         </select>
         <button
-          className="clearBtn"
+          className={`groupToggle${groupBy === "workspace" ? " active" : ""}`}
           type="button"
-          aria-label={t("history.deleteFilteredHistory")}
-          disabled={visibleConversations.length === 0 || isLoading}
-          onClick={() => vscode?.postMessage({ type: "deleteConversations", ids: visibleConversations.map((conversation) => conversation.id) })}
+          aria-pressed={groupBy === "workspace"}
+          data-tooltip={t("history.groupByWorkspace")}
+          data-tooltip-position="bottom"
+          data-tooltip-align="end"
+          onClick={() => setGroupBy(groupBy === "workspace" ? "none" : "workspace")}
         >
-          <span className="codicon codicon-trash" aria-hidden="true" />
+          <span className={`codicon codicon-${groupBy === "workspace" ? "list-tree" : "list-flat"}`} aria-hidden="true" />
+          <span className="groupToggleLabel">{t("history.groupByWorkspace")}</span>
         </button>
       </div>
 
@@ -145,24 +197,29 @@ function HistoryView() {
             <button type="button" className="btn-secondary" onClick={requestHistory}>{t("settings.retry")}</button>
           </div>
         ) : null}
-        {historyEnabled !== false && !isLoading && !error && visibleConversations.length === 0 ? (
-          <div className="historyState">{query ? t("history.noConversationsMatchYourSearch") : t("history.noHistoryYet")}</div>
+        {historyEnabled !== false && !isLoading && !error && visibleRows.length === 0 ? (
+          <div className="historyState">{query || workspaceFilter !== ALL_WORKSPACES ? t("history.noConversationsMatchYourSearch") : t("history.noHistoryYet")}</div>
         ) : null}
-        {historyEnabled !== false && !isLoading && !error ? paginatedConversations.map((conversation) => (
+        {historyEnabled !== false && !isLoading && !error ? paginatedRows.map((row) => row.kind === "group" ? (
+          <div className="historyGroup" key={`group:${row.key}`} role="presentation">
+            <span className="historyGroupLabel" title={row.label}>{row.label}</span>
+            <span className="historyGroupCount">{t("history.groupSummary", { count: row.count })}</span>
+          </div>
+        ) : (
           <HistoryListItem
-            key={conversation.id}
-            title={conversation.title}
-            datetime={new Date(conversation.updatedAt)}
-            messageCount={conversation.messageCount}
-            workspace={formatWorkspaceName(conversation.workspaceUri)}
-            activity={activity[conversation.id]}
-            onClick={() => vscode?.postMessage({ type: "loadConversation", requestId: beginNavigationRequest(), id: conversation.id })}
-            onDelete={() => vscode?.postMessage({ type: "deleteConversation", id: conversation.id })}
+            key={row.conversation.id}
+            title={row.conversation.title}
+            datetime={new Date(row.conversation.updatedAt)}
+            messageCount={row.conversation.messageCount}
+            workspace={groupBy === "none" ? formatWorkspaceName(row.conversation.workspaceUri) : undefined}
+            activity={activity[row.conversation.id]}
+            onClick={() => vscode?.postMessage({ type: "loadConversation", requestId: beginNavigationRequest(), id: row.conversation.id })}
+            onDelete={() => vscode?.postMessage({ type: "deleteConversation", id: row.conversation.id })}
           />
         )) : null}
       </div>
 
-      {historyEnabled !== false && !isLoading && !error && visibleConversations.length > PAGE_SIZE ? (
+      {historyEnabled !== false && !isLoading && !error && visibleRows.length > PAGE_SIZE ? (
         <nav className="historyPagination" aria-label={t("history.historyPages")}>
           <button type="button" className="btn-secondary" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>{t("history.previous")}</button>
           <span aria-live="polite">{t("history.pageSummary", { page: currentPage, pages: pageCount, count: visibleConversations.length })}</span>
@@ -177,16 +234,4 @@ export default HistoryView;
 
 function parseSortOrder(value: string): SortOrder | undefined {
   return value === "date_desc" || value === "date_asc" || value === "title_asc" || value === "title_desc" ? value : undefined;
-}
-
-function formatWorkspaceName(workspaceUri: string): string {
-  if (workspaceUri === "workspace:unknown") {return t("history.unknownWorkspace");}
-  try {
-    const url = new URL(workspaceUri);
-    const segments = decodeURIComponent(url.pathname).replace(/\/+$/, "").split("/");
-    return segments.at(-1) || workspaceUri;
-  } catch {
-    const segments = workspaceUri.replace(/\\/g, "/").replace(/\/+$/, "").split("/");
-    return segments.at(-1) || workspaceUri;
-  }
 }

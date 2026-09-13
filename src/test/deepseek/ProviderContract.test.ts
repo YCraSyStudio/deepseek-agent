@@ -1,9 +1,9 @@
 import * as assert from "assert";
 import type { ToolDefinition } from "@/contracts";
 import { DEFAULT_CONFIG } from "@/contracts/Config";
-import { DeepSeekModelProvider, assertCompatibleModel } from "@/infrastructure/deepseek/providers/deepseek/DeepSeekProvider";
-import { buildChatBody } from "@/infrastructure/deepseek/providers/deepseek/features/Chat";
-import { buildToolCallRequest } from "@/infrastructure/deepseek/providers/deepseek/features/toolCall/ToolCallRequest";
+import { DeepSeekModelProvider, assertCompatibleModel } from "@/infrastructure/deepseek/provider/DeepSeekProvider";
+import { buildChatBody } from "@/infrastructure/deepseek/provider/features/Chat";
+import { buildToolCallRequest } from "@/infrastructure/deepseek/provider/features/toolCall/ToolCallRequest";
 
 suite("DeepSeek provider contract", () => {
   const tool: ToolDefinition = {
@@ -55,7 +55,7 @@ suite("DeepSeek provider contract", () => {
     assert.doesNotThrow(() => assertCompatibleModel("deepseek-flash", "https://api.deepseek.com"));
     assert.throws(() => assertCompatibleModel("deepseek-v4-flash-vision-exp", "https://api.deepseek.com"), /not supported/);
     assert.throws(() => assertCompatibleModel("deepseek-v4-flash", "https://api.deepseek.com"), /not supported/);
-    assert.throws(() => assertCompatibleModel("deepseek-v4-pro", "https://api.deepseek.com"), /not supported/);
+    assert.doesNotThrow(() => assertCompatibleModel("deepseek-v4-pro", "https://api.deepseek.com"));
     assert.throws(() => assertCompatibleModel("custom-model", "https://api.deepseek.com"), /not supported/);
     assert.doesNotThrow(() => assertCompatibleModel("custom-model", "http://127.0.0.1:11434/v1"));
   });

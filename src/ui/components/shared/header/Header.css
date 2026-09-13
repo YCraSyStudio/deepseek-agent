@@ -26,12 +26,6 @@ header {
     background-color: color-mix(in srgb, var(--vscode-focusBorder) 16%, transparent);
     box-shadow: inset 0 -2px 0 var(--vscode-focusBorder);
   }
-  .incognitoBtn:after {
-    left: calc(-100% - var(--header-tool-gap));
-  }
-  .newChatBtn:after {
-    right: calc(-100% - var(--header-tool-gap));
-  }
   .center {
     position: absolute;
     left: 50%;

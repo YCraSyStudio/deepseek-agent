@@ -33,7 +33,6 @@ const TYPESCRIPT_SOURCE = [
   "",
 ].join("\n");
 
-/** Mirrors what the TypeScript language service reports for TYPESCRIPT_SOURCE. */
 const TYPESCRIPT_SYMBOLS: ToolHostDocumentSymbol[] = [
   symbol("HEADER", "variable", 0, 0),
   symbol("first", "function", 1, 3),

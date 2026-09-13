@@ -29,6 +29,10 @@ Detached/background launchers are rejected because they can outlive the owned te
 
 The Web search toggle controls both definitions. When disabled, neither tool is sent to DeepSeek.
 
+## Vision tool
+
+- `analyze_images`: asks DeepSeek V4.1 Flash about one or more images attached to the current user message, because V4 Pro cannot read images itself. It is offered only to a Pro generation that carries at least one unexpired attachment, never to a Flash generation or to a turn without images. The delegated request names `deepseek-flash`, sends the DeepSeek file IDs instead of Base64 or local paths, disables thinking, and caps its own output at 8K tokens. The handler resolves the requested attachment IDs inside the current message, rejects expired files and files uploaded to a different API origin, and reports the delegated usage against Flash in the `vision_analysis` phase.
+
 ## Execution rules
 
 Tools return structured results so DeepSeek can continue, the UI can render useful activity, and history can preserve completed work. Host-side schemas, workspace resolution, permission policy, and cancellation remain authoritative. Terminal and mutation sensitivity is classified by an independent DeepSeek review; there is no local danger analyzer.

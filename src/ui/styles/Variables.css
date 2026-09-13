@@ -17,6 +17,12 @@
   --button-fg: var(--vscode-button-foreground, #fff);
   --button-secondary-bg: var(--vscode-button-secondaryBackground, #3a3d41);
   --button-secondary-hover: var(--vscode-button-secondaryHoverBackground, #45494e);
+  --control-radius: 8px;
+  --control-min-height: 30px;
+  --control-padding-block: 5px;
+  --control-padding-inline: 9px;
+  --control-hover-bg: color-mix(in srgb, var(--input-bg) 88%, var(--text-primary) 12%);
+  --control-focus-ring: 0 0 0 2px color-mix(in srgb, var(--input-focus-border) 22%, transparent);
   --font-mono: "Cascadia Code", "JetBrains Mono", "Fira Code", "Consolas", monospace;
   --font-ui: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   --font-size: var(--vscode-font-size, 13px);

@@ -1,4 +1,4 @@
-import type { WebviewProvider } from "@/platform/vscode/webviews/WebviewProvider";
+import type { WebviewProvider } from "@/vscode/webviews/WebviewProvider";
 
 let activeProvider: WebviewProvider | undefined;
 

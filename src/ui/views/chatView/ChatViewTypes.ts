@@ -1,5 +1,5 @@
 import type { ConversationMessage, HandlerToWebviewMessage, StoredToolCall, DangerConfirmationData } from "@/contracts/messages/Webview";
-import type { PermissionMode } from "@/contracts";
+import type { ContextWindowStatus, PermissionMode } from "@/contracts";
 import type { ConversationUsageSnapshot, UsageCurrency } from "@/shared/usage/Usage";
 import type { GenerationEventScope } from "./hooks/GenerationEventScope";
 
@@ -20,12 +20,9 @@ export type InitialConfig = {
   usageCostCurrency?: UsageCurrency;
 };
 
-/** User action for a tool call. */
 export type ToolCallAction = "execute" | "reject";
-/** UI status for a tool call. */
 export type ToolCallStatus = "pending" | "awaiting_confirmation" | "running" | "completed" | "error" | "rejected" | "cancelled";
 
-/** UI tool call state. */
 export interface ToolCallState {
   toolCallId: string;
   toolName: string;
@@ -34,17 +31,12 @@ export interface ToolCallState {
   result?: string;
   round: number;
   requiresConfirmation?: boolean;
-  /** Danger details when the tool requires extra confirmation. */
   dangerConfirmation?: DangerConfirmationData;
-  /** Whether the user rejected the tool call. */
   rejected?: boolean;
-  /** Recorded danger level. */
   dangerLevel?: string;
-  /** Whether the danger was confirmed by the user. */
   dangerConfirmed?: boolean;
 }
 
-/** Group of tool calls from the same round. */
 export interface ToolCallGroup {
   id: string;
   round: number;
@@ -52,10 +44,20 @@ export interface ToolCallGroup {
   expanded: boolean;
 }
 
-/** Available code-block button actions. */
 export type CodeAction = "copy" | "insert";
 
-/** Chat message section props. */
+export type ContextCompactionResult = {
+  status: "compacted" | "empty" | "failed";
+  freedTokens?: number;
+  error?: string;
+};
+
+export type ContextCompactionControls = {
+  pending: boolean;
+  result?: ContextCompactionResult;
+  onCompact: () => void;
+};
+
 export type MessagesSectionProps = {
   getGenerationScope?: () => GenerationEventScope;
   conversationId?: string;
@@ -68,17 +70,12 @@ export type MessagesSectionProps = {
   onConfigLoaded?: (config: InitialConfig) => void;
   onConfigUpdateResult?: (message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>) => void;
   permissionUpdatePending?: boolean;
-  /** Messages added above the loaded transcript by history paging. */
   earlierMessagesLoaded?: number;
-  /**
-   * Opaque cursor for the conversation history stored above the loaded
-   * transcript. When it is set, the transcript's "show earlier" control keeps
-   * working after every loaded message has already been revealed.
-   */
   historyCursor?: string;
   onModelChanged?: (modelId: string) => void;
   onProcessingChange?: (isProcessing: boolean) => void;
-  /** Conversation-wide usage the host reports, so the total covers paged-out messages. */
   onConversationUsageUpdated?: (usage: ConversationUsageSnapshot) => void;
+  onContextWindowUpdated?: (contextWindow: ContextWindowStatus) => void;
+  onContextCompactionResult?: (result: { requestId: string; status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }) => void;
   onFocusInput?: () => void;
 };

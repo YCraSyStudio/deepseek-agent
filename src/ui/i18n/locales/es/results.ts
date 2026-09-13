@@ -2,6 +2,7 @@ import type { TranslationCatalog } from "../Types";
 
 export const results = {
   results: {
+    retainedOutput: "Ver salida conservada",
     searchResults: "Resultados de búsqueda",
     binaryContentCannotBePreviewedAsText: "El contenido binario no puede previsualizarse como texto.",
     binaryPreviewUnavailable: "Se detectó un archivo binario. La vista previa de texto no está disponible.",

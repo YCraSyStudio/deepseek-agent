@@ -3,4 +3,4 @@ export type { MessageDispatcher } from "./UseMessageHandler";
 
 export { useStreamHandler } from "./UseStreamHandler";
 
-export { useChatConfig } from "./UseChatConfig";
+export { reasoningFromConfig, useChatConfig } from "./UseChatConfig";

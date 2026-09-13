@@ -60,6 +60,24 @@ export type StructuredToolResult =
     }
   | {
       toolResultVersion: number;
+      type: "fileMove";
+      path: string;
+      destination: string;
+      sourceKind: string;
+      summary: string;
+      beforeHash?: string;
+    }
+  | {
+      toolResultVersion: number;
+      type: "fileDelete";
+      path: string;
+      entryType: string;
+      entryCount?: number;
+      permanent: boolean;
+      summary: string;
+    }
+  | {
+      toolResultVersion: number;
       type: "SearchResults";
       query: string;
       results: Array<{ file: string; line: number; text: string }>;

@@ -8,12 +8,6 @@ import { takeUtf8Head, takeUtf8Tail } from "@/shared/utils/BoundedText";
 import { assessRequestBudget } from "./ContextBudget";
 import { getTextContent } from "@/contracts/deepseek/Chat";
 
-/**
- * Output ceilings per auxiliary phase. A summary returns bounded prose, while
- * range selection returns at most `MAX_RANGE_COUNT` short ranges, so a smaller
- * ceiling bounds the billed output without cutting a valid answer. Invalid or
- * truncated JSON already falls back to the local range selector.
- */
 const SUMMARY_MAX_TOKENS = 2_048;
 const RANGE_SELECTION_MAX_TOKENS = 512;
 const MAX_RANGE_COUNT = 12;
@@ -33,7 +27,7 @@ export class ContextCompactor {
     private readonly model: string,
     private readonly signal: AbortSignal,
     private readonly maxCalls = 4,
-    private readonly onUsage?: (phase: UsagePhase, usage?: ProviderUsage) => void,
+    private readonly onUsage?: (phase: UsagePhase, usage: ProviderUsage | undefined, model: string) => void,
     private readonly onPromptUsage?: (messages: ChatCompletionRequest["messages"], usage?: ProviderUsage) => void,
   ) {}
 
@@ -156,7 +150,7 @@ export class ContextCompactor {
       return getTextContent(response.choices[0]?.message.content);
     } finally {
       this.onPromptUsage?.(messages, usage);
-      this.onUsage?.(phase, usage);
+      this.onUsage?.(phase, usage, this.model);
     }
   }
 }

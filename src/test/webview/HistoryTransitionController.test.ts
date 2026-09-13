@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import type * as vscode from "vscode";
 import type { AppConfig } from "@/contracts";
 import type { SettingsRepository } from "@/application/ports";
-import type { ChatHandler } from "@/platform/vscode/webviews/handlers/chat/ChatHandler";
-import { HistoryTransitionController } from "@/platform/vscode/webviews/handlers/HistoryTransitionController";
+import type { ChatHandler } from "@/vscode/webviews/handlers/chat/ChatHandler";
+import { HistoryTransitionController } from "@/vscode/webviews/handlers/HistoryTransitionController";
 
 suite("history transition controller", () => {
   test("enters incognito only after persisting the disabled setting", async () => {

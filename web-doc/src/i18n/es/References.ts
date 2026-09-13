@@ -3,7 +3,8 @@ import type { PageContent } from "../Types";
 export const references: PageContent = {
   navTitle: "Referencias",
   title: "Referencias",
-  description: "Referencias técnicas principales.",
+  seoTitle: "Ajustes, comandos y enlaces",
+  description: "Enlaces principales de la extensión: ficha en el marketplace, repositorio, plataforma de DeepSeek y documentación de la API.",
   lead: "Usa estas referencias para validar API, empaquetado o canales de soporte del proyecto.",
   sections: [
     {
@@ -15,8 +16,8 @@ export const references: PageContent = {
         "Tool calls y strict mode beta: https://api-docs.deepseek.com/guides/tool_calls",
         "Modelos y precios: https://api-docs.deepseek.com/quick_start/pricing/",
         "DeepSeek API keys: https://platform.deepseek.com/api_keys",
-        "Repositorio: https://github.com/YarCrasy/deepseek-copilot",
-        "Wiki técnica: https://github.com/YarCrasy/deepseek-copilot/wiki",
+        "Repositorio: https://github.com/YCraSyStudio/deepseek-agent",
+        "Wiki técnica: https://github.com/YCraSyStudio/deepseek-agent/wiki",
       ],
     },
   ],

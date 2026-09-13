@@ -1,23 +1,17 @@
 import { useEffect, useRef } from "react";
 import type { VsCodeApi } from "@webview/VsCodeApi";
-import { WEBVIEW_PROTOCOL_VERSION, type AssistantTimelineEvent, type ConversationMessage, type HandlerToWebviewMessage, type AppConfig, type ImageAttachment, type StoredToolCall, type ToolCall } from "@/contracts";
+import { WEBVIEW_PROTOCOL_VERSION, type AssistantTimelineEvent, type ContextWindowStatus, type ConversationMessage, type HandlerToWebviewMessage, type AppConfig, type ImageAttachment, type StoredToolCall, type ToolCall } from "@/contracts";
 import type { ConversationUsageSnapshot, UsageAggregate } from "@/shared/usage/Usage";
 import type { ApiKeyStatus, DangerConfirmationData, ToolCallStatus } from "../ChatViewTypes";
 import { setInterfaceLanguage } from "@webview/i18n";
 import { acceptMessageForScope, type GenerationEventScopeSource } from "./GenerationEventScope";
 
-/**
- * Additional streamDone event data.
- */
 type StreamDoneInfo = {
   status: "completed" | "cancelled" | "interrupted";
   finish_reason?: string;
   generationStopReason?: ConversationMessage["generationStopReason"];
 };
 
-/**
- * Dispatcher with optional handlers for each webview message type.
- */
 export type MessageDispatcher = {
   onAddMessage?: (message: {
     role: string;
@@ -47,6 +41,8 @@ export type MessageDispatcher = {
   onToolCallConfirmationRequired?: (data: { generationId?: string; toolCalls: ToolCall[]; round: number; autoExecute: boolean; dangerConfirmation?: DangerConfirmationData }) => void;
   onContextCompactionUpdated?: (data: { generationId: string; status: "compacting" | "completed" }) => void;
   onContextCompacted?: (data: { generationId: string }) => void;
+  onContextWindowUpdated?: (data: { conversationId: string; contextWindow: ContextWindowStatus }) => void;
+  onContextCompactionResult?: (data: { requestId: string; status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }) => void;
   onGenerationRecoveryStarted?: (data: { generationId?: string; message: string }) => void;
   onResourceLimitReached?: (data: { generationId?: string; resource: string; error: string }) => void;
   onGenerationSnapshot?: (message: Extract<HandlerToWebviewMessage, { type: "generationSnapshot" }>) => void;
@@ -54,9 +50,6 @@ export type MessageDispatcher = {
   onConversationUsageUpdated?: (data: { conversationId: string; usage: ConversationUsageSnapshot }) => void;
 };
 
-/**
- * Registers the webview message listener and routes messages to the dispatcher.
- */
 export function useMessageHandler(
   vscode: VsCodeApi | null,
   dispatcher: MessageDispatcher,
@@ -190,6 +183,22 @@ export function useMessageHandler(
 
         case "conversationUsageUpdated":
           dispatcherRef.current.onConversationUsageUpdated?.({ conversationId: message.conversationId, usage: message.usage });
+          break;
+
+        case "contextWindowUpdated":
+          dispatcherRef.current.onContextWindowUpdated?.({
+            conversationId: message.conversationId,
+            contextWindow: message.contextWindow,
+          });
+          break;
+
+        case "contextCompactionResult":
+          dispatcherRef.current.onContextCompactionResult?.({
+            requestId: message.requestId,
+            status: message.status,
+            freedTokens: message.freedTokens,
+            error: message.error,
+          });
           break;
       }
     };

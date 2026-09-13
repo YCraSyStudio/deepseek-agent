@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from "child_process";
+import { StringDecoder } from "node:string_decoder";
+import { boundUtf8HeadTail, takeUtf8Head, takeUtf8Tail } from "@/shared/utils/BoundedText";
 import { realpath } from "fs/promises";
 import { getToolWorkspaceHost, resolveWorkspacePathSecure } from "@/infrastructure/tools/ToolWorkspace";
 
@@ -179,9 +181,6 @@ export async function executeWorkspaceCommand(command: string, options: Workspac
       exitSignal = signal;
       if (terminationStarted) {return;}
       drainTimer = setTimeout(() => {
-        // A detached descendant can inherit stdout/stderr after the shell exits,
-        // preventing Node's "close" event forever. This tool never permits a
-        // background process to outlive its finite command invocation.
         terminateAndBoundSettlement(resolveResult);
       }, OUTPUT_DRAIN_GRACE_MS);
     });
@@ -196,6 +195,9 @@ export async function executeWorkspaceCommand(command: string, options: Workspac
 }
 
 export class BoundedOutput {
+  private readonly decoder = new StringDecoder("utf8");
+  private pendingLine = "";
+  private diagnostics = "";
   private readonly head: Buffer[] = [];
   private readonly tail: Buffer[] = [];
   private headBytes = 0;
@@ -208,9 +210,10 @@ export class BoundedOutput {
   }
 
   append(chunk: Buffer): void {
+    this.collectDiagnostics(this.decoder.write(chunk));
     if (this.headBytes < this.half) {
       const take = Math.min(chunk.byteLength, this.half - this.headBytes);
-      this.head.push(chunk.subarray(0, take));
+      this.head.push(Buffer.from(chunk.subarray(0, take)));
       this.headBytes += take;
       chunk = chunk.subarray(take);
     }
@@ -225,15 +228,54 @@ export class BoundedOutput {
         this.tail.shift();
         this.tailBytes -= first.byteLength;
       } else {
-        this.tail[0] = first.subarray(overflow);
+        this.tail[0] = Buffer.from(first.subarray(overflow));
         this.tailBytes -= overflow;
       }
     }
   }
 
   toString(): string {
-    const marker = this.truncated ? Buffer.from("\n...[output truncated; middle omitted]...\n") : Buffer.alloc(0);
-    return Buffer.concat([...this.head, marker, ...this.tail]).toString("utf8");
+    if (!this.truncated) {return Buffer.concat([...this.head, ...this.tail]).toString("utf8");}
+    const diagnostics = this.isDiagnostic(this.pendingLine)
+      ? this.boundDiagnostics(this.diagnostics + this.pendingLine)
+      : this.diagnostics;
+    const marker = "\n...[output truncated; middle omitted]...\n";
+    const evidence = diagnostics ? `\n...[retained diagnostic excerpts; bounded]...\n${diagnostics}\n` : "";
+    const reserved = Buffer.byteLength(marker + evidence, "utf8");
+    if (reserved >= this.limit) {return takeUtf8Head(marker + evidence, this.limit);}
+    const remaining = this.limit - reserved;
+    return takeUtf8Head(Buffer.concat(this.head).toString("utf8"), Math.floor(remaining / 2)) +
+      marker + evidence + takeUtf8Tail(Buffer.concat(this.tail).toString("utf8"), Math.ceil(remaining / 2));
+  }
+
+  private collectDiagnostics(text: string): void {
+    // Scan bounded windows so a single newline-free log cannot grow the retained state.
+    for (let offset = 0; offset < text.length;) {
+      const end = Math.min(text.length, offset + 4096);
+      this.pendingLine += text.slice(offset, end);
+      offset = end;
+      let newline: number;
+      while ((newline = this.pendingLine.search(/[\r\n]/)) >= 0) {
+        const line = this.pendingLine.slice(0, newline);
+        this.pendingLine = this.pendingLine.slice(newline + 1);
+        if (this.isDiagnostic(line)) {this.diagnostics = this.boundDiagnostics(this.diagnostics + line + "\n");}
+      }
+      if (this.pendingLine.length > 8192) {
+        if (this.isDiagnostic(this.pendingLine)) {
+          this.diagnostics = this.boundDiagnostics(this.diagnostics + this.pendingLine + "\n");
+        }
+        this.pendingLine = this.pendingLine.slice(-256);
+      }
+    }
+  }
+
+  private isDiagnostic(line: string): boolean {
+    const plain = line.replace(/\u001b\[[0-9;]*m/g, "");
+    return /\b(error|failed|failure|exception|fatal|traceback)\b|\b(?:TS|CS)\d{4}\b|^\s*(?:at\s+\S+|[×✖])/i.test(plain);
+  }
+
+  private boundDiagnostics(value: string): string {
+    return boundUtf8HeadTail(value, Math.min(16 * 1024, Math.floor(this.limit / 3))).text;
   }
 }
 

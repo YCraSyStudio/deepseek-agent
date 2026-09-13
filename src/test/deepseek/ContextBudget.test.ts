@@ -120,8 +120,6 @@ suite("Context budget and compaction", () => {
     assert.strictEqual(provider.requests.length, 1);
     assert.deepStrictEqual(provider.requests[0].thinking, { type: "disabled" });
     assert.strictEqual(provider.requests[0].tool_choice, "none");
-    // Range selection returns at most a dozen short 1-based ranges, so it needs
-    // far less than the generic auxiliary ceiling.
     assert.strictEqual(provider.requests[0].max_tokens, 512);
     assert.strictEqual(provider.signals[0], signal);
     assert.ok(file.content?.includes("literal line 10"));
@@ -205,6 +203,23 @@ suite("Context budget and compaction", () => {
       (error: unknown) => error instanceof Error && error.name === "AbortError",
     );
     assert.strictEqual(provider.requests.length, 0);
+  });
+
+  test("retains local evidence and attributes an unavailable compaction request to its model", async () => {
+    const observed: unknown[] = [];
+    const provider = {
+      chatCompletion: async (request: ChatCompletionRequest) => {
+        assert.strictEqual(request.model, "unavailable-model");
+        assert.deepStrictEqual(request.thinking, { type: "disabled" });
+        throw new Error("model unavailable");
+      },
+    };
+    const summary = await new ContextCompactor(provider, "unavailable-model", new AbortController().signal, 4,
+      (phase, usage, model) => {observed.push({ phase, usage, model });},
+    ).summarize([{ generationId: "g", visibleText: "Required verification remains pending.", messages: [] }]);
+    assert.strictEqual(summary.provider, "local");
+    assert.match(summary.content, /Required verification remains pending/);
+    assert.deepStrictEqual(observed, [{ phase: "context_summary", usage: undefined, model: "unavailable-model" }]);
   });
 });
 

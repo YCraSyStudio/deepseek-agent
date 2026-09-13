@@ -1,12 +1,12 @@
 ---
 import DocsLayout from "../layouts/DocsLayout.astro";
-import { docsPath, homeContent, navLabels, pageSlugs } from "../i18n";
+import { canonicalPath, homeContent, navLabels, pageSlugs } from "../i18n";
 
 const lang = "en";
 const content = homeContent[lang];
 ---
 <DocsLayout title={content.title} description={content.description} lang={lang}>
-  <h1>Yar's DeepSeek Copilot</h1>
+  <h1>YCraSy DeepSeek Agent</h1>
   <p class="lead">{content.lead}</p>
   <table class="metadataTable" aria-label="Project metadata">
     <tbody>
@@ -26,13 +26,13 @@ const content = homeContent[lang];
   </table>
   <p>
     Available languages:
-    <a href={docsPath("en")}>English</a>,
-    <a href={docsPath("es")}>Español</a>,
-    <a href={docsPath("zh")}>中文</a>.
+    <a href={canonicalPath("en")}>English</a>,
+    <a href={canonicalPath("es")}>Español</a>,
+    <a href={canonicalPath("zh")}>中文</a>.
   </p>
   <section class="sectionList" aria-label="sections">
     {pageSlugs.map((slug) => (
-      <a href={docsPath(lang, slug)}>
+      <a href={canonicalPath(lang, slug)}>
         <strong>{navLabels[lang][slug]}</strong>
         <span>{content.cards[slug]}</span>
       </a>

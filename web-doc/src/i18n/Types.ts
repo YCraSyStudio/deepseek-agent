@@ -7,7 +7,7 @@ export type OverviewContent = {
   cards: Record<PageSlug, string>;
 };
 
-export type SectionContent = {
+type SectionContent = {
   title: string;
   items: string[];
 };
@@ -15,6 +15,7 @@ export type SectionContent = {
 export type PageContent = {
   navTitle: string;
   title: string;
+  seoTitle: string;
   description: string;
   lead: string;
   sections: SectionContent[];

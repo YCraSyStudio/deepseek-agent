@@ -1,0 +1,12 @@
+packages:
+  - web-doc
+
+allowBuilds:
+  '@vscode/vsce-sign': true
+  esbuild: true
+  fsevents: true
+  keytar: true
+
+overrides:
+  diff: 9.0.0
+  serialize-javascript: 7.0.7

@@ -3,11 +3,15 @@ import { estimateAggregateCost, formatUsageCost, USAGE_PHASES } from "@/shared/u
 import { getUiLocale, t } from "@webview/i18n";
 import { useComposerPopover } from "./UseComposerPopover";
 import { MODEL_OPTIONS } from "@/contracts/deepseek/Models";
+import type { ContextWindowStatus } from "@/contracts";
+import type { ContextCompactionControls } from "@webview/views/chatView/ChatViewTypes";
 
 interface UsagePickerProps {
   usage?: UsageAggregate;
   usageByModel?: readonly UsageAggregate[];
   currency?: UsageCurrency;
+  contextWindow?: ContextWindowStatus;
+  compaction?: ContextCompactionControls;
 }
 
 const PHASE_LABELS: Record<UsagePhase, Parameters<typeof t>[0]> = {
@@ -21,8 +25,11 @@ const PHASE_LABELS: Record<UsagePhase, Parameters<typeof t>[0]> = {
   vision_analysis: "chat.usage.phases.visionAnalysis",
 };
 
-function UsagePicker({ usage, usageByModel = [], currency = "usd" }: UsagePickerProps) {
-  const { open, rootRef, triggerRef, togglePopover } = useComposerPopover();
+const RING_RADIUS = 9;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+function UsagePicker({ usage, usageByModel = [], currency = "usd", contextWindow, compaction }: UsagePickerProps) {
+  const { open, rootRef, triggerRef, togglePopover, maxHeight } = useComposerPopover();
   const hasUsage = !!usage && usage.count > 0;
 
   return (
@@ -31,25 +38,83 @@ function UsagePicker({ usage, usageByModel = [], currency = "usd" }: UsagePicker
         ref={triggerRef}
         type="button"
         className={`usageTrigger ${open ? "active" : ""}`}
-        aria-label={t("chat.usage.conversation")}
+        aria-label={contextLabel(contextWindow)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title={t("chat.usage.conversation")}
+        title={contextLabel(contextWindow)}
+        data-tooltip={contextLabel(contextWindow)}
+        data-tooltip-align="end"
         disabled={!hasUsage}
         onClick={togglePopover}
       >
-        <span className="codicon codicon-pulse" aria-hidden="true" />
+        <ContextWindowRing status={contextWindow} pending={compaction?.pending === true} />
       </button>
 
-      {open && usage ? <UsagePopover usage={usage} usageByModel={usageByModel} currency={currency} /> : null}
+      {open && usage ? (
+        <UsagePopover
+          usage={usage}
+          usageByModel={usageByModel}
+          currency={currency}
+          contextWindow={contextWindow}
+          compaction={compaction}
+          maxHeight={maxHeight}
+        />
+      ) : null}
     </div>
   );
 }
 
-export function UsagePopover({ usage, usageByModel, currency = "usd" }: {
+function ContextWindowRing({ status, pending }: { status?: ContextWindowStatus; pending: boolean }) {
+  const fraction = status && status.windowTokens > 0
+    ? Math.min(1, status.usedTokens / status.windowTokens)
+    : 0;
+  const className = [
+    "contextRing",
+    `tone-${ringTone(status)}`,
+    status?.source === "estimated" ? "estimated" : "",
+    pending ? "pending" : "",
+  ].filter(Boolean).join(" ");
+
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <circle className="contextRingTrack" cx="12" cy="12" r={RING_RADIUS} />
+      <circle
+        className="contextRingValue"
+        cx="12"
+        cy="12"
+        r={RING_RADIUS}
+        strokeDasharray={RING_CIRCUMFERENCE}
+        strokeDashoffset={RING_CIRCUMFERENCE * (1 - fraction)}
+      />
+    </svg>
+  );
+}
+
+function ringTone(status?: ContextWindowStatus): "idle" | "normal" | "warning" | "danger" {
+  if (!status || status.usedTokens <= 0) {return "idle";}
+  if (status.usedTokens >= status.hardLimitTokens) {return "danger";}
+  if (status.usedTokens >= status.softLimitTokens) {return "warning";}
+  return "normal";
+}
+
+function contextLabel(status?: ContextWindowStatus): string {
+  if (!status) {
+    return t("chat.usage.contextUnmeasured");
+  }
+  const used = formatTokens(status.usedTokens);
+  const total = formatTokens(status.windowTokens);
+  const share = status.windowTokens > 0 ? Math.round(status.usedTokens / status.windowTokens * 100) : 0;
+  const estimate = status.source === "estimated" ? ` (${t("chat.usage.contextEstimated")})` : "";
+  return `${t("chat.usage.contextWindow")}: ${t("chat.usage.contextUsed", { used, total })} · ${share}%${estimate}`;
+}
+
+export function UsagePopover({ usage, usageByModel, currency = "usd", contextWindow, compaction, maxHeight }: {
   usage: UsageAggregate;
   usageByModel: readonly UsageAggregate[];
   currency?: UsageCurrency;
+  contextWindow?: ContextWindowStatus;
+  compaction?: ContextCompactionControls;
+  maxHeight?: number;
 }) {
   const reportedCost = estimateAggregateCost(usage, currency) ?? sumModelCosts(usageByModel, currency);
   const partialCost = reportedCost !== undefined && usage.reported < usage.count;
@@ -60,7 +125,7 @@ export function UsagePopover({ usage, usageByModel, currency = "usd" }: {
   });
 
   return (
-    <section className="usagePopover" role="dialog" aria-label={t("chat.usage.conversation")}>
+    <section className="usagePopover" role="dialog" aria-label={t("chat.usage.conversation")} style={{ maxHeight }}>
       <header className="usagePopoverHeader">
         <span className="usagePopoverTitle">{t("chat.usage.conversation")}</span>
         {usageByModel.length > 1 ? (
@@ -74,6 +139,8 @@ export function UsagePopover({ usage, usageByModel, currency = "usd" }: {
         <UsageMetric label={t("chat.usage.total")} value={formatTokens(usage.totalTokens)} prominent />
         <UsageMetric label={t("chat.usage.cost")} value={formatCost(reportedCost, currency, partialCost)} prominent />
       </div>
+
+      <ContextWindowSection status={contextWindow} compaction={compaction} />
 
       <div className="usageMetricGrid">
         <UsageMetric label={t("chat.usage.requests")} value={formatNumber(usage.count)} />
@@ -113,6 +180,72 @@ export function UsagePopover({ usage, usageByModel, currency = "usd" }: {
       ) : null}
     </section>
   );
+}
+
+function ContextWindowSection({ status, compaction }: {
+  status?: ContextWindowStatus;
+  compaction?: ContextCompactionControls;
+}) {
+  const share = status && status.windowTokens > 0
+    ? Math.min(100, Math.round(status.usedTokens / status.windowTokens * 100))
+    : 0;
+  const pending = compaction?.pending === true;
+  const result = compaction?.result;
+
+  return (
+    <div className="usageContext">
+      <div className="usageSectionLabel">{t("chat.usage.contextWindow")}</div>
+      <div className="usageContextValues">
+        <span className="usageContextShare">{status ? `${share}%` : "—"}</span>
+        <span className="usageContextTokens">
+          {status
+            ? t("chat.usage.contextUsed", {
+                used: formatTokens(status.usedTokens),
+                total: formatTokens(status.windowTokens),
+              })
+            : t("chat.usage.contextUnmeasured")}
+          {status?.source === "estimated" ? (
+            <span className="usageContextEstimate">{t("chat.usage.contextEstimated")}</span>
+          ) : null}
+        </span>
+      </div>
+      <div className={`usageContextBar tone-${ringTone(status)}`} role="presentation">
+        <span style={{ width: `${share}%` }} />
+      </div>
+      {status ? (
+        <div className="usageContextMeta">
+          <span>{t("chat.usage.contextAutoCompaction", { limit: formatTokens(status.softLimitTokens) })}</span>
+          {status.compactions > 0 ? (
+            <span>{t("chat.usage.contextCompactions", { count: status.compactions })}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {compaction ? (
+        <button
+          type="button"
+          className="usageCompactAction"
+          disabled={pending}
+          onClick={compaction.onCompact}
+        >
+          <span className={`codicon ${pending ? "codicon-loading codicon-modifier-spin" : "codicon-archive"}`} aria-hidden="true" />
+          {pending ? t("chat.usage.compacting") : t("chat.usage.compactNow")}
+        </button>
+      ) : null}
+      {result ? (
+        <p className={`usageCompactResult tone-${result.status}`}>{compactionResultLabel(result)}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function compactionResultLabel(result: { status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }): string {
+  if (result.status === "compacted") {
+    return t("chat.usage.compactedFreed", { tokens: formatTokens(result.freedTokens ?? 0) });
+  }
+  if (result.status === "empty") {
+    return t("chat.usage.compactEmpty");
+  }
+  return t("chat.usage.compactFailed", { error: result.error ?? t("chat.usage.unavailable") });
 }
 
 function ModelUsageRow({ usage, currency }: { usage: UsageAggregate; currency: UsageCurrency }) {
@@ -161,11 +294,6 @@ function PhaseRow({ phase, usage }: { phase: UsagePhase; usage: PhaseUsage }) {
   );
 }
 
-/**
- * Cache-hit share of the input tokens a phase actually reports. Rendering it per
- * phase is what makes a serialized-prefix regression visible: the conversation
- * total hides it behind the primary phase's share.
- */
 function cacheHitRate(usage: PhaseUsage): number | undefined {
   if (usage.cacheHitTokens === undefined || usage.cacheMissTokens === undefined) {
     return undefined;

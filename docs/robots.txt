@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ycrasystudio.github.io/deepseek-agent/sitemap.xml

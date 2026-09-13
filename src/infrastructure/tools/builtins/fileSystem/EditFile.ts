@@ -1,6 +1,7 @@
 import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import { getErrorMessage } from "@/shared/utils/Errors";
 import { bufferLooksBinary, createStructuredResult, createUnifiedDiff } from "./StructuredResult";
 import { createHash } from "crypto";
 import { findLineEndingInsensitiveRanges, normalizeReplacementLineEndings, type TextRange } from "./LineEndings";
@@ -113,7 +114,6 @@ async function prepareEdit(
       try {
         await workspace.prepareFileDiff?.(args.path, before, after);
       } catch {
-        // Diff preview is best-effort; the structured result still carries a unified diff.
       }
     }
 
@@ -178,10 +178,6 @@ function replaceRanges(content: string, ranges: readonly TextRange[], replacemen
     result = `${result.slice(0, range.start)}${replacement}${result.slice(range.end)}`;
   }
   return result;
-}
-
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export const editFileDefinition: ToolDefinition = {

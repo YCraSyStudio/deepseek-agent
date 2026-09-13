@@ -6,6 +6,7 @@ import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTest
 const vsixPath = resolve(process.argv[2] ?? "");
 const version = process.argv[3] ?? "stable";
 const root = resolve(".tmp", `packaged-${version}`);
+const vscodeCache = resolve(".tmp", "vscode");
 const userDataDir = resolve(root, "user-data");
 const extensionsDir = resolve(root, "extensions");
 const workspaceDir = resolve(root, "workspace");
@@ -14,7 +15,7 @@ await mkdir(userDataDir, { recursive: true });
 await mkdir(extensionsDir, { recursive: true });
 await mkdir(workspaceDir, { recursive: true });
 
-const executable = await downloadAndUnzipVSCode(version);
+const executable = await downloadAndUnzipVSCode({ version, cachePath: vscodeCache });
 const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(executable, { reuseMachineInstall: true });
 const installation = spawnSync(cli, [
   ...cliArgs,
@@ -27,7 +28,7 @@ if (installation.status !== 0) {
   throw new Error(`VSIX installation failed with exit code ${installation.status}`);
 }
 const installedDirectory = (await readdir(extensionsDir, { withFileTypes: true }))
-  .find((entry) => entry.isDirectory() && entry.name.startsWith("yarcrasy.yrs-dpsk-copilot-"));
+  .find((entry) => entry.isDirectory() && entry.name.startsWith("yarcrasy.deepseek-agent-"));
 if (!installedDirectory) {
   throw new Error("The installed extension directory could not be located.");
 }
@@ -38,11 +39,11 @@ try {
   await runTests({
     vscodeExecutablePath: executable,
     extensionDevelopmentPath: resolve(extensionsDir, installedDirectory.name),
-    extensionTestsPath: resolve("out/test/PackagedRunner.js"),
+    extensionTestsPath: resolve(".tmp/integration-tests/PackagedRunner.js"),
     launchArgs: [workspaceDir, "--user-data-dir", userDataDir, "--extensions-dir", extensionsDir],
     extensionTestsEnv: {
       NODE_ENV: "test",
-      DEEPSEEK_COPILOT_USER_DATA_DIR: resolve(root, "extension-data"),
+      DEEPSEEK_AGENT_USER_DATA_DIR: resolve(root, "extension-data"),
       EXPECTED_PACKAGED_EXTENSION_ROOT: resolve(extensionsDir, installedDirectory.name),
     },
   });

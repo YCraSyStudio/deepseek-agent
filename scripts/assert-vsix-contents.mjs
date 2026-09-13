@@ -5,7 +5,7 @@ import yauzl from "yauzl";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = JSON.parse(readFileSync(join(projectRoot, "package.json"), "utf8"));
-const expectedFileName = `yrs-dpsk-copilot-${packageJson.version}.vsix`;
+const expectedFileName = `deepseek-agent-${packageJson.version}.vsix`;
 const vsixPath = resolve(process.argv[2] ?? join(projectRoot, "artifacts", expectedFileName));
 if (basename(vsixPath) !== expectedFileName) {
   throw new Error(`Unexpected VSIX filename: expected ${expectedFileName}, received ${basename(vsixPath)}`);

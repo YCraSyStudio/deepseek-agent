@@ -1,11 +1,13 @@
 import * as path from "node:path";
 import type { ConfirmationRequiredResult } from "@/application/tools/Types";
 import type { AppConfig, ChatCompletionRequest, ChatCompletionResponse, ToolCall } from "@/contracts";
-import { chatCompletion } from "@/infrastructure/deepseek/providers/deepseek/features/Chat";
+import { chatCompletion } from "@/infrastructure/deepseek/provider/features/Chat";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import { collectCommandFileContext } from "./CommandFileContext";
 import { getTextContent } from "@/contracts/deepseek/Chat";
 import { isRecord } from "@/shared/utils/TypeGuards";
+import { hasOnlyKeys } from "@/shared/utils/Validation";
+import { resolveAuxiliaryModel } from "@/application/chat/AuxiliaryModelPolicy";
 
 const REVIEW_TIMEOUT_MS = 20_000;
 const MAX_USER_INTENT_LENGTH = 4_000;
@@ -37,7 +39,7 @@ export interface CommandSafetyReviewOptions {
   workspaceRoot?: string;
   signal?: AbortSignal;
   complete?: (signal: AbortSignal, request: ChatCompletionRequest) => Promise<ChatCompletionResponse>;
-  onUsage?: (usage?: ProviderUsage) => void;
+  onUsage?: (usage: ProviderUsage | undefined, model: string) => void;
 }
 
 export const REVIEW_SYSTEM_PROMPT = `You are the independent security decision maker for a VS Code coding agent.
@@ -69,7 +71,7 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
       ? await collectCommandFileContext(action, actionContext.cwd, options.workspaceRoot)
       : [];
     const request: ChatCompletionRequest = {
-      model: options.providerConfig.model,
+      model: resolveAuxiliaryModel(options.providerConfig),
       messages: [
         { role: "system", content: REVIEW_SYSTEM_PROMPT },
         {
@@ -99,7 +101,7 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
       usage = response.usage;
       return parseCommandSafetyReview(getTextContent(response.choices[0]?.message.content));
     } finally {
-      options.onUsage?.(usage);
+      options.onUsage?.(usage, request.model);
     }
   } catch (error: unknown) {
     if (options.signal?.aborted) {throw error;}
@@ -112,12 +114,20 @@ function getReviewedAction(toolCall: ToolCall, actionContext: ConfirmationRequir
   return action || undefined;
 }
 
+const REVIEWABLE_FILE_MUTATION_TOOLS = ["create_file", "edit_file", "apply_patch", "move_path", "delete_path"];
+
 function getSanitizedFileMutation(toolCall: ToolCall): string | undefined {
-  if (!["create_file", "edit_file", "apply_patch"].includes(toolCall.function.name)) {return undefined;}
+  if (!REVIEWABLE_FILE_MUTATION_TOOLS.includes(toolCall.function.name)) {return undefined;}
   try {
     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
     if (typeof args.path !== "string" || !args.path.trim()) {return undefined;}
-    return `${toolCall.function.name} path=${JSON.stringify(args.path.trim())}`;
+    const destination = typeof args.destination === "string" && args.destination.trim()
+      ? ` destination=${JSON.stringify(args.destination.trim())}`
+      : "";
+    const options = toolCall.function.name === "delete_path"
+      ? ` recursive=${args.recursive === true} permanent=${args.permanent === true}`
+      : "";
+    return `${toolCall.function.name} path=${JSON.stringify(args.path.trim())}${destination}${options}`;
   } catch {return undefined;}
 }
 
@@ -190,7 +200,3 @@ function isCommandSafetyConfidence(value: unknown): value is CommandSafetyConfid
     value === "medium_low" || value === "low" || value === "very_low";
 }
 
-function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const allowed = new Set(keys);
-  return Object.keys(value).every((key) => allowed.has(key));
-}

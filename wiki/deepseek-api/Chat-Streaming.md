@@ -10,12 +10,12 @@ Official references:
 
 Main path:
 
-- `src/infrastructure/deepseek/providers/deepseek/DeepSeekProvider.ts`
-- `src/infrastructure/deepseek/providers/deepseek/features/Chat.ts`
-- `src/platform/vscode/webviews/handlers/chat/Streaming.ts`
-- `src/platform/vscode/webviews/handlers/chat/generation/GenerationExecutor.ts`
-- `src/platform/vscode/webviews/handlers/chat/generation/GenerationRunFactory.ts`
-- `src/platform/vscode/webviews/handlers/chat/generation/GenerationRunFinalizer.ts`
+- `src/infrastructure/deepseek/provider/DeepSeekProvider.ts`
+- `src/infrastructure/deepseek/provider/features/Chat.ts`
+- `src/vscode/webviews/handlers/chat/streaming/Streaming.ts`
+- `src/vscode/webviews/handlers/chat/generation/GenerationExecutor.ts`
+- `src/vscode/webviews/handlers/chat/generation/GenerationRunFactory.ts`
+- `src/vscode/webviews/handlers/chat/generation/GenerationRunFinalizer.ts`
 
 ## Flow
 

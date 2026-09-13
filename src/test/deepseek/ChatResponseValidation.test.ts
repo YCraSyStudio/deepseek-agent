@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { assertUniqueToolCallIds, parseChatCompletionResponse, parseStreamToolCalls } from "@/infrastructure/deepseek/providers/deepseek/features/ChatResponseValidation";
+import { assertUniqueToolCallIds, parseChatCompletionResponse, parseStreamToolCalls } from "@/infrastructure/deepseek/provider/features/ChatResponseValidation";
 
 suite("DeepSeek chat response validation", () => {
   test("rejects malformed choices and tool calls", () => {

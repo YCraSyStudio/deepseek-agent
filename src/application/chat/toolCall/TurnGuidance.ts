@@ -6,12 +6,6 @@ const PROGRESS_CHECKPOINT_MARKER = "<progress_review_checkpoint";
 const COMPLETION_RECOVERY_MARKER = "<completion_recovery";
 const GUIDANCE_MARKERS = [PROGRESS_CHECKPOINT_MARKER, COMPLETION_RECOVERY_MARKER];
 
-/**
- * In-turn guidance is appended as the newest message instead of rewriting an
- * earlier one. DeepSeek discounts a matching request prefix, so editing the
- * system message re-bills the whole transcript as a cache miss, while a message
- * appended at the tail costs only its own tokens.
- */
 export function createProgressReviewCheckpointMessage(
   review: ProgressReviewResult,
   completedRounds: number,
@@ -39,7 +33,6 @@ export function createCompletionRecoveryMessage(): ChatMessage {
   };
 }
 
-/** Turn guidance is agent instruction, so reviewers must never read it as the user's request. */
 export function isTurnGuidanceMessage(message: Pick<ChatMessage, "role" | "content">): boolean {
   if (message.role !== "user") {return false;}
   const content = getTextContent(message.content).trimStart();

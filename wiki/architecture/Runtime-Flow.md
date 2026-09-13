@@ -8,7 +8,7 @@
 2. `src/extension/lifecycle/Activate.ts` constructs the DeepSeek provider, tools, storage, and `WebviewProvider`.
 3. Settings and schema-v2 conversations are validated; generation checkpoints are recovered.
 4. Work interrupted by host shutdown is stored as `interrupted`, unfinished tools become `cancelled`, and queued prompts are offered as recoverable drafts.
-5. The `yrs-dpsk-copilot.chatView` view and commands are registered.
+5. The `deepseek-agent.chatView` view and commands are registered.
 
 ## Opening the chat
 

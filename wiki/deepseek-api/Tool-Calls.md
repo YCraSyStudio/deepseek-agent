@@ -11,9 +11,9 @@ Official references:
 Key files:
 
 - `src/application/chat/toolCall/ToolCallCycle.ts`
-- `src/infrastructure/deepseek/providers/deepseek/features/toolCall/ToolCallRequest.ts`
-- `src/infrastructure/deepseek/providers/deepseek/features/toolCall/ToolCallStreaming.ts`
-- `src/platform/vscode/webviews/handlers/chat/toolCalls/ToolCallSession.ts`
+- `src/infrastructure/deepseek/provider/features/toolCall/ToolCallRequest.ts`
+- `src/infrastructure/deepseek/provider/features/toolCall/ToolCallStreaming.ts`
+- `src/vscode/webviews/handlers/chat/toolCalls/ToolCallSession.ts`
 
 ## Cycle
 

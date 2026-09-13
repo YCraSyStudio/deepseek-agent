@@ -37,7 +37,7 @@ export class WebAccessPolicy {
 
   grantUserUrls(urls: readonly string[]): void {
     for (const value of urls) {
-      try { this.grantResult(value); } catch { /* Ignore malformed user text. */ }
+      try { this.grantResult(value); } catch { }
     }
   }
 
@@ -61,7 +61,7 @@ export function extractHttpsUrls(text: string): string[] {
   const urls: string[] = [];
   for (const match of text.matchAll(/https:\/\/[^\s<>"'`]+/gi)) {
     const raw = match[0].replace(/[),.;!?]+$/, "");
-    try { urls.push(validatePublicWebUrl(raw).toString()); } catch { /* Ignore unsafe URLs. */ }
+    try { urls.push(validatePublicWebUrl(raw).toString()); } catch { }
   }
   return [...new Set(urls)];
 }

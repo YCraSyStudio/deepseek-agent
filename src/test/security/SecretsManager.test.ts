@@ -1,7 +1,7 @@
 import * as assert from "node:assert";
 import type * as vscode from "vscode";
 import { API_CREDENTIALS_SECRET_KEY, API_KEY_SECRET_KEY } from "@/shared/constants";
-import { SecretsManager } from "@/platform/vscode/storage/SecretsManager";
+import { SecretsManager } from "@/vscode/storage/SecretsManager";
 
 suite("origin-scoped API credentials", () => {
   test("migrates the legacy global key without losing it", async () => {

@@ -15,7 +15,6 @@ import { centeredScrollOffset, rescaledScrollOffset } from "./ImagePan";
 import { useImagePan } from "./UseImagePan";
 import "./ImageLightbox.css";
 
-/** Image opened in the lightbox: the preview source plus a label for screen readers. */
 export interface LightboxImage {
   id: string;
   src: string;
@@ -23,17 +22,10 @@ export interface LightboxImage {
 }
 
 type Props = {
-  /** Image to show enlarged, or `null` to keep the lightbox closed. */
   image: LightboxImage | null;
   onClose: () => void;
 };
 
-/**
- * Full-window image viewer opened by clicking an attached image, following the
- * Codex interaction: click the thumbnail, drag or scroll the enlarged image in a
- * viewport that keeps its aspect ratio, and zoom with the floating controls or
- * the keyboard.
- */
 export default function ImageLightbox({ image, onClose }: Props) {
   const isOpen = image !== null;
   const labelId = useId();
@@ -41,9 +33,7 @@ export default function ImageLightbox({ image, onClose }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [naturalSize, setNaturalSize] = useState<ImageSize | null>(null);
   const [viewportSize, setViewportSize] = useState<ImageSize | null>(null);
-  /** `null` keeps the image fitted to the window. */
   const [zoom, setZoom] = useState<number | null>(null);
-  /** Scrollable size measured after the previous render, used to keep the view in place. */
   const previousContentSize = useRef<ImageSize | null>(null);
   const renderedImageId = useRef<string | null>(null);
 
@@ -78,11 +68,6 @@ export default function ImageLightbox({ image, onClose }: Props) {
   const pannable = isPannable(renderedSize, viewportSize);
   const pan = useImagePan(viewportRef);
 
-  /**
-   * Keeps the view where the user left it: a freshly opened image starts centred,
-   * and zoom steps or window resizes keep the visible spot visible instead of
-   * jumping back to a corner.
-   */
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport || !isOpen) {return;}
@@ -121,7 +106,6 @@ export default function ImageLightbox({ image, onClose }: Props) {
 
   const handleViewportClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      // A drag ends with a click; only a real click on the empty area closes.
       if (pan.didDrag()) {return;}
       if (event.target instanceof HTMLImageElement) {return;}
       onClose();
@@ -173,7 +157,7 @@ export default function ImageLightbox({ image, onClose }: Props) {
               onClick={zoomOut}
               disabled={!canZoomOutNow}
               aria-label={t("chat.zoomOut")}
-              title={t("chat.zoomOut")}
+              data-tooltip={t("chat.zoomOut")}
             >
               <span className="codicon codicon-zoom-out" aria-hidden="true" />
             </button>
@@ -183,7 +167,7 @@ export default function ImageLightbox({ image, onClose }: Props) {
               onClick={fitToWindow}
               data-dialog-initial-focus
               aria-label={t("chat.fitImageToWindow")}
-              title={t("chat.fitImageToWindow")}
+              data-tooltip={t("chat.fitImageToWindow")}
             >
               {percent}%
             </button>
@@ -193,7 +177,7 @@ export default function ImageLightbox({ image, onClose }: Props) {
               onClick={zoomIn}
               disabled={!canZoomInNow}
               aria-label={t("chat.zoomIn")}
-              title={t("chat.zoomIn")}
+              data-tooltip={t("chat.zoomIn")}
             >
               <span className="codicon codicon-zoom-in" aria-hidden="true" />
             </button>
@@ -203,7 +187,8 @@ export default function ImageLightbox({ image, onClose }: Props) {
             className="imageLightboxButton imageLightboxClose"
             onClick={onClose}
             aria-label={t("chat.closeImagePreview")}
-            title={t("chat.closeImagePreview")}
+            data-tooltip={t("chat.closeImagePreview")}
+            data-tooltip-align="end"
           >
             <span className="codicon codicon-close" aria-hidden="true" />
           </button>
@@ -213,7 +198,6 @@ export default function ImageLightbox({ image, onClose }: Props) {
   );
 }
 
-/** Available space inside the viewport, excluding its padding and scrollbars. */
 function contentSize(element: HTMLElement): ImageSize {
   const styles = window.getComputedStyle(element);
   const paddingX = Number.parseFloat(styles.paddingLeft) + Number.parseFloat(styles.paddingRight);
@@ -224,7 +208,6 @@ function contentSize(element: HTMLElement): ImageSize {
   };
 }
 
-/** True when the rendered image is bigger than the viewport, so it can be dragged. */
 function isPannable(rendered: ImageSize | null, viewport: ImageSize | null): boolean {
   if (!rendered || !viewport) {return false;}
   return rendered.width > viewport.width || rendered.height > viewport.height;

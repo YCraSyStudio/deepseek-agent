@@ -3,13 +3,14 @@ import type { PageContent } from "../Types";
 export const userManual: PageContent = {
   navTitle: "用户手册",
   title: "用户手册",
-  description: "配置和使用聊天、工具、权限、上下文及工作区历史记录。",
+  seoTitle: "用户手册：聊天、工具与权限",
+  description: "安装扩展、配置 API 密钥，并使用聊天、图像、权限、工作区工具、终端、上下文和全局历史记录。",
   lead: "配置 API key，选择权限模式，然后从侧边栏使用 DeepSeek，并明确控制每一项工作区操作。",
   sections: [
     {
       title: "开始使用",
       items: [
-        "从 Activity Bar 打开 Yar's DeepSeek Copilot，并在 Settings 中输入 API key。凭据按规范化 API 来源存储在 VS Code Secret Storage 中；重新打开 Settings 时只会显示遮罩占位符预览。",
+        "从 Activity Bar 打开 YCraSy DeepSeek Agent，并在 Settings 中输入 API key。凭据按规范化 API 来源存储在 VS Code Secret Storage 中；重新打开 Settings 时只会显示遮罩占位符预览。",
         "选择 thinking mode、reasoning effort、输出预留和并发上限。聊天使用 DeepSeek V4.1 Flash，具备 1M Token 总上下文和 384K 最大输出；输出预留默认为 384,000 个 Token。默认并发数为 8，可设置为 1 到 16。",
         "输入 ./ 可自动补全安全的工作区路径；始终拒绝 ../ 父目录遍历。多根工作区路径以稳定别名开头，例如 ./frontend/src/App.tsx。",
         "使用统一的 + 操作或资源管理器/编辑器命令添加上下文。普通外部文件会成为受限只读快照；图像会在验证二进制签名后上传到 DeepSeek。",
@@ -107,14 +108,14 @@ export const userManual: PageContent = {
     {
       title: "历史记录和隐私",
       items: [
-        "设置保存在 ~/.yrs-dpsk-copilot/settings.json 中。API 凭据按规范化来源隔离保存在 VS Code Secret Storage 中，绝不会进入 WebviewConfig、历史记录或 checkpoint。",
-        "历史记录以每个会话一个 JSON 文件的形式全局保存在 ~/.yrs-dpsk-copilot/history/ 中，每条记录都会显示其来源工作区。",
+        "设置保存在 ~/.deepseek-agent/settings.json 中。API 凭据按规范化来源隔离保存在 VS Code Secret Storage 中，绝不会进入 WebviewConfig、历史记录或 checkpoint。",
+        "历史记录以每个会话一个 JSON 文件的形式全局保存在 ~/.deepseek-agent/history/ 中，每条记录都会显示其来源工作区。",
         "可以禁用历史记录，也可以将保留期设为 0 天（仅手动删除）到 3650 天；默认值为 30 天。",
         "禁用历史记录会进入无痕模式。如果存在活动生成或排队消息，停止并清空前会要求确认。无痕聊天仅保留在内存中，在聊天、历史记录和设置之间切换时不会丢失，但重新加载扩展或 VS Code 时会被丢弃。退出时可以明确保存为新会话或直接丢弃。",
         "历史列表直接从经过验证的会话文件重建。存储上限为 100 个会话和 24 MiB。",
         "删除单个会话或所有可见会话时会使用 VS Code 原生确认，并提供撤销。删除前先取消活动任务并清空队列和 checkpoint；图像资源会等撤销窗口结束后再清理，以便完整恢复。",
         "会话文件必须使用 schema version 2，并包含完整的工作区绑定和当前格式的上下文摘要。激活时，所有不兼容、格式错误、过大或文件名不匹配的历史文件及其消息分段都会被永久删除，不再尝试旧版迁移。",
-        "活动任务的 checkpoint 保存在 ~/.yrs-dpsk-copilot/generation-checkpoints/ 下，且不包含 API key。中断时处于 pending 或 running 的工具会恢复为 cancelled；仅恢复包含完整工作区绑定的 schema-3 checkpoint，不兼容记录会被删除。",
+        "活动任务的 checkpoint 保存在 ~/.deepseek-agent/generation-checkpoints/ 下，且不包含 API key。中断时处于 pending 或 running 的工具会恢复为 cancelled；仅恢复包含完整工作区绑定的 schema-3 checkpoint，不兼容记录会被删除。",
       ],
     },
     {

@@ -2,13 +2,6 @@ const TAG_REF_PREFIX = "refs/tags/";
 const RELEASE_BRANCH_REF = "refs/heads/main";
 const RELEASE_SUBJECT = /^release:\s/i;
 
-/**
- * Decides whether a workflow run has to publish a release and which tag it targets.
- *
- * A pushed `v*` tag always publishes. So does a push to `main` whose commit subject starts with
- * `release:`, with the tag derived from the version being released, so cutting a release no longer
- * needs a tag that a human has to create before the gates run.
- */
 export function resolveReleaseMode({ eventName, ref, headCommitMessage, version }) {
   const tagRef = tagRefName(ref);
   if (tagRef) {

@@ -316,8 +316,6 @@ suite("tool call cycle completion", () => {
       cycleOptions: { reviewCompletion: async () => "incomplete" },
     });
 
-    // The reviewer is a best-effort signal: after the single recovery round a
-    // second "incomplete" must not discard the answer the user already paid for.
     assert.strictEqual(requests, 2);
     assert.strictEqual(result.rounds, 2);
     assert.strictEqual(result.finalMessage.content, stalledResponse.choices[0].message.content);
@@ -363,7 +361,6 @@ suite("tool call cycle completion", () => {
       model: "model",
       modelClient: {
         completeRound: async ({ messages, tools }) => {
-          // The cycle appends to one array in place, so snapshot each round.
           requests.push(structuredClone(messages));
           toolOrders.push(tools.map((tool) => tool.function.name));
           return responses.shift()!;
@@ -373,9 +370,6 @@ suite("tool call cycle completion", () => {
       executeToolCall: async () => "contents",
     });
 
-    // DeepSeek discounts a matching input prefix, so every earlier message and
-    // the tool ordering must stay byte-identical: a rewritten message anywhere
-    // in that prefix makes the rest of the request a full cache miss.
     assert.strictEqual(requests.length, 3);
     for (let index = 1; index < requests.length; index += 1) {
       const previous = requests[index - 1];
@@ -423,10 +417,6 @@ suite("tool call cycle completion", () => {
       },
     });
 
-    // Reviewer guidance used to be spliced into the system message, which made
-    // every request after a checkpoint a full cache miss. It must only ever be
-    // appended: DeepSeek discounts a matching prefix, and the prefix here stays
-    // byte-identical across the injected rounds.
     assert.strictEqual(requests.length, 3);
     for (let index = 1; index < requests.length; index += 1) {
       assert.deepStrictEqual(

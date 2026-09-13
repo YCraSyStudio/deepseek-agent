@@ -4,26 +4,26 @@
 
 ## Root
 
-- `npm run compile`: TypeScript without emitting files.
-- `npm run watch`: TypeScript in watch mode.
-- `npm run build`: extension + webview.
-- `npm run build:extension`: bundle `dist/extension.js`.
-- `npm run build:webview`: bundle `dist/webview`.
-- `npm run dev:webview`: Vite server for UI.
-- `npm run lint`: ESLint over `src`.
-- `npm run test:unit`: recursively discovers unit tests under `src/test` while
+- `pnpm run compile`: TypeScript without emitting files.
+- `pnpm run watch`: TypeScript in watch mode.
+- `pnpm run build`: extension + webview.
+- `pnpm run build:extension`: bundle `dist/extension.js`.
+- `pnpm run build:webview`: bundle `dist/webview`.
+- `pnpm run dev:webview`: Vite server for UI.
+- `pnpm run lint`: ESLint over `src`.
+- `pnpm run test:unit`: recursively discovers unit tests under `src/test` while
   excluding `src/test/integration`.
-- `npm run test:integration`: builds and runs the VS Code Extension Development
+- `pnpm run test:integration`: builds and runs the VS Code Extension Development
   Host tests from `src/test/integration`.
-- `npm test`: unit tests followed by integration tests.
+- `pnpm test`: unit tests followed by integration tests.
 
 ## Web documentation
 
 In `web-doc`:
 
-- `npm run dev`: Astro dev server.
-- `npm run build`: Astro build.
-- `npm run preview`: preview the build.
+- `pnpm run dev`: Astro dev server.
+- `pnpm run build`: Astro build.
+- `pnpm run preview`: preview the build.
 
 ## Local Node
 

@@ -1,25 +1,13 @@
 import { createHash } from "node:crypto";
 
-/**
- * Positive decision cache.
- *
- * A cached decision is reused only when every fact that justified it still
- * holds: the conversation, the workspace binding, the permission fingerprint,
- * the tool, the normalized subject, the content hash, and the effect profile.
- * Any change produces a different key, so a mutated script or a changed
- * permission mode is reviewed again.
- */
 
 export interface DecisionKeyInput {
   conversationId?: string;
   workspaceId?: string;
   permissionFingerprint?: string;
   toolName: string;
-  /** Normalized command or workspace path. */
   subject: string;
-  /** Content hash when the decision depends on file bytes. */
   contentHash?: string;
-  /** Effect-profile signature when the decision depends on script content. */
   effectProfile?: string;
 }
 
@@ -29,7 +17,6 @@ export interface DecisionScope {
   permissionFingerprint?: string;
 }
 
-/** Facts that are missing from the scope make a decision uncacheable. */
 export function isCacheableScope(scope: DecisionScope): boolean {
   return Boolean(scope.conversationId && scope.workspaceId && scope.permissionFingerprint);
 }

@@ -7,7 +7,7 @@ Tools let DeepSeek read context, search, create files, and execute commands acco
 Application logic lives in `src/application/tools`. Concrete built-ins live in
 `src/infrastructure/tools/builtins` and are grouped into `fileSystem`, `terminal`,
 and `context`. Actions that require VS Code run through `ToolWorkspace`; its
-adapter lives under `src/platform/vscode/tools`.
+adapter lives under `src/vscode/tools`.
 
 Principles:
 

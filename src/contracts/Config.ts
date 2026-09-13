@@ -4,6 +4,26 @@ import { DEEPSEEK_FLASH_MODEL_ID, MAX_OUTPUT_TOKENS } from "./deepseek/Models";
 export type PermissionMode = "default" | "auto-approve" | "full-access";
 export type InterfaceLanguage = "auto" | "en" | "es" | "zh";
 
+export const REASONING_EFFORT_VALUES = ["low", "high", "max"] as const;
+export type ReasoningEffort = (typeof REASONING_EFFORT_VALUES)[number];
+export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "high";
+
+export function isReasoningEffort(value: unknown): value is ReasoningEffort {
+  return typeof value === "string" && (REASONING_EFFORT_VALUES as readonly string[]).includes(value);
+}
+
+export function normalizeReasoningEffort(value: unknown, fallback: ReasoningEffort = DEFAULT_REASONING_EFFORT): ReasoningEffort {
+  return isReasoningEffort(value) ? value : fallback;
+}
+
+/** Maps the picker vocabulary (including legacy aliases) to a supported effort level. */
+export function mapReasoningEffort(reasoning: string | undefined): ReasoningEffort | undefined {
+  if (!reasoning || reasoning === "off") {return undefined;}
+  if (reasoning === "low" || reasoning === "minimal") {return "low";}
+  if (reasoning === "medium" || reasoning === "xhigh") {return "high";}
+  return reasoning === "max" ? "max" : "high";
+}
+
 export interface SearxngEngineOption {
   name: string;
   shortcut: string;
@@ -19,7 +39,7 @@ export interface AppConfig {
   model: string;
 
   thinkingMode: boolean;
-  reasoningEffort?: "high" | "max";
+  reasoningEffort?: ReasoningEffort;
 
   temperature: number;
   topP: number;
@@ -33,15 +53,11 @@ export interface AppConfig {
   historyRetentionDays: number;
   includeHomeAgents: boolean;
   usageBreakdown: boolean;
-  /** Display currency for estimated usage costs; aggregates stay priced in USD. */
   usageCostCurrency: UsageCurrency;
   webSearchEnabled: boolean;
-  /** @deprecated Preserved for persisted-config compatibility. */
   webSearchEngine: "searxng";
   searxngUrl: string;
-  /** SearXNG engine shortcuts. Empty means use the instance defaults. */
   searxngEngines: string[];
-  /** Cached engine metadata obtained from the configured SearXNG instance. */
   searxngEngineCatalog: SearxngEngineOption[];
 
   userId?: string;
@@ -60,7 +76,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   baseUrl: "https://api.deepseek.com",
   model: DEEPSEEK_FLASH_MODEL_ID,
   thinkingMode: true,
-  reasoningEffort: "high",
+  reasoningEffort: DEFAULT_REASONING_EFFORT,
   temperature: 1.0,
   topP: 1.0,
   maxTokens: MAX_OUTPUT_TOKENS,

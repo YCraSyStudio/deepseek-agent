@@ -5,7 +5,7 @@ import { applyPatchHandler, applyPatchHandlerForced } from "@/infrastructure/too
 import { setToolWorkspaceHost, type ToolWorkspaceEntryType, type ToolWorkspaceHost, type ToolWorkspaceStat } from "@/infrastructure/tools/ToolWorkspace";
 
 suite("apply_patch tool", () => {
-  const workspaceRoot = path.resolve("/tmp/deepseek-copilot-apply-patch");
+  const workspaceRoot = path.resolve("/tmp/deepseek-agent-apply-patch");
 
   test("previews before confirmation and applies only in forced handler", async () => {
     const files = new Map<string, string>([["README.md", "alpha\nbeta\n"]]);

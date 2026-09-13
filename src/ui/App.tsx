@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import "./App.css";
-import { Header, HistoryTransitionPanel, type HistoryTransition } from "@webview/components/shared";
+import { Header, HistoryTransitionPanel, TooltipLayer, type HistoryTransition } from "@webview/components/shared";
 import { ChatView, SettingsView, HistoryView } from "./views";
 import { VsCodeProvider } from "./views/chatView/contexts";
-import type { Conversation, HandlerToWebviewMessage } from "@/contracts";
+import type { ContextWindowStatus, Conversation, HandlerToWebviewMessage } from "@/contracts";
 import type { ConversationUsageSnapshot } from "@/shared/usage/Usage";
 import { getVsCodeApi } from "./VsCodeApi";
 import { getUiLocale, subscribeUiLocale } from "./i18n";
@@ -15,12 +15,9 @@ function App() {
   useSyncExternalStore(subscribeUiLocale, getUiLocale, getUiLocale);
   const [currentView, setCurrentView] = useState<ViewType>("chat");
   const [loadedConversation, setLoadedConversation] = useState<Conversation | null>(null);
-  // Mirrored in a ref because a deletion arrives from the host after the state
-  // that identifies the deleted conversation is no longer readable in the handler.
   const loadedConversationIdRef = useRef<string | undefined>(undefined);
-  // Conversation-wide usage reported by the host so the popover can total the
-  // messages that history paging dropped from memory.
   const [conversationUsage, setConversationUsage] = useState<ConversationUsageSnapshot | undefined>();
+  const [contextWindow, setContextWindow] = useState<ContextWindowStatus | undefined>();
   const [chatRevision, setChatRevision] = useState(0);
   const [historyEnabled, setHistoryEnabled] = useState<boolean>();
   const [historyUpdatePending, setHistoryUpdatePending] = useState(false);
@@ -43,6 +40,7 @@ function App() {
   const handleCancelWorkspaceMismatch = useCallback(() => {
     setLoadedConversation(null);
     setConversationUsage(undefined);
+    setContextWindow(undefined);
     setEarlierMessagesLoaded(0);
     setCurrentView("history");
     setNavigationPending(false);
@@ -57,6 +55,7 @@ function App() {
         if (!isLatestNavigationRequest(message.requestId)) {return;}
         setLoadedConversation(message.conversation);
         setConversationUsage(message.usage);
+        setContextWindow(message.contextWindow);
         setEarlierMessagesLoaded(0);
         setNavigationPending(false);
         setChatRevision((revision) => revision + 1);
@@ -72,8 +71,6 @@ function App() {
           hasEarlierMessages: message.hasEarlierMessages,
           historyCursor: message.cursor,
         } : current);
-        // The page is prepended above the transcript, so the chat has to render its tail
-        // instead of hiding the earlier messages the user just asked for.
         setEarlierMessagesLoaded((count) => count + message.messages.length);
         setNavigationPending(false);
         setChatRevision((revision) => revision + 1);
@@ -81,9 +78,11 @@ function App() {
         const deletedId = message.id;
         setLoadedConversation((current) => (current?.id === deletedId ? null : current));
         setConversationUsage((current) => (loadedConversationIdRef.current === deletedId ? undefined : current));
+        setContextWindow((current) => (loadedConversationIdRef.current === deletedId ? undefined : current));
       } else if (message.type === "clearChat") {
         setLoadedConversation(null);
         setConversationUsage(undefined);
+        setContextWindow(undefined);
         setEarlierMessagesLoaded(0);
         setNavigationPending(false);
         setChatRevision((revision) => revision + 1);
@@ -93,6 +92,7 @@ function App() {
         vscode?.setState({ schemaVersion: 4, mode: "persistent", draft: "", referencedFiles: [] });
         setLoadedConversation(null);
         setConversationUsage(undefined);
+        setContextWindow(undefined);
         setEarlierMessagesLoaded(0);
         setNavigationPending(false);
         setChatRevision((revision) => revision + 1);
@@ -150,6 +150,7 @@ function App() {
             key={chatRevision}
             loadedConversation={loadedConversation}
             conversationUsage={conversationUsage}
+            contextWindow={contextWindow}
             navigationPending={navigationPending}
             earlierMessagesLoaded={earlierMessagesLoaded}
             onCancelWorkspaceMismatch={handleCancelWorkspaceMismatch}
@@ -177,6 +178,7 @@ function App() {
           }}
         />
       </div>
+      <TooltipLayer />
     </VsCodeProvider>
   );
 }

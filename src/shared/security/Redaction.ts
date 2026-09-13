@@ -22,3 +22,12 @@ export function redactSensitiveText(value: unknown, sensitiveValues: readonly st
   }
   return redacted;
 }
+
+/** Credential patterns only: tool results must retain usable filesystem paths. */
+export function redactCredentials(value: string): string {
+  let redacted = value;
+  for (const pattern of SENSITIVE_PATTERNS.slice(0, 6)) {
+    redacted = redacted.replace(pattern, (_match, prefix?: string) => `${prefix && !/^https?:/i.test(prefix) ? prefix : ""}[REDACTED]`);
+  }
+  return redacted.replace(/\b(password\s*[:=]\s*)[^\s,;}"']+/gi, "$1[REDACTED]");
+}

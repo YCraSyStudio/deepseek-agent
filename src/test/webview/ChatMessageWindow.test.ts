@@ -32,7 +32,6 @@ suite("chat message render window", () => {
 
     assert.strictEqual(initialChatWindowSize(total, 200), CHAT_MESSAGE_WINDOW + 200);
     assert.strictEqual(hiddenChatMessageCount(total, initialChatWindowSize(total, 200)), 200 - CHAT_MESSAGE_WINDOW);
-    // A further page keeps exactly the untouched tail of the first one hidden.
     assert.strictEqual(hiddenChatMessageCount(600, initialChatWindowSize(600, 400)), 200 - CHAT_MESSAGE_WINDOW);
   });
 

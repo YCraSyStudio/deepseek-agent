@@ -77,7 +77,7 @@ suite("shell execution", () => {
 
   test("terminates descendants when a command is cancelled", async () => {
     setToolWorkspaceHost(createUnusedWorkspaceHost(process.cwd()));
-    const sandbox = await mkdtemp(path.join(tmpdir(), "deepseek-copilot-process-test-"));
+    const sandbox = await mkdtemp(path.join(tmpdir(), "deepseek-agent-process-test-"));
     const marker = path.join(sandbox, "child-survived.txt");
     const fixture = path.resolve("src/test/fixtures/SpawnChildProcess.mjs");
     const controller = new AbortController();
@@ -96,7 +96,7 @@ suite("shell execution", () => {
   test("does not hang when an exited shell leaves inherited output handles open", async function () {
     this.timeout(10_000);
     setToolWorkspaceHost(createUnusedWorkspaceHost(process.cwd()));
-    const sandbox = await mkdtemp(path.join(tmpdir(), "deepseek-copilot-output-test-"));
+    const sandbox = await mkdtemp(path.join(tmpdir(), "deepseek-agent-output-test-"));
     const marker = path.join(sandbox, "orphan-survived.txt");
     const fixture = path.resolve("src/test/fixtures/SpawnInheritedOutputChild.mjs");
     const startedAt = Date.now();

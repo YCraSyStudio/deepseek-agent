@@ -3,13 +3,14 @@ import type { PageContent } from "../Types";
 export const userManual: PageContent = {
   navTitle: "User manual",
   title: "User manual",
-  description: "Configure and use chat, tools, permissions, context, and global history.",
+  seoTitle: "User manual: chat, tools, permissions",
+  description: "Install the extension, add an API key, and use chat, images, permissions, workspace tools, terminal, context, and global history.",
   lead: "Configure the API key, choose a permission mode, then use DeepSeek from the sidebar with explicit control over every workspace operation.",
   sections: [
     {
       title: "Getting started",
       items: [
-        "Open Yar's DeepSeek Copilot from the Activity Bar and enter the API key in Settings. Credentials are stored per normalized API origin in VS Code Secret Storage; reopening Settings shows only a masked placeholder preview.",
+        "Open YCraSy DeepSeek Agent from the Activity Bar and enter the API key in Settings. Credentials are stored per normalized API origin in VS Code Secret Storage; reopening Settings shows only a masked placeholder preview.",
         "Choose thinking mode, reasoning effort, output allowance, and concurrent generation limit. Chat runs on DeepSeek V4.1 Flash with a 1M-token total context and 384K maximum output; the output allowance defaults to 384,000 tokens. Concurrency defaults to 8 and accepts values from 1 to 16.",
         "Type ./ to autocomplete safe workspace paths. Parent traversal with ../ is never accepted. In multi-root workspaces, paths begin with a stable alias such as ./frontend/src/App.tsx.",
         "Use the single + attachment action or Explorer/editor commands for explicit context. Ordinary external files become bounded, read-only snapshots; images are uploaded to DeepSeek after their binary signature is verified.",
@@ -107,14 +108,14 @@ export const userManual: PageContent = {
     {
       title: "History and privacy",
       items: [
-        "Settings are stored in ~/.yrs-dpsk-copilot/settings.json. API credentials remain in VS Code Secret Storage, isolated by normalized origin, and are never included in WebviewConfig, history, or checkpoints.",
-        "History is stored globally as one JSON file per conversation in ~/.yrs-dpsk-copilot/history/ and each entry shows its source workspace.",
+        "Settings are stored in ~/.deepseek-agent/settings.json. API credentials remain in VS Code Secret Storage, isolated by normalized origin, and are never included in WebviewConfig, history, or checkpoints.",
+        "History is stored globally as one JSON file per conversation in ~/.deepseek-agent/history/ and each entry shows its source workspace.",
         "History can be disabled and retention can be configured from 0 days (manual deletion only) to 3650 days. The default is 30 days.",
         "Disabling history enters Incognito mode. Active generations and queued prompts require confirmation before they are stopped and cleared. Incognito chats stay only in memory, survive navigation between Chat, History, and Settings, and are discarded when the extension or VS Code reloads. When leaving, the current chat can be explicitly saved as a new conversation or discarded.",
         "The history list is rebuilt directly from validated conversation files. Storage is capped at 100 conversations and 24 MiB.",
         "Deleting one conversation or all visible conversations uses a native VS Code confirmation and offers Undo. Deletion first cancels active work and clears its queue/checkpoint; image cleanup waits until Undo expires so restoration remains complete.",
         "Conversation files must use schema version 2 with a complete workspace binding and current context summaries. On activation, every incompatible, malformed, oversized, or mismatched history file is permanently deleted together with its message segments; no legacy migration is attempted.",
-        "Active work is checkpointed without the API key under ~/.yrs-dpsk-copilot/generation-checkpoints/. Interrupted pending or running tools are restored as cancelled; only schema-3 checkpoints with a complete workspace binding are recovered, and incompatible records are deleted.",
+        "Active work is checkpointed without the API key under ~/.deepseek-agent/generation-checkpoints/. Interrupted pending or running tools are restored as cancelled; only schema-3 checkpoints with a complete workspace binding are recovered, and incompatible records are deleted.",
       ],
     },
     {

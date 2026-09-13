@@ -1,6 +1,6 @@
 import * as assert from "node:assert";
 import { createHash } from "node:crypto";
-import { FileChangeRegistry } from "@/platform/vscode/editor/diff/FileChangeRegistry";
+import { FileChangeRegistry } from "@/vscode/editor/diff/FileChangeRegistry";
 
 const OPTIONS = { maxEntries: 2, maxDocumentBytes: 1024 };
 

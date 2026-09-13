@@ -121,5 +121,5 @@ jobs:
             runtime-dist/* \
             --target "$GITHUB_SHA" \
             --title "SearXNG runtime $SEARXNG_RUNTIME_VERSION" \
-            --notes "Pinned SearXNG sidecar runtimes used by DeepSeek Copilot. Published assets are immutable; the extension trusts only checksums embedded in its VSIX." \
+            --notes "Pinned SearXNG sidecar runtimes used by YCraSy DeepSeek Agent. Published assets are immutable; the extension trusts only checksums embedded in its VSIX." \
             --prerelease

@@ -1,17 +1,10 @@
 import type { CommandFacts } from "./CommandFacts";
 import type { ScriptEffectProfile } from "./ScriptEffects";
 
-/**
- * Deterministic approval rules.
- *
- * Each rule answers a single question with machine-verifiable facts: is this
- * action provably bounded? When any fact is missing, unknown, or outside the
- * stated boundary the verdict is `review`, which keeps the existing
- * model-based safety review in the loop.
- */
 
 type ApprovalCode =
   | "workspace-file-mutation"
+  | "git-recoverable-path-change"
   | "read-only-diagnostic"
   | "verified-workspace-script"
   | "cached-positive-decision";
@@ -34,20 +27,13 @@ const FILE_MUTATION_TOOLS = new Set(["create_file", "edit_file", "apply_patch"])
 
 export interface FileMutationFacts {
   toolName: string;
-  /** Declared tool effect from the registry. */
   effect?: string;
-  /** Result of the workspace containment check performed by the host. */
   workspaceContained?: boolean;
   reasonCode?: string;
   filePath?: string;
   sensitivePath: boolean;
 }
 
-/**
- * A file mutation that the host proved inside the bound workspace only touches
- * project files. The payload is irrelevant to safety, so no model review round
- * can add information here.
- */
 export function approveWorkspaceFileMutation(facts: FileMutationFacts): SafetyVerdict {
   const evidence: Record<string, unknown> = {
     toolName: facts.toolName,
@@ -82,11 +68,6 @@ export function approveWorkspaceFileMutation(facts: FileMutationFacts): SafetyVe
   };
 }
 
-/**
- * Version, help, and availability queries are finite read-only diagnostics.
- * The command parser already proved every segment is allowlisted, so asking a
- * model costs a round without adding a fact.
- */
 export function approveReadOnlyDiagnostic(facts: CommandFacts): SafetyVerdict {
   if (facts.classification !== "read-only-diagnostic") {
     return review("not-a-read-only-diagnostic", { classification: facts.classification });
@@ -108,20 +89,12 @@ export type ScriptProvenance = "agent-authored" | "changed" | "unknown";
 
 export interface ScriptExecutionFacts {
   facts: CommandFacts;
-  /** True when the script path resolves inside the bound workspace. */
   contained: boolean;
-  /** Whether the on-disk content still matches what the agent wrote. */
   provenance: ScriptProvenance;
   profile: ScriptEffectProfile;
   hash?: string;
 }
 
-/**
- * Runs a workspace script unattended only when four independent facts agree:
- * the command is a single script invocation, the script lives inside the
- * workspace, its content still matches the agent-authored bytes, and its
- * declared effects stay inside the bounded profile.
- */
 export function approveVerifiedWorkspaceScript(input: ScriptExecutionFacts): SafetyVerdict {
   const facts: Record<string, unknown> = {
     script: input.facts.script?.path,
@@ -153,4 +126,44 @@ export function approveVerifiedWorkspaceScript(input: ScriptExecutionFacts): Saf
 
 function review(code: string, facts: Record<string, unknown>): ReviewVerdict {
   return { kind: "review", code, facts };
+}
+
+const GIT_RECOVERABLE_TOOLS = new Set(["move_path", "delete_path"]);
+
+export interface GitRecoverablePathFacts {
+  toolName: string;
+  effect?: string;
+  filePath?: string;
+  sensitivePath: boolean;
+  insideRepository: boolean;
+  recoverable: boolean;
+  reason: string;
+}
+
+export function approveGitRecoverablePathChange(facts: GitRecoverablePathFacts): SafetyVerdict {
+  const evidence: Record<string, unknown> = {
+    toolName: facts.toolName,
+    effect: facts.effect,
+    filePath: facts.filePath,
+    sensitivePath: facts.sensitivePath,
+    insideRepository: facts.insideRepository,
+    recoverable: facts.recoverable,
+    gitReason: facts.reason,
+  };
+  if (!GIT_RECOVERABLE_TOOLS.has(facts.toolName)) {
+    return review("not-a-path-change-tool", evidence);
+  }
+  if (facts.effect !== "workspace-mutation") {
+    return review("unexpected-effect", evidence);
+  }
+  if (!facts.filePath) {
+    return review("path-unknown", evidence);
+  }
+  if (facts.sensitivePath) {
+    return review("sensitive-path", evidence);
+  }
+  if (!facts.insideRepository || !facts.recoverable) {
+    return review(`git-${facts.reason}`, evidence);
+  }
+  return { kind: "approve", code: "git-recoverable-path-change", facts: evidence };
 }

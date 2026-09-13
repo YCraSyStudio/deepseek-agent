@@ -1,5 +1,12 @@
-export type { AppConfig, InterfaceLanguage, PermissionMode, PermissionSnapshot, SearxngEngineOption } from "./Config";
-export { DEFAULT_CONFIG } from "./Config";
+export type { AppConfig, InterfaceLanguage, PermissionMode, PermissionSnapshot, ReasoningEffort, SearxngEngineOption } from "./Config";
+export {
+  DEFAULT_CONFIG,
+  DEFAULT_REASONING_EFFORT,
+  REASONING_EFFORT_VALUES,
+  isReasoningEffort,
+  mapReasoningEffort,
+  normalizeReasoningEffort,
+} from "./Config";
 export type {
   WebviewToHandlerMessage,
   HandlerToWebviewMessage,
@@ -32,8 +39,9 @@ export type {
 } from "./deepseek/Chat";
 export {
   DEEPSEEK_FLASH_MODEL_ID,
+  DEEPSEEK_PRO_MODEL_ID,
   MAX_OUTPUT_TOKENS,
   MODEL_REGISTRY,
 } from "./deepseek/Models";
 export { WEBVIEW_PROTOCOL_VERSION, WEBVIEW_INPUT_LIMITS } from "./messages/WebviewProtocol";
-export type { ReferencedFilePayload } from "./messages/WebviewModels";
+export type { ContextWindowStatus, ReferencedFilePayload } from "./messages/WebviewModels";

@@ -1,5 +1,5 @@
 import * as assert from "node:assert";
-import { reconstructDiffDocuments } from "@/platform/vscode/editor/diff/UnifiedDiffDocuments";
+import { reconstructDiffDocuments } from "@/vscode/editor/diff/UnifiedDiffDocuments";
 
 suite("unified diff documents", () => {
   test("reconstructs before and after excerpts for one change", () => {

@@ -7,13 +7,6 @@ import {
   type ToolWorkspaceHost,
 } from "@/infrastructure/tools/ToolWorkspace";
 
-/**
- * One call should read like a project overview, not like a directory dump.
- * Hidden entries are always included, while any folder that holds more
- * content than a readable summary can carry is printed as a single `...`
- * placeholder so `node_modules`, build output, and lockfile-era trees stay
- * out of the model context.
- */
 const MAX_TREE_LINES = 400;
 const MAX_TREE_BYTES = 48 * 1024;
 const MAX_DIRECTORY_READS = 300;
@@ -107,11 +100,6 @@ function normalizeScope(value: unknown): WorkspaceScope {
   return { path: trimmed, label: trimmed };
 }
 
-/**
- * Renders one directory and, recursively, the folders that stay readable.
- * A `null` result means "this subtree does not fit"; the caller then prints the
- * folder name followed by `...` instead of a partial listing.
- */
 async function renderDirectory(
   workspace: ToolWorkspaceHost,
   dirPath: string,
@@ -193,7 +181,6 @@ async function renderDirectory(
       continue;
     }
 
-    // Discard anything the collapsed subtree reported before the rollback.
     state.files = counters.files;
     state.directories = counters.directories;
     state.collapsed = counters.collapsed;

@@ -1,3 +1,3 @@
 import { mkdir } from "node:fs/promises";
 
-await mkdir("test-results", { recursive: true });
+await mkdir(".tmp/test-results", { recursive: true });

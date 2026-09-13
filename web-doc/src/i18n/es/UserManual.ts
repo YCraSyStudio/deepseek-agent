@@ -3,13 +3,14 @@ import type { PageContent } from "../Types";
 export const userManual: PageContent = {
   navTitle: "Manual",
   title: "Manual de usuario",
-  description: "Configura y usa el chat, las herramientas, los permisos, el contexto y el historial del workspace.",
+  seoTitle: "Manual: chat, herramientas, permisos",
+  description: "Instala la extensión, añade una clave de API y usa el chat, las imágenes, los permisos, las herramientas del workspace, la terminal, el contexto y el historial global.",
   lead: "Configura la API key, elige un modo de permisos y usa DeepSeek desde la barra lateral con control explícito sobre cada operación del workspace.",
   sections: [
     {
       title: "Primeros pasos",
       items: [
-        "Abre Yar's DeepSeek Copilot desde la Activity Bar e introduce la API key en Settings. Las credenciales se guardan por origen de API normalizado en Secret Storage de VS Code; al reabrir Settings solo se muestra una preview enmascarada como placeholder.",
+        "Abre YCraSy DeepSeek Agent desde la Activity Bar e introduce la API key en Settings. Las credenciales se guardan por origen de API normalizado en Secret Storage de VS Code; al reabrir Settings solo se muestra una preview enmascarada como placeholder.",
         "Elige thinking mode, reasoning effort, reserva de salida y límite de generaciones concurrentes. El chat usa DeepSeek V4.1 Flash con 1M tokens de contexto total y 384K de salida máxima; la reserva de salida predeterminada es de 384.000 tokens. La concurrencia predeterminada es 8 y admite valores entre 1 y 16.",
         "Escribe ./ para autocompletar rutas seguras del workspace. El recorrido a padres con ../ nunca se acepta. En multi-root, las rutas comienzan por un alias estable como ./frontend/src/App.tsx.",
         "Usa la única acción + o los comandos del explorador/editor para aportar contexto. Los archivos externos ordinarios se convierten en snapshots acotados y de solo lectura; las imágenes se suben a DeepSeek tras verificar su firma binaria.",
@@ -107,14 +108,14 @@ export const userManual: PageContent = {
     {
       title: "Historial y privacidad",
       items: [
-        "Los ajustes se guardan en ~/.yrs-dpsk-copilot/settings.json. Las credenciales permanecen en Secret Storage de VS Code, aisladas por origen normalizado, y nunca forman parte de WebviewConfig, historial o checkpoints.",
-        "El historial se guarda globalmente como un archivo JSON por conversación en ~/.yrs-dpsk-copilot/history/ y cada entrada muestra su workspace de origen.",
+        "Los ajustes se guardan en ~/.deepseek-agent/settings.json. Las credenciales permanecen en Secret Storage de VS Code, aisladas por origen normalizado, y nunca forman parte de WebviewConfig, historial o checkpoints.",
+        "El historial se guarda globalmente como un archivo JSON por conversación en ~/.deepseek-agent/history/ y cada entrada muestra su workspace de origen.",
         "Puede deshabilitarse y su retención puede configurarse entre 0 días (solo borrado manual) y 3650 días. El valor predeterminado es 30 días.",
         "Desactivar el historial activa el modo incógnito. Si hay generaciones activas o mensajes en cola, se pide confirmación antes de detenerlos y vaciarlos. Los chats incógnitos solo viven en memoria, sobreviven al cambio entre Chat, Historial y Ajustes, y se descartan al recargar la extensión o VS Code. Al salir, el chat puede guardarse explícitamente como una conversación nueva o descartarse.",
         "La lista se reconstruye directamente desde archivos de conversación validados. El almacenamiento está limitado a 100 conversaciones y 24 MiB.",
         "Borrar una conversación o todas las visibles usa confirmación nativa y ofrece Deshacer. Primero cancela el trabajo activo y limpia cola/checkpoint; las imágenes no se eliminan hasta que vence Deshacer para que la restauración sea completa.",
         "Los archivos de conversación deben usar el esquema versión 2 con un binding de workspace completo y resúmenes de contexto actuales. Al activar, cada archivo de historial incompatible, mal formado, demasiado grande o con nombre discordante se elimina permanentemente junto con sus segmentos; no se intenta ninguna migración heredada.",
-        "El trabajo activo se guarda sin la API key en checkpoints bajo ~/.yrs-dpsk-copilot/generation-checkpoints/. Las herramientas pending o running interrumpidas se restauran como cancelled; solo se recuperan checkpoints de esquema 3 con un binding de workspace completo y los registros incompatibles se eliminan.",
+        "El trabajo activo se guarda sin la API key en checkpoints bajo ~/.deepseek-agent/generation-checkpoints/. Las herramientas pending o running interrumpidas se restauran como cancelled; solo se recuperan checkpoints de esquema 3 con un binding de workspace completo y los registros incompatibles se eliminan.",
       ],
     },
     {

@@ -35,7 +35,6 @@
   min-width: 0;
   min-height: 0;
   display: block;
-  /* Bottom padding leaves room for the floating zoom controls. */
   padding: 14px 20px 78px;
   overflow: auto;
   scrollbar-width: thin;
@@ -46,17 +45,10 @@
 
   &.isPanning {
     cursor: grabbing;
-    /* The drag owns the pointer, so selecting text must not fight it. */
     user-select: none;
   }
 }
 
-/*
- * Canvas sized to the image or to the viewport, whichever is bigger: the image is
- * centred while it fits, and once it does not, it overflows into the scrollable
- * viewport instead of being squashed. The image therefore never loses its
- * aspect ratio, however far the user zooms in.
- */
 .imageLightboxCanvas {
   align-items: center;
   justify-content: center;
@@ -68,7 +60,6 @@
 }
 
 .imageLightboxImage {
-  /* Never shrinks: a zoomed image grows and scrolls rather than deforming. */
   flex: none;
   border-radius: 4px;
   display: block;

@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { StreamEventEmitter } from "@/platform/vscode/webviews/handlers/chat/StreamEventEmitter";
+import { StreamEventEmitter } from "@/vscode/webviews/handlers/chat/streaming/StreamEventEmitter";
 
 suite("StreamEventEmitter", () => {
   test("creates ordered native events across reasoning, tools and content", () => {

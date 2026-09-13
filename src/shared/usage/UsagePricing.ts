@@ -15,39 +15,39 @@ interface PriceTier {
   offPeak: PriceRate;
 }
 
-/** Official DeepSeek-V4.1-Flash off-peak rates in USD per 1M tokens. */
-const FLASH_OFF_PEAK_RATE_USD: PriceRate = Object.freeze({
-  inputMissPerMillion: 0.15,
-  inputHitPerMillion: 0.003,
-  outputPerMillion: 0.6,
+const FLASH_MODEL_ID = "deepseek-flash";
+const PRO_MODEL_ID = "deepseek-v4-pro";
+
+const FLASH_OFF_PEAK_RATES: Readonly<Record<UsageCurrency, PriceRate>> = Object.freeze({
+  usd: Object.freeze({
+    inputMissPerMillion: 0.15,
+    inputHitPerMillion: 0.003,
+    outputPerMillion: 0.6,
+  }),
+  cny: Object.freeze({
+    inputMissPerMillion: 1,
+    inputHitPerMillion: 0.02,
+    outputPerMillion: 4,
+  }),
 });
 
-/** Official DeepSeek-V4.1-Flash off-peak rates in CNY per 1M tokens. */
-const FLASH_OFF_PEAK_RATE_CNY: PriceRate = Object.freeze({
-  inputMissPerMillion: 1,
-  inputHitPerMillion: 0.02,
-  outputPerMillion: 4,
+const PRO_OFF_PEAK_RATES: Readonly<Record<UsageCurrency, PriceRate>> = Object.freeze({
+  usd: Object.freeze({
+    inputMissPerMillion: 0.66,
+    inputHitPerMillion: 0.022,
+    outputPerMillion: 1.98,
+  }),
+  cny: Object.freeze({
+    inputMissPerMillion: 4.5,
+    inputHitPerMillion: 0.15,
+    outputPerMillion: 13.5,
+  }),
 });
 
-const OFF_PEAK_RATES: Readonly<Record<UsageCurrency, PriceRate>> = Object.freeze({
-  usd: FLASH_OFF_PEAK_RATE_USD,
-  cny: FLASH_OFF_PEAK_RATE_CNY,
+const MODEL_TIERS: Readonly<Record<string, Readonly<Record<UsageCurrency, PriceTier>>>> = Object.freeze({
+  [FLASH_MODEL_ID]: Object.freeze(createTiers(FLASH_OFF_PEAK_RATES)),
+  [PRO_MODEL_ID]: Object.freeze(createTiers(PRO_OFF_PEAK_RATES)),
 });
-
-/**
- * Official prices retrieved 2026-09-10. DeepSeek publishes a USD and a CNY
- * table instead of an exchange rate, so each display currency is priced from
- * its own documented numbers. DeepSeek bills weekdays 01:00-04:00 and
- * 06:00-10:00 UTC (09:00-12:00 and 14:00-18:00 Beijing time) at twice the
- * off-peak rate.
- */
-const FLASH_TIERS: Readonly<Record<UsageCurrency, PriceTier>> = Object.freeze(createTiers(OFF_PEAK_RATES));
-
-/**
- * Models whose rates this catalog publishes. The shared layer cannot import the
- * contract model registry, so the priced model id lives beside its rates.
- */
-const PRICED_MODEL_IDS: ReadonlySet<string> = new Set(["deepseek-flash"]);
 
 export function isOfficialDeepSeekEndpoint(baseUrl: string): boolean {
   return getApiOrigin(baseUrl) === getApiOrigin(OFFICIAL_DEEPSEEK_BASE_URL);
@@ -89,20 +89,21 @@ export function estimateUsageCost(
   return calculateUsageCost(selectRate(tier, instant), cacheHit, cacheMiss, output);
 }
 
-/**
- * Prices the reported subset of an aggregate. When requests are missing usage,
- * this is a lower bound for the conversation rather than its exact total.
- */
 export function estimateReportedUsageCost(
   usage: UsageAggregate,
   at?: Date,
   currency: UsageCurrency = "usd",
 ): number | undefined {
+  if (usage.byModel) {
+    if (usage.saturated || !usage.officialEndpoint) {return undefined;}
+    const costs = usage.byModel.map((entry) => estimateReportedUsageCost(entry, at, currency));
+    return costs.length > 0 && costs.every((cost) => cost !== undefined)
+      ? roundUsageCost(costs.reduce((sum, cost) => sum + (cost ?? 0), 0))
+      : undefined;
+  }
   if (
     !usage.officialEndpoint ||
     usage.saturated ||
-    // A stored estimate is only comparable inside its own price catalog; older
-    // versions keep the value they were billed with instead of being recomputed.
     usage.priceCatalogVersion !== PRICE_CATALOG_VERSION ||
     usage.reported === 0 ||
     usage.cacheHitReported !== usage.reported ||
@@ -120,22 +121,17 @@ export function estimateReportedUsageCost(
     : undefined;
 }
 
-/**
- * Prices an aggregate for display in the requested currency. USD reuses the
- * stored estimate; every other currency reprices the reported tokens from
- * DeepSeek's own rate table for that currency.
- */
 export function estimateAggregateCost(
   usage: UsageAggregate,
   currency: UsageCurrency = "usd",
   at?: Date,
 ): number | undefined {
+  if (usage.byModel) {return estimateReportedUsageCost(usage, at, currency);}
   return currency === "usd"
     ? usage.costUsd ?? estimateReportedUsageCost(usage, at)
     : estimateReportedUsageCost(usage, at, currency);
 }
 
-/** Persisted aggregates always store their estimate in USD. */
 export function refreshUsageCost(aggregate: UsageAggregate, at?: Date): void {
   const instant = resolvePricedInstant(aggregate, at);
   const cost = aggregate.officialEndpoint ? estimateUsageCost(aggregate, aggregate.model, instant) : undefined;
@@ -150,11 +146,6 @@ export function refreshUsageCost(aggregate: UsageAggregate, at?: Date): void {
   aggregate.costUsd = cost;
 }
 
-/**
- * Anchors pricing to the request instant instead of the moment a panel is
- * reopened: outside that window a weekday peak aggregate would otherwise be
- * recomputed at double its billed rate.
- */
 function resolvePricedInstant(usage: ProviderUsage | UsageAggregate, at?: Date): Date {
   if (at) {return at;}
   const stored = "pricedAt" in usage && usage.pricedAt ? new Date(usage.pricedAt) : undefined;
@@ -165,7 +156,6 @@ export function roundUsageCost(value: number): number {
   return Math.round(value * 1_000_000) / 1_000_000;
 }
 
-/** Peak hours are 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. */
 function isPeakPricingHour(at: Date): boolean {
   const day = at.getUTCDay();
   if (day === 0 || day === 6) {return false;}
@@ -191,9 +181,8 @@ function createPriceTier(offPeak: PriceRate): PriceTier {
   };
 }
 
-/** Only a model with a published table is priced; anything else yields no estimate. */
 function resolvePriceTier(model: string | undefined, currency: UsageCurrency): PriceTier | undefined {
-  return model && PRICED_MODEL_IDS.has(model) ? FLASH_TIERS[currency] : undefined;
+  return model ? MODEL_TIERS[model]?.[currency] : undefined;
 }
 
 function selectRate(tier: PriceTier, at: Date): PriceRate {

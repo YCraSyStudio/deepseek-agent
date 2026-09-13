@@ -10,7 +10,6 @@ const FOCUSABLE_SELECTOR = [
   "summary",
 ].join(",");
 
-/** Keeps keyboard focus inside a dialog and restores it when the dialog closes. */
 export function useDialogFocus(onEscape: () => void, focusKey: string, isOpen: boolean): RefObject<HTMLElement | null> {
   const dialogRef = useRef<HTMLElement>(null);
   const onEscapeRef = useRef(onEscape);

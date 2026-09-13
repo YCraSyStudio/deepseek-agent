@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import type { AppConfig } from "@/contracts";
 import { CONFIG_SECTION, INCLUDE_HOME_AGENTS_KEY } from "@/shared/constants";
-import { registerExtensionApi } from "@/platform/vscode/activation/RegisterExtensionApi";
-import { SettingsManager, SecretsManager } from "@/platform/vscode/storage";
+import { registerExtensionApi } from "@/vscode/activation/RegisterExtensionApi";
+import { SettingsManager, SecretsManager } from "@/vscode/storage";
 import { setActiveProvider } from "./ExtensionRuntime";
 import { initializeLogger, logInfo } from "@/shared/logging/Logger";
-import { getWebRuntimeDiagnostics } from "@/platform/vscode/tools/browser";
+import { getWebRuntimeDiagnostics } from "@/vscode/tools/browser";
 import { ExtensionCompositionRoot } from "../CompositionRoot";
 
 type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled" | "searxngEngines" | "searxngEngineCatalog"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes";
@@ -29,14 +29,12 @@ const LEGACY_SETTING_KEYS: ReadonlyArray<LegacySettingKey> = [
 ];
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const diagnostics = vscode.window.createOutputChannel("Yar's DeepSeek Copilot");
-  // Usage summaries are the only info-level diagnostic events. They are
-  // redacted aggregates and must be retained for release comparisons.
+  const diagnostics = vscode.window.createOutputChannel("YCraSy DeepSeek Agent");
   context.subscriptions.push(initializeLogger(diagnostics, "info"));
   await initializeUserSettings();
   if (SettingsManager.getPersistenceError()) {
     await vscode.window.showWarningMessage(
-      "DeepSeek Copilot settings storage is unavailable. Chat remains available with temporary settings and incognito history; check access to the extension data directory and reload VS Code.",
+      "YCraSy DeepSeek Agent settings storage is unavailable. Chat remains available with temporary settings and incognito history; check access to the extension data directory and reload VS Code.",
     );
   }
   await SecretsManager.migrateLegacyApiKey(context, SettingsManager.load().baseUrl);

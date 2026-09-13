@@ -4,11 +4,11 @@ import type { ReferencedFile, WorkspaceBinding } from "@/contracts";
 import type { ConversationState } from "@/application/chat/ConversationState";
 import type { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
 import type { SettingsRepository } from "@/application/ports";
-import type { HistoryManager } from "@/platform/vscode/storage";
-import type { ConversationWorkspaceReferences } from "@/platform/vscode/webviews/handlers/chat/ConversationWorkspaceReferences";
-import { MessageAdmissionService } from "@/platform/vscode/webviews/handlers/chat/MessageAdmissionService";
-import type { SlashCommandService } from "@/platform/vscode/webviews/handlers/chat/SlashCommandService";
-import type { SendMessagePayload } from "@/platform/vscode/webviews/handlers/chat/Types";
+import type { HistoryManager } from "@/vscode/storage";
+import type { ConversationWorkspaceReferences } from "@/vscode/webviews/handlers/chat/session/ConversationWorkspaceReferences";
+import { MessageAdmissionService } from "@/vscode/webviews/handlers/chat/messaging/MessageAdmissionService";
+import type { SlashCommandService } from "@/vscode/webviews/handlers/chat/messaging/SlashCommandService";
+import type { SendMessagePayload } from "@/vscode/webviews/handlers/chat/Types";
 
 suite("message admission service", () => {
   test("validates file references before admitting a normalized request", async () => {
@@ -140,7 +140,7 @@ function payload(overrides: Partial<SendMessagePayload> = {}): SendMessagePayloa
 function emptyWorkspaceBinding(): WorkspaceBinding {
   return {
     schemaVersion: 1,
-    uri: "yrs-workspace:empty",
+    uri: "ycrasy-workspace:empty",
     name: "No workspace",
     revision: "empty-revision",
     folders: [],

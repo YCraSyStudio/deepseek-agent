@@ -7,9 +7,9 @@
 `package.json` declares:
 
 - `main`: `./dist/extension.js`.
-- activity bar container: `yrs-dpsk-copilot-sidebar`.
-- webview view: `yrs-dpsk-copilot.chatView`.
-- commands: `yrs-dpsk-copilot.openChat`, `yrs-dpsk-copilot.addSelectionToChat`.
+- activity bar container: `deepseek-agent-sidebar`.
+- webview view: `deepseek-agent.chatView`.
+- commands: `deepseek-agent.openChat`, `deepseek-agent.addSelectionToChat`.
 
 VS Code automatically generates activation events from those contributions. Do not keep a manual `activationEvents` list unless there is a specific reason.
 

@@ -1,6 +1,8 @@
 import * as path from "path";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type {
+  DeleteWorkspacePathOptions,
+  MoveWorkspacePathOptions,
   RealPathResolver,
   ResolvedWorkspacePath,
   ResolveWorkspacePathOptions,
@@ -8,6 +10,8 @@ import type {
   ToolWorkspaceHost,
 } from "@/application/ports";
 export type {
+  DeleteWorkspacePathOptions,
+  MoveWorkspacePathOptions,
   RealPathResolver,
   ResolvedWorkspacePath,
   ResolveWorkspacePathOptions,
@@ -129,7 +133,6 @@ function createValidatingWorkspaceHost(host: ToolWorkspaceHost): ToolWorkspaceHo
               try {
                 accepted.add(await host.resolvePath(rawPath, false));
               } catch {
-                // Omit search results that fail containment or sensitive-path validation.
               }
             } else {
               const rootPath = host.getRootPath();
@@ -150,6 +153,15 @@ function createValidatingWorkspaceHost(host: ToolWorkspaceHost): ToolWorkspaceHo
       ? async (rawPath: string, maxBytes: number) => host.readFilePreview!(await validate(rawPath), maxBytes)
       : undefined,
     writeFile: async (rawPath: string, content: Uint8Array) => host.writeFile(await validate(rawPath, true), content),
+    movePath: host.movePath
+      ? async (source: string, options: MoveWorkspacePathOptions) => host.movePath!(
+          await validate(source, true),
+          { ...options, destination: await validate(options.destination, true) },
+        )
+      : undefined,
+    deletePath: host.deletePath
+      ? async (rawPath: string, options: DeleteWorkspacePathOptions) => host.deletePath!(await validate(rawPath, true), options)
+      : undefined,
     stat: async (rawPath: string) => host.stat(await validate(rawPath)),
     createParentDirectory: async (rawPath: string) => host.createParentDirectory(await validate(rawPath, true)),
     readDirectory: async (rawPath: string) => host.readDirectory(await validate(rawPath)),

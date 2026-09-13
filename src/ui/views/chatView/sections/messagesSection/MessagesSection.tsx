@@ -31,6 +31,8 @@ function MessagesSection({
   onModelChanged,
   onProcessingChange,
   onConversationUsageUpdated,
+  onContextWindowUpdated,
+  onContextCompactionResult,
   onFocusInput,
   earlierMessagesLoaded = 0,
   historyCursor,
@@ -57,6 +59,8 @@ function MessagesSection({
     onModelChanged,
     onProcessingChange,
     onConversationUsageUpdated,
+    onContextWindowUpdated,
+    onContextCompactionResult,
     focusInput,
   });
 
@@ -74,12 +78,10 @@ function MessagesSection({
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [isCompacting, setIsCompacting] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
-  // Only the transcript tail is mounted; earlier messages stay in memory until revealed.
   const [visibleMessageCount, setVisibleMessageCount] = useState(
     () => initialChatWindowSize(messages.length, earlierMessagesLoaded),
   );
   const hiddenMessageCount = hiddenChatMessageCount(messages.length, visibleMessageCount);
-  // Follows the streaming transcript; it only grows here, since revealing a page stays a user decision.
   useEffect(() => {
     setVisibleMessageCount((count) => followChatWindowGrowth(count, messages.length, earlierMessagesLoaded));
   }, [messages.length, earlierMessagesLoaded]);
@@ -136,12 +138,10 @@ function MessagesSection({
   }, [messages, isProcessing, tools.activeTimelineGroups, listRef]);
 
   const showEarlierMessages = useCallback(() => {
-    // Anchor the height so the sentence being read stays in place.
     scrollAnchorRef.current = listRef.current?.scrollHeight ?? null;
     setVisibleMessageCount((count) => growChatWindow(count, messages.length));
   }, [listRef, messages.length]);
 
-  // Reuses the earlier-messages control once no in-memory page remains.
   const loadEarlierHistoryPage = useCallback(() => {
     if (!conversationId || !historyCursor) {
       return;

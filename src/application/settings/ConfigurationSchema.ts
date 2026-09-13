@@ -1,6 +1,7 @@
 import {
   DEFAULT_CONFIG,
   MAX_OUTPUT_TOKENS,
+  normalizeReasoningEffort,
   type AppConfig,
   type InterfaceLanguage,
   type PermissionMode,
@@ -13,12 +14,17 @@ import { isRecord } from "@/shared/utils/TypeGuards";
 export type StoredSettingKey = Exclude<keyof AppConfig, "apiKey" | "userId">;
 export type StoredSettings = Pick<AppConfig, StoredSettingKey>;
 
-const STORED_SETTING_KEYS = new Set<StoredSettingKey>([
+const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
   "permissionMode", "autoContext", "historyEnabled",
   "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled", "webSearchEngine", "searxngUrl", "searxngEngines", "searxngEngineCatalog",
-]);
+];
+
+const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
+
+/** Every setting the extension persists, in storage order. Additions belong here and in the UI only. */
+export const SETTING_KEYS_LIST = SETTING_KEYS;
 
 export function normalizeConfig(value: unknown): AppConfig {
   const config = isRecord(value) ? value : {};
@@ -93,10 +99,6 @@ function normalizePermissionMode(value: unknown): PermissionMode {
   return value === "default" || value === "full-access" || value === "auto-approve"
     ? value
     : DEFAULT_CONFIG.permissionMode;
-}
-
-function normalizeReasoningEffort(value: unknown): AppConfig["reasoningEffort"] {
-  return value === "high" || value === "max" ? value : DEFAULT_CONFIG.reasoningEffort;
 }
 
 function normalizeSearxngUrl(value: unknown): string {

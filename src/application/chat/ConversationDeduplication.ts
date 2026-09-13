@@ -1,6 +1,5 @@
 import type { Conversation } from "@/contracts";
 
-/** Finds stale history fragments that are fully contained in a newer conversation. */
 export function findDuplicateConversationIds(conversations: Conversation[]): Set<string> {
   const preferred = [...conversations].sort((left, right) =>
     right.messages.length - left.messages.length || right.updatedAt - left.updatedAt,

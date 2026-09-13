@@ -5,6 +5,8 @@ export type {
 } from "./Persistence";
 export type { GenerationEventSink, IdGenerator } from "./Runtime";
 export type {
+  DeleteWorkspacePathOptions,
+  MoveWorkspacePathOptions,
   RealPathResolver,
   ResolvedWorkspacePath,
   ResolveWorkspacePathOptions,

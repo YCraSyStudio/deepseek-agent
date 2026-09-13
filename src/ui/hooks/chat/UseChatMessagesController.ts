@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from "react";
-import type { AppConfig, HandlerToWebviewMessage } from "@/contracts";
+import type { AppConfig, ContextWindowStatus, HandlerToWebviewMessage } from "@/contracts";
 import type { ConversationUsageSnapshot } from "@/shared/usage/Usage";
 import type { ChatMessage, InitialConfig, StoredToolCall } from "../../views/chatView/ChatViewTypes";
-import { useStreamHandler, type MessageDispatcher } from "../../views/chatView/hooks";
+import { reasoningFromConfig, useStreamHandler, type MessageDispatcher } from "../../views/chatView/hooks";
 
 interface ChatMessagesControllerOptions {
   externalMessages?: ChatMessage[];
@@ -16,6 +16,8 @@ interface ChatMessagesControllerOptions {
   onModelChanged?: (modelId: string) => void;
   onProcessingChange?: (isProcessing: boolean) => void;
   onConversationUsageUpdated?: (usage: ConversationUsageSnapshot) => void;
+  onContextWindowUpdated?: (contextWindow: ContextWindowStatus) => void;
+  onContextCompactionResult?: (result: { requestId: string; status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }) => void;
   focusInput: () => void;
 }
 
@@ -31,6 +33,8 @@ export function useChatMessagesController({
   onModelChanged,
   onProcessingChange,
   onConversationUsageUpdated,
+  onContextWindowUpdated,
+  onContextCompactionResult,
   focusInput,
 }: ChatMessagesControllerOptions) {
   const [internalMessages, setInternalMessages] = useState<ChatMessage[]>([]);
@@ -181,7 +185,7 @@ export function useChatMessagesController({
       (config: Partial<AppConfig>, revision: number) => {
         onConfigLoaded?.({
           revision,
-          reasoning: config.thinkingMode === false ? "off" : config.reasoningEffort === "max" ? "max" : "high",
+          reasoning: reasoningFromConfig(config),
           model: config.model ?? undefined,
           permissionMode: config.permissionMode,
           historyEnabled: config.historyEnabled,
@@ -208,13 +212,27 @@ export function useChatMessagesController({
 
     onConversationUsageUpdated: useCallback(
       (data) => {
-        // Another conversation can still be generating while this one is shown.
         if (conversationId !== undefined && data.conversationId !== conversationId) {
           return;
         }
         onConversationUsageUpdated?.(data.usage);
       },
       [conversationId, onConversationUsageUpdated],
+    ),
+
+    onContextWindowUpdated: useCallback(
+      (data) => {
+        if (conversationId !== undefined && data.conversationId !== conversationId) {
+          return;
+        }
+        onContextWindowUpdated?.(data.contextWindow);
+      },
+      [conversationId, onContextWindowUpdated],
+    ),
+
+    onContextCompactionResult: useCallback(
+      (result) => onContextCompactionResult?.(result),
+      [onContextCompactionResult],
     ),
   };
 

@@ -2,13 +2,14 @@ import * as assert from "node:assert";
 import { selectGenerationTools } from "@/application/chat/GenerationToolSelection";
 import { ToolRegistry } from "@/application/tools/ToolRegistry";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
+import { DEEPSEEK_FLASH_MODEL_ID, DEEPSEEK_PRO_MODEL_ID } from "@/contracts";
 
 suite("generation tool selection", () => {
   test("keeps global tools when workspace files are unavailable", () => {
     const registry = createRegistry();
     assert.deepStrictEqual(
       names(selectGenerationTools(registry, availability({ files: false }))),
-      ["search_web", "read_web"],
+      ["search_web", "read_web", "analyze_images"],
     );
   });
 
@@ -16,7 +17,7 @@ suite("generation tool selection", () => {
     const registry = createRegistry();
     assert.deepStrictEqual(
       names(selectGenerationTools(registry, availability({ terminal: false }))),
-      ["read_file", "create_file", "search_web", "read_web"],
+      ["read_file", "create_file", "search_web", "read_web", "analyze_images"],
     );
   });
 
@@ -24,8 +25,18 @@ suite("generation tool selection", () => {
     const registry = createRegistry();
     assert.deepStrictEqual(
       names(selectGenerationTools(registry, availability({ webSearchEnabled: false }))),
-      ["read_file", "create_file", "run_terminal_command"],
+      ["read_file", "create_file", "run_terminal_command", "analyze_images"],
     );
+  });
+
+  test("exposes image analysis only to Pro generations with image attachments", () => {
+    const registry = createRegistry();
+    const withoutImages = selectGenerationTools(registry, availability({ hasImageAttachments: false }));
+    const visionModel = selectGenerationTools(registry, availability({ modelId: DEEPSEEK_FLASH_MODEL_ID }));
+
+    assert.ok(!names(withoutImages).includes("analyze_images"));
+    assert.ok(!names(visionModel).includes("analyze_images"));
+    assert.ok(names(selectGenerationTools(registry, availability())).includes("analyze_images"));
   });
 });
 
@@ -36,6 +47,7 @@ function createRegistry(): ToolRegistry {
   register(registry, "run_terminal_command", { dangerLevel: "dangerous", requiresConfirmation: true, effect: "workspace-mutation" });
   register(registry, "search_web", { dangerLevel: "safe", requiresConfirmation: false, scope: "global", effect: "external-effect" });
   register(registry, "read_web", { dangerLevel: "safe", requiresConfirmation: false, scope: "global", effect: "external-effect" });
+  register(registry, "analyze_images", { dangerLevel: "safe", requiresConfirmation: false, scope: "global", effect: "external-effect" });
   return registry;
 }
 
@@ -61,6 +73,8 @@ function availability(overrides: Partial<Parameters<typeof selectGenerationTools
     files: true,
     terminal: true,
     webSearchEnabled: true,
+    modelId: DEEPSEEK_PRO_MODEL_ID,
+    hasImageAttachments: true,
     ...overrides,
   };
 }

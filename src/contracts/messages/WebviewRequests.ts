@@ -34,6 +34,7 @@ export type WebviewToHandlerMessage =
     }
   | { type: "cancelGeneration"; requestId: string; generationId: string; conversationId: string }
   | { type: "getGenerationSnapshot" }
+  | { type: "compactContext"; requestId: string; conversationId?: string }
   | { type: "consumeRecoveredDraft"; conversationId: string; clientRequestId: string }
   | { type: "copyCode"; code: string }
   | { type: "insertCode"; code: string; conversationId?: string; workspaceRevision?: string }

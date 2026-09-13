@@ -48,8 +48,25 @@ export function createUsageAggregate(officialEndpoint: boolean, model?: string):
   };
 }
 
-/** Records one provider request exactly once. Undefined means usage was unavailable or malformed. */
-export function recordUsage(aggregate: UsageAggregate, phase: UsagePhase, usage?: ProviderUsage): void {
+export function recordUsage(aggregate: UsageAggregate, phase: UsagePhase, usage?: ProviderUsage, model = aggregate.model): void {
+  if (aggregate.byModel || (aggregate.count > 0 && model !== aggregate.model)) {
+    if (!aggregate.byModel) {aggregate.byModel = [structuredClone(aggregate)];}
+    let target = aggregate.byModel.find((entry) => entry.model === model);
+    if (!target) {
+      target = createUsageAggregate(aggregate.officialEndpoint, model);
+      aggregate.byModel.push(target);
+    }
+    recordUsage(target, phase, usage, model);
+    const merged = aggregateUsageAggregates(aggregate.byModel)!;
+    for (const key of Object.keys(aggregate)) {delete (aggregate as unknown as Record<string, unknown>)[key];}
+    Object.assign(aggregate, merged);
+    return;
+  }
+  if (aggregate.count === 0 && model !== aggregate.model) {
+    aggregate.model = model;
+    delete aggregate.priceCatalogVersion;
+    if (aggregate.officialEndpoint && supportsUsagePricing(model)) {aggregate.priceCatalogVersion = PRICE_CATALOG_VERSION;}
+  }
   aggregate.count = safeAdd(aggregate.count, 1, aggregate);
   aggregate.requests = safeAdd(aggregate.requests, 1, aggregate);
   const phaseUsage = aggregate.byPhase[phase] ?? createEmptyPhaseUsage();
@@ -63,14 +80,13 @@ export function recordUsage(aggregate: UsageAggregate, phase: UsagePhase, usage?
   refreshUsageCost(aggregate);
 }
 
-/** Combines persisted generation summaries into a conversation-level aggregate. */
 export function aggregateUsageAggregates(values: readonly UsageAggregate[]): UsageAggregate | undefined {
-  const observed = values.filter((value) => value.count > 0);
+  const observed = values.flatMap((value) => value.byModel ?? [value]).filter((value) => value.count > 0);
   if (observed.length === 0) {
     return undefined;
   }
 
-  const models = new Set(observed.map((value) => value.model).filter((value): value is string => value !== undefined));
+  const models = new Set(observed.map((value) => value.model));
   const officialEndpoint = observed.every((value) => value.officialEndpoint);
   const aggregate = createUsageAggregate(officialEndpoint, models.size === 1 ? [...models][0] : undefined);
   for (const value of observed) {
@@ -104,13 +120,13 @@ export function aggregateUsageAggregates(values: readonly UsageAggregate[]): Usa
     delete aggregate.currency;
     delete aggregate.costUsd;
   }
+  if (models.size > 1) {aggregate.byModel = aggregateUsageByModel(observed);}
   return aggregate;
 }
 
-/** Groups generation-level usage without losing model changes within a conversation. */
 export function aggregateUsageByModel(values: readonly UsageAggregate[]): UsageAggregate[] {
   const groups = new Map<string | undefined, UsageAggregate[]>();
-  for (const value of values) {
+  for (const value of values.flatMap((value) => value.byModel ?? [value])) {
     if (value.count === 0) {continue;}
     const group = groups.get(value.model) ?? [];
     group.push(value);
@@ -123,25 +139,16 @@ export function aggregateUsageByModel(values: readonly UsageAggregate[]): UsageA
   });
 }
 
-/** The parts of a stored message a conversation usage total needs. */
 export interface UsageBearingMessage {
   usage?: UsageAggregate;
   generationId?: string;
 }
 
-/** Conversation-wide usage the host reports to the composer popover. */
 export interface ConversationUsageSnapshot {
   total?: UsageAggregate;
   byModel: UsageAggregate[];
 }
 
-/**
- * Totals the usage recorded by every message of a conversation. The composer
- * popover cannot add up the messages it renders, because history paging only
- * loads the transcript tail, so the sum has to come from the whole conversation.
- * `pending` covers the run whose assistant message is not persisted yet, which
- * keeps the total from lagging a turn behind.
- */
 export function summarizeConversationUsage(
   messages: readonly UsageBearingMessage[],
   pending?: UsageBearingMessage,
@@ -157,7 +164,6 @@ export function summarizeConversationUsage(
   return { total: aggregateUsageAggregates(values), byModel: aggregateUsageByModel(values) };
 }
 
-/** Redacted one-line summary suitable for diagnostics and release comparisons. */
 export function formatUsageSummary(aggregate: UsageAggregate): string {
   const phases = USAGE_PHASES
     .filter((phase) => aggregate.byPhase[phase])

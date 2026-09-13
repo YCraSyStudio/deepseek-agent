@@ -42,18 +42,18 @@ Do not use SemVer suffixes such as `-beta.1` or `-preview.1` for Marketplace pac
 
 ## Target release
 
-For the current branch, `0.1.14` is the current preview target. Keep `package.json` and the root lockfile aligned to that release until it is cut.
+For the current branch, `0.1.15` is the current preview target. Keep `package.json` and the root lockfile aligned to that release until it is cut.
 
-After `0.1.14`:
+After `0.1.15`:
 
 - each subsequent `0.1.x` release keeps `preview: true` and the normal Marketplace channel;
-- remaining bugs are tracked across `0.1.15`, `0.1.16`, ... until `0.1.x` stabilizes;
+- remaining bugs are tracked across `0.1.16`, `0.1.17`, ... until `0.1.x` stabilizes;
 - the line is promoted to `0.2.x` with `preview: false` only once daily-use testing reports no remaining errors.
 
 ## Marketplace metadata
 
 - Publisher: `yarcrasy`
-- Repository: `https://github.com/YarCrasy/deepseek-copilot`
+- Repository: `https://github.com/YCraSyStudio/deepseek-agent`
 - License: MIT
 - Categories: `AI`, `Chat`
 - Main entry: `dist/extension.js`
@@ -64,17 +64,17 @@ After `0.1.14`:
 Run from the repository root:
 
 ```bash
-npm run compile
-npm run lint
-npm run build
-npm test
+pnpm run compile
+pnpm run lint
+pnpm run build
+pnpm test
 ```
 
 Run the human documentation build:
 
 ```bash
 cd web-doc
-npm run build
+pnpm run build
 ```
 
 The Astro build output is the repository root `docs/` folder. Configure GitHub Pages to serve from the main branch `/docs` folder.
@@ -82,7 +82,7 @@ The Astro build output is the repository root `docs/` folder. Configure GitHub P
 Package the VSIX:
 
 ```bash
-npx @vscode/vsce package --no-dependencies
+pnpm dlx @vscode/vsce package --no-dependencies
 ```
 
 Do not use the deprecated `vsce` package. Older versions still require explicit `activationEvents`; modern VS Code generates activation events from contribution declarations.
@@ -119,7 +119,7 @@ Before creating the extension tag, publish the immutable SearXNG sidecar release
 gh workflow run searxng-runtime.yml --ref main
 gh run list --workflow searxng-runtime.yml --limit 1
 gh run watch <run-id> --exit-status
-npm run verify:searxng-runtime
+pnpm run verify:searxng-runtime
 ```
 
 The runtime workflow reads the `v2` metadata pinned in the extension, builds and smoke-tests all five supported binaries, verifies their sizes and SHA-256 digests against the VSIX trust anchor, and creates the prerelease atomically. It refuses to modify an existing runtime release.
@@ -158,7 +158,7 @@ Publish only after installing the packaged VSIX in a clean profile and testing a
 ## Manual release validation
 
 - Open Extension Development Host.
-- Open DeepSeek Copilot from the Activity Bar.
+- Open YCraSy DeepSeek Agent from the Activity Bar.
 - Save and test a DeepSeek API key.
 - Send a normal chat message.
 - Send a prompt that needs a file and select a path through `./` autocomplete.
@@ -172,7 +172,8 @@ Publish only after installing the packaged VSIX in a clean profile and testing a
 - Verify DeepSeek V4.1 Flash reads attached file IDs directly.
 - Close and reopen VS Code during active and queued work; verify partial output is saved and queued prompts appear as recoverable drafts.
 - Open a file from a tool result.
-- Verify Settings tooltips and select controls render correctly.
+- Verify Settings tooltips and select controls render correctly, and that composer tooltips (attach, model picker, permission mode, send/Stop) stay fully inside the sidebar instead of being clipped at its edges.
+- Verify the model/reasoning trigger and the permission select share height, radius and highlight.
 - Enable Incognito mode, verify the chat survives in memory without history/checkpoints, then test both explicit save and discard transitions.
 - Enable the usage breakdown and verify request/report coverage, reasoning, cache hit/miss, conversation totals, and official V4 cost estimates after a normal and a tool-assisted generation.
 - Verify custom API origins do not receive DeepSeek-specific `stream_options` automatically and never show an estimated cost.
@@ -189,7 +190,7 @@ Publish only after installing the packaged VSIX in a clean profile and testing a
 - DeepSeek is the only AI provider.
 - At most one generation runs per conversation; the global concurrent-generation limit is configurable from 1 to 16.
 - Tool execution is workspace-sensitive and should be reviewed before auto approval.
-- The webview tooltip system mimics VS Code theme variables but cannot invoke native VS Code hover widgets directly.
+- Webview tooltips come from the shared portalled `TooltipLayer` and mimic VS Code theme variables; native VS Code hover widgets are not reachable from the webview.
 - Explorer clipboard URI access is not used; workspace references use path autocomplete or the unified picker. Clipboard image data is supported separately through bounded webview IPC.
 
 [Back](INDEX.md)

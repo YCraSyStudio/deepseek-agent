@@ -6,6 +6,24 @@ import {
 } from "@/infrastructure/deepseek/security/commandReview/CommandSafetyReviewer";
 
 suite("DeepSeek command safety reviewer", () => {
+  test("counts an unavailable review against its requested model and requires confirmation", async () => {
+    for (const baseUrl of ["https://api.deepseek.com", "https://example.com"]) {
+      const observed: unknown[] = [];
+      const review = await reviewCommandSafety({
+        toolCall: call("create_file", { path: "src/new.ts", content: "test" }),
+        actionContext: { requiresConfirmation: true, dangerLevel: "caution", warningMessage: "review" },
+        providerConfig: { model: "unavailable-model", apiKey: "test", baseUrl } as AppConfig,
+        complete: async (_signal, request) => {
+          assert.strictEqual(request.model, "unavailable-model");
+          assert.deepStrictEqual(request.thinking, { type: "disabled" });
+          throw new Error("model unavailable");
+        },
+        onUsage: (usage, model) => {observed.push({ usage, model });},
+      });
+      assert.strictEqual(review.decision, "manual_confirmation");
+      assert.deepStrictEqual(observed, [{ usage: undefined, model: "unavailable-model" }]);
+    }
+  });
   test("accepts the strict decision and risk schema", () => {
     assert.deepStrictEqual(parseCommandSafetyReview(JSON.stringify({
       decision: "approve",

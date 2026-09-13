@@ -14,7 +14,6 @@ const DOCUMENT_HASH = /^[a-f0-9]{64}$/;
 
 export interface ToolCallFileChange {
   path: string;
-  /** Bounded unified diff, present when the tool result could carry it. */
   diff?: string;
   beforeHash?: string;
   afterHash?: string;
@@ -49,10 +48,6 @@ export function hidesSuccessfulFileResult(toolCall: Pick<ToolCallState, "toolNam
   return toolCall.status === "completed" && isEditorFileTool(toolCall.toolName);
 }
 
-/**
- * Describes the change applied by a completed file tool. Large edits expose document hashes
- * instead of an inline diff, so the extension host can still open the exact recorded change.
- */
 export function getToolCallFileChange(
   toolCall: Pick<ToolCallState, "toolName" | "status" | "result">,
 ): ToolCallFileChange | undefined {

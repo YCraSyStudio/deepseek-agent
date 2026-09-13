@@ -3,26 +3,20 @@ import { ToolRegistry } from "./ToolRegistry";
 import type { DangerLevel, ExecutionResult, ConfirmationRequiredResult, ToolHandlerContext } from "./Types";
 import type { ToolExecutionOutcome } from "@/domain/tools/ToolExecutionOutcome";
 import { isCancellationError, throwIfAborted } from "@/shared/utils/Cancellation";
+import { getErrorMessage } from "@/shared/utils/Errors";
 
 const workspaceMutationQueues = new Map<string, Promise<void>>();
 
-/**
- * Executes tool calls and propagates handler-level confirmation requests.
- */
 export class ToolExecutor {
   constructor(
     private registry: ToolRegistry,
     private readonly mutationScopeKey: () => string = () => "workspace:default",
   ) {}
 
-  /** Read-only access to execution metadata used by execution policy. */
   getMetadata(toolName: string): import("./Types").ToolMetadata | undefined {
     return this.registry.get(toolName)?.metadata;
   }
 
-  /**
-   * Validate and execute a tool call.
-   */
   async execute(toolCall: ToolCall, context: ToolHandlerContext = {}): Promise<ExecutionResult> {
     throwIfAborted(context.signal);
     if (this.shouldSerializeWorkspaceMutation(toolCall.function.name)) {
@@ -89,9 +83,6 @@ export class ToolExecutor {
     }
   }
 
-  /**
-   * Execute a tool call after explicit user confirmation.
-   */
   async executeForced(toolCall: ToolCall, context: ToolHandlerContext = {}): Promise<ExecutionResult> {
     throwIfAborted(context.signal);
     if (this.shouldSerializeWorkspaceMutation(toolCall.function.name)) {
@@ -137,9 +128,6 @@ export class ToolExecutor {
     }
   }
 
-  /**
-   * Check whether an execution result requests confirmation.
-   */
   static isConfirmationRequired(result: string): ConfirmationRequiredResult | null {
     try {
       const parsed: unknown = JSON.parse(result);
@@ -219,6 +207,3 @@ function isToolErrorResult(result: string, parsedResult: unknown = parseJson(res
   return isStructuredCommandError(parsedResult) || /^\s*Error(?:\s|:)/i.test(result);
 }
 
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}

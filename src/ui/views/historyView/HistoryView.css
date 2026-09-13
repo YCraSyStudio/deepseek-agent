@@ -19,6 +19,9 @@
     gap: 5px;
     padding: 10px;
     display: flex;
+    &[hidden] {
+      display: none;
+    }
     .searchBar {
       border-radius: 5px;
       flex: 1 1 auto;
@@ -37,10 +40,46 @@
         right: 8px;
       }
     }
-    .sortBy {
-      flex: 0 0 auto;
+  }
+  .historyFilters {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px 10px;
+    display: flex;
+    &[hidden] {
+      display: none;
+    }
+    select {
+      flex: 1 1 0;
       width: auto;
-      max-width: 45%;
+      min-width: 0;
+    }
+    .groupToggle {
+      color: var(--text-secondary);
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      flex: 0 1 auto;
+      gap: 5px;
+      min-width: 0;
+      padding: 7px 9px;
+      transition: border-color .16s, box-shadow .16s;
+      &:focus {
+        border-color: var(--input-focus-border);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus-border) 22%, transparent);
+      }
+      &.active {
+        color: var(--vscode-focusBorder);
+        border-color: var(--vscode-focusBorder);
+        background: color-mix(in srgb, var(--vscode-focusBorder) 16%, var(--input-bg));
+      }
+      .groupToggleLabel {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+        overflow: hidden;
+      }
     }
   }
   .historyList {
@@ -53,6 +92,29 @@
     padding: 8px 0;
     display: flex;
     overflow: hidden auto;
+  }
+  .historyGroup {
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px 4px;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    .historyGroupLabel {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .historyGroupCount {
+      font-weight: 400;
+      flex: none;
+    }
   }
   .historyState {
     box-sizing: border-box;
@@ -93,21 +155,22 @@
 @media (max-width: 300px) {
   .historyView {
     .historyToolbar {
-      flex-wrap: wrap;
       padding: 6px;
 
       .searchBar {
-        flex-basis: 100%;
+        min-width: 100px;
+      }
+    }
+
+    .historyFilters {
+      padding: 0 6px 6px;
+
+      .workspaceFilter {
+        flex: 1 1 100%;
       }
 
-      .sortBy {
-        flex: 1 1 0;
-        max-width: none;
-        min-width: 0;
-      }
-
-      .clearBtn {
-        flex: 0 0 auto;
+      .groupToggleLabel {
+        display: none;
       }
     }
 

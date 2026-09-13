@@ -5,7 +5,9 @@ import {
   assessRequestBudget,
   estimateRequestTokens,
   getEffectiveMaxTokens,
+  getRequestLimits,
   type RequestBudgetAssessment,
+  type RequestLimits,
 } from "./ContextBudget";
 
 const MAX_AUTOMATIC_COMPACTIONS = 3;
@@ -20,13 +22,13 @@ export interface OutputBudgetAssessment {
   maxTokens: number;
 }
 
-/** Mutable, generation-scoped budget state. It must never be shared by runs. */
 export class GenerationBudgetManager {
   private estimateScale = 1;
   private automaticCompactions = 0;
   private conciseRecoveries = 0;
   private reasoningBytes = 0;
   private contentBytes = 0;
+  private requestContextTokens?: number;
 
   constructor(
     readonly model: string,
@@ -64,10 +66,27 @@ export class GenerationBudgetManager {
     const estimated = estimateRequestTokens(messages, tools);
     if (estimated <= 0) {return;}
     const observedScale = usage.prompt_tokens / estimated;
-    // Never make the estimator less conservative during the session.
     this.estimateScale = Math.min(4, Math.max(this.estimateScale, observedScale));
   }
 
+  recordRequestContext(messages: ChatMessage[], tools: ToolDefinition[], usage?: ProviderUsage): void {
+    if (usage && usage.prompt_tokens > 0) {
+      this.requestContextTokens = usage.prompt_tokens + (usage.completion_tokens ?? 0);
+      return;
+    }
+    const estimated = Math.ceil(estimateRequestTokens(messages, tools) * this.estimateScale);
+    if (estimated > 0) {
+      this.requestContextTokens = estimated;
+    }
+  }
+
+  get requestContext(): number | undefined {
+    return this.requestContextTokens;
+  }
+
+  get requestLimits(): RequestLimits {
+    return getRequestLimits(this.model, this.requestedMaxTokens);
+  }
   canCompactAutomatically(): boolean {
     return this.automaticCompactions < MAX_AUTOMATIC_COMPACTIONS;
   }

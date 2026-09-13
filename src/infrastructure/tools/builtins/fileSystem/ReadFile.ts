@@ -1,6 +1,7 @@
 import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost, type ToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import { getErrorMessage } from "@/shared/utils/Errors";
 import { bufferLooksBinary, createStructuredResult, toTextPreview } from "./StructuredResult";
 import { splitSourceLines } from "./DocumentSymbols";
 import { createHash } from "crypto";
@@ -61,10 +62,6 @@ async function handleReadFile(args: Record<string, unknown>): Promise<string> {
   }
 }
 
-/**
- * The fallback for content the editor cannot name as a symbol: the whole file is read, but only the
- * requested lines reach the model.
- */
 async function readLineRange(workspace: ToolWorkspaceHost, filePath: string, range: LineRange): Promise<string> {
   const content = await workspace.readFile(filePath);
   if (bufferLooksBinary(content)) {
@@ -140,10 +137,6 @@ function parseLineRange(args: Record<string, unknown>): LineRange | string | und
 
 function toLineCount(value: unknown): number | undefined {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
-}
-
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export const readFileDefinition: ToolDefinition = {

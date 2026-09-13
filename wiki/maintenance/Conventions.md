@@ -14,6 +14,9 @@
 
 ## Code
 
+- Source files carry no comments. State intent through names, types, and
+  structure. Keep only the directives tooling requires: `eslint-disable*`,
+  `@ts-expect-error`, `@vite-ignore`, coverage pragmas, and license banners.
 - Keep aliases consistent with `tsconfig.json`.
 - Use `src/contracts` for shared serializable messages.
 - Avoid duplicated strings for public ids.

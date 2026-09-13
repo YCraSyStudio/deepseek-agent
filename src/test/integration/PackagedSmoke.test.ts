@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 
 suite("Packaged VSIX smoke", () => {
   test("activates the installed artifact and resolves its chat command", async () => {
-    const extension = vscode.extensions.getExtension("yarcrasy.yrs-dpsk-copilot");
+    const extension = vscode.extensions.getExtension("yarcrasy.deepseek-agent");
     assert.ok(extension);
     const expectedRoot = process.env.EXPECTED_PACKAGED_EXTENSION_ROOT;
     assert.ok(expectedRoot);
@@ -12,8 +12,8 @@ suite("Packaged VSIX smoke", () => {
     await extension.activate();
     assert.strictEqual(extension.isActive, true);
     const commands = await vscode.commands.getCommands(true);
-    assert.ok(commands.includes("yrs-dpsk-copilot.openChat"));
-    assert.ok(commands.includes("yrs-dpsk-copilot.showDiagnostics"));
-    await vscode.commands.executeCommand("yrs-dpsk-copilot.openChat");
+    assert.ok(commands.includes("deepseek-agent.openChat"));
+    assert.ok(commands.includes("deepseek-agent.showDiagnostics"));
+    await vscode.commands.executeCommand("deepseek-agent.openChat");
   });
 });

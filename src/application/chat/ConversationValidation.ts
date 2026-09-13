@@ -1,7 +1,11 @@
 import type { AssistantTimelineEvent, ConversationMessage, DangerConfirmationData, StoredToolCall, WorkspaceBinding } from "@/contracts";
+import { isImageAttachmentShape } from "@/contracts/attachments";
 import { isConversationContextSummary, isProviderTranscript, type StoredConversation } from "./ProviderTranscript";
 import { isUsageAggregate } from "@/shared/usage/Usage";
 import { isRecord } from "@/shared/utils/TypeGuards";
+import { isBoundedString } from "@/shared/utils/Validation";
+
+const MAX_IMAGE_ATTACHMENT_BYTES = 64 * 1024 * 1024;
 
 export function isConversation(value: unknown): value is StoredConversation {
   if (!isRecord(value) || !isBoundedString(value.id, 512) || !isBoundedString(value.title, 4096) || !isBoundedString(value.model, 256) || !isBoundedString(value.workspaceUri, 32_768)) {
@@ -99,17 +103,7 @@ function isConversationMessage(value: unknown): value is ConversationMessage {
 }
 
 function isImageAttachment(value: unknown): boolean {
-  if (!isRecord(value)) {return false;}
-  return isBoundedString(value.id, 512) &&
-    isBoundedString(value.fileId, 512) && /^file-api-[A-Za-z0-9_-]+$/.test(value.fileId as string) &&
-    isBoundedString(value.name, 512) &&
-    ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(String(value.mediaType)) &&
-    Number.isSafeInteger(value.size) && (value.size as number) > 0 && (value.size as number) <= 64 * 1024 * 1024 &&
-    ["picker", "clipboard", "drop"].includes(String(value.source)) &&
-    isTimestamp(value.uploadedAt) && isTimestamp(value.expiresAt) &&
-    isBoundedString(value.apiBaseUrl, 32_768) &&
-    isBoundedString(value.cacheFileName, 256) && /^[A-Za-z0-9._-]+$/.test(value.cacheFileName as string) &&
-    (value.previewUri === undefined || isBoundedString(value.previewUri, 32_768));
+  return isImageAttachmentShape(value) && Number(value.size) <= MAX_IMAGE_ATTACHMENT_BYTES;
 }
 
 function isTimelineEvent(value: unknown): value is AssistantTimelineEvent {
@@ -157,9 +151,6 @@ export function isDangerConfirmationData(value: unknown): value is DangerConfirm
   );
 }
 
-function isBoundedString(value: unknown, maxLength: number): value is string {
-  return typeof value === "string" && value.length <= maxLength;
-}
 
 function isTimestamp(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;

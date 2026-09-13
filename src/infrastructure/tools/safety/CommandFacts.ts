@@ -1,39 +1,23 @@
 import * as path from "node:path";
 
-/**
- * Deterministic facts parsed from a proposed terminal command.
- *
- * Safety decisions for terminal commands and workspace scripts are made from
- * these facts, never from a model assertion. Anything this module cannot prove
- * is reported as `unknown` so the caller keeps requiring a review.
- */
 
 type CommandClassification = "read-only-diagnostic" | "script-execution" | "unknown";
 export type ScriptLanguage = "powershell" | "shell" | "javascript" | "python";
 
 export interface ScriptInvocation {
-  /** Interpreter program that runs the script, lowercased. */
   interpreter: string;
-  /** Script operand exactly as written in the command. */
   path: string;
-  /** Arguments passed to the script. */
   args: string[];
   language: ScriptLanguage;
 }
 
 export interface CommandFacts {
   classification: CommandClassification;
-  /** Programs invoked by each shell segment, lowercased and without `.exe`. */
   programs: string[];
-  /** Raw shell segments after splitting on `&&` and `;`. */
   segments: string[];
-  /** Present only when the command runs a single workspace script. */
   script?: ScriptInvocation;
-  /** True when execution policy is relaxed for one child process only. */
   processScopedPolicyBypass: boolean;
-  /** True when the command changes machine or user execution policy. */
   changesExecutionPolicy: boolean;
-  /** True when the command escalates privileges (`sudo`, `runas`, `RunAs`). */
   escalatesPrivileges: boolean;
 }
 
@@ -48,10 +32,6 @@ const DIAGNOSTIC_FLAGS = new Set([
   "/?",
 ]);
 
-/**
- * Programs whose version/help query is finite, local, and read-only. Extending
- * this list is the only way a new command becomes an automatic diagnostic.
- */
 const DIAGNOSTIC_PROGRAMS = new Set([
   "node", "npm", "npx", "pnpm", "yarn", "bun", "deno", "corepack",
   "dotnet", "msbuild", "nuget",
@@ -67,11 +47,9 @@ const DIAGNOSTIC_PROGRAMS = new Set([
   "tar", "unzip", "zip", "7z", "git-lfs",
 ]);
 
-/** Availability queries: `where node`, `which node`, `command -v node`. */
 const AVAILABILITY_PROGRAMS = new Set(["where", "which"]);
 
 interface InterpreterSpec {
-  /** Flag that introduces the script path, when the interpreter needs one. */
   flag?: string;
   language: ScriptLanguage;
 }
@@ -88,7 +66,6 @@ const INTERPRETERS = new Map<string, InterpreterSpec>([
   ["python3", { language: "python" }],
 ]);
 
-/** Interpreter flags that turn a run into inline code instead of a script file. */
 const INLINE_CODE_FLAGS = new Set(["-c", "-e", "--eval", "-p", "--print", "-i", "--interactive", "-command", "-encodedcommand"]);
 
 const SCRIPT_LANGUAGES = new Map<string, ScriptLanguage>([
@@ -136,15 +113,10 @@ export function parseCommandFacts(command: string): CommandFacts {
   return facts;
 }
 
-/** Stable form used for decision-cache keys and for logging. */
 export function normalizeCommandForDecision(command: string): string {
   return command.replace(/\s+/g, " ").trim();
 }
 
-/**
- * Rejects commands whose effect cannot be proven from the segment text alone:
- * pipes, redirections, background execution, substitutions, and variables.
- */
 function hasUnsupportedShellSyntax(command: string): boolean {
   return (
     /[\r\n]/.test(command) ||
@@ -191,7 +163,6 @@ function isBareProgramName(value: string): boolean {
   return /^[A-Za-z][A-Za-z0-9._+-]*$/.test(value);
 }
 
-/** Detects a script run inside a single already-tokenized segment. */
 export function detectScriptInvocation(tokens: string[]): ScriptInvocation | undefined {
   if (tokens.length === 0) {
     return undefined;
@@ -280,7 +251,6 @@ function programName(token: string): string {
   return path.win32.basename(token).replace(/\.(?:exe|cmd|bat)$/i, "").toLowerCase();
 }
 
-/** Splits a command on `&&` and `;` while respecting quotes. */
 function splitShellSegments(command: string): string[] {
   const segments: string[] = [];
   let current = "";
@@ -317,7 +287,6 @@ function splitShellSegments(command: string): string[] {
   return segments;
 }
 
-/** Tokenizes one shell segment, dropping quoting characters. */
 function tokenize(segment: string): string[] {
   const tokens: string[] = [];
   let current = "";

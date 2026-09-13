@@ -7,6 +7,16 @@ export interface ResolvedWorkspacePath { absolutePath: string; relativePath: str
 export interface ResolveWorkspacePathOptions { allowSensitive?: boolean; }
 export type RealPathResolver = (absolutePath: string) => Promise<string>;
 
+export interface MoveWorkspacePathOptions {
+  destination: string;
+  overwrite?: boolean;
+}
+
+export interface DeleteWorkspacePathOptions {
+  recursive: boolean;
+  useTrash: boolean;
+}
+
 export interface ToolHostCommandOptions {
   cwd: string;
   workspaceRoot: string;
@@ -29,12 +39,9 @@ export interface ToolHostCommandResult {
 
 export interface ToolHostDocumentSymbol {
   name: string;
-  /** Editor symbol kind, lowercased, for example "function" or "class". */
   kind: string;
-  /** 0-based inclusive line range of the declaration, body included. */
   startLine: number;
   endLine: number;
-  /** 0-based line holding the declared name, which may follow decorators or documentation. */
   nameLine: number;
   children: ToolHostDocumentSymbol[];
 }
@@ -52,6 +59,8 @@ export interface ToolWorkspaceHost {
   readFile(path: string): Promise<Uint8Array>;
   readFilePreview?(path: string, maxBytes: number): Promise<ToolWorkspaceFilePreview>;
   writeFile(path: string, content: Uint8Array): Promise<void>;
+  movePath?(source: string, options: MoveWorkspacePathOptions): Promise<void>;
+  deletePath?(path: string, options: DeleteWorkspacePathOptions): Promise<void>;
   stat(path: string): Promise<ToolWorkspaceStat>;
   createParentDirectory(path: string): Promise<void>;
   readDirectory(path: string): Promise<Array<[string, ToolWorkspaceEntryType]>>;

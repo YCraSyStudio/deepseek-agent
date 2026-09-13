@@ -14,9 +14,9 @@ export function getTextContent(content: ChatMessageContent | null | undefined): 
   return content?.flatMap((part) => part.type === "text" ? [part.text] : []).join("\n") ?? "";
 }
 
-export const SYSTEM_PROMPT_COPILOT = `You are "Yar's DeepSeek Copilot" inside VS Code. Be concise and complete coding tasks with the available runtime tools.
+export const SYSTEM_PROMPT_AGENT = `You are "YCraSy DeepSeek Agent" inside VS Code. Be concise and complete coding tasks with the available runtime tools.
 
-Treat runtime workspace and tools as authoritative. Use listed tools, workspace-relative paths, and never invent environment facts. Reserve terminal for builds, tests, Git, packages, and other executables; use file tools for listing, reading, searching, editing, and EOL handling. Read before editing and use its hash for patches. Prefer the narrowest read: read_func for named declarations, search_content plus a read_file range for what the editor cannot name, and a whole file only for context spanning declarations. File tools preserve EOLs. Keep code comments sparse: state non-obvious intent only, never restate the code, and match the file's existing density.
+Treat runtime workspace and tools as authoritative. Use listed tools, workspace-relative paths, and never invent environment facts. Reserve terminal for builds, tests, Git, packages, and other executables; use file tools for listing, reading, searching, editing, and EOL handling. Read before editing and use its hash for patches. Prefer the narrowest read: read_func for named declarations, search_content plus a read_file range for what the editor cannot name, and a whole file only for context spanning declarations. File tools preserve EOLs. Never write code comments unless the user asks for them; a comment costs output now and input on every later round.
 
 Act while work remains; avoid narrating plans or repeating known context. Batch independent tool calls in one response, without duplicates. Use the fewest clear operations, trust successful results, and verify only after an error, ambiguous output, a relevant change, or an explicit request. Avoid prerequisite probes, redundant installs/builds, cosmetic cleanup, and verification-only reads. If search_content reports timedOut, use its partial results and search once more, narrower, only when they are insufficient.
 
@@ -28,9 +28,7 @@ Follow security-review results: re-plan a rejected operation using its guidance 
 
 Reply in the language of the user's latest message unless they request another. Never stop after merely announcing a future action: perform the tool call in that response or give the final answer. When work is complete, answer directly with only relevant results and no process narration.`;
 
-/**
- * Ensures that a message list has exactly one system prompt at the beginning.
- */
+
 export function ensureSingleSystemPrompt(messages: ChatMessage[], createSystemMessageFn: () => ChatMessage): ChatMessage[] {
   const systemPrompts = messages.filter((msg) => msg.role === "system");
   const nonSystemMessages = messages.filter((msg) => msg.role !== "system");
@@ -49,7 +47,6 @@ export interface ToolCall {
     name: string;
     arguments: string;
   };
-  /** SSE index for partial streaming tool-call chunks. */
   index?: number;
 }
 
@@ -74,44 +71,17 @@ export interface ChatMessage {
   name?: string;
 }
 
-/**
- * Maps the UI reasoning value to DeepSeek's reasoning_effort.
- */
-export function mapReasoningEffort(reasoning: string | undefined): "high" | "max" | undefined {
-  if (!reasoning || reasoning === "off") { return undefined; }
-
-  if (reasoning === "low" || reasoning === "medium") { return "high"; }
-
-  return reasoning === "max" ? "max" : "high";
-}
-
-/**
- * Creates the system message injected at the beginning of API requests.
- *
- * The content must stay byte-identical across rounds and generations: it is the
- * first serialized message, so any byte that changes here invalidates DeepSeek's
- * prefix cache for the tool schemas and the whole history that follow it. The
- * current date therefore travels with the latest user turn instead (see
- * `appendCurrentTimeToUserTurn`), which is the only position that is new anyway.
- */
 export function createSystemMessage(): { role: "system"; content: string } {
-  if (process.env.NODE_ENV === "development" && !SYSTEM_PROMPT_COPILOT?.trim()) {
-    logWarning("[createSystemMessage] SYSTEM_PROMPT_COPILOT is empty. Requests will not include system instructions.");
+  if (process.env.NODE_ENV === "development" && !SYSTEM_PROMPT_AGENT?.trim()) {
+    logWarning("[createSystemMessage] SYSTEM_PROMPT_AGENT is empty. Requests will not include system instructions.");
   }
 
   return {
     role: "system" as const,
-    content: SYSTEM_PROMPT_COPILOT,
+    content: SYSTEM_PROMPT_AGENT,
   };
 }
 
-/**
- * Appends the current local date and time to the newest user turn.
- *
- * Keeping it out of the system message preserves the cacheable prefix while the
- * model still receives the instant it needs for relative dates. Older turns keep
- * the value they were sent with, so already cached messages are never rewritten.
- */
 export function appendCurrentTimeToUserTurn(
   content: ChatMessage["content"],
   now = new Date(),
@@ -166,7 +136,7 @@ export interface ChatCompletionRequest {
   temperature?: number;
   top_p?: number;
   thinking?: { type: "enabled" | "disabled" };
-  reasoning_effort?: "high" | "max";
+  reasoning_effort?: "low" | "high" | "max";
   stop?: string[];
   tools?: ToolDefinition[];
   tool_choice?: ToolChoice;

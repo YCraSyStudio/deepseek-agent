@@ -45,7 +45,7 @@ suite("SearXNG search", () => {
     const server = http.createServer((request, response) => {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       assert.strictEqual(url.pathname, "/search");
-      assert.strictEqual(url.searchParams.get("q"), "deepseek copilot");
+      assert.strictEqual(url.searchParams.get("q"), "deepseek agent");
       assert.strictEqual(url.searchParams.get("format"), "json");
       assert.strictEqual(url.searchParams.get("language"), "es-ES");
       response.writeHead(200, { "content-type": "application/json" });
@@ -63,7 +63,7 @@ suite("SearXNG search", () => {
     try {
       const result = await searchSearxng(
         `http://127.0.0.1:${port}`,
-        "deepseek copilot",
+        "deepseek agent",
         { language: "es", region: "ES", tag: "es-ES" },
         2,
       );

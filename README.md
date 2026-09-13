@@ -1,4 +1,4 @@
-# Yar's DeepSeek Copilot
+# YCraSy DeepSeek Agent
 
 A DeepSeek-only coding assistant built for VS Code. Chat with DeepSeek, share workspace context, review its reasoning and tool activity, and let it work on your project under the permission mode you choose.
 
@@ -28,28 +28,28 @@ A DeepSeek-only coding assistant built for VS Code. Chat with DeepSeek, share wo
 
 ## Get started
 
-1. Install the extension and open **Yar's DeepSeek Copilot** from the Activity Bar.
+1. Install the extension and open **YCraSy DeepSeek Agent** from the Activity Bar.
 2. Open **Settings** in the chat view and enter your DeepSeek API key.
 3. Pick generation options and a permission mode. Chat runs on **DeepSeek V4.1 Flash**.
 4. Send a message. Type `./` to reference workspace paths, attach a file or image with `+`, paste an image, or include an editor selection from VS Code.
 
 ## Documentation
 
-- [User documentation](https://ycrasystudio.github.io/deepseek-copilot/en/)
-- [Documentación en español](https://ycrasystudio.github.io/deepseek-copilot/es/)
-- [中文文档](https://ycrasystudio.github.io/deepseek-copilot/zh/)
+- [User documentation](https://ycrasystudio.github.io/deepseek-agent/en/)
+- [Documentación en español](https://ycrasystudio.github.io/deepseek-agent/es/)
+- [中文文档](https://ycrasystudio.github.io/deepseek-agent/zh/)
 - [Technical wiki](wiki/INDEX.md)
 - [Release notes](CHANGELOG.md)
 - [Release channels and versioning](wiki/maintenance/Beta-Publishing.md)
-- [Report a bug or request a feature](https://github.com/YCraSyStudio/deepseek-copilot/issues)
+- [Report a bug or request a feature](https://github.com/YCraSyStudio/deepseek-agent/issues)
 
 ## Privacy and safety
 
-Yar's DeepSeek Copilot does not collect usage telemetry. Prompts, referenced content, uploaded images, conversation context, and generated responses sent to DeepSeek are handled under DeepSeek's current privacy policy and API terms. Images use DeepSeek's Files API and are referenced by file ID instead of embedding Base64 in chat history or provider messages. Do not send confidential, personal, or regulated information unless those terms meet your requirements.
+YCraSy DeepSeek Agent does not collect usage telemetry. Prompts, referenced content, uploaded images, conversation context, and generated responses sent to DeepSeek are handled under DeepSeek's current privacy policy and API terms. Images use DeepSeek's Files API and are referenced by file ID instead of embedding Base64 in chat history or provider messages. Do not send confidential, personal, or regulated information unless those terms meet your requirements.
 
 Workspace tools follow the selected permission mode and VS Code Workspace Trust. Terminal commands are non-interactive but are not OS-sandboxed. Inspect tool calls carefully, especially when using unattended modes.
 
-Yar's DeepSeek Copilot is an independent third-party extension. It is not affiliated with, endorsed by, sponsored by, or officially maintained by DeepSeek.
+YCraSy DeepSeek Agent is an independent third-party extension. It is not affiliated with, endorsed by, sponsored by, or officially maintained by DeepSeek.
 
 ## License
 

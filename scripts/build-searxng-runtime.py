@@ -35,7 +35,7 @@ def run(*args: str, cwd: Path | None = None) -> None:
 
 
 def verify_source(source: Path) -> str:
-    marker = source / ".deepseek-copilot-searxng-commit"
+    marker = source / ".deepseek-agent-searxng-commit"
     if not marker.is_file():
         raise RuntimeError(f"Pinned source marker is missing: {marker}")
     commit = marker.read_text(encoding="utf-8").strip()
@@ -55,7 +55,7 @@ def settings_yaml(port: int) -> str:
 
 general:
   debug: false
-  instance_name: "DeepSeek Copilot Search"
+  instance_name: "YCraSy DeepSeek Agent Search"
   enable_metrics: false
 
 search:
@@ -67,7 +67,7 @@ search:
 server:
   bind_address: "127.0.0.1"
   port: {port}
-  secret_key: "deepseek-copilot-runtime-smoke-test-secret"
+  secret_key: "deepseek-agent-runtime-smoke-test-secret"
   limiter: false
   public_instance: false
   image_proxy: false
@@ -83,7 +83,7 @@ def smoke_test(executable: Path) -> None:
     # Windows can retain a short-lived lock on redirected log handles after the
     # process exits. The smoke test result must not be turned into a failure by
     # best-effort cleanup of the temporary directory.
-    with tempfile.TemporaryDirectory(prefix="deepseek-copilot-searxng-", ignore_cleanup_errors=True) as temporary:
+    with tempfile.TemporaryDirectory(prefix="deepseek-agent-searxng-", ignore_cleanup_errors=True) as temporary:
         temp = Path(temporary)
         settings = temp / "settings.yml"
         cache = temp / "cache"
@@ -105,7 +105,7 @@ def smoke_test(executable: Path) -> None:
                     try:
                         with urllib.request.urlopen(url, timeout=2) as response:
                             payload = json.loads(response.read().decode("utf-8"))
-                        if payload.get("instance_name") == "DeepSeek Copilot Search":
+                        if payload.get("instance_name") == "YCraSy DeepSeek Agent Search":
                             print(f"SearXNG runtime smoke test passed at {url}")
                             return
                     except Exception:

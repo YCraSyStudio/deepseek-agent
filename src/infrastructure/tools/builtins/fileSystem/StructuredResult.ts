@@ -4,10 +4,6 @@ const MAX_DIFF_LINES = 240;
 const DIFF_CONTEXT_LINES = 3;
 const MAX_LCS_CELLS = 1_000_000;
 
-/**
- * Line budget for the complete diff retained for the change viewer. Tool results keep the
- * smaller default budget so the model context stays bounded.
- */
 export const MAX_RECORDED_DIFF_LINES = 4_000;
 
 export interface UnifiedDiffPreview {

@@ -3,13 +3,9 @@ import { logWarning } from "@/shared/logging/Logger";
 import { isRecord } from "@/shared/utils/TypeGuards";
 import type { RegisteredTool, ValidationResult } from "./Types";
 
-/**
- * Central tool catalog.
- */
 export class ToolRegistry {
   private tools = new Map<string, RegisteredTool>();
 
-  /** Register a tool definition, handler, and metadata. */
   register(tool: RegisteredTool): void {
     const name = tool.definition.function.name;
     if (this.tools.has(name)) {
@@ -18,17 +14,14 @@ export class ToolRegistry {
     this.tools.set(name, tool);
   }
 
-  /** Get a registered tool by name. */
   get(name: string): RegisteredTool | undefined {
     return this.tools.get(name);
   }
 
-  /** Get all API-ready tool definitions. */
   getDefinitionsForAPI(): ToolDefinition[] {
     return Array.from(this.tools.values()).map((t) => t.definition);
   }
 
-  /** Validate a tool call against the registry and its strict JSON schema. */
   validate(toolCall: { function: { name: string; arguments: string } }): ValidationResult {
     const toolDef = this.tools.get(toolCall.function.name);
     if (!toolDef) {
@@ -47,7 +40,6 @@ export class ToolRegistry {
     }
   }
 
-  /** Number of registered tools. */
   get size(): number {
     return this.tools.size;
   }

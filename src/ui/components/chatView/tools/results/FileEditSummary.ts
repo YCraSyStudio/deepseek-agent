@@ -12,12 +12,6 @@ export interface TurnFileEdit {
   afterHash?: string;
 }
 
-/**
- * Summarizes the file changes applied during one assistant turn.
- *
- * Files are listed in first-touch order. Line counts add up every edit applied to the same
- * file during the turn; the change view opens the most recent recorded change of that file.
- */
 export function collectTurnFileEdits(groups: readonly ToolCallGroup[]): TurnFileEdit[] {
   const edits = new Map<string, TurnFileEdit>();
 

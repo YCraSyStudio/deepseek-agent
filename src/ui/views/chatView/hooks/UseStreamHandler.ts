@@ -7,7 +7,6 @@ type TimelineToolGroupEvent = Extract<AssistantTimelineEvent, { type: "tool-grou
 const MAX_REASONING_CHARACTERS = 512 * 1024;
 const MAX_PENDING_DELTA_CHARACTERS = 32 * 1024;
 
-/** Maintains the single assistant message receiving the current event stream. */
 export function useStreamHandler() {
   const streamingMessageIdRef = useRef<string | null>(null);
   const pendingDeltasRef = useRef<Array<{ eventId: string; eventType: TimelineTextEvent["type"]; content: string; generationId?: string; setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>> }>>([]);

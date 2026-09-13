@@ -2,6 +2,7 @@ import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import type { ToolHostDocumentSymbol } from "@/application/ports";
 import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import { getErrorMessage } from "@/shared/utils/Errors";
 import { createHash } from "crypto";
 import { bufferLooksBinary, createStructuredResult } from "./StructuredResult";
 import {
@@ -153,10 +154,6 @@ async function handleReadFunction(args: Record<string, unknown>): Promise<string
   }
 }
 
-/**
- * A language service that is still activating answers requests with no symbols, sometimes for
- * seconds, so an empty result is only believed after the provider repeats it across a backoff.
- */
 async function readDocumentSymbolsWithRetry(
   readSymbols: (filePath: string) => Promise<ToolHostDocumentSymbol[]>,
   filePath: string,
@@ -198,10 +195,6 @@ function parseRequestedNames(value: unknown): string[] | string {
     names.push(entry.trim());
   }
   return names;
-}
-
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export const readFunctionDefinition: ToolDefinition = {

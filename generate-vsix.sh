@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Packages the extension as artifacts/yrs-dpsk-copilot-<version>.vsix.
+# Packages the extension as artifacts/deepseek-agent-<version>.vsix.
 #
 # Usage:
 #   ./generate-vsix.sh                 type-check, lint, build, package, verify
@@ -35,34 +35,34 @@ for argument in "$@"; do
 done
 
 if [ ! -d node_modules ]; then
-  echo "node_modules is missing; run 'npm ci' first." >&2
+  echo "node_modules is missing; run 'pnpm install' first." >&2
   exit 1
 fi
 
 version="$(node -p "require('./package.json').version")"
-vsix_path="artifacts/yrs-dpsk-copilot-${version}.vsix"
+vsix_path="artifacts/deepseek-agent-${version}.vsix"
 
 # vsce builds the VSIX from dist/, so the bundles must be regenerated first.
 if [ "$run_checks" -eq 1 ]; then
   echo "==> Type-check"
-  npm run compile
+  pnpm run compile
   echo "==> Lint"
-  npm run lint
+  pnpm run lint
 fi
 
 if [ "$run_tests" -eq 1 ]; then
   echo "==> Tests"
-  npm test
+  pnpm test
 fi
 
 echo "==> Build extension and webview bundles"
-npm run build
+pnpm run build
 
 # package:vsix clears stale VSIX files from artifacts/ before packaging this version.
 echo "==> Package ${vsix_path}"
-npm run package:vsix
+pnpm run package:vsix
 
 echo "==> Verify VSIX contents"
-npm run verify:vsix
+pnpm run verify:vsix
 
 echo "Generated ${vsix_path} ($(du -h "$vsix_path" | cut -f1))"

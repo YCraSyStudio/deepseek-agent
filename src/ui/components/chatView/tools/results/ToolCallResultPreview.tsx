@@ -82,6 +82,10 @@ export function renderToolCallResultPreview({ toolCall, vscode }: ResultPreviewO
     });
   }
 
+  if (structured?.type === "fileMove" || structured?.type === "fileDelete") {
+    return renderWriteSummary(structured.summary, structured.path);
+  }
+
   if (toolCall.toolName === "search_content") {
     return renderSearchPreview(result, toolCall.status, vscode);
   }

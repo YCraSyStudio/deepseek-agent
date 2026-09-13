@@ -1,9 +1,57 @@
 import * as assert from "assert";
 import { readBoundedJson } from "@/infrastructure/deepseek/client/BoundedResponseJson";
-import { fitToolResultForModel } from "@/application/chat/toolCall/ToolResultBudget";
+import { fitToolResultForModel, estimateToolResultTokens } from "@/application/chat/toolCall/ToolResultFit";
 import { boundUtf8HeadTail } from "@/shared/utils/BoundedText";
 
 suite("overflow protection", () => {
+  test("keeps terminal JSON and failing diagnostics from the omitted middle", () => {
+    const result = fitToolResultForModel(JSON.stringify({
+      kind: "command_result", exitCode: 1, durationMs: 100,
+      stdout: "success\n".repeat(3000) + "error TS1234: missing type\n" + "success\n".repeat(3000),
+      stderr: "", truncated: { stdout: false, stderr: false },
+    }), 4096, 500);
+    const parsed = JSON.parse(result);
+    assert.strictEqual(parsed.exitCode, 1);
+    assert.strictEqual(parsed.truncated.stdout, true);
+    assert.match(parsed.stdout, /error TS1234: missing type/);
+    assert.ok(estimateToolResultTokens(result) <= 500);
+  });
+
+  test("accounts for escaped text and bounds every result without a cumulative cycle limit", () => {
+    let total = 0;
+    for (let index = 0; index < 8; index++) {
+      const result = fitToolResultForModel("\u0001".repeat(100_000));
+      const tokens = estimateToolResultTokens(result);
+      assert.ok(tokens <= 16_000);
+      total += tokens;
+    }
+    assert.ok(total > 64_000);
+  });
+
+  test("omits oversized terminal metadata without losing its failure status", () => {
+    const result = fitToolResultForModel(JSON.stringify({
+      kind: "command_result", command: "x".repeat(200_000),
+      stdout: "", stderr: "failed", exitCode: 2, timedOut: false,
+    }), 1024, 300);
+    assert.strictEqual(JSON.parse(result).exitCode, 2);
+    assert.strictEqual(JSON.parse(result).metadataOmitted, true);
+    assert.ok(estimateToolResultTokens(result) <= 300);
+  });
+  test("never throws when terminal metadata alone overflows the budget", () => {
+    const bounded = fitToolResultForModel(JSON.stringify({
+      kind: "command_result",
+      command: "x".repeat(200_000),
+      signal: "SIGTERM".repeat(20_000),
+      stdout: "ok",
+      stderr: "",
+      exitCode: null,
+    }), 1024, 300);
+
+    assert.ok(bounded.length > 0);
+    assert.ok(Buffer.byteLength(bounded, "utf8") <= 1024);
+    assert.ok(estimateToolResultTokens(bounded) <= 300);
+  });
+
   test("bounds tool results by UTF-8 bytes while preserving head and tail", () => {
     const value = `HEAD-${"界".repeat(100)}-TAIL`;
     const bounded = fitToolResultForModel(value, 96);

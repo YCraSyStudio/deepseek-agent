@@ -7,8 +7,9 @@ import type {
   ToolCallCycleResult,
 } from "./ToolCallTypes";
 import { createCompletionRecoveryMessage, createProgressReviewCheckpointMessage } from "./TurnGuidance";
-import { fitToolResultForModel } from "./ToolResultBudget";
+import { fitToolResultForModel } from "./ToolResultFit";
 import { logWarning } from "@/shared/logging/Logger";
+import { redactToolOutput } from "@/shared/security/ToolOutputRedaction";
 
 const DEFAULT_PROGRESS_REVIEW_INTERVAL = 20;
 const DEFAULT_PROGRESS_REVIEW_FOLLOW_UP_INTERVAL = 5;
@@ -37,8 +38,6 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
     const shouldStream = cycleOptions.streamFinalResponse === true;
     let response;
     if (shouldStream) {
-      // The streaming implementation reports once in a finally block so usage
-      // is retained even when the terminal marker is missing.
       response = await modelClient.streamRound({ messages, tools: reasoningTools, model, cycleOptions, emitStreamEvents: true });
     } else {
       response = await modelClient.completeRound({ messages, tools: reasoningTools, model, cycleOptions });
@@ -67,7 +66,6 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
             cycleOptions.onStreamChunk?.("\n\n");
             continue;
           }
-          // A second "incomplete" is a judgement, not a verdict: keeping the delivered answer costs a "continue", discarding it costs the turn.
           logWarning("[ToolCallCycle] Completion review still reported an incomplete answer after recovery; keeping the delivered response.");
         }
       }
@@ -105,7 +103,7 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
 
       const validation = validateToolCall(toolCall, availableTools);
       if (!validation.valid) {
-        const invalidResult = createToolResultMessage(toolCall.id, toolCall.function.name, `Error: ${validation.error}`);
+        const invalidResult = createToolResultMessage(toolCall.id, toolCall.function.name, fitToolResultForModel(`Error: ${validation.error}`));
         messages.push(invalidResult);
         transcript.push(structuredClone(invalidResult));
         cycleOptions.onTranscriptUpdate?.(structuredClone(transcript), "incomplete");
@@ -114,14 +112,13 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
 
       const signature = createToolSignature(toolCall);
       if (executedSignatures.get(signature) === mutationEpoch) {
-        const duplicateResult = createToolResultMessage(toolCall.id, toolCall.function.name, "Skipped: identical tool call already executed in this cycle.");
+        const duplicateResult = createToolResultMessage(toolCall.id, toolCall.function.name, fitToolResultForModel("Skipped: identical tool call already executed in this cycle."));
         messages.push(duplicateResult);
         transcript.push(structuredClone(duplicateResult));
         cycleOptions.onTranscriptUpdate?.(structuredClone(transcript), "incomplete");
         continue;
       }
-      // Calls are intentionally sequential: writes preserve model order and manual approvals can advance one at a time.
-      const result = await executeToolCall(toolCall);
+      const result = redactToolOutput(await executeToolCall(toolCall));
       toolCallsExecuted++;
       if (shouldRememberToolSignature(toolCall, result)) {
         if (invalidatesPriorToolSignatures(toolCall)) {mutationEpoch++;}
@@ -227,7 +224,7 @@ function shouldRememberToolSignature(toolCall: { function: { name: string } }, r
 }
 
 function invalidatesPriorToolSignatures(toolCall: { function: { name: string } }): boolean {
-  return ["create_file", "edit_file", "apply_patch", "run_terminal_command"].includes(toolCall.function.name);
+  return ["create_file", "edit_file", "apply_patch", "move_path", "delete_path", "run_terminal_command"].includes(toolCall.function.name);
 }
 
 function stableStringify(value: unknown): string {

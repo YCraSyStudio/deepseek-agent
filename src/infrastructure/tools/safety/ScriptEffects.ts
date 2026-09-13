@@ -1,27 +1,14 @@
 import type { ScriptLanguage } from "./CommandFacts";
 
-/**
- * Conservative capability scan for workspace scripts.
- *
- * A script is only considered bounded when it declares no denied capability and
- * every network destination it names is local. This is deliberately a
- * deny-based scan over parsed text: a script that the agent authored is not
- * trusted merely because the agent authored it.
- */
 
 export interface ScriptEffectProfile {
-  /** True when the script shows no denied capability. */
   bounded: boolean;
-  /** Capabilities recognized as bounded evidence, for logs and diagnostics. */
   capabilities: string[];
-  /** Denial codes that blocked automatic approval. */
   blockedBy: string[];
 }
 
 export interface ScriptEffectOptions {
-  /** Absolute workspace root; absolute paths under it count as contained. */
   workspaceRoot?: string;
-  /** Maximum characters inspected; longer content is not treated as bounded. */
   maxBytes?: number;
 }
 
@@ -81,7 +68,6 @@ const CAPABILITY_EVIDENCE: ReadonlyArray<{ code: string; pattern: RegExp }> = [
 const URL_PATTERN = /https?:\/\/([A-Za-z0-9._-]+|\[[0-9a-fA-F:]+\])(?::\d+)?/g;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "0.0.0.0"]);
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /(?:[A-Za-z]:[\\/]|\\\\)[A-Za-z0-9._$-]+(?:[\\/][A-Za-z0-9._$-]+)*/g;
-/** POSIX absolute paths, ignoring `./`, `$VAR/`, `dir//`, and URL separators. */
 const POSIX_ABSOLUTE_PATH_PATTERN = /(?<![\w.:/$-])\/(?:[A-Za-z0-9._$-]+\/)+/g;
 
 export function analyzeScriptEffects(

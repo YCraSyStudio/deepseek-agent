@@ -312,6 +312,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
                 disabled={hasTextContent && !canSend}
                 aria-label={t(!hasTextContent ? "chat.stopGeneration" : isControlPressed ? "chat.queueMessage" : "chat.interruptAndGuide")}
                 data-tooltip={t(!hasTextContent ? "chat.stopGeneration" : isControlPressed ? "chat.queueMessage" : "chat.interruptAndGuide")}
+                data-tooltip-align="end"
               >
                 <span
                   className={`codicon ${!hasTextContent ? "codicon-debug-stop" : isControlPressed ? "codicon-list-ordered" : "codicon-debug-restart"}`}
@@ -319,7 +320,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
                 />
               </button>
             ) : (
-              <button className="sendBtn inside" type="button" onClick={handleSend} disabled={!canSend} aria-label={t("chat.sendMessage")}>
+              <button className="sendBtn inside" type="button" onClick={handleSend} disabled={!canSend} aria-label={t("chat.sendMessage")} data-tooltip={t("chat.sendMessage")} data-tooltip-align="end">
                 <span className="codicon codicon-send" aria-hidden="true" />
               </button>
             )}

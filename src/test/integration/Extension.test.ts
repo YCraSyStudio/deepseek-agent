@@ -10,24 +10,24 @@ import { GenerationBudgetManager } from "@/application/chat/context/GenerationBu
 import type { ModelProvider } from "@/application/ports";
 import { searchContentHandler } from "@/infrastructure/tools/builtins/fileSystem/SearchContent";
 import { runWithToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
-import { createVsCodeToolWorkspace } from "@/platform/vscode/tools/VsCodeToolWorkspace";
-import { ChangeDiffViewer } from "@/platform/vscode/editor/diff/ChangeDiffViewer";
-import { fileChangeRegistry } from "@/platform/vscode/editor/diff/FileChangeRegistry";
-import { captureCurrentWorkspaceBinding, captureWorkspaceRunSnapshot, type WorkspaceRunSnapshot } from "@/platform/vscode/workspace";
-import { getPathCompletionItems } from "@/platform/vscode/editor/EditorActions";
-import { HistoryManager } from "@/platform/vscode/storage/HistoryManager";
-import { VsCodeSettingsRepository } from "@/platform/vscode/storage/RepositoryAdapters";
-import { fitGenerationRequestContext } from "@/platform/vscode/webviews/handlers/chat/generation/GenerationContext";
-import type { GenerationRunRecord } from "@/platform/vscode/webviews/handlers/chat/generation/GenerationRun";
+import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
+import { ChangeDiffViewer } from "@/vscode/editor/diff/ChangeDiffViewer";
+import { fileChangeRegistry } from "@/vscode/editor/diff/FileChangeRegistry";
+import { captureCurrentWorkspaceBinding, captureWorkspaceRunSnapshot, type WorkspaceRunSnapshot } from "@/vscode/workspace";
+import { getPathCompletionItems } from "@/vscode/editor/EditorActions";
+import { HistoryManager } from "@/vscode/storage/HistoryManager";
+import { VsCodeSettingsRepository } from "@/vscode/storage/RepositoryAdapters";
+import { fitGenerationRequestContext } from "@/vscode/webviews/handlers/chat/generation/GenerationContext";
+import type { GenerationRunRecord } from "@/vscode/webviews/handlers/chat/generation/GenerationRun";
 
 const settingsRepository = new VsCodeSettingsRepository();
 
 suite("Extension integration", () => {
   test("activates under the Marketplace identifier and registers its main command", async () => {
-    const extension = vscode.extensions.getExtension("yarcrasy.yrs-dpsk-copilot");
+    const extension = vscode.extensions.getExtension("yarcrasy.deepseek-agent");
 
     assert.ok(extension, "The development extension should be discoverable by its Marketplace identifier.");
-    const testDataDirectory = process.env.DEEPSEEK_COPILOT_USER_DATA_DIR;
+    const testDataDirectory = process.env.DEEPSEEK_AGENT_USER_DATA_DIR;
     assert.ok(testDataDirectory);
     const historyDirectory = path.join(testDataDirectory, "history");
     const incompatiblePaths = [
@@ -46,12 +46,12 @@ suite("Extension integration", () => {
       await assert.rejects(access(incompatiblePath), (error: NodeJS.ErrnoException) => error.code === "ENOENT");
     }
     const commands = await vscode.commands.getCommands(true);
-    assert.ok(commands.includes("yrs-dpsk-copilot.openChat"));
-    assert.ok(commands.includes("yrs-dpsk-copilot.startSearxng"));
-    assert.ok(commands.includes("yrs-dpsk-copilot.stopSearxng"));
-    assert.strictEqual(commands.includes("yrs-dpsk-copilot.installChromiumHeadless"), false);
-    assert.strictEqual(commands.includes("yrs-dpsk-copilot.updateChromiumHeadless"), false);
-    assert.strictEqual(commands.includes("yrs-dpsk-copilot.removeChromiumHeadless"), false);
+    assert.ok(commands.includes("deepseek-agent.openChat"));
+    assert.ok(commands.includes("deepseek-agent.startSearxng"));
+    assert.ok(commands.includes("deepseek-agent.stopSearxng"));
+    assert.strictEqual(commands.includes("deepseek-agent.installChromiumHeadless"), false);
+    assert.strictEqual(commands.includes("deepseek-agent.updateChromiumHeadless"), false);
+    assert.strictEqual(commands.includes("deepseek-agent.removeChromiumHeadless"), false);
   });
 
   test("captures a revisioned workspace binding and rejects parent autocomplete", async () => {
@@ -78,7 +78,7 @@ suite("Extension integration", () => {
     const snapshot: WorkspaceRunSnapshot = {
       binding: {
         schemaVersion: 1,
-        uri: "yrs-workspace:test-multi-root",
+        uri: "ycrasy-workspace:test-multi-root",
         name: "Test multi-root",
         revision: "test-revision",
         folders,
@@ -156,8 +156,6 @@ suite("Extension integration", () => {
 
     try {
       const editedEditor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(editedUri));
-      // The user's file is shown last because re-activating an editor that is already visible is not
-      // reported as a focus change on a headless macOS runner, while a fresh open always is.
       await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(userUri), {
         viewColumn: vscode.ViewColumn.Beside,
       });
@@ -217,7 +215,7 @@ suite("Extension integration", () => {
   });
 
   test("rejects a stale conversation save from another manager instance", async () => {
-    const extension = vscode.extensions.getExtension("yarcrasy.yrs-dpsk-copilot");
+    const extension = vscode.extensions.getExtension("yarcrasy.deepseek-agent");
     assert.ok(extension);
     const first = new HistoryManager(settingsRepository);
     const second = new HistoryManager(settingsRepository);
@@ -354,7 +352,6 @@ function sha256(content: Uint8Array): string {
 
 async function expectActiveEditor(uri: vscode.Uri, message: string): Promise<void> {
   const expected = uri.toString(true);
-  // Stays inside the harness timeout so a late state reports this assertion instead of a mocha timeout.
   const deadline = Date.now() + 4_000;
   let actual = activeEditorUri();
   while (actual !== expected && Date.now() < deadline) {

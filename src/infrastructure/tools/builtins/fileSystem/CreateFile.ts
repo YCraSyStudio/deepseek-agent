@@ -1,6 +1,7 @@
 import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import { getErrorMessage } from "@/shared/utils/Errors";
 import { bufferLooksBinary, createStructuredResult, createUnifiedDiff, isMissingFileError } from "./StructuredResult";
 import { createHash } from "crypto";
 
@@ -20,7 +21,6 @@ async function handleCreateFile(args: Record<string, unknown>): Promise<string> 
       fileExists = true;
     } catch (err: unknown) {
       if (isMissingFileError(err)) {
-        // Missing files are expected when creating a new file.
       } else {
         return `Error checking if file "${filePath}" exists: ${getErrorMessage(err)}`;
       }
@@ -42,9 +42,6 @@ async function handleCreateFile(args: Record<string, unknown>): Promise<string> 
   }
 }
 
-/**
- * Forced variant used after explicit user confirmation.
- */
 async function handleCreateFileForced(args: Record<string, unknown>): Promise<string> {
   const filePath = args.path as string;
   const content = (args.content as string) || "";
@@ -89,10 +86,6 @@ async function handleCreateFileForced(args: Record<string, unknown>): Promise<st
   } catch (err: unknown) {
     return `Error creating file '${filePath}': ${getErrorMessage(err)}`;
   }
-}
-
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 async function readExistingFile(filePath: string): Promise<{ content: string; size: number; binary: boolean; hash: string } | undefined> {

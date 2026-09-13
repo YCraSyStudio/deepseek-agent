@@ -20,13 +20,6 @@ interface ChatMessagesProps {
   activeToolCallGroups?: ToolCallGroup[];
 }
 
-/**
- * Constant empty list for rows that are not the live turn.
- *
- * Live tool groups get a new identity on every streamed chunk. Rows that cannot
- * use them must keep an identical prop, or memoization would rebuild every
- * message of the conversation on each chunk.
- */
 const NO_TOOL_CALL_GROUPS: ToolCallGroup[] = [];
 
 function ChatMessages({
@@ -69,12 +62,6 @@ interface MessageRowProps {
   onEnlargeImage: (image: LightboxImage) => void;
 }
 
-/**
- * One transcript entry.
- *
- * Memoized so appending or streaming a message only re-renders the row that
- * changed instead of reprocessing the Markdown of the whole conversation.
- */
 const MessageRow = memo(function MessageRow({
   message,
   isActive,

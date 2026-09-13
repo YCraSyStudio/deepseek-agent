@@ -1,6 +1,9 @@
 ---
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
-  docsPath,
+  alternateEntries,
+  canonicalPath,
   languageLabels,
   languages,
   navLabels,
@@ -12,9 +15,10 @@ import {
 } from "../i18n";
 import deepSeekIconUrl from "../assets/DeepSeekIcon.svg?url";
 
-const { title, description, lang = "en", currentSlug } = Astro.props as {
+const { title, description, seoTitle, lang = "en", currentSlug } = Astro.props as {
   title: string;
   description: string;
+  seoTitle?: string;
   lang?: Language;
   currentSlug?: PageSlug;
 };
@@ -25,37 +29,176 @@ const tocItems = currentSlug
       label: section.title,
     }))
   : pageSlugs.map((slug) => ({
-      href: docsPath(lang, slug),
+      href: canonicalPath(lang, slug),
       label: navLabels[lang][slug],
     }));
 
 const quickStartSlugs: PageSlug[] = ["intro", "user-manual"];
 const projectSlugs: PageSlug[] = ["changelog", "technical-decisions", "references"];
+
+const productName = "YCraSy DeepSeek Agent";
+const publisherName = "YCraSy Studio";
+const publisherUrl = "https://github.com/YCraSyStudio";
+const repositoryUrl = "https://github.com/YCraSyStudio/deepseek-agent";
+const marketplaceUrl = "https://marketplace.visualstudio.com/items?itemName=yarcrasy.deepseek-agent";
+function readExtensionManifest(): { version: string } {
+  for (const candidate of ["../package.json", "package.json"]) {
+    const manifestPath = resolve(process.cwd(), candidate);
+    if (!existsSync(manifestPath)) {
+      continue;
+    }
+    const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as { name?: string; version?: string };
+    if (parsed.name === "deepseek-agent" && typeof parsed.version === "string") {
+      return { version: parsed.version };
+    }
+  }
+  throw new Error("Could not read the extension version from the repository manifest");
+}
+
+const manifest = readExtensionManifest();
+const siteRoot = new URL(canonicalPath("en"), Astro.site ?? "https://ycrasystudio.github.io/");
+const absoluteUrl = (path: string) => new URL(path, siteRoot).href;
+const pageTitle = seoTitle ?? title;
+const fullTitle = `${pageTitle} | ${productName}`;
+const canonicalUrl = absoluteUrl(canonicalPath(lang, currentSlug));
+const englishHomeUrl = absoluteUrl(canonicalPath("en"));
+const ogImageUrl = absoluteUrl("og-image.png");
+const iconPngUrl = absoluteUrl("icon-256.png");
+const sitemapUrl = absoluteUrl("sitemap.xml");
+const alternates = alternateEntries(currentSlug).map((entry) => ({ ...entry, href: absoluteUrl(entry.path) }));
+const localeByLanguage: Record<Language, string> = { en: "en_US", es: "es_ES", zh: "zh_CN" };
+const alternateLocales = languages.filter((item) => item !== lang).map((item) => localeByLanguage[item]);
+const currentLabel = currentSlug ? navLabels[lang][currentSlug] : productName;
+
+const publisherNode = {
+  "@type": "Organization",
+  "@id": `${englishHomeUrl}#publisher`,
+  name: publisherName,
+  url: publisherUrl,
+  logo: { "@type": "ImageObject", url: iconPngUrl, width: 256, height: 256 },
+};
+
+const websiteNode = {
+  "@type": "WebSite",
+  "@id": `${englishHomeUrl}#website`,
+  url: englishHomeUrl,
+  name: productName,
+  description: pageContent.en.intro.description,
+  inLanguage: [...languages],
+  publisher: { "@id": `${englishHomeUrl}#publisher` },
+};
+
+const applicationNode = {
+  "@type": "SoftwareApplication",
+  "@id": `${englishHomeUrl}#application`,
+  name: productName,
+  description,
+  url: englishHomeUrl,
+  applicationCategory: "DeveloperApplication",
+  applicationSubCategory: "Code editor extension",
+  operatingSystem: "Windows, macOS, Linux",
+  softwareVersion: manifest.version,
+  softwareRequirements: "Visual Studio Code",
+  downloadUrl: marketplaceUrl,
+  installUrl: marketplaceUrl,
+  sameAs: [marketplaceUrl, repositoryUrl],
+  isAccessibleForFree: true,
+  license: "https://opensource.org/license/mit",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  image: ogImageUrl,
+  inLanguage: lang,
+  publisher: { "@id": `${englishHomeUrl}#publisher` },
+};
+
+const articleNode = {
+  "@type": "TechArticle",
+  "@id": `${canonicalUrl}#article`,
+  headline: pageTitle,
+  name: pageTitle,
+  description,
+  url: canonicalUrl,
+  mainEntityOfPage: canonicalUrl,
+  inLanguage: lang,
+  isPartOf: { "@id": `${englishHomeUrl}#website` },
+  publisher: { "@id": `${englishHomeUrl}#publisher` },
+  license: "https://opensource.org/license/mit",
+};
+
+const breadcrumbNode = {
+  "@type": "BreadcrumbList",
+  "@id": `${canonicalUrl}#breadcrumb`,
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: productName, item: absoluteUrl(canonicalPath(lang)) },
+    { "@type": "ListItem", position: 2, name: currentLabel, item: canonicalUrl },
+  ],
+};
+
+const graph = [
+  websiteNode,
+  publisherNode,
+  currentSlug ? articleNode : applicationNode,
+  ...(currentSlug ? [breadcrumbNode] : []),
+];
+const structuredData = JSON.stringify({ "@context": "https://schema.org", "@graph": graph });
 ---
 <!doctype html>
 <html lang={lang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title} | Yar's DeepSeek Copilot</title>
+    <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    <meta
+      name="robots"
+      content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+    />
+    <meta name="author" content={publisherName} />
+    <meta name="theme-color" content="#1b1b1f" />
+    <link rel="canonical" href={canonicalUrl} />
+    {alternates.map((alternate) => <link rel="alternate" hreflang={alternate.lang} href={alternate.href} />)}
+    <link rel="sitemap" type="application/xml" href={sitemapUrl} />
     <link rel="icon" href={deepSeekIconUrl} />
+    <link rel="icon" type="image/png" sizes="256x256" href={iconPngUrl} />
+    <link rel="apple-touch-icon" href={iconPngUrl} />
+    <meta property="og:type" content={currentSlug ? "article" : "website"} />
+    <meta property="og:site_name" content={productName} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={productName} />
+    <meta property="og:locale" content={localeByLanguage[lang]} />
+    {alternateLocales.map((locale) => <meta property="og:locale:alternate" content={locale} />)}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content={productName} />
+    <script is:inline type="application/ld+json" set:html={structuredData} />
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href={docsPath(lang)} aria-label="Yar's DeepSeek Copilot home">
+      <a class="brand" href={canonicalPath(lang)} aria-label="YCraSy DeepSeek Agent home">
         <img src={deepSeekIconUrl} alt="" width="28" height="28" />
-        <span>Yar's DeepSeek Copilot</span>
+        <span>YCraSy DeepSeek Agent</span>
       </a>
       <div class="topbarActions">
         <div class="languageSwitcher" aria-label="Language selector">
           {languages.map((item) => (
-            <a class:list={[item === lang && "active"]} href={docsPath(item, currentSlug)} hreflang={item}>
+            <a
+              class:list={[item === lang && "active"]}
+              href={canonicalPath(item, currentSlug)}
+              hreflang={item}
+              aria-current={item === lang ? "page" : undefined}
+            >
               {languageLabels[item]}
             </a>
           ))}
         </div>
-        <a class="platformLink" href="https://platform.deepseek.com/" target="_blank" rel="noreferrer">
+        <a class="platformLink" href="https://platform.deepseek.com/" target="_blank" rel="noopener noreferrer">
           DeepSeek Platform
           <span aria-hidden="true">↗</span>
         </a>
@@ -67,9 +210,17 @@ const projectSlugs: PageSlug[] = ["changelog", "technical-decisions", "reference
         <nav>
           <div class="navGroup">
             <p>Quick Start</p>
-            <a class:list={["navRoot", !currentSlug && "active"]} href={docsPath(lang)}>Overview</a>
+            <a
+              class:list={["navRoot", !currentSlug && "active"]}
+              href={canonicalPath(lang)}
+              aria-current={!currentSlug ? "page" : undefined}>Overview</a
+            >
             {quickStartSlugs.map((slug) => (
-              <a class:list={[currentSlug === slug && "active"]} href={docsPath(lang, slug)}>
+              <a
+                class:list={[currentSlug === slug && "active"]}
+                href={canonicalPath(lang, slug)}
+                aria-current={currentSlug === slug ? "page" : undefined}
+              >
                 {navLabels[lang][slug]}
               </a>
             ))}
@@ -77,7 +228,11 @@ const projectSlugs: PageSlug[] = ["changelog", "technical-decisions", "reference
           <div class="navGroup">
             <p>Project</p>
             {projectSlugs.map((slug) => (
-              <a class:list={[currentSlug === slug && "active"]} href={docsPath(lang, slug)}>
+              <a
+                class:list={[currentSlug === slug && "active"]}
+                href={canonicalPath(lang, slug)}
+                aria-current={currentSlug === slug ? "page" : undefined}
+              >
                 {navLabels[lang][slug]}
               </a>
             ))}

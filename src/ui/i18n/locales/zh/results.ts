@@ -2,6 +2,7 @@ import type { TranslationCatalog } from "../Types";
 
 export const results = {
   results: {
+    retainedOutput: "查看保留的输出",
     searchResults: "搜索结果",
     binaryContentCannotBePreviewedAsText: "二进制内容无法作为文本预览。",
     binaryPreviewUnavailable: "检测到二进制文件，无法进行文本预览。",

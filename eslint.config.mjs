@@ -1,8 +1,6 @@
 import typescriptEslint from "typescript-eslint";
 
 export default [{
-    files: ["**/*.{ts,tsx}"],
-}, {
     plugins: {
         "@typescript-eslint": typescriptEslint.plugin,
     },
@@ -14,11 +12,6 @@ export default [{
     },
 
     rules: {
-        "@typescript-eslint/naming-convention": ["warn", {
-            selector: "import",
-            format: ["camelCase", "PascalCase"],
-        }],
-
         curly: "warn",
         eqeqeq: "warn",
         "no-throw-literal": "warn",
@@ -29,7 +22,7 @@ export default [{
     rules: {
         "no-restricted-imports": ["error", {
             patterns: [{
-                group: ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/platform/**", "@webview/**", "react", "react/**", "vscode", "node:*"],
+                group: ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode", "node:*"],
                 message: "Contracts may depend only on other contracts and shared framework-free utilities.",
             }],
         }],
@@ -39,7 +32,7 @@ export default [{
     rules: {
         "no-restricted-imports": ["error", {
             patterns: [{
-                group: ["@/application/**", "@/contracts/**", "@/extension/**", "@/infrastructure/**", "@/platform/**", "@webview/**", "react", "react/**", "vscode", "node:*"],
+                group: ["@/application/**", "@/contracts/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode", "node:*"],
                 message: "Domain must remain independent from application, transports, providers, VS Code, Node, and React.",
             }],
         }],
@@ -49,7 +42,7 @@ export default [{
     rules: {
         "no-restricted-imports": ["error", {
             patterns: [{
-                group: ["@/extension/**", "@/infrastructure/**", "@/platform/**", "@webview/**", "react", "react/**", "vscode"],
+                group: ["@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode"],
                 message: "Application may depend only on domain, contracts, application modules, and shared utilities.",
             }],
         }],
@@ -59,18 +52,18 @@ export default [{
     rules: {
         "no-restricted-imports": ["error", {
             patterns: [{
-                group: ["@/extension/**", "@/platform/**", "@webview/**", "react", "react/**", "vscode"],
+                group: ["@/extension/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode"],
                 message: "Infrastructure implements application ports and must not depend on VS Code, the extension shell, or React.",
             }],
         }],
     },
 }, {
-    files: ["src/platform/**/*.{ts,tsx}"],
+    files: ["src/vscode/**/*.{ts,tsx}"],
     rules: {
         "no-restricted-imports": ["error", {
             patterns: [{
                 group: ["@/extension/**", "@webview/**", "react", "react/**"],
-                message: "Platform adapters must not depend on the composition root or the React webview.",
+                message: "VS Code adapters must not depend on the composition root or the React webview.",
             }],
         }],
     },
@@ -80,7 +73,7 @@ export default [{
     rules: {
         "no-restricted-imports": ["error", {
             patterns: [{
-                group: ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/platform/**", "vscode", "node:*"],
+                group: ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "vscode", "node:*"],
                 message: "The webview may depend only on contracts, shared browser-safe utilities, and UI modules.",
             }],
         }],

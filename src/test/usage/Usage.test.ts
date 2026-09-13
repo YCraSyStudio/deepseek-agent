@@ -17,12 +17,49 @@ import {
   USAGE_SCHEMA_VERSION,
 } from "@/shared/usage/Usage";
 
-/** Thursday 02:00 UTC is inside a weekday peak window. */
 const PEAK = new Date("2026-09-10T02:00:00Z");
-/** Thursday 12:00 UTC is outside every peak window. */
 const OFF_PEAK = new Date("2026-09-10T12:00:00Z");
 
 suite("usage observability", () => {
+  test("attributes mixed-model requests without charging an unknown model at Flash rates", () => {
+    const aggregate = createUsageAggregate(true, "deepseek-flash");
+    recordUsage(aggregate, "tool_round", completeUsage(100, 20, 80, 20), "deepseek-flash");
+    recordUsage(aggregate, "security_review", completeUsage(50, 10, 40, 10), "future-model");
+    recordUsage(aggregate, "context_summary", undefined, "future-model");
+    recordUsage(aggregate, "primary", completeUsage(100, 20, 80, 20), "deepseek-flash");
+    assert.strictEqual(aggregate.count, 4);
+    assert.strictEqual(aggregate.reported, 3);
+    assert.strictEqual(aggregate.model, undefined);
+    const models = aggregateUsageByModel([aggregate]);
+    assert.strictEqual(models.length, 2);
+    assert.strictEqual(models.find((entry) => entry.model === "deepseek-flash")?.count, 2);
+    assert.strictEqual(models.find((entry) => entry.model === "future-model")?.byPhase.context_summary?.reported, 0);
+    assert.strictEqual(estimateAggregateCost(aggregate, "usd", OFF_PEAK), undefined);
+    assert.strictEqual(estimateAggregateCost(aggregate, "cny", OFF_PEAK), undefined);
+    assert.deepStrictEqual(normalizeUsageAggregate(JSON.parse(JSON.stringify(aggregate))), aggregate);
+    const conversation = summarizeConversationUsage([{ usage: aggregate }]);
+    assert.strictEqual(conversation.total?.count, 4);
+    assert.strictEqual(conversation.byModel.length, 2);
+  });
+
+  test("rejects inconsistent or recursively nested model breakdowns", () => {
+    const aggregate = createUsageAggregate(true, "deepseek-flash");
+    recordUsage(aggregate, "tool_round", completeUsage(100, 20, 80, 20), "deepseek-flash");
+    recordUsage(aggregate, "security_review", undefined, "future-model");
+    const invalid = structuredClone(aggregate);
+    invalid.byModel![0].byModel = [structuredClone(invalid.byModel![1])];
+    assert.strictEqual(normalizeUsageAggregate(invalid), undefined);
+    aggregate.byModel![1].count++;
+    assert.strictEqual(normalizeUsageAggregate(aggregate), undefined);
+  });
+
+  test("uses the actual first request model instead of an unused configured primary", () => {
+    const aggregate = createUsageAggregate(true, "future-model");
+    recordUsage(aggregate, "context_summary", completeUsage(50, 10, 40, 10), "deepseek-flash");
+    assert.strictEqual(aggregate.model, "deepseek-flash");
+    assert.strictEqual(aggregate.byModel, undefined);
+    assert.ok(estimateAggregateCost(aggregate) !== undefined);
+  });
   suite("parseProviderUsage", () => {
     test("normalizes the documented DeepSeek cache and nested reasoning fields", () => {
       const usage = parseProviderUsage({
@@ -149,7 +186,6 @@ suite("usage observability", () => {
       assert.strictEqual(snapshot.total?.inputTokens, 150);
       assert.deepStrictEqual(snapshot.byModel.map((value) => value.count), [2]);
 
-      // Once the run persists its assistant message, the pending copy must not be counted twice.
       const persisted = summarizeConversationUsage(
         [...messages, { generationId: "running", usage: running }],
         { generationId: "running", usage: running },
@@ -176,11 +212,24 @@ suite("usage observability", () => {
         estimateUsageCost(usage, "deepseek-flash", PEAK),
         rounded((300 * 0.3 + 700 * 0.006 + 100 * 1.2) / 1_000_000),
       );
-      // Only a registered model has a published table, so a retired or unknown
-      // name yields no estimate instead of borrowing the current rates.
-      assert.strictEqual(estimateUsageCost(usage, "deepseek-v4-pro", OFF_PEAK), undefined);
       assert.strictEqual(estimateUsageCost(usage, "deepseek-v4-flash", OFF_PEAK), undefined);
       assert.strictEqual(estimateUsageCost(usage, "deepseek-v4-flash-vision-exp", OFF_PEAK), undefined);
+    });
+
+    test("prices DeepSeek V4 Pro at the documented peak and off-peak rates", () => {
+      const usage = completeUsage(1_000, 100, 700, 300);
+      assert.strictEqual(
+        estimateUsageCost(usage, "deepseek-v4-pro", OFF_PEAK),
+        rounded((300 * 0.66 + 700 * 0.022 + 100 * 1.98) / 1_000_000),
+      );
+      assert.strictEqual(
+        estimateUsageCost(usage, "deepseek-v4-pro", PEAK),
+        rounded((300 * 1.32 + 700 * 0.044 + 100 * 3.96) / 1_000_000),
+      );
+      assert.strictEqual(
+        estimateUsageCost(usage, "deepseek-v4-pro", OFF_PEAK, "cny"),
+        rounded((300 * 4.5 + 700 * 0.15 + 100 * 13.5) / 1_000_000),
+      );
     });
 
     test("prices the same tokens from DeepSeek's documented CNY table", () => {

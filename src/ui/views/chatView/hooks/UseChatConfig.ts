@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useVsCode } from "../contexts";
 import { MODEL_OPTIONS } from "@/contracts/deepseek/Models";
-import type { HandlerToWebviewMessage, PermissionMode } from "@/contracts";
+import { mapReasoningEffort, DEFAULT_REASONING_EFFORT, type HandlerToWebviewMessage, type PermissionMode, type ReasoningEffort } from "@/contracts";
 import type { UsageCurrency } from "@/shared/usage/Usage";
 import { shouldApplyConfigRevision } from "@webview/config/ConfigRevision";
 
-/**
- * Converts the UI reasoning value to the config expected by the extension host.
- */
-function reasoningToConfig(value: string): { thinkingMode: boolean; reasoningEffort?: "high" | "max" } {
+function reasoningToConfig(value: string): { thinkingMode: boolean; reasoningEffort?: ReasoningEffort } {
   const thinkingMode = value !== "off";
   if (!thinkingMode) {
     return { thinkingMode };
   }
-  const reasoningEffort = value === "max" ? ("max" as const) : ("high" as const);
-  return { thinkingMode, reasoningEffort };
+  return { thinkingMode, reasoningEffort: mapReasoningEffort(value) };
+}
+
+export function reasoningFromConfig(config: { thinkingMode?: boolean; reasoningEffort?: ReasoningEffort }): string {
+  if (config.thinkingMode === false) {
+    return "off";
+  }
+  return config.reasoningEffort ?? DEFAULT_REASONING_EFFORT;
 }
 
 export function useChatConfig() {
@@ -40,9 +43,6 @@ export function useChatConfig() {
   useEffect(() => {
     reasoningRef.current = reasoning;
   }, [reasoning]);
-  /**
-   * Applies saved config from configLoaded without side effects inside useEffect.
-   */
   const applySavedConfig = useCallback((config: { reasoning?: string; model?: string; permissionMode?: PermissionMode; historyEnabled?: boolean; usageBreakdown?: boolean; usageCostCurrency?: UsageCurrency }, revision?: number) => {
     if (revision !== undefined) {
       if (!shouldApplyConfigRevision(revisionRef.current, revision)) {
@@ -73,7 +73,7 @@ export function useChatConfig() {
   }, []);
   const applyConfigUpdateResult = useCallback((message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>) => {
     applySavedConfig({
-      reasoning: message.config.thinkingMode === false ? "off" : message.config.reasoningEffort === "max" ? "max" : "high",
+      reasoning: reasoningFromConfig(message.config),
       model: message.config.model,
       permissionMode: message.config.permissionMode,
       historyEnabled: message.config.historyEnabled,

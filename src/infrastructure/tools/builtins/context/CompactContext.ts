@@ -1,15 +1,6 @@
 import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 
-/**
- * Signaling tool that requests a tool-cycle context compaction.
- *
- * The handler itself is a no-op: the actual context rollover is performed by
- * ToolCallSession when it observes this tool name in the active cycle. This is
- * intentional - a tool handler is isolated from the cycle's live messages, so
- * the session intercepts the call and compacts the in-flight conversation,
- * allowing the model to continue from the compacted state on the next round.
- */
 async function handleCompactContext(): Promise<string> {
   return [
     "Context compaction requested. The active tool protocol will be rolled over into a compacted continuation for the next round.",

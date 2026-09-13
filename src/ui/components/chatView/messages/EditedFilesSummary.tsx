@@ -11,11 +11,6 @@ interface EditedFilesSummaryProps {
   toolCallGroups: ToolCallGroup[];
 }
 
-/**
- * Lists the files edited during one assistant turn, mirroring the compact change summary
- * other coding agents show when a turn finishes. Reverting changes is intentionally not
- * offered yet; it needs its own design.
- */
 function EditedFilesSummary({ toolCallGroups }: EditedFilesSummaryProps) {
   const vscode = useVsCode();
   const files = useMemo(() => collectTurnFileEdits(toolCallGroups), [toolCallGroups]);
@@ -62,7 +57,7 @@ function EditedFilesSummary({ toolCallGroups }: EditedFilesSummaryProps) {
             <button
               type="button"
               className="editedFileRow"
-              title={t("tools.viewChange")}
+              data-tooltip={t("tools.viewChange")}
               onClick={() => openChange(file)}
             >
               <span className="editedFilePath">{file.path}</span>

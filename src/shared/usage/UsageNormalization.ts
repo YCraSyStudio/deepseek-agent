@@ -40,7 +40,6 @@ export function isProviderUsage(value: unknown): value is ProviderUsage {
   return parseProviderUsage(value) !== undefined;
 }
 
-/** Validates a value read back from history; returns undefined when malformed or internally inconsistent. */
 export function normalizeUsageAggregate(value: unknown): UsageAggregate | undefined {
   if (
     !isRecord(value) ||
@@ -95,8 +94,6 @@ export function normalizeUsageAggregate(value: unknown): UsageAggregate | undefi
     schemaVersion: USAGE_SCHEMA_VERSION,
     officialEndpoint: value.officialEndpoint,
     ...(value.model !== undefined ? { model: value.model } : {}),
-    // The stored catalog version is preserved: an estimate produced under older
-    // rates must not be relabelled as if it had been priced with current ones.
     ...(priceCatalogVersion !== undefined ? { priceCatalogVersion } : {}),
     ...(value.pricedAt !== undefined ? { pricedAt: value.pricedAt } : {}),
     ...(value.currency !== undefined ? { currency: "USD" } : {}),
@@ -108,6 +105,29 @@ export function normalizeUsageAggregate(value: unknown): UsageAggregate | undefi
   };
   if ((normalized.costUsd === undefined) !== (normalized.currency === undefined)) {
     return undefined;
+  }
+  if (value.byModel !== undefined) {
+    if (!Array.isArray(value.byModel) || value.byModel.length < 2 || value.byModel.length > 100) {return undefined;}
+    const children: UsageAggregate[] = [];
+    for (const entry of value.byModel) {
+      if (!isRecord(entry) || entry.byModel !== undefined) {return undefined;}
+      const child = normalizeUsageAggregate(entry);
+      if (!child || child.count === 0 || children.some((other) => other.model === child.model)) {return undefined;}
+      children.push(child);
+    }
+    if (normalized.model !== undefined) {return undefined;}
+    if (normalized.officialEndpoint !== children.every((child) => child.officialEndpoint)) {return undefined;}
+    const sum = createEmptyPhaseUsage();
+    for (const child of children) {mergePhaseUsage(sum, child);}
+    if (JSON.stringify(sum) !== JSON.stringify(totals)) {return undefined;}
+    for (const phase of USAGE_PHASES) {
+      const phaseSum = createEmptyPhaseUsage();
+      for (const child of children) {
+        if (child.byPhase[phase]) {mergePhaseUsage(phaseSum, child.byPhase[phase]!);}
+      }
+      if (JSON.stringify(phaseSum) !== JSON.stringify(normalized.byPhase[phase] ?? createEmptyPhaseUsage())) {return undefined;}
+    }
+    normalized.byModel = children;
   }
   return normalized;
 }
@@ -210,7 +230,6 @@ function isOptionalNonNegativeNumber(value: unknown): value is number | undefine
   return value === undefined || (typeof value === "number" && Number.isFinite(value) && value >= 0);
 }
 
-/** Accepts only the canonical UTC form written by `refreshUsageCost`. */
 function isUtcInstant(value: unknown): value is string {
   if (typeof value !== "string" || value.length > 40) {
     return false;

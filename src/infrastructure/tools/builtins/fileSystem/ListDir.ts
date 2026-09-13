@@ -1,6 +1,7 @@
 import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import { getErrorMessage } from "@/shared/utils/Errors";
 
 const MAX_DIRECTORY_ENTRIES = 500;
 const MAX_DIRECTORY_OUTPUT_BYTES = 64 * 1024;
@@ -38,10 +39,6 @@ async function handleListDir(args: Record<string, unknown>): Promise<string> {
   } catch (err: unknown) {
     return `Error listing directory '${dirPath}': ${getErrorMessage(err)}`;
   }
-}
-
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export const listDirDefinition: ToolDefinition = {

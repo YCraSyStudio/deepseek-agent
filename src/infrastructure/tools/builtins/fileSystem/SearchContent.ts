@@ -1,6 +1,7 @@
 import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolHandlerContext, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost, type ToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import { getErrorMessage } from "@/shared/utils/Errors";
 import { bufferLooksBinary, createStructuredResult } from "./StructuredResult";
 
 const MAX_SEARCH_RESULTS = 50;
@@ -294,10 +295,6 @@ function createAbortError(message: string): Error {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && (error.name === "AbortError" || error.name === "Canceled");
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export const searchContentDefinition: ToolDefinition = {

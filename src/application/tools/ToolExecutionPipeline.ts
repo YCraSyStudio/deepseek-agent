@@ -1,4 +1,3 @@
-/** Ordered policy boundary for a single tool execution. */
 const TOOL_EXECUTION_STAGE_ORDER = [
   "argument_validation",
   "workspace_trust",

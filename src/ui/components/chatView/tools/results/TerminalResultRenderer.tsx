@@ -1,5 +1,6 @@
 import type { TerminalCommandResult } from "@webview/views/chatView/utils/FilePreviewTypes";
 import { t } from "@webview/i18n";
+import { useState } from "react";
 
 export function renderTerminalResult(result: TerminalCommandResult) {
   const duration =
@@ -45,6 +46,7 @@ export function renderTerminalResult(result: TerminalCommandResult) {
               : ""}
           </summary>
           <pre>{truncate(result.stdout, 16_000)}</pre>
+          {stdoutPreviewTruncated ? <RetainedOutput value={result.stdout} /> : null}
         </details>
       ) : null}
       {result.stderr ? (
@@ -56,6 +58,7 @@ export function renderTerminalResult(result: TerminalCommandResult) {
               : ""}
           </summary>
           <pre>{truncate(result.stderr, 16_000)}</pre>
+          {stderrPreviewTruncated ? <RetainedOutput value={result.stderr} /> : null}
         </details>
       ) : null}
       {!result.stdout && !result.stderr ? (
@@ -64,6 +67,16 @@ export function renderTerminalResult(result: TerminalCommandResult) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function RetainedOutput({ value }: { value: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{t("results.retainedOutput")}</summary>
+      {open ? <textarea readOnly aria-label={t("results.retainedOutput")} value={value} rows={20} style={{ width: "100%" }} /> : null}
+    </details>
   );
 }
 

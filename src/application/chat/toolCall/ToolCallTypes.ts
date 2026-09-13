@@ -1,4 +1,4 @@
-import type { ChatCompletionResponse, ChatMessage, ToolCall, ToolDefinition } from "@/contracts";
+import type { ChatCompletionResponse, ChatMessage, ReasoningEffort, ToolCall, ToolDefinition } from "@/contracts";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import type { GenerationBudgetManager } from "@/application/chat/context/GenerationBudgetManager";
 
@@ -15,7 +15,6 @@ export interface ToolCallCycleOptions {
   onToolResult?: (toolCallId: string, result: string) => void;
   onTranscriptUpdate?: (messages: ChatMessage[], status: "complete" | "incomplete") => void;
   onUsage?: (usage?: ProviderUsage) => void;
-  /** Runs only at a protocol-safe boundary, after every emitted tool call has a terminal result. */
   prepareRequestContext?: (
     messages: ChatMessage[],
     tools: ToolDefinition[],
@@ -28,14 +27,13 @@ export interface ToolCallCycleOptions {
   onStreamChunk?: (content: string) => void;
   onStreamReasoning?: (content: string) => void;
   thinkingMode?: boolean;
-  reasoningEffort?: "high" | "max";
+  reasoningEffort?: ReasoningEffort;
   maxTokens?: number;
   userId?: string;
   budgetManager?: GenerationBudgetManager;
   onRecoveryStarted?: () => Promise<void> | void;
   reviewCompletion?: (context: CompletionReviewContext) => Promise<CompletionReviewDecision>;
   reviewProgress?: (context: ProgressReviewContext) => Promise<ProgressReviewResult>;
-  /** Internal override used by tests. Production starts at 20 rounds, then reviews every 5 rounds. */
   progressReviewInterval?: number;
 }
 

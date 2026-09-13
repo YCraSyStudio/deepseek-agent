@@ -36,6 +36,12 @@ Image cards use host-generated preview URIs. Removing a draft card asks the host
 
 Clicking an attached image, either a composer thumbnail or an image of a sent message, opens `ImageLightbox`: a full-window viewer that fits the image to the window, keeps its aspect ratio, and lets the user drag the image to pan once it overflows the scrollable viewport. It exposes zoom out, the fit percentage (click to fit), zoom in, and close. Escape, the backdrop, and `+`/`-`/`0` are also handled, focus stays trapped inside the viewer, and the maths lives in the pure `ImageZoom` (scale) and `ImagePan` (scroll offset) modules.
 
+## Controls and tooltips
+
+One shared control language keeps panels consistent: `src/ui/styles/Variables.css` publishes the compact control metrics (`--control-radius`, `--control-min-height`, `--control-hover-bg`, `--control-focus-ring`) and both `select` and the composed composer pickers (model/reasoning, usage, attachment) use them, so the model menu matches the permission select instead of carrying its own border, height and highlight.
+
+Tooltips are declared with `data-tooltip` on the control and rendered by the single `TooltipLayer` mounted in `App.tsx`. The layer delegates `pointerover`/`focusin` on the document, opens an `aria-describedby` reference, and portals one fixed box to `body`: anchors live inside panels that clip their children (`overflow: hidden`, container queries), and the sidebar is too narrow for a blindly centred hint. `TooltipPlacement.ts` holds the maths (flip to the opposite side when the asked one has no room, keep `6px` from the viewport edges), `data-tooltip-position` and `data-tooltip-align` choose the side and the alignment, hover waits `350ms`, focus shows immediately, and pointer, click, `Escape` and blur dismiss it. Native `title` attributes are kept only where they describe truncated content the browser draws itself.
+
 ## Responsive behavior
 
 All controls use the webview viewport, `min-width: 0`, minimal horizontal padding, wrapping, and content-sized menus. The combined model/reasoning popover follows its actual content width and stays within the viewport. No supported sidebar width should require horizontal scrolling.

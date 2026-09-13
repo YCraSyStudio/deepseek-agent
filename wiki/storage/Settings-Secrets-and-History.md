@@ -4,7 +4,7 @@
 
 ## Settings
 
-`src/platform/vscode/storage/SettingsManager.ts` atomically stores normalized settings in `~/.yrs-dpsk-copilot/settings.json`. Runtime reads use the confirmed in-memory revision.
+`src/vscode/storage/SettingsManager.ts` atomically stores normalized settings in `~/.deepseek-agent/settings.json`. Runtime reads use the confirmed in-memory revision.
 
 `HistoryTransitionController` owns the two-phase persistent/incognito transition so configuration writes, pending-generation decisions, and save/discard outcomes remain ordered.
 
@@ -25,7 +25,7 @@ API keys are never part of settings.
 
 ## Conversation history
 
-`HistoryManager` coordinates retention and mutation locking. `ConversationStorage` owns manifests and bounded segments, while `ConversationNormalization` produces the canonical schema-v2 representation. Data lives under `~/.yrs-dpsk-copilot/history/`. Conversations include immutable workspace binding, generation ownership, terminal status, timeline, tool presentation, and image attachment metadata.
+`HistoryManager` coordinates retention and mutation locking. `ConversationStorage` owns manifests and bounded segments, while `ConversationNormalization` produces the canonical schema-v2 representation. Data lives under `~/.deepseek-agent/history/`. Conversations include immutable workspace binding, generation ownership, terminal status, timeline, tool presentation, and image attachment metadata.
 
 Terminal generation statuses are `completed`, `cancelled`, `interrupted`, and `error`. Explicit Stop persists a `cancelled` turn with its user message, partial assistant timeline, and completed tool results. Only complete provider protocol sequences are eligible for future replay.
 
@@ -43,7 +43,7 @@ History is limited by retention and quota and excludes the active conversation f
 
 ## Generation checkpoints
 
-`GenerationCheckpointStore` keeps one atomic schema-3 checkpoint per conversation under `~/.yrs-dpsk-copilot/generation-checkpoints/`.
+`GenerationCheckpointStore` keeps one atomic schema-3 checkpoint per conversation under `~/.deepseek-agent/generation-checkpoints/`.
 
 - Streaming writes are coalesced; queue and tool transitions persist immediately.
 - Checkpoints contain partial presentation state, canonical transcript, queued prompts, image metadata, non-secret configuration, workspace binding, permission snapshot, and a monotonic revision.

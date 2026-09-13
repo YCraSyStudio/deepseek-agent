@@ -9,6 +9,8 @@ import { getVsCodeApi } from "@webview/VsCodeApi";
 import ModelReasoningPicker from "./ModelReasoningPicker";
 import UsagePicker, { UsagePopover } from "./UsagePicker";
 import type { UsageAggregate, UsageCurrency } from "@/shared/usage/Usage";
+import type { ContextWindowStatus } from "@/contracts";
+import type { ContextCompactionControls } from "@webview/views/chatView/ChatViewTypes";
 
 type Props = {
   reasoning: string;
@@ -18,15 +20,15 @@ type Props = {
   onReasoningChange: (value: string) => void;
   onModelChange: (modelId: string) => void;
   onPermissionModeChange: (value: PermissionMode) => void;
-  /** Files referenced in the next chat request. */
   referencedFiles?: ReferencedFile[];
-  /** Remove a referenced file. */
   onRemoveReferencedFile?: (index: number) => void;
   conversationId?: string;
   usage?: UsageAggregate;
   usageByModel?: readonly UsageAggregate[];
   usageCurrency?: UsageCurrency;
   showUsage?: boolean;
+  contextWindow?: ContextWindowStatus;
+  compaction?: ContextCompactionControls;
 };
 
 const PERMISSION_MODES: readonly PermissionMode[] = ["default", "auto-approve", "full-access"];
@@ -50,6 +52,8 @@ function InputFooter({
   usageByModel = [],
   usageCurrency = "usd",
   showUsage = false,
+  contextWindow,
+  compaction,
 }: Props) {
   const footerRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
@@ -65,7 +69,7 @@ function InputFooter({
   }, []);
 
   const reasoningOptions = useMemo(() => {
-    return [{ value: "off", label: t("chat.off") }, { value: "high", label: t("chat.high") }, { value: "max", label: t("chat.max") }];
+    return [{ value: "off", label: t("chat.off") }, { value: "low", label: t("chat.low") }, { value: "high", label: t("chat.high") }, { value: "max", label: t("chat.max") }];
   }, []);
 
   const modelOptions = useMemo(() => {
@@ -94,6 +98,8 @@ function InputFooter({
             type="button"
             className="attachmentPickerTrigger"
             aria-label={t("chat.attach")}
+            data-tooltip={t("chat.attach")}
+            data-tooltip-align="start"
             onClick={() => getVsCodeApi()?.postMessage({
               type: "selectAttachments",
               requestId: crypto.randomUUID(),
@@ -122,14 +128,28 @@ function InputFooter({
           >
             {compact && showUsage && usage && usage.count > 0 ? (
               <div className="compactComposerUsage">
-                <UsagePopover usage={usage} usageByModel={usageByModel} currency={usageCurrency} />
+                <UsagePopover
+                  usage={usage}
+                  usageByModel={usageByModel}
+                  currency={usageCurrency}
+                  contextWindow={contextWindow}
+                  compaction={compaction}
+                />
               </div>
             ) : null}
           </ModelReasoningPicker>
         </div>
         {!compact ? <div className="inputFooterSecondaryControls">
-          {showUsage ? <UsagePicker usage={usage} usageByModel={usageByModel} currency={usageCurrency} /> : null}
-          <span className="selectTooltipWrapper" data-tooltip={t("tools.permissionMode")}>
+          {showUsage ? (
+            <UsagePicker
+              usage={usage}
+              usageByModel={usageByModel}
+              currency={usageCurrency}
+              contextWindow={contextWindow}
+              compaction={compaction}
+            />
+          ) : null}
+          <span className="selectTooltipWrapper" data-tooltip={t("tools.permissionMode")} data-tooltip-align="end">
             <select
               name="PermissionMode"
               id="PermissionMode"

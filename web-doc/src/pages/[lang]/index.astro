@@ -1,6 +1,6 @@
 ---
 import DocsLayout from "../../layouts/DocsLayout.astro";
-import { docsPath, homeContent, isLanguage, languages, navLabels, pageSlugs, type Language } from "../../i18n";
+import { canonicalPath, homeContent, isLanguage, languages, navLabels, pageSlugs, type Language } from "../../i18n";
 
 export function getStaticPaths() {
   return languages.map((lang) => ({ params: { lang } }));
@@ -8,13 +8,13 @@ export function getStaticPaths() {
 
 const lang = Astro.params.lang;
 if (!isLanguage(lang)) {
-  return Astro.redirect(docsPath("en"));
+  return Astro.redirect(canonicalPath("en"));
 }
 
 const content = homeContent[lang as Language];
 ---
 <DocsLayout title={content.title} description={content.description} lang={lang}>
-  <h1>Yar's DeepSeek Copilot</h1>
+  <h1>YCraSy DeepSeek Agent</h1>
   <p class="lead">{content.lead}</p>
   <table class="metadataTable" aria-label="Project metadata">
     <tbody>
@@ -34,7 +34,7 @@ const content = homeContent[lang as Language];
   </table>
   <section class="sectionList" aria-label="sections">
     {pageSlugs.map((slug) => (
-      <a href={docsPath(lang, slug)}>
+      <a href={canonicalPath(lang as Language, slug)}>
         <strong>{navLabels[lang][slug]}</strong>
         <span>{content.cards[slug]}</span>
       </a>

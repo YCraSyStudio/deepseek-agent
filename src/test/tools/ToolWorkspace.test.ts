@@ -13,7 +13,7 @@ import {
 } from "@/infrastructure/tools/ToolWorkspace";
 
 suite("workspace path validation", () => {
-  const workspaceRoot = path.resolve("/tmp/deepseek-copilot-workspace");
+  const workspaceRoot = path.resolve("/tmp/deepseek-agent-workspace");
 
   test("resolves relative paths inside the workspace", () => {
     const resolved = resolveWorkspacePath("src/core/index.ts", workspaceRoot);
@@ -90,7 +90,7 @@ suite("workspace path validation", () => {
   });
 
   test("rejects symbolic links and junctions that resolve outside the workspace", async () => {
-    const sandbox = await mkdtemp(path.join(tmpdir(), "deepseek-copilot-path-test-"));
+    const sandbox = await mkdtemp(path.join(tmpdir(), "deepseek-agent-path-test-"));
     const root = path.join(sandbox, "workspace");
     const outside = path.join(sandbox, "outside");
     await mkdir(root);

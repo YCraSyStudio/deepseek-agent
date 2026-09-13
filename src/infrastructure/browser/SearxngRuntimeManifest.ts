@@ -1,7 +1,9 @@
+import { isRecord } from "@/shared/utils/TypeGuards";
+
 export const SEARXNG_RUNTIME_VERSION = "2026.08.22-9fea41204-v2";
 export const SEARXNG_RUNTIME_COMMIT = "9fea41204fdfa7a5cfa15b0ebd12904c520478ce";
 export const SEARXNG_RUNTIME_RELEASE_TAG = `searxng-runtime-${SEARXNG_RUNTIME_VERSION}`;
-export const SEARXNG_RUNTIME_RELEASE_BASE_URL = `https://github.com/YCraSyStudio/deepseek-copilot/releases/download/${SEARXNG_RUNTIME_RELEASE_TAG}`;
+export const SEARXNG_RUNTIME_RELEASE_BASE_URL = `https://github.com/YCraSyStudio/deepseek-agent/releases/download/${SEARXNG_RUNTIME_RELEASE_TAG}`;
 export const MAX_SEARXNG_RUNTIME_BYTES = 512 * 1024 * 1024;
 
 export type SearxngRuntimePlatformKey =
@@ -24,11 +26,6 @@ export interface SearxngRuntimeManifest {
   readonly assets: Partial<Record<SearxngRuntimePlatformKey, SearxngRuntimeAsset>>;
 }
 
-/**
- * Trust anchor shipped inside the VSIX. Runtime downloads are accepted only when
- * they match these exact sizes and SHA-256 digests; release metadata is never a
- * source of trust for executable bytes.
- */
 export const PINNED_SEARXNG_RUNTIME_ASSETS: Readonly<Partial<Record<SearxngRuntimePlatformKey, SearxngRuntimeAsset>>> = Object.freeze({
   "linux-x64": Object.freeze({
     name: "searxng-runtime-linux-x64",
@@ -103,10 +100,6 @@ export function parseSearxngRuntimeManifest(value: unknown): SearxngRuntimeManif
   };
 }
 
-/**
- * Remote manifests remain useful release metadata, but any consumer must prove
- * that their entry exactly matches the trust anchor embedded in the extension.
- */
 export function resolveSearxngRuntimeAsset(
   manifest: SearxngRuntimeManifest,
   platformKey: SearxngRuntimePlatformKey,
@@ -137,6 +130,3 @@ function parseAsset(platformKey: SearxngRuntimePlatformKey, value: unknown): Sea
   return { name: expectedName, sha256: value.sha256.toLowerCase(), size: Number(value.size) };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}

@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { isWebviewToHandlerMessage } from "@/platform/vscode/webviews/WebviewMessageValidation";
+import { isWebviewToHandlerMessage } from "@/vscode/webviews/WebviewMessageValidation";
 
 suite("webview message validation", () => {
   test("accepts every valid message shape", () => {

@@ -25,32 +25,33 @@ jobs:
         env:
           HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: node scripts/detect-release-mode.mjs
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: node scripts/prepare-test-results.mjs
-      - run: npm run compile
-      - run: npm run lint
-      - run: npm run audit:dead-code
-      - run: npm run test:unit
-      - run: npm run verify:searxng-runtime-config
+      - run: pnpm run compile
+      - run: pnpm run lint
+      - run: pnpm run audit:dead-code
+      - run: pnpm run test:unit
+      - run: pnpm run verify:searxng-runtime-config
       - name: Verify published SearXNG runtime
         if: steps.release-mode.outputs.release == 'true'
-        run: npm run verify:searxng-runtime
+        run: pnpm run verify:searxng-runtime
       - name: Validate release tag and changelog
         if: steps.release-mode.outputs.release == 'true'
         env:
           TAG: ${{ steps.release-mode.outputs.tag }}
         run: node scripts/extract-release-notes.mjs CHANGELOG.md package.json "$TAG" release-notes.md
       - name: Audit runtime dependencies
-        run: npm audit --omit=dev --audit-level=high
+        run: pnpm audit --prod --audit-level high
       - name: Audit build chain
-        run: npm audit --audit-level=critical
-      - run: npm run build
-      - run: npm run package:vsix
-      - run: npm run verify:vsix
+        run: pnpm audit --audit-level critical
+      - run: pnpm run build
+      - run: pnpm run package:vsix
+      - run: pnpm run verify:vsix
       - run: node scripts/write-artifact-checksum.mjs artifacts/*.vsix artifacts/sha256.txt
       - uses: actions/upload-artifact@v7
         with:
@@ -61,7 +62,8 @@ jobs:
         if: always()
         with:
           name: quality-test-results
-          path: test-results/
+          path: .tmp/test-results/
+          include-hidden-files: true
           if-no-files-found: warn
 
   extension-host:
@@ -73,23 +75,25 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: node scripts/prepare-test-results.mjs
       - name: Run extension-host integration tests
         if: runner.os != 'Linux'
-        run: npm run test:integration -- --code-version stable --reporter xunit --reporter-option output=test-results/integration.xml
+        run: pnpm run test:integration -- --code-version stable --reporter xunit --reporter-option output=.tmp/test-results/integration.xml
       - name: Run extension-host integration tests (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a npm run test:integration -- --code-version stable --reporter xunit --reporter-option output=test-results/integration.xml
+        run: xvfb-run -a pnpm run test:integration -- --code-version stable --reporter xunit --reporter-option output=.tmp/test-results/integration.xml
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: extension-host-${{ matrix.os }}
-          path: test-results/
+          path: .tmp/test-results/
+          include-hidden-files: true
           if-no-files-found: warn
 
   packaged-smoke:
@@ -98,16 +102,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
           name: production-vsix
           path: artifacts
-      - run: npm run prepare:integration
+      - run: pnpm run prepare:integration
       - run: xvfb-run -a node scripts/test-packaged-vsix.mjs artifacts/*.vsix stable
 
   github-release:
@@ -162,7 +167,7 @@ jobs:
           gh release create "$TAG"
           artifacts/*.vsix
           artifacts/sha256.txt
-          --title "Yar's DeepSeek Copilot $TAG"
+          --title "YCraSy DeepSeek Agent $TAG"
           --notes-file release-notes.md
           --prerelease
           --verify-tag

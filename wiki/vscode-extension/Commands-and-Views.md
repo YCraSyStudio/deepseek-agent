@@ -4,14 +4,14 @@
 
 ## Commands
 
-`yrs-dpsk-copilot.openChat`
+`deepseek-agent.openChat`
 
-- Opens/focuses the DeepSeek Copilot sidebar.
-- Should resolve the `yrs-dpsk-copilot.chatView` view.
+- Opens/focuses the YCraSy DeepSeek Agent sidebar.
+- Should resolve the `deepseek-agent.chatView` view.
 
 ## Views
 
-`yrs-dpsk-copilot.chatView`
+`deepseek-agent.chatView`
 
 - Main React webview.
 - Contains Chat, History, and Settings.

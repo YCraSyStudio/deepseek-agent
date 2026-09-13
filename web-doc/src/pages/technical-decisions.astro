@@ -5,7 +5,7 @@ import { pageContent, sectionAnchor } from "../i18n";
 const lang = "en";
 const content = pageContent[lang]["technical-decisions"];
 ---
-<DocsLayout title={content.title} description={content.description} lang={lang} currentSlug="technical-decisions">
+<DocsLayout title={content.title} seoTitle={content.seoTitle} description={content.description} lang={lang} currentSlug="technical-decisions">
   <h1>{content.title}</h1>
   <p class="lead">{content.lead}</p>
   {content.sections.map((section) => (

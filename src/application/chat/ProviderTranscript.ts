@@ -1,5 +1,6 @@
 import type { ChatMessage, Conversation, ConversationMessage, ToolCall } from "@/contracts";
 import { isRecord } from "@/shared/utils/TypeGuards";
+import { isBoundedString } from "@/shared/utils/Validation";
 
 const MAX_TRANSCRIPT_MESSAGES = 10_000;
 const MAX_TRANSCRIPT_FIELD_CHARACTERS = 5 * 1024 * 1024;
@@ -34,7 +35,6 @@ interface CompactionBoundary {
 
 export interface StoredConversationMessage extends ConversationMessage {
   providerTranscript?: ProviderTranscript;
-  /** Compact assistant text used for future provider context after a generation completes. */
   contextContent?: string;
 }
 
@@ -223,6 +223,3 @@ function isMessageRole(value: unknown): value is ChatMessage["role"] {
   return value === "assistant" || value === "tool";
 }
 
-function isBoundedString(value: unknown, maxLength: number): value is string {
-  return typeof value === "string" && value.length <= maxLength;
-}

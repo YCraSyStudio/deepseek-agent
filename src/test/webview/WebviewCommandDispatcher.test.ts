@@ -1,5 +1,5 @@
 import * as assert from "node:assert";
-import { WebviewCommandDispatcher } from "@/platform/vscode/webviews/WebviewCommandDispatcher";
+import { WebviewCommandDispatcher } from "@/vscode/webviews/WebviewCommandDispatcher";
 
 suite("WebviewCommandDispatcher", () => {
   test("routes a typed command once and reports unknown commands", () => {

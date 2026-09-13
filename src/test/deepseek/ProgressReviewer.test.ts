@@ -3,7 +3,7 @@ import type { AppConfig, ChatCompletionRequest, ChatCompletionResponse } from "@
 import {
   parseProgressReview,
   reviewProgress,
-} from "@/infrastructure/deepseek/providers/deepseek/features/ProgressReviewer";
+} from "@/infrastructure/deepseek/provider/features/ProgressReviewer";
 import { createProgressReviewCheckpointMessage } from "@/application/chat/toolCall/TurnGuidance";
 
 suite("DeepSeek progress reviewer", () => {

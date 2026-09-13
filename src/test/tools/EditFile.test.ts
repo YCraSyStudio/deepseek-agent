@@ -4,7 +4,7 @@ import { editFileHandler, editFileHandlerForced } from "@/infrastructure/tools/b
 import { setToolWorkspaceHost, type ToolWorkspaceEntryType, type ToolWorkspaceHost, type ToolWorkspaceStat } from "@/infrastructure/tools/ToolWorkspace";
 
 suite("edit_file tool", () => {
-  const workspaceRoot = path.resolve("/tmp/deepseek-copilot-edit-file");
+  const workspaceRoot = path.resolve("/tmp/deepseek-agent-edit-file");
 
   test("requires replaceAll when search text is ambiguous", async () => {
     const files = new Map<string, string>([["README.md", "alpha beta alpha"]]);

@@ -28,9 +28,6 @@ const aliasPlugin = {
   },
 };
 
-/**
- * @type {import('esbuild').Plugin}
- */
 const esbuildProblemMatcherPlugin = {
   name: "esbuild-problem-matcher",
 

@@ -14,7 +14,7 @@
 
 ## Allowed direction
 
-- `platform/vscode` may depend on `application`, `contracts`, `infrastructure`, and `shared`.
+- `vscode` may depend on `application`, `contracts`, `infrastructure`, and `shared`.
 - `application` may depend on `contracts` and runtime-neutral `shared` modules.
 - `infrastructure` may depend on `application`, `contracts`, and `shared`.
 - `ui/chat` should communicate with the backend only through the message contract.
@@ -32,7 +32,7 @@ Create an interface when domain logic needs to:
 - execute commands.
 - access the active workspace.
 
-The port belongs in `src/application/ports`; concrete implementations live in `src/infrastructure` or `src/platform/vscode`.
+The port belongs in `src/application/ports`; concrete implementations live in `src/infrastructure` or `src/vscode`.
 
 ESLint enforces these directions with scoped `no-restricted-imports` rules.
 `src/test/architecture/LayerBoundaries.test.ts` resolves aliases and relative

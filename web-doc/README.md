@@ -1,14 +1,14 @@
-# DeepSeek Copilot Web Doc
+# YCraSy DeepSeek Agent Web Doc
 
-Human-facing visual documentation for DeepSeek Copilot, built with Astro.
+Human-facing visual documentation for YCraSy DeepSeek Agent, built with Astro.
 
 ## Languages
 
 The site supports:
 
-- English: `/deepseek-copilot/en/`
-- Spanish: `/deepseek-copilot/es/`
-- Chinese: `/deepseek-copilot/zh/`
+- English: `/deepseek-agent/en/`
+- Spanish: `/deepseek-agent/es/`
+- Chinese: `/deepseek-agent/zh/`
 
 Translated content lives in `src/i18n/[lang]/[page].ts`.
 
@@ -25,10 +25,10 @@ Shared i18n types, route helpers, and composition live in `src/i18n/index.ts`.
 
 Astro writes the static site to `../docs` so GitHub Pages can serve it from the repository root `/docs` folder.
 
-The production base path is `/deepseek-copilot`, matching the project page URL:
+The production base path is `/deepseek-agent`, matching the project page URL:
 
-https://yarcrasy.github.io/deepseek-copilot/
+https://ycrasystudio.github.io/deepseek-agent/
 
 Technical documentation lives in the GitHub Wiki:
 
-https://github.com/YarCrasy/deepseek-copilot/wiki
+https://github.com/YCraSyStudio/deepseek-agent/wiki

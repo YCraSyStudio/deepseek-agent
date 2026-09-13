@@ -10,5 +10,5 @@ await build({
   platform: "node",
   format: "cjs",
   external: ["vscode", "mocha"],
-  outdir: "out/test",
+  outdir: ".tmp/integration-tests",
 });

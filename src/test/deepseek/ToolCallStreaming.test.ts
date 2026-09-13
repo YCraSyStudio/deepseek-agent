@@ -1,5 +1,5 @@
 import * as assert from "node:assert";
-import { createDeepSeekToolCallModelClient } from "@/infrastructure/deepseek/providers/deepseek/features/toolCall/DeepSeekToolCallModelClient";
+import { createDeepSeekToolCallModelClient } from "@/infrastructure/deepseek/provider/features/toolCall/DeepSeekToolCallModelClient";
 
 suite("native tool-call streaming", () => {
   test("emits short assistant chunks immediately without a protocol tail buffer", async () => {

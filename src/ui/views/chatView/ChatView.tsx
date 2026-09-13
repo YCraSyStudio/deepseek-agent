@@ -4,21 +4,18 @@ import "@vscode/codicons/dist/codicon.css";
 import { InputCtrls, InputFooter, MessagesSection } from "./sections";
 import { useChatConfig } from "./hooks";
 import WorkspaceMismatchModal from "@webview/components/shared/workspaceMismatchModal/WorkspaceMismatchModal";
-import type { ApiKeyStatus, ChatMessage } from "./ChatViewTypes";
+import type { ApiKeyStatus, ChatMessage, ContextCompactionResult } from "./ChatViewTypes";
 import { getVsCodeApi } from "@webview/VsCodeApi";
-import type { Conversation, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, WorkspaceContextStatus } from "@/contracts";
+import type { ContextWindowStatus, Conversation, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, WorkspaceContextStatus } from "@/contracts";
 import { t } from "@webview/i18n";
 import { summarizeConversationUsage, type ConversationUsageSnapshot, type UsageCurrency } from "@/shared/usage/Usage";
 import { useChatCommandMessages, type PendingChatRequest } from "./hooks/UseChatCommandMessages";
-
-interface PersistentChatViewState {
-  schemaVersion: 5;
-  mode: "persistent";
-  draft: string;
-  referencedFiles: ReferencedFile[];
-  imageAttachments: ImageAttachment[];
-  conversationId?: string;
-}
+import {
+  getSavedChatState,
+  mergeReferencedFiles,
+  referenceIdentity,
+  type PersistentChatViewState,
+} from "./model/PersistentChatState";
 
 interface IncognitoChatViewState {
   schemaVersion: 3;
@@ -28,6 +25,7 @@ interface IncognitoChatViewState {
 interface ChatViewProps {
   loadedConversation?: Conversation | null;
   conversationUsage?: ConversationUsageSnapshot;
+  contextWindow?: ContextWindowStatus;
   navigationPending?: boolean;
   earlierMessagesLoaded?: number;
   onCancelWorkspaceMismatch?: () => void;
@@ -38,7 +36,7 @@ interface WorkspaceMismatch {
   workspaceName: string;
 }
 
-function ChatView({ loadedConversation, conversationUsage, navigationPending = false, earlierMessagesLoaded = 0, onCancelWorkspaceMismatch }: ChatViewProps) {
+function ChatView({ loadedConversation, conversationUsage, contextWindow, navigationPending = false, earlierMessagesLoaded = 0, onCancelWorkspaceMismatch }: ChatViewProps) {
   const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus>("missing");
   const [isProcessing, setIsProcessing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -62,22 +60,50 @@ function ChatView({ loadedConversation, conversationUsage, navigationPending = f
   const referencedFilesRef = useRef(referencedFiles);
   const imageAttachmentsRef = useRef(imageAttachments);
   const [requestError, setRequestError] = useState<string>();
-  // Seeded from the loaded conversation and refreshed by the host after every
-  // generation; the chat remounts on navigation, so the prop is always current.
   const [hostUsage, setHostUsage] = useState(conversationUsage);
+  const [contextWindowStatus, setContextWindowStatus] = useState(contextWindow);
+  const [compaction, setCompaction] = useState<{ pending: boolean; result?: ContextCompactionResult }>({ pending: false });
+  const compactionRequestRef = useRef<string | undefined>(undefined);
   const initialConfigHandledRef = useRef(false);
   const workspaceRequestIdRef = useRef<string | undefined>(undefined);
   const workspaceMismatchRef = useRef<string | undefined>(undefined);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const usageSummary = useMemo(() => {
-    // The host totals the whole conversation. Adding up the rendered messages
-    // would under-report as soon as history paging drops messages from memory.
     if (hostUsage) {
       return { total: hostUsage.total, byModel: hostUsage.byModel };
     }
     return summarizeConversationUsage(messages);
   }, [hostUsage, messages]);
+
+  const handleContextWindowUpdated = useCallback((next: ContextWindowStatus) => {
+    setContextWindowStatus(next);
+  }, []);
+
+  const handleContextCompactionResult = useCallback((result: ContextCompactionResult & { requestId: string }) => {
+    if (compactionRequestRef.current !== result.requestId) {
+      return;
+    }
+    compactionRequestRef.current = undefined;
+    setCompaction({
+      pending: false,
+      result: { status: result.status, freedTokens: result.freedTokens, error: result.error },
+    });
+    if (result.status === "compacted") {
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "context", content: "" }]);
+    }
+  }, []);
+
+  const handleCompactContext = useCallback(() => {
+    const vscode = getVsCodeApi();
+    if (!vscode || compactionRequestRef.current !== undefined) {
+      return;
+    }
+    const requestId = crypto.randomUUID();
+    compactionRequestRef.current = requestId;
+    setCompaction({ pending: true });
+    vscode.postMessage({ type: "compactContext", requestId, conversationId: conversationIdRef.current });
+  }, []);
 
   useEffect(() => {
     conversationIdRef.current = conversationId;
@@ -311,6 +337,8 @@ function ChatView({ loadedConversation, conversationUsage, navigationPending = f
         onModelChanged={handleModelChanged}
         onProcessingChange={setIsProcessing}
         onConversationUsageUpdated={setHostUsage}
+        onContextWindowUpdated={handleContextWindowUpdated}
+        onContextCompactionResult={handleContextCompactionResult}
         onFocusInput={focusInput}
       />
       {apiKeyStatus === "missing" ? <div className="statusMessage warning">{t("chat.apiKeyMissing")}</div> : null}
@@ -381,66 +409,18 @@ function ChatView({ loadedConversation, conversationUsage, navigationPending = f
               usageByModel={usageSummary.byModel}
               usageCurrency={usageCostCurrency}
               showUsage={usageBreakdown}
+              contextWindow={contextWindowStatus}
+              compaction={{
+                pending: compaction.pending,
+                result: compaction.result,
+                onCompact: handleCompactContext,
+              }}
             />
           )}
         />
       </div>
     </div>
   );
-}
-
-function getSavedChatState(): PersistentChatViewState | undefined {
-  const state = getVsCodeApi()?.getState<Record<string, unknown>>();
-  if (!state || typeof state !== "object") {
-    return undefined;
-  }
-
-  if (state.schemaVersion !== 5 || state.mode !== "persistent") {return undefined;}
-
-  return {
-    schemaVersion: 5,
-    mode: "persistent",
-    draft: typeof state.draft === "string" ? state.draft : "",
-    referencedFiles: Array.isArray(state.referencedFiles)
-      ? state.referencedFiles.filter(isReferencedFile).filter((file) => file.scope !== "external-snapshot")
-      : [],
-    imageAttachments: Array.isArray(state.imageAttachments)
-      ? state.imageAttachments.filter(isImageAttachment)
-      : [],
-    conversationId: typeof state.conversationId === "string" && state.conversationId.trim() ? state.conversationId : undefined,
-  };
-}
-
-function referenceIdentity(file: ReferencedFile): string {
-  return file.referenceId ?? `${file.scope ?? "workspace"}:${file.path}`;
-}
-
-function isImageAttachment(value: unknown): value is ImageAttachment {
-  if (!value || typeof value !== "object") {return false;}
-  const image = value as Partial<ImageAttachment>;
-  return typeof image.id === "string" && typeof image.fileId === "string" &&
-    typeof image.name === "string" && typeof image.previewUri === "string" &&
-    typeof image.expiresAt === "number" && image.expiresAt > Date.now();
-}
-
-function isReferencedFile(value: unknown): value is ReferencedFile {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const file = value as Partial<ReferencedFile>;
-  return typeof file.path === "string" && typeof file.name === "string" && (file.type === "file" || file.type === "directory");
-}
-
-function mergeReferencedFiles(currentFiles: ReferencedFile[], newFiles: ReferencedFile[]): ReferencedFile[] {
-  const seen = new Set(currentFiles.map((file) => file.path));
-  const uniqueNewFiles = newFiles.filter((file) => {
-    if (seen.has(file.path)) {
-      return false;
-    }
-    seen.add(file.path);
-    return true;
-  });
-  return [...currentFiles, ...uniqueNewFiles];
 }
 
 export default ChatView;

@@ -6,7 +6,7 @@ function ChatEmptyState() {
   return (
     <div className="emptyState">
       <img src={DeepSeekLogo} alt="DeepSeek" />
-      <h2>Yar's DeepSeek Copilot</h2>
+      <h2>YCraSy DeepSeek Agent</h2>
       <p>{t("chat.emptyDescription")}</p>
       <div className="emptyHints">
         <kbd>Enter</kbd> {t("chat.send")}

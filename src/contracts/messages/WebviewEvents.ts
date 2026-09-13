@@ -3,6 +3,7 @@ import type { ConversationUsageSnapshot, UsageAggregate } from "@/shared/usage/U
 import type {
   AssistantTimelineEvent,
   AvailableToolInfo,
+  ContextWindowStatus,
   Conversation,
   ConversationMessage,
   ConversationSummary,
@@ -54,6 +55,14 @@ export type HandlerToWebviewMessage =
   | { type: "generationSnapshot"; generations: GenerationSnapshot[]; recoveredDrafts: Array<{ conversationId: string; messages: QueuedGenerationMessage[] }> }
   | { type: "contextCompactionUpdated"; generationId: string; conversationId: string; status: "compacting" | "completed" }
   | { type: "contextCompacted"; generationId: string; conversationId: string }
+  | { type: "contextWindowUpdated"; conversationId: string; contextWindow: ContextWindowStatus }
+  | {
+      type: "contextCompactionResult";
+      requestId: string;
+      status: "compacted" | "empty" | "failed";
+      freedTokens?: number;
+      error?: string;
+    }
   | { type: "generationRecoveryStarted"; generationId: string; conversationId: string; reason: "excessive_reasoning"; message: string }
   | { type: "resourceLimitReached"; generationId?: string; conversationId?: string; resource: string; error: string }
   | { type: "showTyping"; generationId: string; conversationId: string }
@@ -94,7 +103,13 @@ export type HandlerToWebviewMessage =
   | { type: "modelChanged"; modelId: string }
   | { type: "history"; conversations: ConversationSummary[] }
   | { type: "historyError"; requestId?: string; error: string }
-  | { type: "conversationLoaded"; requestId: string; conversation: Conversation; usage?: ConversationUsageSnapshot }
+  | {
+      type: "conversationLoaded";
+      requestId: string;
+      conversation: Conversation;
+      usage?: ConversationUsageSnapshot;
+      contextWindow?: ContextWindowStatus;
+    }
   | { type: "conversationPageLoaded"; requestId: string; id: string; messages: Conversation["messages"]; hasEarlierMessages: boolean; cursor?: string }
   | { type: "conversationLoadRejected"; requestId: string }
   | { type: "conversationDeleted"; id: string }

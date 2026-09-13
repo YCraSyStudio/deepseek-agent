@@ -8,11 +8,11 @@ const allowedDependencies: Record<string, ReadonlySet<string>> = {
   application: new Set(["application", "contracts", "domain", "shared"]),
   contracts: new Set(["contracts", "shared"]),
   domain: new Set(["domain", "shared"]),
-  extension: new Set(["application", "contracts", "domain", "extension", "infrastructure", "platform", "shared"]),
+  extension: new Set(["application", "contracts", "domain", "extension", "infrastructure", "shared", "vscode"]),
   infrastructure: new Set(["application", "contracts", "domain", "infrastructure", "shared"]),
-  platform: new Set(["application", "contracts", "domain", "infrastructure", "platform", "shared"]),
   shared: new Set(["shared"]),
   ui: new Set(["assets", "contracts", "shared", "ui"]),
+  vscode: new Set(["application", "contracts", "domain", "infrastructure", "shared", "vscode"]),
 };
 
 suite("architecture boundaries", () => {
@@ -74,7 +74,7 @@ suite("architecture boundaries", () => {
         if ((owner === "domain" || owner === "application") && (specifier.startsWith("node:") || specifier === "path")) {
           violations.push(`${relative(sourceRoot, file)} imports ${specifier}`);
         }
-        if (specifier === "vscode" && owner !== "platform" && owner !== "extension") {
+        if (specifier === "vscode" && owner !== "vscode" && owner !== "extension") {
           violations.push(`${relative(sourceRoot, file)} imports vscode`);
         }
         if ((specifier === "react" || specifier.startsWith("react/")) && owner !== "ui") {
@@ -160,7 +160,6 @@ function resolveSourceFile(basePath: string): string | undefined {
     try {
       if (readFileSync(candidate)) {return candidate;}
     } catch {
-      // Try the next TypeScript resolution candidate.
     }
   }
   return undefined;

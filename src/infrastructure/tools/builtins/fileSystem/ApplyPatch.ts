@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import { getErrorMessage } from "@/shared/utils/Errors";
 import { bufferLooksBinary, createStructuredResult, createUnifiedDiff } from "./StructuredResult";
 import { getPredominantLineEnding, hasTrailingLineEnding, joinTextLines, splitTextLines, type TextLine } from "./LineEndings";
 
@@ -96,7 +97,6 @@ async function preparePatch(args: ApplyPatchArgs, options: { showDiffPreview: bo
       try {
         await workspace.prepareFileDiff?.(args.path, before, after);
       } catch {
-        // Native diff preview is best-effort; the returned result still includes a unified diff.
       }
     }
 
@@ -208,10 +208,6 @@ function hashText(content: string): string {
 
 function hashBytes(content: Uint8Array): string {
   return createHash("sha256").update(content).digest("hex");
-}
-
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export const applyPatchDefinition: ToolDefinition = {

@@ -14,7 +14,6 @@ const productionCsp = [
   "script-src {{CSP_SOURCE}} 'nonce-{{NONCE}}'",
 ].join('; ');
 
-// https://vite.dev/Config/
 export default defineConfig({
   root: uiRoot,
   plugins: [

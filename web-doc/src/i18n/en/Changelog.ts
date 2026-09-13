@@ -3,9 +3,25 @@ import type { PageContent } from "../Types";
 export const changelog: PageContent = {
   navTitle: "Changelog",
   title: "Changelog",
-  description: "Relevant changes and preview status.",
-  lead: "Preview 0.1.14 moves the extension to DeepSeek V4.1 Flash and retires the model options that DeepSeek no longer serves.",
+  seoTitle: "Release notes and changelog",
+  description: "Every published 0.1.x pre-release of YCraSy DeepSeek Agent with the changes that are visible to the user.",
+  lead: "Preview 0.1.15 adds move_path and delete_path with Git-backed approval, brings DeepSeek V4 Pro back with image questions delegated to Flash, and reports the context window with an on-demand compaction.",
   sections: [
+    {
+      title: "0.1.15 path tools, Vision, and the context window",
+      items: [
+        "Added the move_path tool: it moves or renames a file or a whole directory inside the workspace and creates the destination's parent folder. The destination must not exist, so nothing is overwritten by accident, and an optional expectedBeforeHash rejects the move if the source file changed after the preview.",
+        "Added the delete_path tool: it deletes a file or, with recursive: true, a directory and everything inside it. The path goes to the operating system trash unless permanent: true is passed, and recursive is never inferred, so a directory deletion fails instead of silently taking its contents with it.",
+        "Path changes can now be decided from Git facts. In the automatic permission modes, move_path and delete_path skip the security review when Git proves the change can be undone: the path is inside a repository, tracked, not ignored, and free of uncommitted changes. An untracked, ignored, modified, or non-repository path keeps the confirmation it had before, so a deletion that cannot be undone is never treated as a routine workspace write.",
+        "DeepSeek V4 Pro is selectable again, and its images are delegated to Flash. The model registry records capability flags, so the extension knows that V4 Pro cannot read images itself: a Pro generation that carries a live attachment is offered analyze_images, which asks Flash about the attachments named in the current message, sends DeepSeek file IDs instead of Base64 or local paths, disables thinking, caps its own output at 8K tokens, rejects expired files and files uploaded to another API origin, and reports the delegated usage against Flash in the vision_analysis phase. A Flash generation keeps reading images natively, in chat and in tool rounds.",
+        "The usage popover now shows the context window and can compact on demand. It reports measured usage once a request has been sent and an estimate before that, with the window size, the soft and hard limits, the point where auto-compaction starts, and how many compactions the conversation has had. A Compact context action runs a manual compaction and reports the tokens it freed, or that there was nothing to compact.",
+        "Added the low reasoning effort, between off and high, so thinking can be trimmed for speed without turning reasoning off.",
+        "Conversation history can be filtered and grouped by workspace, with an All workspaces entry, a header per workspace, and the conversation count of each group.",
+        "Terminal results keep their full output viewable. The row still shows a bounded preview, and a View retained output disclosure opens the stdout or stderr that was kept, so a command whose preview looks truncated can be inspected without running it again.",
+        "Tooltips are drawn by one portal layer. data-tooltip anchors are rendered by TooltipLayer, which flips sides and aligns when the requested position has no room, so hints survive the panels that clip their children and the narrow sidebar. The composer pickers and select now share the same control metrics, so the model menu matches the permission select instead of carrying its own border and height.",
+        "Credentials are stripped from tool traffic. Tool results, stored tool-call arguments, and the content handed back after a confirmation pass through redaction, which replaces credential-shaped keys and patterns with [REDACTED] before the text reaches the transcript, the tool ledger, or a checkpoint. Structured output stays parseable, so the paths and results a tool consumer reads are unaffected.",
+      ],
+    },
     {
       title: "0.1.14 DeepSeek V4.1 Flash migration",
       items: [

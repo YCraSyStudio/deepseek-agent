@@ -6,7 +6,7 @@ import { withFileLock, writeJsonFileAtomic } from "@/infrastructure/persistence/
 
 suite("JSON file storage", () => {
   test("creates parent directories and replaces an existing JSON file", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "yrs-dpsk-copilot-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "deepseek-agent-"));
     const target = path.join(root, "nested", "settings.json");
 
     try {
@@ -21,7 +21,7 @@ suite("JSON file storage", () => {
   });
 
   test("serializes independent callers through a shared filesystem lock", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "yrs-dpsk-lock-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "deepseek-agent-lock-"));
     const target = path.join(root, "settings.json");
     const order: string[] = [];
     let releaseFirst: (() => void) | undefined;

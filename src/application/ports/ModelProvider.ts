@@ -18,7 +18,6 @@ export interface ModelProvider {
   listModels(): Promise<Array<{ id: string; name: string }>>;
 }
 
-/** Creates transport adapters without exposing their concrete implementation to use cases. */
 export interface ModelProviderFactory {
   create(config: AppConfig): ModelProvider;
 }

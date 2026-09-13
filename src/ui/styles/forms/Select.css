@@ -9,17 +9,22 @@ select {
   background-position: calc(100% - 14px), calc(100% - 9px);
   background-repeat: no-repeat;
   background-size: 5px 5px, 5px 5px;
-  border-radius: 8px;
+  border-radius: var(--control-radius);
   outline: none;
   width: 100%;
   min-width: 100px;
-  padding: 7px 34px 7px 9px;
+  min-height: var(--control-min-height);
+  padding: var(--control-padding-block) 34px var(--control-padding-block) var(--control-padding-inline);
   font: inherit;
   transition: border-color .16s, box-shadow .16s;
 
+  &:hover:not(:disabled) {
+    background-color: var(--control-hover-bg);
+  }
+
   &:focus {
     border-color: var(--input-focus-border);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus-border) 22%, transparent);
+    box-shadow: var(--control-focus-ring);
   }
 }
 

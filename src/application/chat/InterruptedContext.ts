@@ -4,7 +4,7 @@ import { isRecord } from "@/shared/utils/TypeGuards";
 
 const MAX_CONTEXT_CHARACTERS = 8 * 1024;
 const MAX_PARTIAL_CONTENT_CHARACTERS = 2_000;
-const MUTATING_TOOLS = new Set(["create_file", "edit_file", "apply_patch", "run_terminal_command"]);
+const MUTATING_TOOLS = new Set(["create_file", "edit_file", "apply_patch", "move_path", "delete_path", "run_terminal_command"]);
 const WEB_TOOLS = new Set(["search_web", "read_web"]);
 
 interface LedgerLine {

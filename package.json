@@ -1,18 +1,19 @@
 {
-  "name": "yrs-dpsk-copilot",
-  "displayName": "Yar's Deepseek copilot - A VS Code copilot specialized on Deepseek.",
-  "description": "A deeply integrated VS Code coding assistant specialized in DeepSeek.",
-  "version": "0.1.14",
+  "name": "deepseek-agent",
+  "displayName": "YCraSy DeepSeek Agent",
+  "description": "DeepSeek coding agent for VS Code: chat, tool calls, and autonomous workspace tasks powered by DeepSeek models.",
+  "version": "0.1.15",
+  "packageManager": "pnpm@12.4.1",
   "preview": true,
   "publisher": "yarcrasy",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YCraSyStudio/deepseek-copilot.git"
+    "url": "https://github.com/YCraSyStudio/deepseek-agent.git"
   },
-  "homepage": "https://ycrasystudio.github.io/deepseek-copilot/",
+  "homepage": "https://ycrasystudio.github.io/deepseek-agent/",
   "bugs": {
-    "url": "https://github.com/YCraSyStudio/deepseek-copilot/issues"
+    "url": "https://github.com/YCraSyStudio/deepseek-agent/issues"
   },
   "icon": "src/assets/DeepSeekIcon.png",
   "engines": {
@@ -24,12 +25,12 @@
   ],
   "keywords": [
     "deepseek",
+    "agent",
     "ai",
     "assistant",
-    "copilot",
     "chat",
     "coding",
-    "agent"
+    "vscode"
   ],
   "galleryBanner": {
     "color": "#0f172a",
@@ -50,78 +51,78 @@
   "contributes": {
     "commands": [
       {
-        "command": "yrs-dpsk-copilot.startSearxng",
-        "title": "Yar's DeepSeek Copilot: Start Local SearXNG",
-        "category": "Yar's DeepSeek Copilot"
+        "command": "deepseek-agent.startSearxng",
+        "title": "YCraSy DeepSeek Agent: Start Local SearXNG",
+        "category": "YCraSy DeepSeek Agent"
       },
       {
-        "command": "yrs-dpsk-copilot.stopSearxng",
-        "title": "Yar's DeepSeek Copilot: Stop Local SearXNG",
-        "category": "Yar's DeepSeek Copilot"
+        "command": "deepseek-agent.stopSearxng",
+        "title": "YCraSy DeepSeek Agent: Stop Local SearXNG",
+        "category": "YCraSy DeepSeek Agent"
       },
       {
-        "command": "yrs-dpsk-copilot.openChat",
-        "title": "Yar's DeepSeek Copilot: Open Chat",
-        "category": "Yar's DeepSeek Copilot"
+        "command": "deepseek-agent.openChat",
+        "title": "YCraSy DeepSeek Agent: Open Chat",
+        "category": "YCraSy DeepSeek Agent"
       },
       {
-        "command": "yrs-dpsk-copilot.addFileToChat",
-        "title": "Yar's DeepSeek Copilot: Add File to Chat",
-        "category": "Yar's DeepSeek Copilot",
+        "command": "deepseek-agent.addFileToChat",
+        "title": "YCraSy DeepSeek Agent: Add File to Chat",
+        "category": "YCraSy DeepSeek Agent",
         "icon": "$(add)"
       },
       {
-        "command": "yrs-dpsk-copilot.addSelectionToChat",
-        "title": "Yar's DeepSeek Copilot: Add Selection to Chat",
-        "category": "Yar's DeepSeek Copilot",
+        "command": "deepseek-agent.addSelectionToChat",
+        "title": "YCraSy DeepSeek Agent: Add Selection to Chat",
+        "category": "YCraSy DeepSeek Agent",
         "icon": "$(add)"
       },
       {
-        "command": "yrs-dpsk-copilot.newChat",
-        "title": "Yar's DeepSeek Copilot: New Chat",
-        "category": "Yar's DeepSeek Copilot",
+        "command": "deepseek-agent.newChat",
+        "title": "YCraSy DeepSeek Agent: New Chat",
+        "category": "YCraSy DeepSeek Agent",
         "icon": "$(add)"
       },
       {
-        "command": "yrs-dpsk-copilot.reviewChanges",
-        "title": "Yar's DeepSeek Copilot: Review Changes",
-        "category": "Yar's DeepSeek Copilot",
+        "command": "deepseek-agent.reviewChanges",
+        "title": "YCraSy DeepSeek Agent: Review Changes",
+        "category": "YCraSy DeepSeek Agent",
         "icon": "$(git-pull-request)"
       },
       {
-        "command": "yrs-dpsk-copilot.showDiagnostics",
-        "title": "Yar's DeepSeek Copilot: Show Diagnostics",
-        "category": "Yar's DeepSeek Copilot"
+        "command": "deepseek-agent.showDiagnostics",
+        "title": "YCraSy DeepSeek Agent: Show Diagnostics",
+        "category": "YCraSy DeepSeek Agent"
       },
       {
-        "command": "yrs-dpsk-copilot.clearDiagnostics",
-        "title": "Yar's DeepSeek Copilot: Clear Diagnostics",
-        "category": "Yar's DeepSeek Copilot"
+        "command": "deepseek-agent.clearDiagnostics",
+        "title": "YCraSy DeepSeek Agent: Clear Diagnostics",
+        "category": "YCraSy DeepSeek Agent"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "yrs-dpsk-copilot.addFileToChat",
+          "command": "deepseek-agent.addFileToChat",
           "when": "resourceScheme == file && !explorerResourceIsFolder",
           "group": "navigation@50"
         }
       ],
       "editor/context": [
         {
-          "command": "yrs-dpsk-copilot.addSelectionToChat",
+          "command": "deepseek-agent.addSelectionToChat",
           "when": "editorHasSelection",
           "group": "navigation@50"
         },
         {
-          "command": "yrs-dpsk-copilot.reviewChanges",
+          "command": "deepseek-agent.reviewChanges",
           "when": "resourceScheme == file",
           "group": "navigation@51"
         }
       ],
       "scm/title": [
         {
-          "command": "yrs-dpsk-copilot.reviewChanges",
+          "command": "deepseek-agent.reviewChanges",
           "group": "navigation@50"
         }
       ]
@@ -129,17 +130,17 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "yrs-dpsk-copilot-sidebar",
-          "title": "Yar's DeepSeek Copilot",
+          "id": "deepseek-agent-sidebar",
+          "title": "YCraSy DeepSeek Agent",
           "icon": "src/assets/DeepSeekIcon.svg"
         }
       ]
     },
     "views": {
-      "yrs-dpsk-copilot-sidebar": [
+      "deepseek-agent-sidebar": [
         {
           "type": "webview",
-          "id": "yrs-dpsk-copilot.chatView",
+          "id": "deepseek-agent.chatView",
           "name": "Chat",
           "icon": "src/assets/DeepSeekIcon.svg",
           "visibility": "visible"
@@ -148,20 +149,20 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "pnpm run build",
     "compile": "tsc -p ./ --noEmit",
     "watch": "tsc -watch -p ./ --noEmit",
     "audit:dead-code": "knip --no-progress",
-    "build": "npm run build:extension && npm run build:webview",
+    "build": "pnpm run build:extension && pnpm run build:webview",
     "build:extension": "node esbuild.js --production",
     "build:webview": "vite build --config src/ui/vite.config.mts",
     "dev:webview": "vite --config src/ui/vite.config.mts --host 0.0.0.0 --port 5175 --strictPort",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "npm run test:unit && npm run test:integration",
+    "pretest": "pnpm run compile && pnpm run lint",
+    "lint": "eslint src --max-warnings 0",
+    "test": "pnpm run test:unit && pnpm run test:integration",
     "test:unit": "node scripts/run-unit-tests.mjs",
-    "prepare:integration": "npm run build && node scripts/build-integration-tests.mjs",
-    "test:integration": "npm run prepare:integration && vscode-test",
+    "prepare:integration": "pnpm run build && node scripts/build-integration-tests.mjs",
+    "test:integration": "pnpm run prepare:integration && vscode-test",
     "verify:searxng-runtime-config": "node scripts/verify-searxng-runtime-config.mjs",
     "verify:searxng-runtime": "node scripts/verify-searxng-runtime-release.mjs",
     "package:vsix": "node scripts/prepare-artifacts.mjs && vsce package --no-dependencies --out artifacts",
@@ -195,14 +196,5 @@
     "typescript-eslint": "^8.65.0",
     "vite": "^8.1.5",
     "yauzl": "^3.2.0"
-  },
-  "allowScripts": {
-    "esbuild@0.28.1": true,
-    "@vscode/vsce-sign@2.0.9": true,
-    "keytar@7.9.0": true
-  },
-  "overrides": {
-    "diff": "9.0.0",
-    "serialize-javascript": "7.0.7"
   }
 }

@@ -60,7 +60,6 @@ interface UseChatCommandMessagesOptions {
   setters: ChatCommandSetters;
 }
 
-/** Applies host protocol events to the selected chat without leaking stale IDs across views. */
 export function useChatCommandMessages({
   appendReferencedFiles,
   focusInput,

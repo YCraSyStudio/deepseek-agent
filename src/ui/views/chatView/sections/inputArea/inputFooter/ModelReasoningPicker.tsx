@@ -32,7 +32,7 @@ function ModelReasoningPicker({
   permission,
   children,
 }: ModelReasoningPickerProps) {
-  const { open, rootRef, triggerRef, openPopover, closePopover, togglePopover } = useComposerPopover();
+  const { open, rootRef, triggerRef, openPopover, closePopover, togglePopover, maxHeight } = useComposerPopover();
   const modelLabel = useMemo(
     () => modelOptions.find((option) => option.value === model)?.label ?? model,
     [model, modelOptions],
@@ -57,7 +57,8 @@ function ModelReasoningPicker({
         type="button"
         className="modelReasoningTrigger"
         aria-label={`${compact ? t("navigation.settings") : t("chat.modelSelector")}: ${modelLabel}; ${t("chat.reasoning")}: ${reasoningLabel}`}
-        title={compact ? t("navigation.settings") : `${modelLabel} · ${reasoningLabel}`}
+        data-tooltip={compact ? t("navigation.settings") : `${modelLabel} · ${reasoningLabel}`}
+        data-tooltip-align="end"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={togglePopover}
@@ -79,6 +80,7 @@ function ModelReasoningPicker({
         <div
           className="modelReasoningMenu"
           role="menu"
+          style={{ maxHeight }}
           aria-label={compact ? t("navigation.settings") : `${t("chat.modelSelector")} / ${t("chat.reasoning")}`}
           onKeyDown={(event) => {
             if (event.key === "Escape") {

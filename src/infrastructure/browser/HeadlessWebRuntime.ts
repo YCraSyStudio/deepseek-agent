@@ -9,7 +9,7 @@ const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 const MAX_CONCURRENT_READS = 4;
 const MAX_WAITING_OPERATIONS = 32;
-const USER_AGENT = "Yars-DeepSeek-Copilot/0.1";
+const USER_AGENT = "YCraSy-DeepSeek-Agent/0.1";
 const TEXTUAL_CONTENT_TYPES = [
   "text/html",
   "application/xhtml+xml",

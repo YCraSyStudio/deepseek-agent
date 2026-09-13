@@ -5,11 +5,11 @@ const source = await readFile(sourcePath, "utf8");
 const runtimeVersion = requiredMatch(source, /SEARXNG_RUNTIME_VERSION = "([^"]+)"/, "runtime version");
 const searxngCommit = requiredMatch(source, /SEARXNG_RUNTIME_COMMIT = "([a-f0-9]{40})"/, "SearXNG commit");
 const releaseTag = `searxng-runtime-${runtimeVersion}`;
-const releaseBaseUrl = `https://github.com/YCraSyStudio/deepseek-copilot/releases/download/${releaseTag}`;
+const releaseBaseUrl = `https://github.com/YCraSyStudio/deepseek-agent/releases/download/${releaseTag}`;
 const pinnedAssets = parsePinnedAssets(source);
 
 const manifestResponse = await fetchWithTimeout(`${releaseBaseUrl}/manifest.json`, {
-  headers: { accept: "application/json", "user-agent": "deepseek-copilot-release-gate" },
+  headers: { accept: "application/json", "user-agent": "deepseek-agent-release-gate" },
   redirect: "follow",
 });
 if (!manifestResponse.ok) {
@@ -36,7 +36,7 @@ for (const [platformKey, pinned] of Object.entries(pinnedAssets)) {
     throw new Error(`Published SearXNG metadata does not match the pinned ${platformKey} asset`);
   }
   const assetResponse = await fetchWithTimeout(`${releaseBaseUrl}/${pinned.name}`, {
-    headers: { "user-agent": "deepseek-copilot-release-gate" },
+    headers: { "user-agent": "deepseek-agent-release-gate" },
     method: "HEAD",
     redirect: "follow",
   });

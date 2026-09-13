@@ -3,7 +3,8 @@ import type { PageContent } from "../Types";
 export const technicalDecisions: PageContent = {
   navTitle: "Decisiones técnicas",
   title: "Decisiones técnicas",
-  description: "Decisiones de arquitectura, persistencia, streaming y ejecución.",
+  seoTitle: "Arquitectura y decisiones técnicas",
+  description: "Cómo se estructura la extensión por capas, cómo se asignan y recuperan las generaciones y cómo se diseñan el streaming, las herramientas y la persistencia.",
   lead: "La extensión separa el estado de dominio, el transporte de DeepSeek, las capacidades de VS Code y el renderizado React para que las reglas de seguridad sean autoritativas en el host.",
   sections: [
     {
@@ -58,7 +59,7 @@ export const technicalDecisions: PageContent = {
         "SSE admite comentarios, CRLF, campos data con o sin espacios, eventos multilínea, finalización del decoder, diagnósticos de JSON inválido y cancelación del reader.",
         "Las peticiones a DeepSeek normalizan URLs, usan un timeout de 60 segundos por intento y un máximo de tres intentos para fallos transitorios, respetando Retry-After.",
         "La búsqueda web usa SearXNG. El endpoint loopback predeterminado se apoya en un runtime de plataforma cuya versión, tamaño y digest SHA-256 están fijados en el VSIX; los endpoints compatibles personalizados requieren HTTPS fuera de loopback y no pueden contener credenciales.",
-        "Los ajustes, el historial con esquema v2 y los checkpoints con esquema 3 viven bajo ~/.yrs-dpsk-copilot/. Las credenciales viven separadas en Secret Storage de VS Code por origen normalizado; la webview solo recibe estado enmascarado. Los checkpoints nunca contienen una clave y los historiales o checkpoints incompatibles se eliminan sin migración.",
+        "Los ajustes, el historial con esquema v2 y los checkpoints con esquema 3 viven bajo ~/.deepseek-agent/. Las credenciales viven separadas en Secret Storage de VS Code por origen normalizado; la webview solo recibe estado enmascarado. Los checkpoints nunca contienen una clave y los historiales o checkpoints incompatibles se eliminan sin migración.",
         "Las peticiones a DeepSeek rechazan URLs con credenciales, exigen HTTPS fuera de loopback, conservan el origen elegido durante redirecciones y eliminan valores sensibles de errores visibles.",
         "Las capacidades registradas de DeepSeek V4.1 Flash usan 1M tokens de contexto total y 384K de salida máxima. La reserva configurada es 384.000 por defecto y reduce el presupuesto de entrada junto con el margen de seguridad.",
         "El contexto tiene presupuestos agregados, detección de binarios, datos Git staged y unstaged, fuentes AGENTS.md acotadas y delimitadores explícitos de datos no confiables.",

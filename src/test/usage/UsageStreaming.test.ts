@@ -2,9 +2,9 @@ import * as assert from "node:assert";
 import type { StreamChunk } from "@/contracts";
 import { DEFAULT_CONFIG } from "@/contracts/Config";
 import type { ModelProvider } from "@/application/ports";
-import { chatCompletionStream } from "@/infrastructure/deepseek/providers/deepseek/features/Chat";
+import { chatCompletionStream } from "@/infrastructure/deepseek/provider/features/Chat";
 import { PartialStreamError } from "@/application/errors/PartialStreamError";
-import { sendMessageStreaming } from "@/platform/vscode/webviews/handlers/chat/Streaming";
+import { sendMessageStreaming } from "@/vscode/webviews/handlers/chat/streaming/Streaming";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 
 suite("usage streaming", () => {
@@ -127,8 +127,6 @@ suite("usage streaming", () => {
       payload: payload(),
       config: DEFAULT_CONFIG,
       provider: fakeProvider(async (_request, onChunk) => {
-        // A compatible provider may retry a connection before any response
-        // bytes are observed. Usage is reported by the logical call boundary.
         for (let attempt = 1; attempt <= 2; attempt += 1) {
           attempts += 1;
           if (attempt === 1) {

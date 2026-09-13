@@ -1,5 +1,5 @@
 let latestNavigationRequestId: string | undefined;
-export const NAVIGATION_STARTED_EVENT = "deepseek-copilot:navigation-started";
+export const NAVIGATION_STARTED_EVENT = "deepseek-agent:navigation-started";
 
 export function beginNavigationRequest(): string {
   latestNavigationRequestId = crypto.randomUUID();

@@ -59,7 +59,6 @@ export async function collectCommandFileContext(
         ...(content === undefined ? {} : { content }),
       });
     } catch {
-      // Missing, sensitive, external, or unreadable paths are deliberately omitted.
     }
   }
   return contexts;
@@ -89,8 +88,6 @@ function extractExplicitFileOperands(command: string): string[] {
     ]).has(program)) {
       candidates.push(...extractMutationOperands(tokens.slice(1)));
     } else {
-      // Script runs carry the actual effects: send the script body to the
-      // reviewer instead of an opaque interpreter invocation.
       const script = detectScriptInvocation(tokens);
       if (script) {
         candidates.push(script.path);

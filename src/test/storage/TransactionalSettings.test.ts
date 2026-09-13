@@ -2,26 +2,26 @@ import * as assert from "node:assert";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { SettingsManager } from "@/platform/vscode/storage/SettingsManager";
+import { SettingsManager } from "@/vscode/storage/SettingsManager";
 import { getSettingsFilePath } from "@/infrastructure/persistence/UserDataPaths";
 import { getGenerationCheckpointDirectory } from "@/infrastructure/persistence/UserDataPaths";
-import { GenerationCheckpointStore } from "@/platform/vscode/storage/GenerationCheckpointStore";
-import { VsCodeSettingsRepository } from "@/platform/vscode/storage/RepositoryAdapters";
+import { GenerationCheckpointStore } from "@/vscode/storage/GenerationCheckpointStore";
+import { VsCodeSettingsRepository } from "@/vscode/storage/RepositoryAdapters";
 
 suite("transactional settings", () => {
   const previousNodeEnv = process.env.NODE_ENV;
-  const previousUserDataDir = process.env.DEEPSEEK_COPILOT_USER_DATA_DIR;
+  const previousUserDataDir = process.env.DEEPSEEK_AGENT_USER_DATA_DIR;
   const testRoot = mkdtempSync(path.join(os.tmpdir(), "deepseek-settings-"));
 
   suiteSetup(async () => {
     process.env.NODE_ENV = "test";
-    process.env.DEEPSEEK_COPILOT_USER_DATA_DIR = testRoot;
+    process.env.DEEPSEEK_AGENT_USER_DATA_DIR = testRoot;
     await SettingsManager.initialize({ permissionMode: "auto-approve", toolExecutionModes: { read_file: "auto_approve" } });
   });
 
   suiteTeardown(() => {
     if (previousNodeEnv === undefined) {delete process.env.NODE_ENV;} else {process.env.NODE_ENV = previousNodeEnv;}
-    if (previousUserDataDir === undefined) {delete process.env.DEEPSEEK_COPILOT_USER_DATA_DIR;} else {process.env.DEEPSEEK_COPILOT_USER_DATA_DIR = previousUserDataDir;}
+    if (previousUserDataDir === undefined) {delete process.env.DEEPSEEK_AGENT_USER_DATA_DIR;} else {process.env.DEEPSEEK_AGENT_USER_DATA_DIR = previousUserDataDir;}
     rmSync(testRoot, { recursive: true, force: true });
   });
 

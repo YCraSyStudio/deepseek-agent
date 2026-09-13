@@ -36,6 +36,21 @@ export interface ContextBudget {
   inputTokens: number;
 }
 
+export interface RequestLimits {
+  windowTokens: number;
+  softLimitTokens: number;
+  hardLimitTokens: number;
+}
+
+export function getRequestLimits(model: string, requestedOutputTokens: number): RequestLimits {
+  const budget = getContextBudget(model, requestedOutputTokens);
+  return {
+    windowTokens: budget.contextTokens,
+    softLimitTokens: Math.max(1, Math.floor(budget.inputTokens * INPUT_COMPACTION_RATIO)),
+    hardLimitTokens: Math.max(1, Math.floor(budget.inputTokens * INPUT_HARD_LIMIT_RATIO)),
+  };
+}
+
 function getModelCapabilities(model: string): ModelCapabilities {
   const modelInfo = MODEL_REGISTRY.find((entry) => entry.id === model);
   return modelInfo
@@ -88,10 +103,6 @@ export function assessRequestBudget(
   };
 }
 
-/**
- * Conservative UTF-8 estimate. It deliberately measures the exact request
- * shape, including hidden reasoning, tool schemas and tool arguments.
- */
 export function estimateRequestTokens(
   messages: ChatMessage[],
   tools: ToolDefinition[] = [],

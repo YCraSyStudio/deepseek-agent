@@ -55,8 +55,8 @@ def apply_portability_patches(output: Path) -> None:
         raise RuntimeError("Pinned SearXNG valkeydb.py no longer matches the expected error block")
     valkeydb.write_text(text.replace(error_block, portable_error_block, 1), encoding="utf-8")
 
-    (output / "DEEPSEEK-COPILOT-PATCHES.txt").write_text(
-        "DeepSeek Copilot portability patch\n"
+    (output / "DEEPSEEK-AGENT-PATCHES.txt").write_text(
+        "YCraSy DeepSeek Agent portability patch\n"
         "==================================\n\n"
         "The pinned SearXNG source is unmodified except for searx/valkeydb.py, where the Unix-only\n"
         "pwd module is made optional so the standalone sidecar can start on Windows. Linux and macOS\n"
@@ -77,7 +77,7 @@ def main() -> None:
     shutil.rmtree(output, ignore_errors=True)
     output.mkdir(parents=True, exist_ok=True)
     url = f"https://github.com/searxng/searxng/archive/{args.commit}.tar.gz"
-    request = urllib.request.Request(url, headers={"User-Agent": "deepseek-copilot-runtime-builder"})
+    request = urllib.request.Request(url, headers={"User-Agent": "deepseek-agent-runtime-builder"})
     with urllib.request.urlopen(request, timeout=60) as response:
         archive_bytes = response.read()
     if len(archive_bytes) > 64 * 1024 * 1024:
@@ -112,7 +112,7 @@ def main() -> None:
         raise RuntimeError(f"Pinned SearXNG archive is missing required files: {missing}")
 
     apply_portability_patches(output)
-    (output / ".deepseek-copilot-searxng-commit").write_text(f"{args.commit}\n", encoding="utf-8")
+    (output / ".deepseek-agent-searxng-commit").write_text(f"{args.commit}\n", encoding="utf-8")
     (output / "searx" / "version_frozen.py").write_text(
         "# SPDX-License-Identifier: AGPL-3.0-or-later\n"
         f'VERSION_STRING = "{VERSION_STRING}"\n'
