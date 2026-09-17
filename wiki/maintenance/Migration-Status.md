@@ -13,7 +13,7 @@
 - Marketplace metadata, README, MIT license, and VSIX packaging track the version declared in `package.json`.
 - Legacy single-origin API credentials migrate to a versioned per-origin Secret
   Storage bundle without exposing the stored value to the webview.
-- Conversations require `schemaVersion: 2`, a complete workspace binding, and current context-summary data. The compatibility window tracked by [issue #61](https://github.com/YCraSyStudio/deepseek-agent/issues/61) ended in `0.1.11`: activation deletes every incompatible JSON conversation and its segments without interpreting or migrating it.
+- Conversations require `schemaVersion: 2`, a complete workspace binding, and current context-summary data, and live in `history/<id>/` as a `manifest.json` plus auto-incremented message chunk files. The compatibility window tracked by [issue #61](https://github.com/YCraSyStudio/deepseek-agent/issues/61) ended in `0.1.11`: activation deletes every incompatible conversation, legacy flat conversation file, and obsolete segment directory without interpreting or migrating it.
 - Generation checkpoints require schema 3 and a complete workspace binding. Unsupported or malformed checkpoint files are deleted instead of migrated or quarantined.
 
 ## Watch list

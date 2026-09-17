@@ -13,6 +13,7 @@ import {
   deleteConversationStorage,
   getHistoryMutationTarget,
   MAX_CONVERSATION_BYTES,
+  purgeLegacyConversationStorage,
   readConversationFile,
   readStoredConversationRecord,
   writeConversationStorage,
@@ -30,6 +31,7 @@ export class HistoryManager {
   async initialize(): Promise<void> {
     await withFileLock(getHistoryMutationTarget(), async () => {
       await rm(path.join(getHistoryDirectory(), "corrupt"), { recursive: true, force: true });
+      await purgeLegacyConversationStorage();
       await this.readAll();
     });
   }
@@ -114,7 +116,7 @@ export class HistoryManager {
     const entries = await readdir(getHistoryDirectory(), { withFileTypes: true });
     const records = await Promise.all(
       entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+        .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
         .map((entry) => readStoredConversationRecord(path.join(getHistoryDirectory(), entry.name))),
     );
     return records.filter((record): record is StoredConversationRecord => record !== undefined);

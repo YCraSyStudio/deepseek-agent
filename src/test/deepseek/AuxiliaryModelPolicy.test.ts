@@ -2,6 +2,11 @@ import * as assert from "node:assert";
 import { resolveAuxiliaryModel } from "@/application/chat/AuxiliaryModelPolicy";
 
 suite("auxiliary model policy", () => {
+  test("routes verified official primary models to Flash", () => {
+    assert.strictEqual(resolveAuxiliaryModel({ model: "deepseek-v4-pro", baseUrl: "https://api.deepseek.com" }), "deepseek-flash");
+    assert.strictEqual(resolveAuxiliaryModel({ model: "deepseek-v4-pro", baseUrl: "https://api.deepseek.com/v1" }), "deepseek-flash");
+  });
+
   test("retains models without verified substitution compatibility", () => {
     assert.strictEqual(resolveAuxiliaryModel({ model: "deepseek-flash", baseUrl: "https://api.deepseek.com" }), "deepseek-flash");
     assert.strictEqual(resolveAuxiliaryModel({ model: "future-model", baseUrl: "https://api.deepseek.com" }), "future-model");

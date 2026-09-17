@@ -7,18 +7,22 @@ import { getHistoryDirectory } from "@/infrastructure/persistence/UserDataPaths"
 import { normalizeConversation } from "./ConversationNormalization";
 
 export const MAX_CONVERSATION_BYTES = 64 * 1024 * 1024;
-const MAX_SEGMENT_BYTES = 4 * 1024 * 1024;
-const SEGMENT_STORAGE_SCHEMA_VERSION = 1;
+const MAX_CHUNK_BYTES = 4 * 1024 * 1024;
+const MAX_CHUNK_COUNT = 10_000;
+const CHUNK_STORAGE_SCHEMA_VERSION = 1;
+const MANIFEST_FILE_NAME = "manifest.json";
+const CHUNK_FILE_PATTERN = /^\d{1,5}\.json$/;
+const LEGACY_SEGMENT_DIRECTORY_NAME = ".segments";
 
-interface SegmentedConversationManifest {
-  storageSchemaVersion: typeof SEGMENT_STORAGE_SCHEMA_VERSION;
+interface ConversationManifest {
+  storageSchemaVersion: typeof CHUNK_STORAGE_SCHEMA_VERSION;
   conversation: Omit<StoredConversation, "messages">;
-  chunks: string[];
+  chunks: number;
 }
 
 export interface StoredConversationRecord {
   conversation: StoredConversation;
-  filePath: string;
+  directoryPath: string;
   sizeBytes: number;
 }
 
@@ -26,91 +30,79 @@ export function getHistoryMutationTarget(): string {
   return path.join(getHistoryDirectory(), ".mutations");
 }
 
-function getConversationPath(id: string): string {
-  return path.join(getHistoryDirectory(), `${encodeURIComponent(id)}.json`);
+function getConversationDirectory(id: string): string {
+  return path.join(getHistoryDirectory(), encodeURIComponent(id));
 }
 
 export async function readConversationFile(id: string): Promise<StoredConversation | undefined> {
-  const filePath = getConversationPath(id);
+  const directoryPath = getConversationDirectory(id);
   try {
-    if ((await stat(filePath)).size > MAX_CONVERSATION_BYTES) {
-      await deleteIncompatibleHistoryFile(filePath);
-      return undefined;
-    }
-    const parsed = await readConversationStorage(filePath);
+    const parsed = await readConversationStorage(directoryPath);
     if (!parsed || parsed.id !== id) {
-      await deleteIncompatibleHistoryFile(filePath);
+      await deleteIncompatibleConversation(directoryPath);
       return undefined;
     }
     return normalizeConversation(parsed);
   } catch (error) {
     if (!isFileNotFoundError(error)) {
-      await deleteIncompatibleHistoryFile(filePath);
+      await deleteIncompatibleConversation(directoryPath);
     }
     return undefined;
   }
 }
 
-export async function readStoredConversationRecord(filePath: string): Promise<StoredConversationRecord | undefined> {
+export async function readStoredConversationRecord(directoryPath: string): Promise<StoredConversationRecord | undefined> {
   try {
-    const metadata = await stat(filePath);
-    if (metadata.size > MAX_CONVERSATION_BYTES) {
-      await deleteIncompatibleHistoryFile(filePath);
-      return undefined;
-    }
-    const parsed = await readConversationStorage(filePath);
-    if (!parsed || path.resolve(filePath) !== path.resolve(getConversationPath(parsed.id))) {
-      await deleteIncompatibleHistoryFile(filePath);
+    const parsed = await readConversationStorage(directoryPath);
+    if (!parsed || path.resolve(directoryPath) !== path.resolve(getConversationDirectory(parsed.id))) {
+      await deleteIncompatibleConversation(directoryPath);
       return undefined;
     }
     return {
       conversation: normalizeConversation(parsed),
-      filePath,
+      directoryPath,
       sizeBytes: Buffer.byteLength(JSON.stringify(parsed), "utf8"),
     };
   } catch {
-    await deleteIncompatibleHistoryFile(filePath);
+    await deleteIncompatibleConversation(directoryPath);
     return undefined;
   }
 }
 
 export async function writeConversationStorage(conversation: StoredConversation): Promise<void> {
-  const filePath = getConversationPath(conversation.id);
-  if (Buffer.byteLength(JSON.stringify(conversation), "utf8") <= MAX_SEGMENT_BYTES) {
-    await writeJsonFileAtomic(filePath, conversation);
-    await removeConversationSegments(conversation.id);
-    return;
-  }
-
-  const generation = `${encodeURIComponent(conversation.id)}-${conversation.updatedAt}`;
-  const segmentDirectory = path.join(getHistoryDirectory(), ".segments", generation);
-  await mkdir(segmentDirectory, { recursive: true });
+  const directoryPath = getConversationDirectory(conversation.id);
+  await mkdir(directoryPath, { recursive: true });
   const chunks = chunkConversationMessages(conversation.messages);
-  const chunkPaths: string[] = [];
   for (let index = 0; index < chunks.length; index += 1) {
-    const relative = path.posix.join(".segments", generation, `${String(index).padStart(5, "0")}.json`);
-    await writeJsonFileAtomic(path.join(getHistoryDirectory(), ...relative.split("/")), chunks[index]);
-    chunkPaths.push(relative);
+    await writeJsonFileAtomic(path.join(directoryPath, `${index}.json`), chunks[index]);
   }
   const { messages: _messages, ...metadata } = conversation;
-  const manifest: SegmentedConversationManifest = {
-    storageSchemaVersion: SEGMENT_STORAGE_SCHEMA_VERSION,
+  const manifest: ConversationManifest = {
+    storageSchemaVersion: CHUNK_STORAGE_SCHEMA_VERSION,
     conversation: metadata,
-    chunks: chunkPaths,
+    chunks: chunks.length,
   };
-  await writeJsonFileAtomic(filePath, manifest);
-  await removeConversationSegments(conversation.id, generation);
+  await writeJsonFileAtomic(path.join(directoryPath, MANIFEST_FILE_NAME), manifest);
+  await removeStaleChunks(directoryPath, chunks.length);
 }
 
 export async function deleteConversationStorage(id: string): Promise<void> {
-  await rm(getConversationPath(id), { force: true });
-  await removeConversationSegments(id);
+  await deleteIncompatibleConversation(getConversationDirectory(id));
 }
 
-async function deleteIncompatibleHistoryFile(filePath: string): Promise<void> {
-  const encodedId = path.basename(filePath, path.extname(filePath));
-  await rm(filePath, { force: true }).catch(() => undefined);
-  await removeConversationSegmentsByEncodedId(encodedId);
+export async function purgeLegacyConversationStorage(): Promise<void> {
+  const historyDirectory = getHistoryDirectory();
+  const entries = await readdir(historyDirectory, { withFileTypes: true }).catch(() => []);
+  const legacyPaths = entries
+    .filter((entry) =>
+      (entry.isFile() && entry.name.endsWith(".json")) ||
+      (entry.isDirectory() && entry.name === LEGACY_SEGMENT_DIRECTORY_NAME))
+    .map((entry) => path.join(historyDirectory, entry.name));
+  await Promise.all(legacyPaths.map((legacyPath) => deleteIncompatibleConversation(legacyPath)));
+}
+
+async function deleteIncompatibleConversation(directoryPath: string): Promise<void> {
+  await rm(directoryPath, { recursive: true, force: true }).catch(() => undefined);
 }
 
 function chunkConversationMessages(messages: StoredConversation["messages"]): StoredConversation["messages"][] {
@@ -119,7 +111,7 @@ function chunkConversationMessages(messages: StoredConversation["messages"]): St
   let currentBytes = 2;
   for (const message of messages) {
     const bytes = Buffer.byteLength(JSON.stringify(message), "utf8") + 1;
-    if (current.length > 0 && currentBytes + bytes > MAX_SEGMENT_BYTES) {
+    if (current.length > 0 && currentBytes + bytes > MAX_CHUNK_BYTES) {
       chunks.push(current);
       current = [];
       currentBytes = 2;
@@ -131,17 +123,18 @@ function chunkConversationMessages(messages: StoredConversation["messages"]): St
   return chunks;
 }
 
-async function readConversationStorage(filePath: string): Promise<StoredConversation | undefined> {
-  const parsed = JSON.parse(await readFile(filePath, "utf8")) as unknown;
-  if (isConversation(parsed)) {return parsed;}
-  if (!isSegmentedManifest(parsed)) {return undefined;}
+async function readConversationStorage(directoryPath: string): Promise<StoredConversation | undefined> {
+  const parsed = JSON.parse(await readFile(path.join(directoryPath, MANIFEST_FILE_NAME), "utf8")) as unknown;
+  if (!isConversationManifest(parsed)) {return undefined;}
+  const chunkPaths = await listChunkPaths(directoryPath, parsed.chunks);
+  if (!chunkPaths) {return undefined;}
   const messages: StoredConversation["messages"] = [];
-  for (const relative of parsed.chunks) {
-    const chunkPath = path.resolve(getHistoryDirectory(), ...relative.split("/"));
-    const segmentRoot = path.resolve(getHistoryDirectory(), ".segments");
-    if (!chunkPath.startsWith(`${segmentRoot}${path.sep}`)) {return undefined;}
+  let totalBytes = 0;
+  for (const chunkPath of chunkPaths) {
     const metadata = await stat(chunkPath);
-    if (metadata.size > MAX_SEGMENT_BYTES + 1024 * 1024) {return undefined;}
+    if (metadata.size > MAX_CHUNK_BYTES + 1024 * 1024) {return undefined;}
+    totalBytes += metadata.size;
+    if (totalBytes > MAX_CONVERSATION_BYTES) {return undefined;}
     const chunk = JSON.parse(await readFile(chunkPath, "utf8")) as unknown;
     if (!Array.isArray(chunk)) {return undefined;}
     messages.push(...chunk as StoredConversation["messages"]);
@@ -150,26 +143,37 @@ async function readConversationStorage(filePath: string): Promise<StoredConversa
   return isConversation(conversation) ? conversation : undefined;
 }
 
-function isSegmentedManifest(value: unknown): value is SegmentedConversationManifest {
+async function listChunkPaths(directoryPath: string, expectedChunks: number): Promise<string[] | undefined> {
+  const entries = await readdir(directoryPath, { withFileTypes: true });
+  const indexed: Array<{ index: number; filePath: string }> = [];
+  for (const entry of entries) {
+    if (entry.name === MANIFEST_FILE_NAME || entry.name.startsWith(".")) {continue;}
+    const match = entry.isFile() ? CHUNK_FILE_PATTERN.exec(entry.name) : null;
+    if (!match) {return undefined;}
+    indexed.push({ index: Number.parseInt(match[1]!, 10), filePath: path.join(directoryPath, entry.name) });
+  }
+  if (indexed.length !== expectedChunks) {return undefined;}
+  indexed.sort((left, right) => left.index - right.index);
+  if (indexed.some((entry, position) => entry.index !== position)) {return undefined;}
+  return indexed.map((entry) => entry.filePath);
+}
+
+function isConversationManifest(value: unknown): value is ConversationManifest {
   if (!value || typeof value !== "object") {return false;}
-  const manifest = value as Partial<SegmentedConversationManifest>;
-  return manifest.storageSchemaVersion === SEGMENT_STORAGE_SCHEMA_VERSION &&
+  const manifest = value as Partial<ConversationManifest>;
+  const chunks = manifest.chunks;
+  return manifest.storageSchemaVersion === CHUNK_STORAGE_SCHEMA_VERSION &&
     !!manifest.conversation && typeof manifest.conversation === "object" &&
-    Array.isArray(manifest.chunks) && manifest.chunks.length <= 10_000 &&
-    manifest.chunks.every((chunk) => typeof chunk === "string" && /^\.segments\/[a-zA-Z0-9%_.~-]+\/\d{5}\.json$/.test(chunk));
+    typeof chunks === "number" && Number.isSafeInteger(chunks) && chunks >= 0 && chunks <= MAX_CHUNK_COUNT;
 }
 
-async function removeConversationSegments(id: string, keepGeneration?: string): Promise<void> {
-  await removeConversationSegmentsByEncodedId(encodeURIComponent(id), keepGeneration);
-}
-
-async function removeConversationSegmentsByEncodedId(encodedId: string, keepGeneration?: string): Promise<void> {
-  const root = path.join(getHistoryDirectory(), ".segments");
-  const prefix = `${encodedId}-`;
-  const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
+async function removeStaleChunks(directoryPath: string, chunkCount: number): Promise<void> {
+  const entries = await readdir(directoryPath, { withFileTypes: true }).catch(() => []);
   await Promise.all(entries
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith(prefix) && entry.name !== keepGeneration)
-    .map((entry) => rm(path.join(root, entry.name), { recursive: true, force: true })));
+    .filter((entry) => entry.isFile())
+    .map((entry) => ({ entry, match: CHUNK_FILE_PATTERN.exec(entry.name) }))
+    .filter(({ match }) => match !== null && Number.parseInt(match[1]!, 10) >= chunkCount)
+    .map(({ entry }) => rm(path.join(directoryPath, entry.name), { force: true }).catch(() => undefined)));
 }
 
 function isFileNotFoundError(error: unknown): boolean {

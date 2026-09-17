@@ -12,6 +12,6 @@ Tool-cycle rollover creates a bounded continuity ledger only after all emitted c
 
 Reasoning and visible content share the configured output budget. A reasoning-dominated attempt approaching 80% is cancelled once and retried from the last safe request with thinking disabled. A second approach to the limit is saved as incomplete. The real provider finish reason is retained, and partial, malformed, or length-truncated tool calls are never executed.
 
-Transport and persistence have independent byte limits: 1 MiB per SSE event, 2 MiB pending SSE data, 16 MiB non-streaming chat responses and checkpoints, 4 MiB history segments, and 256 MiB total inactive-history retention. Queues, webview replay, browser work, terminal presentation, and concurrent generation admission also have explicit resource governors. Limit failures are visible; data is never silently dropped.
+Transport and persistence have independent byte limits: 1 MiB per SSE event, 2 MiB pending SSE data, 16 MiB non-streaming chat responses and checkpoints, 4 MiB history message chunks, and 256 MiB total inactive-history retention. Queues, webview replay, browser work, terminal presentation, and concurrent generation admission also have explicit resource governors. Limit failures are visible; data is never silently dropped.
 
 [Back](INDEX.md)
