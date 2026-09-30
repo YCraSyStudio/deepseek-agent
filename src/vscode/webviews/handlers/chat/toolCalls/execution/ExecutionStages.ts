@@ -13,7 +13,7 @@ import {
   rememberPositiveDecision,
   reviewDangerousCommandFailClosed,
 } from "./DangerPolicy";
-import { addProvenFileScope, handlerContext, isAutomaticExecution, requiresWorkspaceMutationPolicy } from "./PipelineContext";
+import { addProvenFileScope, handlerContext, isAutomaticExecution, requiresWorkspaceMutationPolicy, requiresExplicitToolConfirmation } from "./PipelineContext";
 import { createRejectedResult, postToolCallResult } from "./ResultChannel";
 
 const UNTRUSTED_WORKSPACE = "Tool call rejected because the workspace is not trusted";
@@ -51,6 +51,11 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
       async handle(context) {
         if (context.resultText) {return { kind: "continue", context };}
         if (!isAutomaticExecution(context.ctx)) {return { kind: "continue", context };}
+        if (requiresExplicitToolConfirmation(context.ctx, context.toolCall)) {
+          const result = await context.ctx.toolExecutor.execute(context.toolCall, handlerContext(context.ctx));
+          context.resultText = await handleExecutionResult({ toolCall: context.toolCall, result, ctx: context.ctx, announceStarted: true, round: context.ctx.getCurrentRound() });
+          return { kind: "continue", context };
+        }
         if (!requiresWorkspaceMutationPolicy(context.ctx, context.toolCall)) {
           const result = await context.ctx.toolExecutor.executeForced(context.toolCall, handlerContext(context.ctx));
           postToolCallResult(context.ctx, result);

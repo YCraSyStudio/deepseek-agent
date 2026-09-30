@@ -1,3 +1,5 @@
+import { CaptureService } from "@/infrastructure/capture/CaptureService";
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 import * as vscode from "vscode";
 import {
   mapReasoningEffort,
@@ -318,6 +320,7 @@ export class GenerationExecutor {
           trustedUserRequest: payload.text,
           authorizedUserUrls: extractHttpsUrls(payload.text),
           budgetManager: record.budgetManager,
+          captureScreenshot: runState.isIncognito() ? undefined : (request, captureSignal) => new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal),
           analyzeImages: createDelegatedVisionAnalyzer({
             attachments: imageAttachments,
             providerConfig,

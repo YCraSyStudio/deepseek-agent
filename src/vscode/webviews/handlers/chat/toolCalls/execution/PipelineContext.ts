@@ -15,6 +15,7 @@ export function handlerContext(ctx: ToolExecutionContext): ToolHandlerContext {
     authorizedUserUrls: ctx.authorizedUserUrls,
     webTainted: ctx.isWebTainted?.(),
     analyzeImages: ctx.analyzeImages,
+    captureScreenshot: ctx.captureScreenshot,
   };
 }
 
@@ -76,4 +77,10 @@ function getDestinationArgument(toolCall: ToolCall): string | undefined {
   } catch {
     return undefined;
   }
+}
+export function requiresExplicitToolConfirmation(ctx: ToolExecutionContext, toolCall: ToolCall): boolean {
+  const rule = ctx.toolExecutor.getMetadata(toolCall.function.name)?.alwaysConfirmWhen;
+  if (!rule) {return false;}
+  try {return rule.values.includes(JSON.parse(toolCall.function.arguments)[rule.argument]);}
+  catch {return false;}
 }
