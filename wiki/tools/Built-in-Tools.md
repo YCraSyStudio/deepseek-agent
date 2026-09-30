@@ -38,3 +38,9 @@ The Web search toggle controls both definitions. When disabled, neither tool is 
 Tools return structured results so DeepSeek can continue, the UI can render useful activity, and history can preserve completed work. Host-side schemas, workspace resolution, permission policy, and cancellation remain authoritative. Terminal and mutation sensitivity is classified by an independent DeepSeek review; there is no local danger analyzer.
 
 [Back](INDEX.md)
+
+## Image analysis from local sources
+
+`analyze_images({question, image_ids?, screenshot_ids?, paths?})` accepts attachment ids, screenshot ids (or `latest`), and workspace-relative JPEG/PNG/GIF/WebP files. When local sources are specified, attachment images are included only when their ids are specified. At most 8 images / 32 MiB per call and 16 MiB per local image. Sensitive paths, symlink escapes and files outside the workspace are rejected even in full-access mode.
+
+Calling the tool explicitly uploads the selected images to DeepSeek V4.1 Flash and returns text, including the sent source references for the timeline. Local captures alone never upload data. Temporary uploads are cached by SHA-256 within the generation, expire after one hour and are deleted when the generation settles or is cancelled. User-owned attachments keep their existing lifecycle.

@@ -1,5 +1,5 @@
 import type { ToolDefinition } from "@/contracts";
-import { DEEPSEEK_PRO_MODEL_ID } from "@/contracts/deepseek/Models";
+import { DEEPSEEK_PRO_MODEL_ID, DEEPSEEK_FLASH_MODEL_ID } from "@/contracts/deepseek/Models";
 import type { ToolRegistry } from "@/application/tools/ToolRegistry";
 
 const WEB_TOOL_NAMES = new Set(["search_web", "read_web"]);
@@ -23,7 +23,7 @@ export function selectGenerationTools(
     const registered = registry.get(name);
 
     if (name === IMAGE_ANALYSIS_TOOL_NAME) {
-      return availability.modelId === DEEPSEEK_PRO_MODEL_ID && availability.hasImageAttachments;
+      return ([DEEPSEEK_PRO_MODEL_ID, DEEPSEEK_FLASH_MODEL_ID] as readonly string[]).includes(availability.modelId);
     }
 
     if (registered?.metadata.scope !== "global") {

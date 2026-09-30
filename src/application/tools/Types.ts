@@ -20,6 +20,12 @@ export interface RegisteredTool {
   metadata: ToolMetadata;
 }
 
+export interface AnalyzeImagesRequest {
+  question: string;
+  attachmentIds?: string[];
+  screenshotIds?: string[];
+  paths?: string[];
+}
 export interface ToolHandlerContext {
   signal?: AbortSignal;
   generationId?: string;
@@ -27,7 +33,7 @@ export interface ToolHandlerContext {
   availableToolNames?: readonly string[];
   authorizedUserUrls?: readonly string[];
   webTainted?: boolean;
-  analyzeImages?: (question: string, imageIds: string[], signal?: AbortSignal) => Promise<string>;
+  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
 }
 
 export interface ValidationResult {

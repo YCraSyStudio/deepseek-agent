@@ -29,13 +29,13 @@ suite("generation tool selection", () => {
     );
   });
 
-  test("exposes image analysis only to Pro generations with image attachments", () => {
+  test("exposes local-source vision without attachments for supported models", () => {
     const registry = createRegistry();
     const withoutImages = selectGenerationTools(registry, availability({ hasImageAttachments: false }));
     const visionModel = selectGenerationTools(registry, availability({ modelId: DEEPSEEK_FLASH_MODEL_ID }));
 
-    assert.ok(!names(withoutImages).includes("analyze_images"));
-    assert.ok(!names(visionModel).includes("analyze_images"));
+    assert.ok(names(withoutImages).includes("analyze_images"));
+    assert.ok(names(visionModel).includes("analyze_images"));
     assert.ok(names(selectGenerationTools(registry, availability())).includes("analyze_images"));
   });
 });

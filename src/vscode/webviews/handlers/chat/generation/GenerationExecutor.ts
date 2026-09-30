@@ -1,3 +1,5 @@
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
+import { logWarning } from "@/shared/logging/Logger";
 import * as vscode from "vscode";
 import {
   mapReasoningEffort,
@@ -257,9 +259,12 @@ export class GenerationExecutor {
     });
     stream.showTyping();
 
+    const imageAttachments = (payload.imageAttachments ?? []).filter((attachment) => attachment.expiresAt > Date.now());
+    const visionAnalyzer = createDelegatedVisionAnalyzer({ attachments: imageAttachments, providerConfig,
+      modelProviderFactory: this.dependencies.modelProviderFactory, usageAggregate,
+      screenshots: runState.isIncognito() ? undefined : new ScreenshotStore(task.conversationId),
+    });
     try {
-      const imageAttachments = (payload.imageAttachments ?? [])
-        .filter((attachment) => attachment.expiresAt > Date.now());
       const tools = selectGenerationTools(toolRegistry, {
         files: workspaceSnapshot.binding.capabilities.files,
         terminal: workspaceSnapshot.binding.capabilities.terminal,
@@ -318,12 +323,7 @@ export class GenerationExecutor {
           trustedUserRequest: payload.text,
           authorizedUserUrls: extractHttpsUrls(payload.text),
           budgetManager: record.budgetManager,
-          analyzeImages: createDelegatedVisionAnalyzer({
-            attachments: imageAttachments,
-            providerConfig,
-            modelProviderFactory: this.dependencies.modelProviderFactory,
-            usageAggregate,
-          }),
+          analyzeImages: visionAnalyzer,
           onContextCompacted: ({ estimatedTokensBefore, estimatedTokensAfter }) =>
             recordToolCycleCompaction({
               state: runState,
@@ -409,6 +409,7 @@ export class GenerationExecutor {
         });
       }
     } finally {
+      await visionAnalyzer?.dispose().catch((error: unknown) => logWarning(String(error)));
       await this.finalizer.finalize({
         eventSink,
         model: providerConfig.model,

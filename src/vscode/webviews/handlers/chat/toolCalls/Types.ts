@@ -1,3 +1,4 @@
+import type { AnalyzeImagesRequest } from "@/application/tools/Types";
 import type { AppConfig, AssistantTimelineEvent, ChatMessage, PermissionSnapshot, ToolCall, ToolDefinition } from "@/contracts";
 import type { ToolCallCycleResult } from "@/application/chat/toolCall";
 import type { ToolExecutor } from "@/application/tools/ToolExecutor";
@@ -67,7 +68,7 @@ export interface ToolCallRunOptions {
   authorizedUserUrls: readonly string[];
   budgetManager: GenerationBudgetManager;
   onContextCompacted?: (data: { estimatedTokensBefore: number; estimatedTokensAfter: number }) => Promise<void> | void;
-  analyzeImages?: (question: string, imageIds: string[], signal?: AbortSignal) => Promise<string>;
+  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
 }
 
 export interface ToolCallRunResult {
@@ -105,7 +106,7 @@ export interface ToolExecutionContext {
   markWebTainted?: () => void;
   conversationId?: string;
   permissionFingerprint?: string;
-  analyzeImages?: (question: string, imageIds: string[], signal?: AbortSignal) => Promise<string>;
+  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
 }
 
 export interface HandleExecutionResultOptions {
