@@ -7,13 +7,17 @@ export async function restoreRequestedConversation(
   historyManager: HistoryManager,
   loadConversation: (conversation: NonNullable<ReturnType<ConversationState["getConversation"]>>) => void,
 ): Promise<void> {
-  if (!conversationId || state.getActiveConversationId() === conversationId) {
+  if (!conversationId) {
+    state.reset();
+    return;
+  }
+  if (state.getActiveConversationId() === conversationId) {
     return;
   }
   const conversation = await historyManager.getById(conversationId);
   if (conversation) {
     loadConversation(conversation);
   } else {
-    state.reset();
+    throw new Error("Conversation not found. Open an existing conversation or start a new chat.");
   }
 }

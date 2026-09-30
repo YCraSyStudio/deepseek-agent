@@ -208,6 +208,9 @@ function applyGenerationSnapshot(
       const withoutPriorSnapshot = current.filter(
         (item) => item.generationId !== active.generationId || item.role === "user",
       );
+      if (!withoutPriorSnapshot.some((item) => item.role === "user" && item.generationId === active.generationId)) {
+        withoutPriorSnapshot.push(active.userMessage);
+      }
       if (!active.content && active.timeline.length === 0 && active.toolCalls.length === 0) {
         return withoutPriorSnapshot;
       }
@@ -220,6 +223,11 @@ function applyGenerationSnapshot(
         generationId: active.generationId,
       }];
     });
+  }
+  if (!active) {
+    refs.activeGenerationId.current = undefined;
+    setters.setActiveGenerationId(undefined);
+    setters.setIsProcessing(false);
   }
   const recovered = currentConversationId
     ? message.recoveredDrafts.find((entry) => entry.conversationId === currentConversationId)

@@ -51,12 +51,17 @@ export class MessageAdmissionService {
 
     const { conversationState } = this.dependencies;
     if (!conversationState.isIncognito()) {
-      await restoreRequestedConversation(
+      try {
+        await restoreRequestedConversation(
         payload.conversationId,
         conversationState,
         this.dependencies.historyManager,
         this.dependencies.loadConversation,
-      );
+        );
+      } catch (error: unknown) {
+        this.reject(payload, getErrorMessage(error));
+        return;
+      }
     }
     const conversationId = this.ensureConversation(payload, config.model);
     const binding = await this.dependencies.workspaceReferences.getBinding(conversationId);
@@ -97,7 +102,7 @@ export class MessageAdmissionService {
   private ensureConversation(payload: SendMessagePayload, defaultModel: string): string {
     const { conversationState, historyManager, workspaceReferences } = this.dependencies;
     const existingId = !conversationState.isIncognito()
-      ? payload.conversationId ?? conversationState.getActiveConversationId()
+      ? payload.conversationId
       : conversationState.getActiveConversationId();
     if (existingId) {
       return existingId;

@@ -8,6 +8,7 @@ import type { ApiKeyStatus, ChatMessage, ContextCompactionResult } from "./ChatV
 import { getVsCodeApi } from "@webview/VsCodeApi";
 import type { ContextWindowStatus, Conversation, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, WorkspaceContextStatus } from "@/contracts";
 import { t } from "@webview/i18n";
+import { beginNavigationRequest } from "@webview/NavigationRequests";
 import { summarizeConversationUsage, type ConversationUsageSnapshot, type UsageCurrency } from "@/shared/usage/Usage";
 import { useChatCommandMessages, type PendingChatRequest } from "./hooks/UseChatCommandMessages";
 import {
@@ -234,13 +235,17 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     const vscode = getVsCodeApi();
     if (!initialConfigHandledRef.current) {
       initialConfigHandledRef.current = true;
-      if (historyEnabled && !loadedConversation) {
+      if (historyEnabled) {
         const savedState = getSavedChatState();
-        if (savedState) {
+        if (savedState && (!loadedConversation || savedState.conversationId === loadedConversation.id)) {
           setDraft(savedState.draft);
           setReferencedFiles(savedState.referencedFiles);
           setImageAttachments(savedState.imageAttachments);
+          conversationIdRef.current = savedState.conversationId;
           setConversationId(savedState.conversationId);
+          if (!loadedConversation && savedState.conversationId) {
+            vscode?.postMessage({ type: "loadConversation", requestId: beginNavigationRequest(), id: savedState.conversationId });
+          }
         }
       }
     }
@@ -268,6 +273,12 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
       conversationId,
     });
   }, [draft, referencedFiles, imageAttachments, conversationId, historyEnabled, stateHydrated]);
+
+  useEffect(() => {
+    if (stateHydrated) {
+      getVsCodeApi()?.postMessage({ type: "getGenerationSnapshot" });
+    }
+  }, [stateHydrated, conversationId]);
 
   const handleConfirmWorkspaceMismatch = useCallback(() => {
     if (!workspaceMismatch) {return;}

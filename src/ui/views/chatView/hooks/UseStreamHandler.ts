@@ -25,9 +25,11 @@ export function useStreamHandler() {
         return streamingMessageIdRef.current;
       }
 
-      const id = nextMessageId();
+      const id = generationId ? `active-${generationId}` : nextMessageId();
       streamingMessageIdRef.current = id;
-      setMessages((current) => [...current, { id, role: "assistant", content: "", timeline: [], generationId }]);
+      setMessages((current) => current.some((message) => message.id === id)
+        ? current
+        : [...current, { id, role: "assistant", content: "", timeline: [], generationId }]);
       return id;
     },
     [nextMessageId],

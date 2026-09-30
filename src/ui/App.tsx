@@ -89,7 +89,7 @@ function App() {
       } else if (message.type === "newConversationReady") {
         if (!isLatestNavigationRequest(message.requestId)) {return;}
         const vscode = getVsCodeApi();
-        vscode?.setState({ schemaVersion: 4, mode: "persistent", draft: "", referencedFiles: [] });
+        vscode?.setState({ schemaVersion: 5, mode: "persistent", draft: "", referencedFiles: [], imageAttachments: [] });
         setLoadedConversation(null);
         setConversationUsage(undefined);
         setContextWindow(undefined);

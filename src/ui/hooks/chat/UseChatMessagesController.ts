@@ -57,6 +57,11 @@ export function useChatMessagesController({
   );
 
   const dispatcher: MessageDispatcher = {
+    onGenerationSnapshot: useCallback((snapshot) => {
+      flushTimelineDeltas();
+      resetStreaming();
+      activeGenerationIdRef.current = snapshot.generations.find((generation) => generation.conversationId === conversationId)?.generationId;
+    }, [conversationId, flushTimelineDeltas, resetStreaming]),
     onContextCompacted: useCallback(() => {
       setMessages((current) => [...current, { id: nextMessageId(), role: "context", content: "" }]);
     }, [nextMessageId, setMessages]),

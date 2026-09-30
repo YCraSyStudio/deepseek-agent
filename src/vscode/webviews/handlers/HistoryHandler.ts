@@ -10,6 +10,7 @@ const HISTORY_PAGE_MESSAGES = 200;
 const HISTORY_PAGE_BYTES = 4 * 1024 * 1024;
 
 export class HistoryHandler {
+  private loadSequence = 0;
   constructor(
     private readonly historyManager: HistoryManager,
     private readonly onConversationLoaded?: (conversation: StoredConversation) => ContextWindowStatus | undefined,
@@ -129,7 +130,9 @@ export class HistoryHandler {
   }
 
   private async loadConversation(requestId: string, id: string, webviewView: vscode.WebviewView): Promise<void> {
+    const sequence = ++this.loadSequence;
     const conversation = await this.historyManager.getById(id);
+    if (sequence !== this.loadSequence) {return;}
     if (!conversation) {
       throw new Error("Conversation not found");
     }
