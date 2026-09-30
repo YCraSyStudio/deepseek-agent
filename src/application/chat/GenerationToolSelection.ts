@@ -22,6 +22,8 @@ export function selectGenerationTools(
     const name = tool.function.name;
     const registered = registry.get(name);
 
+    if (name === "capture_screenshot" && !availability.files) {return false;}
+
     if (name === IMAGE_ANALYSIS_TOOL_NAME) {
       return ([DEEPSEEK_PRO_MODEL_ID, DEEPSEEK_FLASH_MODEL_ID] as readonly string[]).includes(availability.modelId);
     }

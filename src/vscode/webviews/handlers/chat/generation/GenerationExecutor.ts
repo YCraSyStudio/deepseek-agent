@@ -1,5 +1,6 @@
 import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 import { logWarning } from "@/shared/logging/Logger";
+import { CaptureService } from "@/infrastructure/capture/CaptureService";
 import * as vscode from "vscode";
 import {
   mapReasoningEffort,
@@ -324,6 +325,7 @@ export class GenerationExecutor {
           authorizedUserUrls: extractHttpsUrls(payload.text),
           budgetManager: record.budgetManager,
           analyzeImages: visionAnalyzer,
+          captureScreenshot: runState.isIncognito() ? undefined : (request, captureSignal) => new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal),
           onContextCompacted: ({ estimatedTokensBefore, estimatedTokensAfter }) =>
             recordToolCycleCompaction({
               state: runState,

@@ -1,4 +1,5 @@
 import type { AnalyzeImagesRequest } from "@/application/tools/Types";
+import type { ToolHandlerContext } from "@/application/tools/Types";
 import type { AppConfig, AssistantTimelineEvent, ChatMessage, PermissionSnapshot, ToolCall, ToolDefinition } from "@/contracts";
 import type { ToolCallCycleResult } from "@/application/chat/toolCall";
 import type { ToolExecutor } from "@/application/tools/ToolExecutor";
@@ -69,6 +70,7 @@ export interface ToolCallRunOptions {
   budgetManager: GenerationBudgetManager;
   onContextCompacted?: (data: { estimatedTokensBefore: number; estimatedTokensAfter: number }) => Promise<void> | void;
   analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
+  captureScreenshot?: ToolHandlerContext["captureScreenshot"];
 }
 
 export interface ToolCallRunResult {
@@ -107,6 +109,7 @@ export interface ToolExecutionContext {
   conversationId?: string;
   permissionFingerprint?: string;
   analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
+  captureScreenshot?: ToolHandlerContext["captureScreenshot"];
 }
 
 export interface HandleExecutionResultOptions {
