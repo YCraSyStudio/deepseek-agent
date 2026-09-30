@@ -9,6 +9,7 @@ import { getVsCodeApi } from "@webview/VsCodeApi";
 import type { ContextWindowStatus, Conversation, HandlerToWebviewMessage, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, WorkspaceContextStatus } from "@/contracts";
 import { t } from "@webview/i18n";
 import { beginNavigationRequest, isLatestNavigationRequest } from "@webview/NavigationRequests";
+import { ClipboardUploads, type PendingImagePreview } from "./model/ClipboardUploads";
 import { summarizeConversationUsage, type ConversationUsageSnapshot, type UsageCurrency } from "@/shared/usage/Usage";
 import { useChatCommandMessages, type PendingChatRequest } from "./hooks/UseChatCommandMessages";
 import {
@@ -42,6 +43,8 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const [isProcessing, setIsProcessing] = useState(false);
   const [draft, setDraft] = useState("");
   const [referencedFiles, setReferencedFiles] = useState<ReferencedFile[]>([]);
+  const clipboardUploads = useRef(new ClipboardUploads((uri) => URL.revokeObjectURL(uri)));
+  const [pendingImages, setPendingImages] = useState<PendingImagePreview[]>([]);
   const [imageAttachments, setImageAttachments] = useState<ImageAttachment[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>(loadedConversation?.messages ?? []);
   const [conversationId, setConversationId] = useState<string | undefined>(loadedConversation?.id);
@@ -190,14 +193,51 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     requestAnimationFrame(focusInput);
   }, []);
 
+  const handlePendingImage = useCallback((preview: PendingImagePreview) => {
+    clipboardUploads.current.add(preview);
+    setPendingImages(clipboardUploads.current.previews());
+  }, []);
+
+  const removePendingImage = useCallback((requestId: string) => {
+    clipboardUploads.current.remove(requestId);
+    setPendingImages(clipboardUploads.current.previews());
+  }, []);
+
+  const resolveImageUpload = useCallback((requestId: string, attachments: ImageAttachment[]) => {
+    const result = clipboardUploads.current.complete(requestId, attachments);
+    setPendingImages(clipboardUploads.current.previews());
+    for (const attachment of result.discarded) {
+      getVsCodeApi()?.postMessage({ type: "deleteImageAttachment", requestId: crypto.randomUUID(), attachment });
+    }
+    return result.accepted;
+  }, []);
+
+  useEffect(() => {
+    const uploads = clipboardUploads.current;
+    return () => {
+      uploads.dispose();
+      // Keep only a cleanup listener for uploads removed during navigation.
+      if (!uploads.outstanding) {return;}
+      const cleanup = (event: MessageEvent) => {
+        if (event.data.type !== "imageAttachmentsSelected") {return;}
+        const result = uploads.complete(event.data.requestId, event.data.attachments);
+        for (const attachment of result.discarded) {
+          getVsCodeApi()?.postMessage({ type: "deleteImageAttachment", requestId: crypto.randomUUID(), attachment });
+        }
+        if (!uploads.outstanding) {window.removeEventListener("message", cleanup);}
+      };
+      window.addEventListener("message", cleanup);
+    };
+  }, []);
+
   const canSend = useMemo(() => {
     const trimmedDraft = draft.trim();
     const workspaceReady = workspaceContext?.state === "connected" || workspaceContext?.state === "empty";
-    return !navigationPending && !isPermissionUpdatePending &&
+    return pendingImages.length === 0 && !navigationPending && !isPermissionUpdatePending &&
       (trimmedDraft.length > 0 || imageAttachments.length > 0) &&
       (apiKeyStatus === "configured" || trimmedDraft.startsWith("/")) &&
       (workspaceReady || trimmedDraft.startsWith("/"));
-  }, [draft, imageAttachments, apiKeyStatus, isPermissionUpdatePending, navigationPending, workspaceContext]);
+  }, [draft, imageAttachments, pendingImages.length, apiKeyStatus, isPermissionUpdatePending, navigationPending, workspaceContext]);
 
   useEffect(() => {
     focusInput();
@@ -318,6 +358,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, [onCancelWorkspaceMismatch]);
 
   useChatCommandMessages({
+    resolveImageUpload,
     appendReferencedFiles,
     focusInput,
     refs: {
@@ -418,6 +459,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
           rows={1}
           referencedFiles={referencedFiles}
           imageAttachments={imageAttachments}
+          pendingImages={pendingImages}
+          onPendingImage={handlePendingImage}
+          onRemovePendingImage={removePendingImage}
           onRemoveImageAttachment={removeImageAttachment}
           onImagePasteError={setRequestError}
           conversationId={conversationId}

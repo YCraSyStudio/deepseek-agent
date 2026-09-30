@@ -1,6 +1,7 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { WEBVIEW_INPUT_LIMITS, type ImageAttachment, type ReferencedFile } from "@/contracts";
 import "./InputCtrl.css";
+import type { PendingImagePreview } from "../../../model/ClipboardUploads";
 import { FileSelector } from "@webview/components/chatView";
 import ImageLightbox, { type LightboxImage } from "@webview/components/shared/imageLightbox/ImageLightbox";
 import { useVsCode } from "@webview/views/chatView/contexts";
@@ -18,6 +19,9 @@ type Props = {
   rows?: number;
   referencedFiles?: ReferencedFile[];
   imageAttachments?: ImageAttachment[];
+  pendingImages?: PendingImagePreview[];
+  onPendingImage?: (preview: PendingImagePreview) => void;
+  onRemovePendingImage?: (requestId: string) => void;
   onRemoveImageAttachment?: (attachment: ImageAttachment) => void;
   onImagePasteError?: (error: string) => void;
   conversationId?: string;
@@ -40,6 +44,9 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       rows = 1,
       referencedFiles,
       imageAttachments = [],
+      pendingImages = [],
+      onPendingImage,
+      onRemovePendingImage,
       onRemoveImageAttachment,
       onImagePasteError,
       conversationId,
@@ -123,7 +130,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
 
     const handleSteer = useCallback(() => {
       const text = input.trim();
-      if ((!text && imageAttachments.length === 0) || !vscode || !conversationId || !activeGenerationId) {
+      if ((!text && imageAttachments.length === 0) || !vscode || !canSend || !conversationId || !activeGenerationId) {
         return;
       }
       const clientRequestId = crypto.randomUUID();
@@ -140,7 +147,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
         referencedFiles: referencedFiles?.map(toRequestReference),
         imageAttachments,
       });
-    }, [activeGenerationId, conversationId, imageAttachments, input, onSend, reasoningRef, referencedFiles, selectedModelRef, vscode, workspaceRevision]);
+    }, [activeGenerationId, canSend, conversationId, imageAttachments, input, onSend, reasoningRef, referencedFiles, selectedModelRef, vscode, workspaceRevision]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -202,7 +209,8 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
         .flatMap((item) => item.getAsFile() ? [item.getAsFile()!] : []);
       if (images.length === 0) {return;}
       event.preventDefault();
-      if (imageAttachments.length + images.length > WEBVIEW_INPUT_LIMITS.images) {
+      if (!vscode) {return;}
+      if (imageAttachments.length + pendingImages.length + images.length > WEBVIEW_INPUT_LIMITS.images) {
         onImagePasteError?.(`You can attach at most ${WEBVIEW_INPUT_LIMITS.images} images.`);
         return;
       }
@@ -211,23 +219,38 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
           onImagePasteError?.("A pasted image may be at most 16 MiB. Use the attachment picker for larger images.");
           continue;
         }
+        const requestId = crypto.randomUUID();
+        const name = file.name || `pasted-image-${Date.now()}-${index + 1}.${extensionForMime(file.type)}`;
+        onPendingImage?.({ requestId, name, previewUri: URL.createObjectURL(file) });
         void file.arrayBuffer().then((buffer) => {
           vscode?.postMessage({
             type: "uploadClipboardImage",
-            requestId: crypto.randomUUID(),
-            name: file.name || `pasted-image-${Date.now()}-${index + 1}.${extensionForMime(file.type)}`,
+            requestId,
+            name,
             mediaType: file.type,
             size: file.size,
             dataBase64: bytesToBase64(new Uint8Array(buffer)),
           });
-        }, () => onImagePasteError?.("The pasted image could not be read."));
+        }, () => {
+          // Route read failures through the same completion path to release the preview.
+          window.dispatchEvent(new MessageEvent("message", { data: { type: "imageAttachmentsSelected", requestId, attachments: [], error: "The pasted image could not be read." } }));
+        });
       }
-    }, [imageAttachments.length, onImagePasteError, vscode]);
+    }, [imageAttachments.length, pendingImages.length, onPendingImage, onImagePasteError, vscode]);
 
     return (
       <div className="inputComposer">
-        {imageAttachments.length > 0 ? (
+        {imageAttachments.length + pendingImages.length > 0 ? (
           <div className="composerImageAttachments">
+            {pendingImages.map((image) => (
+              <div className="composerImageAttachment" key={image.requestId} aria-busy="true">
+                <img src={image.previewUri} alt={image.name} />
+                <span className="composerImagePending" role="status">Uploading…</span>
+                <button type="button" className="composerImageRemove" aria-label={t("chat.removeImage")} onClick={() => onRemovePendingImage?.(image.requestId)}>
+                  <span className="codicon codicon-close" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
             {imageAttachments.map((attachment) => {
               const previewUri = attachment.previewUri;
               return (

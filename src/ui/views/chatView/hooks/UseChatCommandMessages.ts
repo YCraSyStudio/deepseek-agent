@@ -54,6 +54,7 @@ interface ChatCommandSetters {
 }
 
 interface UseChatCommandMessagesOptions {
+  resolveImageUpload: (requestId: string, attachments: ImageAttachment[]) => ImageAttachment[];
   appendReferencedFiles: (files: ReferencedFile[]) => void;
   focusInput: () => void;
   refs: ChatCommandRefs;
@@ -61,6 +62,7 @@ interface UseChatCommandMessagesOptions {
 }
 
 export function useChatCommandMessages({
+  resolveImageUpload,
   appendReferencedFiles,
   focusInput,
   refs,
@@ -76,8 +78,9 @@ export function useChatCommandMessages({
         if (message.error) {
           setters.setRequestError(message.error);
         }
-        if (message.attachments.length > 0) {
-          setters.setImageAttachments((current) => [...current, ...message.attachments].slice(0, 8));
+        const attachments = resolveImageUpload(message.requestId, message.attachments);
+        if (attachments.length > 0) {
+          setters.setImageAttachments((current) => [...current, ...attachments].slice(0, 8));
           requestAnimationFrame(focusInput);
         }
       }
@@ -127,7 +130,7 @@ export function useChatCommandMessages({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [appendReferencedFiles, focusInput]);
+  }, [appendReferencedFiles, focusInput, resolveImageUpload]);
 }
 
 function clearChatState(refs: ChatCommandRefs, setters: ChatCommandSetters): void {
