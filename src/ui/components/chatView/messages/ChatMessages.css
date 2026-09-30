@@ -304,3 +304,13 @@
     background: var(--button-secondary-hover);
   }
 }
+
+/* GFM task items align with regular list text, without a second bullet. */
+:is(.markdownMessage, .reasoning-content) .task-list-item {
+  list-style: none;
+}
+
+:is(.markdownMessage, .reasoning-content) .task-list-item > input[type="checkbox"] {
+  margin-inline: -18px 5px;
+  vertical-align: middle;
+}
