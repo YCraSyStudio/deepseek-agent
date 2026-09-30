@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { SplitSettingsStorage } from "@/infrastructure/persistence/providers/SplitSettingsStorage";
 import { DEFAULT_CONFIG, type AppConfig, type PermissionSnapshot } from "@/contracts";
 import {
   isStoredSettingKey,
@@ -7,8 +8,7 @@ import {
   toStoredSettings,
   type StoredSettings,
 } from "@/application/settings/ConfigurationSchema";
-import { isRecord } from "@/shared/utils/TypeGuards";
-import { withFileLock, writeJsonFileAtomic } from "@/infrastructure/persistence/JsonFileStorage";
+import { withFileLock } from "@/infrastructure/persistence/JsonFileStorage";
 import { getSettingsFilePath } from "@/infrastructure/persistence/UserDataPaths";
 
 type SettingsChangeListener = (config: AppConfig) => void;
@@ -22,7 +22,7 @@ export class SettingsManager {
   private static pendingPermissionUpdates = 0;
   private static readonly changeListeners = new Set<SettingsChangeListener>();
   private static persistSettings: (settings: StoredSettings) => Promise<void> =
-    (settings) => writeJsonFileAtomic(getSettingsFilePath(), settings);
+    (settings) => new SplitSettingsStorage().write(settings);
 
   static async initialize(initialSettings: unknown = {}): Promise<void> {
     if (SettingsManager.initialized) {
@@ -30,26 +30,15 @@ export class SettingsManager {
     }
     try {
       await SettingsManager.enqueueWrite(() => withFileLock(getSettingsFilePath(), async () => {
+        await new SplitSettingsStorage().recover();
         if (existsSync(getSettingsFilePath())) {
           const storedSettings = readStoredSettings();
           const normalizedConfig = normalizeConfig(storedSettings);
-          if (
-            isRecord(storedSettings) &&
-            (Object.prototype.hasOwnProperty.call(storedSettings, "webSearchBrowserVisible") ||
-              Object.prototype.hasOwnProperty.call(storedSettings, "usageBudgets") ||
-              Object.prototype.hasOwnProperty.call(storedSettings, "toolExecutionModes") ||
-              storedSettings.permissionMode === "workspace" ||
-              storedSettings.permissionMode === "chat" ||
-              storedSettings.permissionMode === "enabled" ||
-              storedSettings.permissionMode === "read-only" ||
-              storedSettings.permissionMode === "custom")
-          ) {
-            await SettingsManager.persistSettings(toStoredSettings(normalizedConfig));
-          }
+          await SettingsManager.persistSettings(toStoredSettings(normalizedConfig));
           SettingsManager.currentConfig = normalizedConfig;
           return;
         }
-        const initialConfig = normalizeConfig(initialSettings);
+        const initialConfig = normalizeConfig({ ...normalizeConfig(initialSettings), ...(new SplitSettingsStorage().read() as object) });
         await SettingsManager.persistSettings(toStoredSettings(initialConfig));
         SettingsManager.currentConfig = initialConfig;
       }));
@@ -123,6 +112,7 @@ export class SettingsManager {
     }
     return SettingsManager.enqueueMutation(isPermissionAffectingPatch(partial), async () => {
       await withFileLock(getSettingsFilePath(), async () => {
+        await new SplitSettingsStorage().recover();
         const next = existsSync(getSettingsFilePath()) ? normalizeConfig(readStoredSettings()) : SettingsManager.load();
         for (const [key, value] of Object.entries(partial)) {
           if (!isStoredSettingKey(key) || value === undefined) {continue;}
@@ -145,6 +135,7 @@ export class SettingsManager {
     }
     return SettingsManager.enqueueMutation(true, async () => {
       await withFileLock(getSettingsFilePath(), async () => {
+        await new SplitSettingsStorage().recover();
         const next = normalizeConfig(DEFAULT_CONFIG);
         await SettingsManager.persistSettings(toStoredSettings(next));
         SettingsManager.currentConfig = next;
@@ -160,7 +151,7 @@ export class SettingsManager {
     }
     SettingsManager.persistSettings = persist
       ? (settings) => persist(settings)
-      : (settings) => writeJsonFileAtomic(getSettingsFilePath(), settings);
+      : (settings) => new SplitSettingsStorage().write(settings);
   }
 
   private static emitChange(): void {
@@ -204,9 +195,5 @@ function isPermissionAffectingPatch(partial: Partial<AppConfig>): boolean {
 }
 
 function readStoredSettings(): unknown {
-  try {
-    return JSON.parse(readFileSync(getSettingsFilePath(), "utf8")) as unknown;
-  } catch {
-    return {};
-  }
+  return new SplitSettingsStorage().read();
 }
