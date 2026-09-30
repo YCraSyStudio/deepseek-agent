@@ -85,6 +85,17 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
           updateConfig("browserAccess", value); saveOnBlur("browserAccess", value);
         }}><option value="ask">Ask per origin</option><option value="always">Always</option><option value="never">Never</option></select>
       </div>
+      <div className="settingRow">
+        <label htmlFor="automaticCaptureEnabled">Automatic capture after UI changes</label>
+        <Toggle id="automaticCaptureEnabled" checked={config.automaticCaptureEnabled} onToggle={(checked) => {
+          updateConfig("automaticCaptureEnabled", checked); saveOnBlur("automaticCaptureEnabled", checked);
+        }} />
+        <small>Uses the last explicitly captured target. Captures stay local until analyzed.</small>
+      </div>
+      <div className="settingRow">
+        <label htmlFor="automaticCaptureLimit">Automatic captures per conversation</label>
+        <input id="automaticCaptureLimit" type="number" min={1} max={40} value={config.automaticCaptureLimit} onChange={(event) => updateConfig("automaticCaptureLimit", Number(event.currentTarget.value))} onBlur={(event) => saveOnBlur("automaticCaptureLimit", Number(event.currentTarget.value))} />
+      </div>
       <div className="webSearchSettings">
         <h4 className="subsectionTitle">{t("settings.webSearch.title")}</h4>
         <p className="settingsHint">{t("settings.webSearch.description")}</p>

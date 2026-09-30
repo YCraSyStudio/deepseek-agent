@@ -1,0 +1,11 @@
+# Issue #76: optional automatic UI capture
+
+User decision: implement an opt-in setting, disabled by default. `automaticCaptureEnabled=false`, `automaticCaptureLimit=10` (1–40).
+
+After a successful, non-cancelled turn with completed structured file mutations to `.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.scss`, `.sass`, `.less`, `.html`, `.uxml`, `.uss`, `.unity`, `.prefab`, `.xaml`, `.axaml` or `.fxml`, exactly one attempt reuses the last explicitly captured web viewport or precise native window/PID. No dev server address, title or foreground window is guessed. Whole-screen capture is excluded. Terminal-only edits do not report changed paths and are outside this first trigger contract; use an explicit capture in those turns.
+
+The hook rereads settings at turn end, so disabling the setting during generation takes effect. It runs before storing the final assistant result. A tool-group event records the automatic screenshot or a clear no-op reason (no known target, cap, incognito, remote, Wayland, unavailable browser/helper). The ScreenshotStore and normal capture backends handle storage, cancellation, limits and browser-origin access rules. Existing SHA-256 deduplication avoids repeated image files; the lifetime automatic count persists independently of retention, and automatic writes enforce the limit under the storage lock. Previously stored duplicates consume no extra count.
+
+Next-turn runtime context exposes only the latest screenshot id/dimensions; vision remains an explicit `analyze_images` decision. No image is automatically uploaded. Enabling the setting permits capture activity for previously selected targets; browser capture may open an owned tab or request origin permission. Incognito/remote targets are no-ops.
+
+Branch includes #69, #70, #71, #73, #72 and #74 prerequisite commits, each distinct. Tests cover trigger filtering, known-target precision, disabled mode, cap/no-op/failure, persistent counting and deduplication. Compile/lint/unit suite pass. Manual VS Code validation remains: opt in, establish target, edit UI, inspect one timeline thumbnail, run unchanged UI, reopen conversation, reach cap, disable while generation runs, cancel and verify no late event, and test no target/remote/Wayland.

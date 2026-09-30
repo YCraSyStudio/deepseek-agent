@@ -10,7 +10,7 @@ export class CaptureService {
   constructor(private readonly store: ScreenshotStore, private readonly onCaptured?: (result: CaptureScreenshotResult) => Promise<void> | void,
     private readonly runners: ReadonlyMap<CaptureScreenshotRequest["target"], CaptureBackend> = backends, private readonly timeoutMs = 30_000) {}
 
-  async capture(request: CaptureScreenshotRequest, signal?: AbortSignal): Promise<CaptureScreenshotResult> {
+  async capture(request: CaptureScreenshotRequest, signal?: AbortSignal, automatic?: { limit: number }): Promise<CaptureScreenshotResult> {
     signal?.throwIfAborted();
     const backend = this.runners.get(request.target);
     if (!backend) {throw new Error(`No ${request.target} capture backend is available on this host. Configure a supported local browser/window target.`);}
@@ -30,7 +30,7 @@ export class CaptureService {
       const frame = await Promise.race([backend.capture(request, controller.signal), abortPromise]);
       controller.signal.throwIfAborted();
       const metadata = await this.store.save(frame.bytes, { kind: request.target, target: frame.target,
-        windowTitle: frame.windowTitle, pid: frame.pid, label: request.label });
+        windowTitle: frame.windowTitle, pid: frame.pid, label: request.label, automatic: !!automatic, automaticLimit: automatic?.limit });
       const result: CaptureScreenshotResult = {
         id: metadata.id, path: `.screenshots/${metadata.fileName}`, target: metadata.target, kind: metadata.kind,
         windowTitle: metadata.windowTitle, pid: metadata.pid, width: metadata.width, height: metadata.height, bytes: metadata.bytes,

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { automaticCapture, changedUiPaths, knownCaptureTarget } from "@/infrastructure/capture/AutomaticCapture";
 import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 import { logWarning } from "@/shared/logging/Logger";
 import { CaptureService } from "@/infrastructure/capture/CaptureService";
@@ -279,6 +281,11 @@ export class GenerationExecutor {
         tools,
         workspaceSnapshot,
       );
+      if (config.automaticCaptureEnabled && !runState.isIncognito()) {
+        const latest = await new ScreenshotStore(task.conversationId).lookup().catch(() => undefined);
+        const system = messages.find((message) => message.role === "system");
+        if (latest && system) {system.content = `${system.content ?? ""}\nLocal UI screenshot available: ${JSON.stringify({ id: latest.metadata.id, width: latest.metadata.width, height: latest.metadata.height })}. Use analyze_images to inspect it when relevant.`;}
+      }
       messages = await fitGenerationRequestContext({
         messages,
         payload,
@@ -337,6 +344,31 @@ export class GenerationExecutor {
             }),
         });
         if (result) {
+          if (!signal.aborted && !result.partial) {
+            const captureStore = new ScreenshotStore(task.conversationId);
+            const paths = changedUiPaths(result.toolCalls as StoredToolCall[] ?? []);
+            const automaticSettings = this.dependencies.settings.load();
+            if (automaticSettings.automaticCaptureEnabled && paths.length) {
+              const latest = runState.isIncognito() ? undefined : await captureStore.lookup().catch(() => undefined);
+              const automatic = await automaticCapture({ enabled: true, paths,
+                count: await captureStore.automaticCount().catch(() => automaticSettings.automaticCaptureLimit), limit: automaticSettings.automaticCaptureLimit,
+                target: knownCaptureTarget(latest?.metadata),
+                unavailable: runState.isIncognito() ? "Automatic capture is unavailable in incognito conversations" : vscode.env.remoteName ? "Automatic capture is unavailable in remote workspaces" : undefined,
+                capture: (request) => new CaptureService(captureStore).capture(request, signal, { limit: automaticSettings.automaticCaptureLimit }),
+              });
+              if (!signal.aborted && (automatic.capture || automatic.note)) {
+                const id = `auto-capture-${randomUUID()}`; const round = 0;
+                const captureResult = automatic.capture ? JSON.stringify(automatic.capture) : automatic.note!;
+                result.toolCalls ??= [];
+                result.toolCalls.push({ toolCallId: id, toolName: "capture_screenshot", arguments: JSON.stringify({ automatic: true }), result: captureResult, status: "completed", round });
+                const event = { id, type: "tool-group" as const, round, toolCallIds: [id] };
+                result.timeline.push(event);
+                await eventSink.publish({ type: "toolCallStarted", toolCalls: [{ id, type: "function", function: { name: "capture_screenshot", arguments: JSON.stringify({ automatic: true }) } }], round });
+                await eventSink.publish({ type: "streamTimelineToolGroup", event });
+                await eventSink.publish({ type: "toolCallResult", toolCallId: id, toolName: "capture_screenshot", result: captureResult, status: "completed" });
+              }
+            }
+          }
           await this.resultStore.save({
             content: result.content,
             timeline: result.timeline,
