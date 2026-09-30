@@ -274,6 +274,7 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
     isOptionalBoolean(value.includeHomeAgents) &&
     isOptionalBoolean(value.usageBreakdown) &&
     (value.usageCostCurrency === undefined || isEnumOf(value.usageCostCurrency, USAGE_CURRENCIES)) &&
+    (value.browserAccess === undefined || isEnumOf(value.browserAccess, ["ask", "always", "never"])) &&
     isOptionalBoolean(value.webSearchEnabled) &&
     (value.webSearchEngine === undefined || value.webSearchEngine === "bing" || value.webSearchEngine === "google" || value.webSearchEngine === "baidu" || value.webSearchEngine === "searxng") &&
     (value.searxngUrl === undefined || isAllowedSearxngUrl(value.searxngUrl)) &&
