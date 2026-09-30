@@ -1,3 +1,4 @@
+import { getSearxngSearchDiagnostics } from "@/infrastructure/browser/SearxngSearch";
 import * as vscode from "vscode";
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
 import { logWarning } from "@/shared/logging/Logger";
@@ -66,6 +67,7 @@ export class SettingsHandler {
         revision: this.settings.getRevision(),
         config,
       });
+      await webviewView.webview.postMessage({ type: "webSearchDiagnostics", diagnostics: getSearxngSearchDiagnostics(config.searxngUrl) });
       await this._postApiKeyStatus(webviewView, config.baseUrl);
     } catch (error: unknown) {
       logWarning(`[SettingsHandler] Failed to load settings: ${redactSensitiveText(error)}`);

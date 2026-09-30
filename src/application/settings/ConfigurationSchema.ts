@@ -18,7 +18,7 @@ const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
   "permissionMode", "autoContext", "historyEnabled",
-  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled", "webSearchEngine", "searxngUrl", "searxngEngines", "searxngEngineCatalog",
+  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled", "webSearchEngine", "searxngUrl", "searxngEngines", "searxngFallbackEngines", "searxngEngineCatalog",
 ];
 
 const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
@@ -50,6 +50,7 @@ export function normalizeConfig(value: unknown): AppConfig {
     webSearchEngine: "searxng",
     searxngUrl: normalizeSearxngUrl(config.searxngUrl),
     searxngEngines: normalizeSearxngEngines(config.searxngEngines),
+    searxngFallbackEngines: normalizeSearxngEngines(config.searxngFallbackEngines),
     searxngEngineCatalog: normalizeSearxngEngineCatalog(config.searxngEngineCatalog),
   };
 }
@@ -83,7 +84,7 @@ export function normalizeSettingValue(key: StoredSettingKey, value: unknown): un
   if (key === "historyRetentionDays") {return clampInteger(value, 0, 3650, DEFAULT_CONFIG.historyRetentionDays);}
   if (key === "webSearchEngine") {return "searxng";}
   if (key === "searxngUrl") {return normalizeSearxngUrl(value);}
-  if (key === "searxngEngines") {return normalizeSearxngEngines(value);}
+  if (key === "searxngEngines" || key === "searxngFallbackEngines") {return normalizeSearxngEngines(value);}
   if (key === "searxngEngineCatalog") {return normalizeSearxngEngineCatalog(value);}
   return value;
 }

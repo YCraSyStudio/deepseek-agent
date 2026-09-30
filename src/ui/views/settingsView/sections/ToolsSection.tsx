@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import type { SearchDiagnostics } from "@/contracts/SearchDiagnostics";
+import { getVsCodeApi } from "@webview/VsCodeApi";
+import { useEffect, useMemo, useState } from "react";
 import type { PermissionMode } from "@/contracts";
 import { Toggle } from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
@@ -12,6 +14,15 @@ const PERMISSION_MODE_OPTIONS: Array<{ value: PermissionMode; label: string; des
 ];
 
 function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePending = false }: ToolsSectionProps) {
+  const [diagnostics, setDiagnostics] = useState<SearchDiagnostics>();
+  useEffect(() => {
+    const receive = (event: MessageEvent) => {
+      if (event.data.type === "webSearchDiagnostics") {setDiagnostics(event.data.diagnostics);}
+    };
+    window.addEventListener("message", receive);
+    getVsCodeApi()?.postMessage({ type: "getConfig" });
+    return () => window.removeEventListener("message", receive);
+  }, []);
   const [engineFilter, setEngineFilter] = useState("");
   const selectedPermission = PERMISSION_MODE_OPTIONS.find((option) => option.value === config.permissionMode) ?? PERMISSION_MODE_OPTIONS[0];
   const isAutomaticEngineSelection = config.searxngEngines.length === 0;
@@ -105,6 +116,19 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
           <small className="settingsHint">{t("settings.webSearch.searxngManagedHint")}</small>
         </div>
 
+        <div className="settingRow">
+          <label htmlFor="searxngFallbackEngines">Fallback engines (shortcuts, comma separated)</label>
+          <input id="searxngFallbackEngines" defaultValue={config.searxngFallbackEngines.join(", ")} disabled={!config.webSearchEnabled}
+            onBlur={(event) => {const engines = event.currentTarget.value.split(",").map((value) => value.trim()).filter(Boolean); updateConfig("searxngFallbackEngines", engines); saveOnBlur("searxngFallbackEngines", engines);}} />
+          <small>One retry when engines are unavailable. Empty disables fallback.</small>
+        </div>
+        {diagnostics ? <div className="settingsHint" role="status">
+          Last search: {diagnostics.availability}{diagnostics.singleEngine ? " · single-engine dependency" : ""}
+          {diagnostics.attempts.map((attempt, index) => <div key={index}>
+            {attempt.status} · {attempt.elapsedMs} ms · {attempt.contributingEngines.join(", ") || "engine metadata unavailable"}
+            {attempt.unavailableEngines.map((engine) => <div key={engine.engine}>{engine.engine}: {engine.reason}</div>)}
+          </div>)}
+        </div> : null}
         <div className="settingRow searxngEnginesRow">
           <label>{t("settings.webSearch.engines")}</label>
           <details className="searxngEnginePicker">

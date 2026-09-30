@@ -5,6 +5,7 @@ import {
   fetchSearxngEngines,
   normalizeSearxngEndpoint,
   searchSearxng,
+  SearxngSearchError,
 } from "@/infrastructure/browser/SearxngSearch";
 
 suite("SearXNG search", () => {
@@ -95,6 +96,46 @@ suite("SearXNG search", () => {
       await close(server);
     }
   });
+  test("reports single-engine degraded success and retains provenance", async () => {
+    await withResponses([{ results: [{ url: "https://example.com", engines: ["google cse"] }], unresponsive_engines: [["brave", "CAPTCHA"]] }], async (endpoint) => {
+      const result = await searchSearxng(endpoint, "test", { language: "en", tag: "en" }, 10);
+      assert.equal(result.diagnostics.availability, "degraded");
+      assert.equal(result.diagnostics.singleEngine, true);
+      assert.deepEqual(result.provenance[0]?.engines, ["google cse"]);
+      assert.equal(result.diagnostics.attempts[0]?.unavailableEngines[0]?.engine, "brave");
+    });
+  });
+  test("missing metadata is unknown, and legitimate empty results are not blocked engines", async () => {
+    await withResponses([{ results: [{ url: "https://example.com" }] }, { results: [], unresponsive_engines: [] }], async (endpoint) => {
+      assert.equal((await searchSearxng(endpoint, "test", { language: "en", tag: "en" }, 10)).diagnostics.availability, "unknown");
+      const empty = await searchSearxng(endpoint, "test", { language: "en", tag: "en" }, 10);
+      assert.deepEqual(empty.urls, []);
+      assert.equal(empty.diagnostics.attempts[0]?.status, "empty_results");
+    });
+  });
+  test("unavailable engines retry once with a distinct configured selection and preserve both attempts", async () => {
+    configureSearxngEngineSelection(() => ["g"], () => ["bi"]);
+    const queries: string[] = [];
+    await withResponses([{ results: [], unresponsive_engines: [["google", "too many requests"]] }, { results: [{ url: "https://example.com", engines: ["bing"] }], unresponsive_engines: [] }], async (endpoint) => {
+      const result = await searchSearxng(endpoint, "test", { language: "en", tag: "en" }, 10);
+      assert.equal(result.diagnostics.attempts.length, 2);
+      assert.deepEqual(result.diagnostics.attempts[1]?.selectedEngines, ["bi"]);
+    }, queries);
+    assert.deepEqual(queries, ["!g test", "!bi test"]);
+  });
+  test("filtered URLs and all-engine failure have distinct bounded diagnostics", async () => {
+    await withResponses([{ results: [{ url: "http://example.com" }], unresponsive_engines: [] }, { results: [], unresponsive_engines: [["google", "CAPTCHA"]] }], async (endpoint) => {
+      for (const status of ["filtered_urls", "engines_unavailable"]) {
+        await assert.rejects(searchSearxng(endpoint, "test", { language: "en", tag: "en" }, 10), (error: unknown) =>
+          error instanceof SearxngSearchError && error.diagnostics.attempts[0]?.status === status);
+      }
+    });
+  });
+  test("cancellation does not trigger fallback", async () => {
+    const controller = new AbortController(); controller.abort(new Error("cancelled"));
+    await assert.rejects(searchSearxng("http://127.0.0.1:1", "test", { language: "en", tag: "en" }, 10, controller.signal), /cancelled/);
+  });
+
 });
 
 function listen(server: http.Server): Promise<number> {
@@ -113,4 +154,15 @@ function listen(server: http.Server): Promise<number> {
 
 function close(server: http.Server): Promise<void> {
   return new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+}
+
+async function withResponses(responses: unknown[], operation: (endpoint: string) => Promise<void>, queries: string[] = []): Promise<void> {
+  let index = 0;
+  const server = http.createServer((request, response) => {
+    queries.push(new URL(request.url!, "http://localhost").searchParams.get("q")!);
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify(responses[index++]));
+  });
+  const port = await listen(server);
+  try {await operation(`http://127.0.0.1:${port}`);} finally {await close(server);}
 }

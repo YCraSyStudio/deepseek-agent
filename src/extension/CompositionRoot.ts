@@ -33,7 +33,7 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
     this.secrets = new VsCodeSecretStore(context);
     this.history = new HistoryManager(this.settings);
     this.searxngManager = new SearxngManager(context);
-    configureSearxngEngineSelection(() => this.settings.load().searxngEngines);
+    configureSearxngEngineSelection(() => this.settings.load().searxngEngines, () => this.settings.load().searxngFallbackEngines);
     this.webRuntime = new HeadlessWebRuntime();
     configureWebRuntimeDiagnostics(this.webRuntime, this.settings);
 

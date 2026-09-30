@@ -1,3 +1,4 @@
+import type { SearchDiagnostics } from "@/contracts/SearchDiagnostics";
 type WebSearchProviderId = "searxng";
 
 export interface WebSecurityMetadata {
@@ -12,6 +13,8 @@ export interface WebSearchResult {
   search_id: string;
   provider: WebSearchProviderId;
   urls: string[];
+  diagnostics?: SearchDiagnostics;
+  provenance?: Array<{ url: string; engines: string[] }>;
   trust: "untrusted_web_content";
   security: WebSecurityMetadata;
 }
@@ -21,6 +24,7 @@ export interface WebSearchFailure {
   terminal: true;
   provider: WebSearchProviderId;
   reason: string;
+  diagnostics?: SearchDiagnostics;
   trust: "untrusted_web_content";
 }
 

@@ -192,6 +192,7 @@ function cloneConfig(config: AppConfig): AppConfig {
   return {
     ...config,
     searxngEngines: [...config.searxngEngines],
+    searxngFallbackEngines: [...config.searxngFallbackEngines],
     searxngEngineCatalog: config.searxngEngineCatalog.map((engine) => ({
       ...engine,
       categories: [...engine.categories],

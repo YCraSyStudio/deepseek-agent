@@ -58,6 +58,7 @@ export interface AppConfig {
   webSearchEngine: "searxng";
   searxngUrl: string;
   searxngEngines: string[];
+  searxngFallbackEngines: string[];
   searxngEngineCatalog: SearxngEngineOption[];
 
   userId?: string;
@@ -92,5 +93,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   webSearchEngine: "searxng",
   searxngUrl: "http://127.0.0.1:8888",
   searxngEngines: [],
+  searxngFallbackEngines: [],
   searxngEngineCatalog: [],
 };

@@ -5,7 +5,7 @@ import { LruCache } from "./BrowserCache";
 import type { HeadlessWebRuntime, RenderedPage } from "./HeadlessWebRuntime";
 import { WebAccessPolicy, extractHttpsUrls, validatePublicWebUrl } from "./NetworkPolicy";
 import { addDomainConstraint, resolveSearchLocale, type SearchLocale } from "./SearchProviders";
-import { searchSearxng } from "./SearxngSearch";
+import { searchSearxng, SearxngSearchError } from "./SearxngSearch";
 import { createNormalizedDocument, MAX_WEB_RESPONSE_CHARS, selectDocumentContent, type NormalizedWebDocument } from "./SemanticContent";
 import type { WebDocumentResult, WebSearchFailure, WebSearchResult, WebSecurityMetadata } from "./Types";
 import { validateCursor, validateDomains, validateLanguage, validateOpaqueId, validateOptionalFocus, validateRegion, validateResultLimit, validateSearchQuery } from "./Validation";
@@ -78,6 +78,8 @@ export function createHeadlessWebTools(
           search_id: record.id,
           provider: "searxng",
           urls: record.urls,
+          diagnostics: result.diagnostics,
+          provenance: result.provenance,
           trust: "untrusted_web_content",
           security: {
             source: "live_web",
@@ -99,6 +101,7 @@ export function createHeadlessWebTools(
           terminal: true,
           provider: "searxng",
           reason: sanitizeWebFailure(error, "SearXNG did not return usable results"),
+          diagnostics: error instanceof SearxngSearchError ? error.diagnostics : undefined,
           trust: "untrusted_web_content",
         };
         if (generationKey) {terminalFailures.set(generationKey, failure);}
