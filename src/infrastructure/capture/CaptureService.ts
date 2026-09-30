@@ -32,7 +32,7 @@ export class CaptureService {
       const metadata = await this.store.save(frame.bytes, { kind: request.target, target: frame.target,
         windowTitle: frame.windowTitle, pid: frame.pid, label: request.label, automatic: !!automatic, automaticLimit: automatic?.limit });
       const result: CaptureScreenshotResult = {
-        id: metadata.id, path: `.screenshots/${metadata.fileName}`, target: metadata.target, kind: metadata.kind,
+        id: metadata.id, path: `.screenshots/${metadata.fileName}`, target: metadata.target, kind: request.target,
         windowTitle: metadata.windowTitle, pid: metadata.pid, width: metadata.width, height: metadata.height, bytes: metadata.bytes,
       };
       await this.onCaptured?.(result);

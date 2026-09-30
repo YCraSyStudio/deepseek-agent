@@ -1,3 +1,4 @@
+import { launchOwnedSession } from "@/infrastructure/capture/OwnedSessionLaunch";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import type { CaptureScreenshotRequest } from "@/contracts/Capture";
@@ -33,37 +34,20 @@ export class WebCaptureBackend implements CaptureBackend {
 
   private async integrated(request: CaptureScreenshotRequest, signal: AbortSignal): Promise<CaptureFrame> {
     const name = `YCraSy UI capture ${randomUUID()}`;
-    let owned: vscode.DebugSession | undefined;
-    let subscription: vscode.Disposable | undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let abort: (() => void) | undefined;
+    const owned = await launchOwnedSession<vscode.DebugSession>({
+      signal,
+      subscribe: (onSession) => vscode.debug.onDidStartDebugSession((session) => {
+        if (session.name === name && ["editor-browser", "pwa-editor-browser"].includes(session.type)) {onSession(session);}
+      }),
+      launch: () => vscode.debug.startDebugging(undefined, { type: "editor-browser", request: "launch", name, url: request.url, noDebug: false }),
+      stop: (session) => vscode.debug.stopDebugging(session),
+    });
     try {
-      const started = new Promise<vscode.DebugSession>((resolve, reject) => {
-        subscription = vscode.debug.onDidStartDebugSession((session) => {
-          if (session.name === name && ["editor-browser", "pwa-editor-browser"].includes(session.type)) {owned = session; resolve(session);}
-        });
-        timer = setTimeout(() => reject(new Error("Integrated browser debug session did not start")), 8000);
-        abort = () => reject(new Error("Browser capture cancelled"));
-        signal.addEventListener("abort", abort, { once: true });
-      });
-      // Attach a handler before startDebugging, so start rejection cannot orphan a rejected promise.
-      void started.catch(() => undefined);
-      const launch = vscode.debug.startDebugging(undefined, { type: "editor-browser", request: "launch", name, url: request.url, noDebug: false });
-      const session = await Promise.race([started, Promise.resolve(launch).then((launched) => {
-        if (!launched) {throw new Error("VS Code rejected the editor-browser debug launch");}
-        return started;
-      })]);
-      if (timer) {clearTimeout(timer); timer = undefined;}
       signal.throwIfAborted();
-      const proxy = await session.customRequest("requestCDPProxy") as { host: string; port: number; path: string };
+      const proxy = await owned.session.customRequest("requestCDPProxy") as { host: string; port: number; path: string };
       const connection = await connectCdpProxy(proxy, signal);
       try {return { bytes: await captureCdpViewport(connection, request, signal), target: request.url! };}
       finally {connection.close();}
-    } finally {
-      if (timer) {clearTimeout(timer);}
-      if (abort) {signal.removeEventListener("abort", abort);}
-      subscription?.dispose();
-      if (owned) {await vscode.debug.stopDebugging(owned);}
-    }
+    } finally {await owned.dispose();}
   }
 }
