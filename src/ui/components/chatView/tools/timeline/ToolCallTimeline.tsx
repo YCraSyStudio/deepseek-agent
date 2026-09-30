@@ -1,3 +1,5 @@
+import { ScreenshotPreview } from "../results/ScreenshotPreview";
+import { screenshotReferences } from "../results/ScreenshotReferences";
 import type { VsCodeApi } from "@webview/VsCodeApi";
 import type { ToolCallGroup, ToolCallState } from "@webview/views/chatView/ChatViewTypes";
 import CollapsiblePanel from "../../../shared/collapsiblePanel/CollapsiblePanel";
@@ -83,6 +85,7 @@ function ToolCallItem({ toolCall, vscode, conversationId }: ToolCallItemProps) {
         </div>
       ) : null}
       {toolCall.arguments ? <div className="toolCallArgs">{renderToolCallArgumentsPreview(toolCall.toolName, toolCall.arguments)}</div> : null}
+      {conversationId && vscode ? screenshotReferences(toolCall.toolName, toolCall.result).map((id) => <ScreenshotPreview key={id} id={id} conversationId={conversationId} vscode={vscode} />) : null}
       {renderToolCallResultPreview({ toolCall, vscode })}
     </CollapsiblePanel>
   );

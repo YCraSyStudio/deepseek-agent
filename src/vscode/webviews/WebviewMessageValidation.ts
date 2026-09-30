@@ -33,6 +33,11 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
     case "getAvailableTools":
     case "getGenerationSnapshot":
       return hasOnlyKeys(value, ["type"]);
+    case "getScreenshotPreview":
+    case "openScreenshot":
+      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "screenshotId"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) && typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
+        typeof value.screenshotId === "string" && /^screenshot-\d+$/.test(value.screenshotId);
     case "newConversation":
       return hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128);
     case "selectAttachments":

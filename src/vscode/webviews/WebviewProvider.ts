@@ -1,3 +1,5 @@
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
+import { getHistoryDirectory } from "@/infrastructure/persistence/UserDataPaths";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { ChatHandler } from "./handlers/chat/ChatHandler";
@@ -118,8 +120,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: devServerUrl
-        ? [webviewDistUri, codiconsDistUri, this.imageAttachments.cacheRoot]
-        : [webviewDistUri, this.imageAttachments.cacheRoot],
+        ? [webviewDistUri, codiconsDistUri, this.imageAttachments.cacheRoot, vscode.Uri.file(getHistoryDirectory())]
+        : [webviewDistUri, this.imageAttachments.cacheRoot, vscode.Uri.file(getHistoryDirectory())],
       portMapping: [
         {
           webviewPort: 5175,
@@ -270,6 +272,21 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       "getHistory", "deleteConversation", "deleteConversations", "loadConversation", "loadConversationPage",
     ] as const, (message, view) => this.historyHandler.handle(message, view));
 
+    this.commandDispatcher.registerMany(["getScreenshotPreview", "openScreenshot"] as const, (message, view) => {
+      void (async () => {
+        try {
+          if (!await this.historyManager.getById(message.conversationId)) {throw new Error("Conversation unavailable");}
+          const capture = await new ScreenshotStore(message.conversationId).lookup(message.screenshotId);
+          if (!capture) {throw new Error("Screenshot was deleted or is unavailable");}
+          const uri = vscode.Uri.file(capture.path);
+          if (message.type === "openScreenshot") {await vscode.commands.executeCommand("vscode.open", uri);}
+          else {await view.webview.postMessage({ type: "screenshotPreview", requestId: message.requestId,
+            conversationId: message.conversationId, uri: view.webview.asWebviewUri(uri).toString(), metadata: capture.metadata });}
+        } catch (error) {
+          await view.webview.postMessage({ type: "screenshotPreview", requestId: message.requestId, conversationId: message.conversationId, error: getErrorMessage(error) });
+        }
+      })();
+    });
     this.commandDispatcher.register("selectAttachments", (message, view) => {
       void this.attachmentSelection.select(message.requestId, message.conversationId, view);
     });

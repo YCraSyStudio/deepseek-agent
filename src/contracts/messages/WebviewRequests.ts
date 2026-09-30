@@ -3,6 +3,7 @@ import type { ImageAttachment, ReferencedFile } from "./WebviewModels";
 
 export type WebviewToHandlerMessage =
   | { type: "initializeProtocol"; protocolVersion: 5 }
+  | { type: "getScreenshotPreview" | "openScreenshot"; requestId: string; conversationId: string; screenshotId: string }
   | { type: "getConfig" }
   | { type: "saveConfig"; requestId: string; config: Partial<AppConfig> }
   | { type: "resetConfig"; requestId: string }
