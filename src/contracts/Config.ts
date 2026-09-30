@@ -54,6 +54,7 @@ export interface AppConfig {
   includeHomeAgents: boolean;
   usageBreakdown: boolean;
   usageCostCurrency: UsageCurrency;
+  browserAccess: "ask" | "always" | "never";
   webSearchEnabled: boolean;
   webSearchEngine: "searxng";
   searxngUrl: string;
@@ -88,6 +89,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   includeHomeAgents: false,
   usageBreakdown: false,
   usageCostCurrency: DEFAULT_USAGE_CURRENCY,
+  browserAccess: "ask",
   webSearchEnabled: true,
   webSearchEngine: "searxng",
   searxngUrl: "http://127.0.0.1:8888",

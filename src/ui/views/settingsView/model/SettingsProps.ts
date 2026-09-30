@@ -33,7 +33,7 @@ export type GeneralSectionProps = {
 };
 
 export type ToolsSectionProps = {
-  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "searxngUrl" | "searxngEngines" | "searxngEngineCatalog">;
+  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "browserAccess" | "searxngUrl" | "searxngEngines" | "searxngEngineCatalog">;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
   permissionUpdatePending?: boolean;
