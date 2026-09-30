@@ -18,7 +18,7 @@ const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
   "permissionMode", "autoContext", "historyEnabled",
-  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled", "webSearchEngine", "searxngUrl", "searxngEngines", "searxngEngineCatalog",
+  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "browserAccess", "webSearchEnabled", "webSearchEngine", "searxngUrl", "searxngEngines", "searxngEngineCatalog",
 ];
 
 const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
@@ -46,6 +46,7 @@ export function normalizeConfig(value: unknown): AppConfig {
     includeHomeAgents: normalizeBoolean(config.includeHomeAgents, DEFAULT_CONFIG.includeHomeAgents),
     usageBreakdown: normalizeBoolean(config.usageBreakdown, DEFAULT_CONFIG.usageBreakdown),
     usageCostCurrency: normalizeUsageCurrency(config.usageCostCurrency),
+    browserAccess: config.browserAccess === "always" || config.browserAccess === "never" ? config.browserAccess : "ask",
     webSearchEnabled: normalizeBoolean(config.webSearchEnabled, DEFAULT_CONFIG.webSearchEnabled),
     webSearchEngine: "searxng",
     searxngUrl: normalizeSearxngUrl(config.searxngUrl),
@@ -67,6 +68,7 @@ export function isStoredSettingKey(key: string): key is StoredSettingKey {
 }
 
 export function normalizeSettingValue(key: StoredSettingKey, value: unknown): unknown {
+  if (key === "browserAccess") {return value === "always" || value === "never" ? value : "ask";}
   if (key === "interfaceLanguage") {return normalizeInterfaceLanguage(value);}
   if (key === "permissionMode") {return normalizePermissionMode(value);}
   if (key === "reasoningEffort") {return normalizeReasoningEffort(value);}

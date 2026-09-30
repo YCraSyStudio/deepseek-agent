@@ -78,6 +78,13 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
         <small id="permissionModeDescription" className="permissionModeDescription">{selectedPermission.description}</small>
       </div>
 
+      <div className="settingRow">
+        <label htmlFor="browserAccess">Browser capture access</label>
+        <select id="browserAccess" value={config.browserAccess} onChange={(event) => {
+          const value = event.currentTarget.value as "ask" | "always" | "never";
+          updateConfig("browserAccess", value); saveOnBlur("browserAccess", value);
+        }}><option value="ask">Ask per origin</option><option value="always">Always</option><option value="never">Never</option></select>
+      </div>
       <div className="webSearchSettings">
         <h4 className="subsectionTitle">{t("settings.webSearch.title")}</h4>
         <p className="settingsHint">{t("settings.webSearch.description")}</p>

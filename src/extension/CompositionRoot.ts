@@ -1,3 +1,5 @@
+import { registerCaptureBackend } from "@/infrastructure/capture/CaptureService";
+import { WebCaptureBackend } from "@/vscode/tools/capture/WebCaptureBackend";
 import * as vscode from "vscode";
 import type { AppConfig } from "@/contracts";
 import { ToolRegistry } from "@/application/tools";
@@ -34,6 +36,7 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
     this.history = new HistoryManager(this.settings);
     this.searxngManager = new SearxngManager(context);
     configureSearxngEngineSelection(() => this.settings.load().searxngEngines);
+    registerCaptureBackend("web", new WebCaptureBackend(this.settings));
     this.webRuntime = new HeadlessWebRuntime();
     configureWebRuntimeDiagnostics(this.webRuntime, this.settings);
 
