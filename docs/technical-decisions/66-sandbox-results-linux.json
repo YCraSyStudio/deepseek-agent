@@ -1,0 +1,144 @@
+{
+  "timestamp": "2026-09-30T10:00:32.057Z",
+  "platform": "linux",
+  "versions": {
+    "bubblewrap": "bubblewrap 0.11.1",
+    "node": "v24.18.0",
+    "git": "git version 2.53.0",
+    "dotnet": "10.0.112"
+  },
+  "measurements": [
+    {
+      "name": "20 empty launches",
+      "samples": 20,
+      "medianMs": 5.722596000000067,
+      "p95Ms": 6.614027999999962
+    },
+    {
+      "name": "Empty command RSS (time accounting, not aggregate tree memory)",
+      "result": "node_maxRSS_kB=43412\nbwrap_maxRSS_kB=1980"
+    }
+  ],
+  "tests": [
+    {
+      "name": "sandbox starts",
+      "passed": true,
+      "status": 0,
+      "durationMs": 5.11,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "allowed project write + reference read",
+      "passed": true,
+      "status": 0,
+      "durationMs": 18.58,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "out of scope read blocked",
+      "passed": true,
+      "status": 0,
+      "durationMs": 19.14,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "out of scope write blocked",
+      "passed": true,
+      "status": 0,
+      "durationMs": 20.03,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "reference write blocked",
+      "passed": true,
+      "status": 0,
+      "durationMs": 23.35,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "symlink escape blocked",
+      "passed": true,
+      "status": 0,
+      "durationMs": 19.02,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "project sensitive file masked",
+      "passed": true,
+      "status": 0,
+      "durationMs": 20.14,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "synthetic inherited environment secret removed",
+      "passed": true,
+      "status": 0,
+      "durationMs": 19.35,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "child inherits filesystem isolation",
+      "passed": true,
+      "status": 0,
+      "durationMs": 37.24,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "host loopback service inaccessible",
+      "passed": true,
+      "status": 0,
+      "durationMs": 23.49,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "offline Git init/add/commit",
+      "passed": true,
+      "status": 0,
+      "durationMs": 12.96,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "offline npm test",
+      "passed": true,
+      "status": 0,
+      "durationMs": 201.88,
+      "stdout": "",
+      "stderr": "npm notice run sandbox-fixture@1.0.0 test\nnpm notice run node -e \"require('fs').writeFileSync('/project/npm-test.txt','ok')\"\n"
+    },
+    {
+      "name": "offline dotnet restore/build",
+      "passed": true,
+      "status": 0,
+      "durationMs": 2989.84,
+      "stdout": "  Determining projects to restore...\n  Restored /project/probe.csproj (in 54 ms).\n  probe -> /project/bin/Debug/net10.0/probe.dll\n\nBuild succeeded.\n    0 Warning(s)\n    0 Error(s)\n\nTime Elapsed 00:00:02.18\n",
+      "stderr": "\nWelcome to .NET 10.0!\n---------------------\nSDK Version: 10.0.112\n\n----------------\nWrite your first app: https://aka.ms/dotnet-hello-world\nFind out what's new: https://aka.ms/dotnet-whats-new\nExplore documentation: https://aka.ms/dotnet-docs\nReport issues and find source on GitHub: https://github.com/dotnet/core\nUse 'dotnet --help' to see available commands or visit: https://aka.ms/dotnet-cli\n--------------------------------------------------------------------------------------\n"
+    },
+    {
+      "name": "timeout exits instead of hanging",
+      "passed": true,
+      "status": null,
+      "error": "ETIMEDOUT",
+      "durationMs": 99.99,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "limitations": [
+    "Prototype isolates fixtures only; not integrated terminal/PTY, public network allowlisting, GUI sockets or production tool execution.",
+    "No Windows/macOS/WSL/remote host execution performed.",
+    "Dependency downloads and local server access require a separately reviewed network broker; offline test does not establish online compatibility.",
+    "Timeout fixture checks parent settlement only; descendant reaping and concurrent terminal reuse need production acceptance fixtures."
+  ],
+  "binaryBytes": 80424
+}
