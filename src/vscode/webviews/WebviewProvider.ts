@@ -68,6 +68,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       dependencies.settings,
       dependencies.secrets,
       dependencies.modelProviderFactory,
+      (conversationId, attachments) => this.imageAttachments.archive(conversationId, attachments, this.webviewView?.webview),
     );
     this.settingsHandler = new SettingsHandler(
       this._context,
@@ -93,6 +94,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         const attachments = conversation.messages.flatMap((message) => message.imageAttachments ?? []);
         await Promise.allSettled(attachments.map((attachment) => this.imageAttachments.delete(attachment)));
       },
+      (conversation, webview) => this.imageAttachments.restorePreviews(
+        conversation.id, conversation.messages.flatMap((message) => message.imageAttachments ?? []), webview),
     );
     this.registerMessageHandlers();
     this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {

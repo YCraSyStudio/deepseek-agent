@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import {
   mapReasoningEffort,
   type AppConfig,
+  type ImageAttachment,
   type PermissionSnapshot,
   type StoredToolCall,
 } from "@/contracts";
@@ -66,6 +67,7 @@ interface GenerationExecutorDependencies {
   settings: SettingsRepository;
   secrets: SecretStore;
   modelProviderFactory: ModelProviderFactory;
+  archiveImages: (conversationId: string, attachments: readonly ImageAttachment[]) => Promise<void>;
 }
 
 export class GenerationExecutor {
@@ -243,6 +245,9 @@ export class GenerationExecutor {
       signal,
     });
     await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
+    if (!runState.isIncognito()) {
+      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
+    }
     this.dependencies.syncSelectedConversation(runState);
     await this.dependencies.checkpoint(record, true);
 

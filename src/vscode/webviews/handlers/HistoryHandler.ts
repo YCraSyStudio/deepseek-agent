@@ -17,6 +17,7 @@ export class HistoryHandler {
     private readonly onConversationDeleted?: (id: string) => void,
     private readonly onBeforeConversationDelete?: (id: string) => Promise<void>,
     private readonly onConversationPermanentlyDeleted?: (conversation: StoredConversation) => Promise<void>,
+    private readonly prepareImagePreviews?: (conversation: StoredConversation, webview: vscode.Webview) => Promise<void>,
   ) {}
 
   handle(message: WebviewToHandlerMessage, webviewView: vscode.WebviewView): void {
@@ -136,6 +137,8 @@ export class HistoryHandler {
     if (!conversation) {
       throw new Error("Conversation not found");
     }
+    await this.prepareImagePreviews?.(conversation, webviewView.webview);
+    if (sequence !== this.loadSequence) {return;}
 
     const contextWindow = this.onConversationLoaded?.(conversation);
     const presentation = toPresentationConversation(conversation);
@@ -157,6 +160,7 @@ export class HistoryHandler {
   private async loadConversationPage(requestId: string, id: string, cursor: string, webviewView: vscode.WebviewView): Promise<void> {
     const conversation = await this.historyManager.getById(id);
     if (!conversation) {throw new Error("Conversation not found");}
+    await this.prepareImagePreviews?.(conversation, webviewView.webview);
     const end = decodeHistoryCursor(cursor);
     if (end === undefined || end > conversation.messages.length) {
       throw new Error("Invalid conversation history cursor");

@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import type { ImageAttachment } from "@/contracts";
 import type { SecretStore, SettingsRepository } from "@/application/ports";
 import { deleteDeepSeekFile, uploadDeepSeekImage } from "@/infrastructure/deepseek/files/DeepSeekFiles";
+import { archiveConversationImages } from "@/infrastructure/images/ConversationImageArchive";
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
@@ -92,6 +94,35 @@ export class ImageAttachmentController {
     const apiKey = await this.secrets.getApiKey(attachment.apiBaseUrl);
     if (!apiKey) {throw new Error("The image was removed locally, but its DeepSeek file could not be deleted because the API key is unavailable.");}
     await deleteDeepSeekFile({ apiKey, baseUrl: attachment.apiBaseUrl, fileId: attachment.fileId });
+  }
+
+  async archive(conversationId: string, attachments: readonly ImageAttachment[], webview?: vscode.Webview): Promise<void> {
+    const captures = await archiveConversationImages(conversationId, attachments, async (attachment) =>
+      vscode.workspace.fs.readFile(this.getCacheUri(attachment.cacheFileName)));
+    if (!webview || captures.length === 0) {return;}
+    const directory = new ScreenshotStore(conversationId).directory;
+    this.allowPreviewDirectory(webview, directory);
+    for (let index = 0; index < attachments.length; index++) {
+      attachments[index].previewUri = webview.asWebviewUri(vscode.Uri.joinPath(vscode.Uri.file(directory), captures[index].fileName)).toString();
+    }
+  }
+
+  async restorePreviews(conversationId: string, attachments: readonly ImageAttachment[], webview: vscode.Webview): Promise<void> {
+    if (attachments.length === 0) {return;}
+    const store = new ScreenshotStore(conversationId);
+    this.allowPreviewDirectory(webview, store.directory);
+    for (const attachment of attachments) {
+      const capture = await store.lookup(attachment.id);
+      if (capture) {attachment.previewUri = webview.asWebviewUri(vscode.Uri.file(capture.path)).toString();}
+    }
+  }
+
+  private allowPreviewDirectory(webview: vscode.Webview, directory: string): void {
+    const uri = vscode.Uri.file(directory);
+    const roots = webview.options.localResourceRoots ?? [];
+    if (!roots.some((root) => root.toString() === uri.toString())) {
+      webview.options = { ...webview.options, localResourceRoots: [...roots, uri] };
+    }
   }
 
   getCacheUri(cacheFileName: string): vscode.Uri {

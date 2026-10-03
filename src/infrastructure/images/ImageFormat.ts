@@ -47,14 +47,17 @@ export function inspectCapture(bytes: Buffer): ImageDimensions {
   }
   if (mediaType === "image/jpeg" && bytes.at(-2) === 255 && bytes.at(-1) === 217) {
     let offset = 2;
+    let width = 0; let height = 0;
     while (offset + 4 <= bytes.length) {
       if (bytes[offset] !== 255) {break;}
       const marker = bytes[offset + 1];
       const length = bytes.readUInt16BE(offset + 2);
       if (length < 2 || offset + length + 2 > bytes.length) {break;}
       if ([192, 193, 194].includes(marker) && length >= 8) {
-        const height = bytes.readUInt16BE(offset + 5); const width = bytes.readUInt16BE(offset + 7);
+        height = bytes.readUInt16BE(offset + 5); width = bytes.readUInt16BE(offset + 7);
         assertDimensions(width, height);
+      }
+      if (marker === 218 && width > 0 && height > 0 && length >= 6 && offset + 2 + length < bytes.length - 2) {
         return { width, height, mediaType };
       }
       offset += 2 + length;

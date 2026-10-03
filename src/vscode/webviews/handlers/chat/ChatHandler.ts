@@ -2,7 +2,7 @@ import type * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { GenerationCheckpointStore, HistoryManager } from "@/vscode/storage";
 import { logWarning } from "@/shared/logging/Logger";
-import type { ContextWindowStatus, QueuedGenerationMessage, ReferencedFile, WebviewToHandlerMessage, WorkspaceContextStatus } from "@/contracts";
+import type { ContextWindowStatus, ImageAttachment, QueuedGenerationMessage, ReferencedFile, WebviewToHandlerMessage, WorkspaceContextStatus } from "@/contracts";
 import type { ToolRegistry } from "@/application/tools";
 import {
   captureCurrentWorkspaceBinding,
@@ -67,6 +67,7 @@ export class ChatHandler {
     private readonly settings: SettingsRepository,
     private readonly secrets: SecretStore,
     private readonly modelProviderFactory: ModelProviderFactory,
+    private readonly archiveImages: (conversationId: string, attachments: readonly ImageAttachment[]) => Promise<void>,
   ) {
     this.checkpointStore = new GenerationCheckpointStore(this.settings);
     this.conversationState = new ConversationState(
@@ -184,6 +185,7 @@ export class ChatHandler {
       settings: this.settings,
       secrets: this.secrets,
       modelProviderFactory: this.modelProviderFactory,
+      archiveImages: this.archiveImages,
     });
 
     this.workspaceCoordinator = new ConversationWorkspaceCoordinator({
