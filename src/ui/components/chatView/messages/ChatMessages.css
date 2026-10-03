@@ -311,6 +311,42 @@
 }
 
 :is(.markdownMessage, .reasoning-content) .task-list-item > input[type="checkbox"] {
+  appearance: none;
+  position: relative;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--text-secondary);
+  border-radius: 3px;
+  background: transparent;
+  opacity: 1;
   margin-inline: -18px 5px;
   vertical-align: middle;
+}
+
+:is(.markdownMessage, .reasoning-content) .task-list-item > input[type="checkbox"]:checked {
+  border-color: var(--button-bg);
+  background: var(--button-bg);
+}
+
+:is(.markdownMessage, .reasoning-content) .task-list-item > input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 3px;
+  height: 7px;
+  border: solid var(--button-fg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+@media (forced-colors: active) {
+  :is(.markdownMessage, .reasoning-content) .task-list-item > input[type="checkbox"] {
+    appearance: auto;
+  }
+
+  :is(.markdownMessage, .reasoning-content) .task-list-item > input[type="checkbox"]:checked::after {
+    content: none;
+  }
 }
