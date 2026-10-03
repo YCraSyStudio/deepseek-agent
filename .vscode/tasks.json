@@ -6,25 +6,13 @@
 		{
 			"label": "pnpm: build",
 			"type": "shell",
-			"command": "pnpm run build",
-			"options": {
-				"env": {
-					"PATH": "/home/lingc/.nvm/versions/node/v24.18.0/bin:${env:PATH}",
-					"NVM_BIN": "/home/lingc/.nvm/versions/node/v24.18.0/bin"
-				}
-			},
+			"command": "corepack pnpm run build",
 			"problemMatcher": "$tsc"
 		},
 		{
 			"label": "pnpm: watch",
 			"type": "shell",
-			"command": "pnpm run watch",
-			"options": {
-				"env": {
-					"PATH": "/home/lingc/.nvm/versions/node/v24.18.0/bin:${env:PATH}",
-					"NVM_BIN": "/home/lingc/.nvm/versions/node/v24.18.0/bin"
-				}
-			},
+			"command": "corepack pnpm run watch",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"presentation": {

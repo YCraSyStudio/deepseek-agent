@@ -11,7 +11,7 @@ const MAX_CHUNK_BYTES = 4 * 1024 * 1024;
 const MAX_CHUNK_COUNT = 10_000;
 const CHUNK_STORAGE_SCHEMA_VERSION = 1;
 const MANIFEST_FILE_NAME = "manifest.json";
-const CHUNK_FILE_PATTERN = /^\d{1,5}\.json$/;
+const CHUNK_FILE_PATTERN = /^(\d{1,5})\.json$/;
 const LEGACY_SEGMENT_DIRECTORY_NAME = ".segments";
 
 interface ConversationManifest {

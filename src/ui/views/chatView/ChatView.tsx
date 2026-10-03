@@ -6,9 +6,9 @@ import { useChatConfig } from "./hooks";
 import WorkspaceMismatchModal from "@webview/components/shared/workspaceMismatchModal/WorkspaceMismatchModal";
 import type { ApiKeyStatus, ChatMessage, ContextCompactionResult } from "./ChatViewTypes";
 import { getVsCodeApi } from "@webview/VsCodeApi";
-import type { ContextWindowStatus, Conversation, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, WorkspaceContextStatus } from "@/contracts";
+import type { ContextWindowStatus, Conversation, HandlerToWebviewMessage, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, WorkspaceContextStatus } from "@/contracts";
 import { t } from "@webview/i18n";
-import { beginNavigationRequest } from "@webview/NavigationRequests";
+import { beginNavigationRequest, isLatestNavigationRequest } from "@webview/NavigationRequests";
 import { summarizeConversationUsage, type ConversationUsageSnapshot, type UsageCurrency } from "@/shared/usage/Usage";
 import { useChatCommandMessages, type PendingChatRequest } from "./hooks/UseChatCommandMessages";
 import {
@@ -66,6 +66,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const [compaction, setCompaction] = useState<{ pending: boolean; result?: ContextCompactionResult }>({ pending: false });
   const compactionRequestRef = useRef<string | undefined>(undefined);
   const initialConfigHandledRef = useRef(false);
+  const restorationRequestRef = useRef<string | undefined>(undefined);
   const workspaceRequestIdRef = useRef<string | undefined>(undefined);
   const workspaceMismatchRef = useRef<string | undefined>(undefined);
 
@@ -229,6 +230,23 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, [conversationId, workspaceContext, loadedConversation]);
 
   useEffect(() => {
+    const handleRestorationResult = (event: MessageEvent<HandlerToWebviewMessage>) => {
+      const message = event.data;
+      if (message.type !== "historyError" || !message.requestId ||
+        message.requestId !== restorationRequestRef.current) {return;}
+      restorationRequestRef.current = undefined;
+      if (!isLatestNavigationRequest(message.requestId)) {return;}
+      setRequestError(message.error);
+      if (message.error === "Conversation not found") {
+        conversationIdRef.current = undefined;
+        setConversationId(undefined);
+      }
+    };
+    window.addEventListener("message", handleRestorationResult);
+    return () => window.removeEventListener("message", handleRestorationResult);
+  }, []);
+
+  useEffect(() => {
     if (historyEnabled === undefined) {
       return;
     }
@@ -244,7 +262,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
           conversationIdRef.current = savedState.conversationId;
           setConversationId(savedState.conversationId);
           if (!loadedConversation && savedState.conversationId) {
-            vscode?.postMessage({ type: "loadConversation", requestId: beginNavigationRequest(), id: savedState.conversationId });
+            const requestId = beginNavigationRequest();
+            restorationRequestRef.current = requestId;
+            vscode?.postMessage({ type: "loadConversation", requestId, id: savedState.conversationId });
           }
         }
       }
@@ -278,7 +298,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     if (stateHydrated) {
       getVsCodeApi()?.postMessage({ type: "getGenerationSnapshot" });
     }
-  }, [stateHydrated, conversationId]);
+  }, [stateHydrated]);
 
   const handleConfirmWorkspaceMismatch = useCallback(() => {
     if (!workspaceMismatch) {return;}

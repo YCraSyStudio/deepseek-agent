@@ -153,7 +153,7 @@
     "compile": "tsc -p ./ --noEmit",
     "watch": "tsc -watch -p ./ --noEmit",
     "audit:dead-code": "knip --no-progress",
-    "build": "pnpm run build:extension && pnpm run build:webview",
+    "build": "node esbuild.js --production && vite build --config src/ui/vite.config.mts",
     "build:extension": "node esbuild.js --production",
     "build:webview": "vite build --config src/ui/vite.config.mts",
     "dev:webview": "vite --config src/ui/vite.config.mts --host 0.0.0.0 --port 5175 --strictPort",
