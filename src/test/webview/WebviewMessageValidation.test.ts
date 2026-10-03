@@ -40,6 +40,7 @@ suite("webview message validation", () => {
         requestId: "image-delete-1",
         attachment: {
           id: "image-1",
+          imageNumber: 4,
           fileId: "file-api-abc123",
           name: "screenshot.png",
           mediaType: "image/png",

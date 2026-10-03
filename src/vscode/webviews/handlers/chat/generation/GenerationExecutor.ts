@@ -237,6 +237,13 @@ export class GenerationExecutor {
       imageAttachments: payload.imageAttachments,
     });
     record.userMessage = userMessage;
+    await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
+    if (!runState.isIncognito()) {
+      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
+      if (payload.imageAttachments?.length) {
+        await runState.updateMessageAttachments(userMessage.id, payload.imageAttachments);
+      }
+    }
     let messages = await buildGenerationMessages({
       payload,
       config,
@@ -246,10 +253,6 @@ export class GenerationExecutor {
       excludedGenerationId: generationId,
       signal,
     });
-    await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
-    if (!runState.isIncognito()) {
-      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
-    }
     this.dependencies.syncSelectedConversation(runState);
     await this.dependencies.checkpoint(record, true);
 

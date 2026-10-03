@@ -31,7 +31,7 @@ The Web search toggle controls both definitions. When disabled, neither tool is 
 
 ## Vision tool
 
-- `analyze_images`: asks DeepSeek V4.1 Flash about one or more images attached to the current user message, because V4 Pro cannot read images itself. It is offered only to a Pro generation that carries at least one unexpired attachment, never to a Flash generation or to a turn without images. The delegated request names `deepseek-flash`, sends the DeepSeek file IDs instead of Base64 or local paths, disables thinking, and caps its own output at 8K tokens. The handler resolves the requested attachment IDs inside the current message, rejects expired files and files uploaded to a different API origin, and reports the delegated usage against Flash in the `vision_analysis` phase.
+- `analyze_images`: asks DeepSeek V4.1 Flash about current attachments, stored conversation images or confined workspace files. It is available on supported Flash and Pro generations, including turns without new attachments. Source references are recorded in the tool result and delegated usage is tracked in the `vision_analysis` phase.
 
 ## Execution rules
 
@@ -44,3 +44,5 @@ Tools return structured results so DeepSeek can continue, the UI can render usef
 `analyze_images({question, image_ids?, screenshot_ids?, paths?})` accepts attachment ids, screenshot ids (or `latest`), and workspace-relative JPEG/PNG/GIF/WebP files. When local sources are specified, attachment images are included only when their ids are specified. At most 8 images / 32 MiB per call and 16 MiB per local image. Sensitive paths, symlink escapes and files outside the workspace are rejected even in full-access mode.
 
 Calling the tool explicitly uploads the selected images to DeepSeek V4.1 Flash and returns text, including the sent source references for the timeline. Local captures alone never upload data. Temporary uploads are cached by SHA-256 within the generation, expire after one hour and are deleted when the generation settles or is cancelled. User-owned attachments keep their existing lifecycle.
+
+Conversation image references use the stable number shown on each sent thumbnail. For example, mention images 1 and 3 while attaching a new image 4; the agent can compare all three through screenshot_ids ["1", "3", "4"]. These numbers belong to the current conversation, survive reloads and are never reassigned after retention removes an image. Numbers are assigned when sending, and incognito images have no persistent number.
