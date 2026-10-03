@@ -20,6 +20,7 @@ type Props = {
   referencedFiles?: ReferencedFile[];
   imageAttachments?: ImageAttachment[];
   pendingImages?: PendingImagePreview[];
+  onPrepareImages?: () => Promise<ImageAttachment[]>;
   onPendingImage?: (preview: PendingImagePreview) => void;
   onRemovePendingImage?: (requestId: string) => void;
   onRemoveImageAttachment?: (attachment: ImageAttachment) => void;
@@ -27,7 +28,7 @@ type Props = {
   conversationId?: string;
   workspaceRevision?: string;
   activeGenerationId?: string;
-  onSend?: (text: string, clientRequestId: string) => void;
+  onSend?: (text: string, clientRequestId: string, images?: ImageAttachment[]) => void;
   footer?: React.ReactNode;
 };
 
@@ -45,6 +46,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       referencedFiles,
       imageAttachments = [],
       pendingImages = [],
+      onPrepareImages,
       onPendingImage,
       onRemovePendingImage,
       onRemoveImageAttachment,
@@ -58,6 +60,12 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
     ref,
   ) => {
     const taRef = useRef<HTMLTextAreaElement | null>(null);
+    const submissionPendingRef = useRef(false);
+    const mountedRef = useRef(true);
+    useEffect(() => {
+      mountedRef.current = true;
+      return () => { mountedRef.current = false; };
+    }, []);
     const vscode = useVsCode();
     const [isControlPressed, setIsControlPressed] = useState(false);
     const [enlargedImage, setEnlargedImage] = useState<LightboxImage | null>(null);
@@ -95,27 +103,34 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       };
     }, []);
 
-    const handleSend = useCallback(() => {
+    const handleSend = useCallback(async () => {
       const text = input.trim();
-      if ((!text && imageAttachments.length === 0) || !vscode || !canSend) {
+      if ((!text && imageAttachments.length + pendingImages.length === 0) || !vscode || !canSend || submissionPendingRef.current) {
         return;
       }
 
       clearCompletions();
-      const clientRequestId = crypto.randomUUID();
-      onSend?.(text, clientRequestId);
-      vscode.postMessage({
-        type: "sendMessage",
-        clientRequestId,
-        text,
-        modelId: selectedModelRef.current,
-        reasoning: reasoningRef.current,
-        conversationId,
-        workspaceRevision,
-        referencedFiles: referencedFiles?.map(toRequestReference),
-        imageAttachments,
-      });
-    }, [input, imageAttachments, vscode, canSend, clearCompletions, selectedModelRef, reasoningRef, referencedFiles, conversationId, workspaceRevision, onSend]);
+      submissionPendingRef.current = true;
+      try {
+        const uploaded = pendingImages.length ? await onPrepareImages?.() ?? [] : [];
+        if (!mountedRef.current) {return;}
+        const clientRequestId = crypto.randomUUID();
+        onSend?.(text, clientRequestId, [...imageAttachments, ...uploaded]);
+        vscode.postMessage({
+          type: "sendMessage",
+          clientRequestId,
+          text,
+          modelId: selectedModelRef.current,
+          reasoning: reasoningRef.current,
+          conversationId,
+          workspaceRevision,
+          referencedFiles: referencedFiles?.map(toRequestReference),
+          imageAttachments: [...imageAttachments, ...uploaded],
+        });
+      } catch (error: unknown) {
+        onImagePasteError?.(error instanceof Error ? error.message : String(error));
+      } finally {submissionPendingRef.current = false;}
+    }, [input, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, vscode, canSend, clearCompletions, selectedModelRef, reasoningRef, referencedFiles, conversationId, workspaceRevision, onSend]);
 
     const handleCancel = useCallback(() => {
       if (activeGenerationId && conversationId) {
@@ -128,26 +143,33 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       }
     }, [vscode, activeGenerationId, conversationId]);
 
-    const handleSteer = useCallback(() => {
+    const handleSteer = useCallback(async () => {
       const text = input.trim();
-      if ((!text && imageAttachments.length === 0) || !vscode || !canSend || !conversationId || !activeGenerationId) {
+      if ((!text && imageAttachments.length + pendingImages.length === 0) || !vscode || !canSend || !conversationId || !activeGenerationId || submissionPendingRef.current) {
         return;
       }
-      const clientRequestId = crypto.randomUUID();
-      onSend?.(text, clientRequestId);
-      vscode.postMessage({
-        type: "steerGeneration",
-        generationId: activeGenerationId,
-        clientRequestId,
-        text,
-        modelId: selectedModelRef.current,
-        reasoning: reasoningRef.current,
-        conversationId,
-        workspaceRevision,
-        referencedFiles: referencedFiles?.map(toRequestReference),
-        imageAttachments,
-      });
-    }, [activeGenerationId, canSend, conversationId, imageAttachments, input, onSend, reasoningRef, referencedFiles, selectedModelRef, vscode, workspaceRevision]);
+      submissionPendingRef.current = true;
+      try {
+        const uploaded = pendingImages.length ? await onPrepareImages?.() ?? [] : [];
+        if (!mountedRef.current) {return;}
+        const clientRequestId = crypto.randomUUID();
+        onSend?.(text, clientRequestId, [...imageAttachments, ...uploaded]);
+        vscode.postMessage({
+          type: "steerGeneration",
+          generationId: activeGenerationId,
+          clientRequestId,
+          text,
+          modelId: selectedModelRef.current,
+          reasoning: reasoningRef.current,
+          conversationId,
+          workspaceRevision,
+          referencedFiles: referencedFiles?.map(toRequestReference),
+          imageAttachments: [...imageAttachments, ...uploaded],
+        });
+      } catch (error: unknown) {
+        onImagePasteError?.(error instanceof Error ? error.message : String(error));
+      } finally {submissionPendingRef.current = false;}
+    }, [activeGenerationId, canSend, conversationId, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, input, onSend, reasoningRef, referencedFiles, selectedModelRef, vscode, workspaceRevision]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -221,20 +243,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
         }
         const requestId = crypto.randomUUID();
         const name = file.name || `pasted-image-${Date.now()}-${index + 1}.${extensionForMime(file.type)}`;
-        onPendingImage?.({ requestId, name, previewUri: URL.createObjectURL(file) });
-        void file.arrayBuffer().then((buffer) => {
-          vscode?.postMessage({
-            type: "uploadClipboardImage",
-            requestId,
-            name,
-            mediaType: file.type,
-            size: file.size,
-            dataBase64: bytesToBase64(new Uint8Array(buffer)),
-          });
-        }, () => {
-          // Route read failures through the same completion path to release the preview.
-          window.dispatchEvent(new MessageEvent("message", { data: { type: "imageAttachmentsSelected", requestId, attachments: [], error: "The pasted image could not be read." } }));
-        });
+        onPendingImage?.({ requestId, name, previewUri: URL.createObjectURL(file), file });
       }
     }, [imageAttachments.length, pendingImages.length, onPendingImage, onImagePasteError, vscode]);
 
@@ -243,9 +252,8 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
         {imageAttachments.length + pendingImages.length > 0 ? (
           <div className="composerImageAttachments">
             {pendingImages.map((image) => (
-              <div className="composerImageAttachment" key={image.requestId} aria-busy="true">
+              <div className="composerImageAttachment" key={image.requestId}>
                 <img src={image.previewUri} alt={image.name} />
-                <span className="composerImagePending" role="status">Uploading…</span>
                 <button type="button" className="composerImageRemove" aria-label={t("chat.removeImage")} onClick={() => onRemovePendingImage?.(image.requestId)}>
                   <span className="codicon codicon-close" aria-hidden="true" />
                 </button>
@@ -367,15 +375,6 @@ function toRequestReference(file: ReferencedFile) {
     rootUri: file.rootUri,
     bindingRevision: file.bindingRevision,
   };
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  const chunks: string[] = [];
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    chunks.push(String.fromCharCode(...bytes.subarray(offset, Math.min(bytes.length, offset + chunkSize))));
-  }
-  return btoa(chunks.join(""));
 }
 
 function extensionForMime(mediaType: string): string {

@@ -45,6 +45,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const [referencedFiles, setReferencedFiles] = useState<ReferencedFile[]>([]);
   const clipboardUploads = useRef(new ClipboardUploads((uri) => URL.revokeObjectURL(uri)));
   const [pendingImages, setPendingImages] = useState<PendingImagePreview[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [imageAttachments, setImageAttachments] = useState<ImageAttachment[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>(loadedConversation?.messages ?? []);
   const [conversationId, setConversationId] = useState<string | undefined>(loadedConversation?.id);
@@ -166,11 +167,11 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     textareaRef.current?.focus();
   }, []);
 
-  const handleSend = (text: string, clientRequestId: string) => {
+  const handleSend = (text: string, clientRequestId: string, submittedImages?: ImageAttachment[]) => {
     pendingRequestsRef.current.set(clientRequestId, {
       text,
       referenceIds: referencedFilesRef.current.map(referenceIdentity),
-      imageIds: imageAttachmentsRef.current.map((attachment) => attachment.id),
+      imageIds: (submittedImages ?? imageAttachmentsRef.current).map((attachment) => attachment.id),
     });
     setRequestError(undefined);
   };
@@ -203,13 +204,40 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     setPendingImages(clipboardUploads.current.previews());
   }, []);
 
-  const resolveImageUpload = useCallback((requestId: string, attachments: ImageAttachment[]) => {
-    const result = clipboardUploads.current.complete(requestId, attachments);
+  const resolveImageUpload = useCallback((requestId: string, attachments: ImageAttachment[], error?: string) => {
+    const result = clipboardUploads.current.complete(requestId, attachments, error);
     setPendingImages(clipboardUploads.current.previews());
     for (const attachment of result.discarded) {
       getVsCodeApi()?.postMessage({ type: "deleteImageAttachment", requestId: crypto.randomUUID(), attachment });
     }
     return result.accepted;
+  }, []);
+
+  const prepareImages = useCallback(async () => {
+    setIsUploadingImages(true);
+    const uploads = clipboardUploads.current;
+    try {
+      const preparation = uploads.uploadSelected(async (preview) => {
+        if (!preview.file) {throw new Error("The pasted image is no longer available.");}
+        const bytes = new Uint8Array(await preview.file.arrayBuffer());
+        const chunks: string[] = [];
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+          chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 0x8000)));
+        }
+        getVsCodeApi()?.postMessage({
+          type: "uploadClipboardImage",
+          requestId: preview.requestId,
+          name: preview.name,
+          mediaType: preview.file.type,
+          size: preview.file.size,
+          dataBase64: btoa(chunks.join("")),
+        });
+      });
+      return await preparation;
+    } finally {
+      setIsUploadingImages(false);
+      setPendingImages(uploads.previews());
+    }
   }, []);
 
   useEffect(() => {
@@ -233,11 +261,11 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const canSend = useMemo(() => {
     const trimmedDraft = draft.trim();
     const workspaceReady = workspaceContext?.state === "connected" || workspaceContext?.state === "empty";
-    return pendingImages.length === 0 && !navigationPending && !isPermissionUpdatePending &&
-      (trimmedDraft.length > 0 || imageAttachments.length > 0) &&
+    return !isUploadingImages && !navigationPending && !isPermissionUpdatePending &&
+      (trimmedDraft.length > 0 || imageAttachments.length > 0 || pendingImages.length > 0) &&
       (apiKeyStatus === "configured" || trimmedDraft.startsWith("/")) &&
       (workspaceReady || trimmedDraft.startsWith("/"));
-  }, [draft, imageAttachments, pendingImages.length, apiKeyStatus, isPermissionUpdatePending, navigationPending, workspaceContext]);
+  }, [draft, imageAttachments, pendingImages.length, isUploadingImages, apiKeyStatus, isPermissionUpdatePending, navigationPending, workspaceContext]);
 
   useEffect(() => {
     focusInput();
@@ -460,6 +488,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
           referencedFiles={referencedFiles}
           imageAttachments={imageAttachments}
           pendingImages={pendingImages}
+          onPrepareImages={prepareImages}
           onPendingImage={handlePendingImage}
           onRemovePendingImage={removePendingImage}
           onRemoveImageAttachment={removeImageAttachment}

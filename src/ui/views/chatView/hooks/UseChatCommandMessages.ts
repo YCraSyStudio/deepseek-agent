@@ -54,7 +54,7 @@ interface ChatCommandSetters {
 }
 
 interface UseChatCommandMessagesOptions {
-  resolveImageUpload: (requestId: string, attachments: ImageAttachment[]) => ImageAttachment[];
+  resolveImageUpload: (requestId: string, attachments: ImageAttachment[], error?: string) => ImageAttachment[];
   appendReferencedFiles: (files: ReferencedFile[]) => void;
   focusInput: () => void;
   refs: ChatCommandRefs;
@@ -78,7 +78,7 @@ export function useChatCommandMessages({
         if (message.error) {
           setters.setRequestError(message.error);
         }
-        const attachments = resolveImageUpload(message.requestId, message.attachments);
+        const attachments = resolveImageUpload(message.requestId, message.attachments, message.error);
         if (attachments.length > 0) {
           setters.setImageAttachments((current) => [...current, ...attachments].slice(0, 8));
           requestAnimationFrame(focusInput);
