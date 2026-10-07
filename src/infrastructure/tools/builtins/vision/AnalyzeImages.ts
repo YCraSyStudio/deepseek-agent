@@ -5,7 +5,7 @@ export const analyzeImagesTool: RegisteredTool = {
     type: "function",
     function: {
       name: "analyze_images",
-      description: "Inspect one or more images attached to the current user message using DeepSeek V4.1 Flash. Call this before answering any question that depends on visual details, because the current model cannot read images itself. The result is a text description for the current model.",
+      description: "Inspect message attachments, stored screenshots or workspace image files using DeepSeek V4.1 Flash. Use screenshot_ids (or latest) after capture_screenshot to review UI output. Workspace images are explicitly uploaded only when this tool is called. Call this before answering any question that depends on visual details. The result is a text description for the current model.",
       strict: true,
       parameters: {
         type: "object",
@@ -14,6 +14,8 @@ export const analyzeImagesTool: RegisteredTool = {
             type: "string",
             description: "The precise visual question to answer. Include the details needed to complete the user's task.",
           },
+          screenshot_ids: { type: "array", maxItems: 8, items: { type: "string" }, description: "Conversation image references: screenshot-1 or its numeric alias 1, or latest. For example, compare images 1, 3 and a newly attached image 4 using [\"1\", \"3\", \"4\"]. Numbers are scoped to the current conversation." },
+          paths: { type: "array", maxItems: 8, items: { type: "string" }, description: "Workspace-relative image paths; never secrets or files outside the workspace." },
           image_ids: {
             type: "array",
             items: { type: "string" },
@@ -33,6 +35,13 @@ export const analyzeImagesTool: RegisteredTool = {
       ? args.image_ids.filter((value): value is string => typeof value === "string")
       : [];
     if (!question) {return "Error: question is required.";}
-    return context.analyzeImages(question, imageIds, context.signal);
+        for (const key of ["image_ids", "screenshot_ids", "paths"]) {
+      if (args[key] !== undefined && (!Array.isArray(args[key]) || (args[key] as unknown[]).length > 8 || !(args[key] as unknown[]).every((value) => typeof value === "string" && value.length > 0 && value.length <= 2048))) {
+        return `Error: invalid ${key}.`;
+      }
+    }
+    return context.analyzeImages({ question, attachmentIds: imageIds,
+      screenshotIds: args.screenshot_ids as string[] | undefined,
+      paths: args.paths as string[] | undefined }, context.signal);
   },
 };
