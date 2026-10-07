@@ -1,3 +1,4 @@
+import { detectImageMediaType } from "@/infrastructure/images/ImageFormat";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import type { ImageAttachment } from "@/contracts";
@@ -112,8 +113,11 @@ export class ImageAttachmentController {
     const store = new ScreenshotStore(conversationId);
     this.allowPreviewDirectory(webview, store.directory);
     for (const attachment of attachments) {
-      const capture = await store.lookup(attachment.id);
-      if (capture) {attachment.previewUri = webview.asWebviewUri(vscode.Uri.file(capture.path)).toString();}
+      const capture = await store.lookup(attachment.imageNumber ? String(attachment.imageNumber) : attachment.id);
+      if (capture) {
+        attachment.imageNumber = Number(capture.metadata.id.slice("screenshot-".length));
+        attachment.previewUri = webview.asWebviewUri(vscode.Uri.file(capture.path)).toString();
+      }
     }
   }
 
@@ -173,15 +177,6 @@ export class ImageAttachmentController {
       previewUri: webview.asWebviewUri(cacheUri).toString(),
     };
   }
-}
-
-function detectImageMediaType(bytes: Uint8Array): ImageAttachment["mediaType"] | undefined {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {return "image/jpeg";}
-  if (bytes.length >= 8 && bytes.slice(0, 8).every((value, index) => value === [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a][index])) {return "image/png";}
-  const prefix = Buffer.from(bytes.slice(0, 6)).toString("ascii");
-  if (prefix === "GIF87a" || prefix === "GIF89a") {return "image/gif";}
-  if (bytes.length >= 12 && Buffer.from(bytes.slice(0, 4)).toString("ascii") === "RIFF" && Buffer.from(bytes.slice(8, 12)).toString("ascii") === "WEBP") {return "image/webp";}
-  return undefined;
 }
 
 function extensionFor(mediaType: ImageAttachment["mediaType"]): string {
