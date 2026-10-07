@@ -31,7 +31,7 @@ The Web search toggle controls both definitions. When disabled, neither tool is 
 
 ## Vision tool
 
-- `analyze_images`: asks DeepSeek V4.1 Flash about current attachments, stored conversation images or confined workspace files. It is available on supported Flash and Pro generations, including turns without new attachments. Source references are recorded in the tool result and delegated usage is tracked in the `vision_analysis` phase.
+- `analyze_images`: asks DeepSeek V4.1 Flash about stored conversation images or confined workspace files. Flash reads current and retained visual attachments directly; numbered references do not require a tool call when their images are already in the visual context. Flash uses the tool for new captures or stored images no longer in context. Pro uses it to delegate all visual analysis, including current attachments. The tool remains available on both models without new attachments. Source references are recorded in the tool result and delegated usage is tracked in the `vision_analysis` phase.
 
 ## Execution rules
 
