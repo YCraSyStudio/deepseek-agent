@@ -8,6 +8,7 @@ import { appendCurrentTimeToUserTurn, createSystemMessage, getTextContent } from
 import { modelSupportsVision } from "@/contracts/deepseek/Models";
 import { ContextCompactor, referencedFileNeedsCompaction } from "@/application/chat/context/ContextCompaction";
 import { buildFileContext } from "@/application/chat/context/FileReferences";
+import { buildImageReferenceContext } from "@/application/chat/context/ImageReferences";
 import type { ConversationState } from "@/application/chat/ConversationState";
 import { buildSteeringContinuationInstruction } from "@/application/chat/SteeringContinuation";
 import type { ModelProvider } from "@/application/ports";
@@ -67,19 +68,10 @@ ${payload.text}`
   const attachments = payload.imageAttachments?.filter((attachment) => attachment.expiresAt > Date.now()) ?? [];
   const readsImagesNatively = modelSupportsVision(payload.modelId || config.model);
   const conversationId = state.getActiveConversationId();
-  if (conversationId && !state.isIncognito()) {
-    const images = await new ScreenshotStore(conversationId).list();
-    if (images.length) {
-      userText += `\n\nConversation image references (stable numbers within this conversation):\n${images
-        .map((image) => `- image ${image.id.slice("screenshot-".length)}: screenshot_id=${image.id}; name=${JSON.stringify(image.fileName)}`)
-        .join("\n")}\nWhen the user refers to image numbers, use analyze_images with those screenshot_ids. Include the newly attached images when the request asks to compare the previous and current state. A missing number may have been removed by retention; never substitute a different image.`;
-    }
-  }
-  if (attachments.length > 0) {
-    userText += `\n\nAttached images available through analyze_images:\n${attachments
-      .map((attachment) => `- ${attachment.imageNumber ? `image ${attachment.imageNumber}; ` : ""}id=${attachment.id}; name=${JSON.stringify(attachment.name)}`)
-      .join("\n")}`;
-  }
+  const images = conversationId && !state.isIncognito()
+    ? await new ScreenshotStore(conversationId).list()
+    : [];
+  userText += buildImageReferenceContext(images, attachments, readsImagesNatively);
   const userContent: ChatMessage["content"] = appendCurrentTimeToUserTurn(
     attachments.length > 0 && readsImagesNatively
       ? [
