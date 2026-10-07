@@ -440,6 +440,20 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
         onContextWindowUpdated={handleContextWindowUpdated}
         onContextCompactionResult={handleContextCompactionResult}
         onFocusInput={focusInput}
+        onReferenceImage={(number) => {
+          const input = textareaRef.current;
+          const start = input?.selectionStart ?? draft.length;
+          const end = input?.selectionEnd ?? start;
+          const reference = t("chat.imageReference", { number });
+          const before = draft.slice(0, start);
+          const after = draft.slice(end);
+          const inserted = `${before && !/\s$/.test(before) ? " " : ""}${reference}${after && !/^\s/.test(after) ? " " : ""}`;
+          setDraft(before + inserted + after);
+          requestAnimationFrame(() => {
+            textareaRef.current?.focus();
+            textareaRef.current?.setSelectionRange(start + inserted.length, start + inserted.length);
+          });
+        }}
       />
       {apiKeyStatus === "missing" ? <div className="statusMessage warning">{t("chat.apiKeyMissing")}</div> : null}
       {isPermissionUpdatePending ? <div className="statusMessage" role="status" aria-live="polite">{t("chat.applyingPermissions")}</div> : null}

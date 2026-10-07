@@ -1,5 +1,6 @@
 import { CaptureService } from "@/infrastructure/capture/CaptureService";
 import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
+import { logWarning } from "@/shared/logging/Logger";
 import * as vscode from "vscode";
 import {
   mapReasoningEffort,
@@ -237,6 +238,13 @@ export class GenerationExecutor {
       imageAttachments: payload.imageAttachments,
     });
     record.userMessage = userMessage;
+    await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
+    if (!runState.isIncognito()) {
+      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
+      if (payload.imageAttachments?.length) {
+        await runState.updateMessageAttachments(userMessage.id, payload.imageAttachments);
+      }
+    }
     let messages = await buildGenerationMessages({
       payload,
       config,
@@ -246,10 +254,6 @@ export class GenerationExecutor {
       excludedGenerationId: generationId,
       signal,
     });
-    await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
-    if (!runState.isIncognito()) {
-      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
-    }
     this.dependencies.syncSelectedConversation(runState);
     await this.dependencies.checkpoint(record, true);
 
@@ -259,9 +263,12 @@ export class GenerationExecutor {
     });
     stream.showTyping();
 
+    const imageAttachments = (payload.imageAttachments ?? []).filter((attachment) => attachment.expiresAt > Date.now());
+    const visionAnalyzer = createDelegatedVisionAnalyzer({ attachments: imageAttachments, providerConfig,
+      modelProviderFactory: this.dependencies.modelProviderFactory, usageAggregate,
+      screenshots: runState.isIncognito() ? undefined : new ScreenshotStore(task.conversationId),
+    });
     try {
-      const imageAttachments = (payload.imageAttachments ?? [])
-        .filter((attachment) => attachment.expiresAt > Date.now());
       const tools = selectGenerationTools(toolRegistry, {
         files: workspaceSnapshot.binding.capabilities.files,
         terminal: workspaceSnapshot.binding.capabilities.terminal,
@@ -321,12 +328,7 @@ export class GenerationExecutor {
           authorizedUserUrls: extractHttpsUrls(payload.text),
           budgetManager: record.budgetManager,
           captureScreenshot: runState.isIncognito() ? undefined : (request, captureSignal) => new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal),
-          analyzeImages: createDelegatedVisionAnalyzer({
-            attachments: imageAttachments,
-            providerConfig,
-            modelProviderFactory: this.dependencies.modelProviderFactory,
-            usageAggregate,
-          }),
+          analyzeImages: visionAnalyzer,
           onContextCompacted: ({ estimatedTokensBefore, estimatedTokensAfter }) =>
             recordToolCycleCompaction({
               state: runState,
@@ -412,6 +414,7 @@ export class GenerationExecutor {
         });
       }
     } finally {
+      await visionAnalyzer?.dispose().catch((error: unknown) => logWarning(String(error)));
       await this.finalizer.finalize({
         eventSink,
         model: providerConfig.model,

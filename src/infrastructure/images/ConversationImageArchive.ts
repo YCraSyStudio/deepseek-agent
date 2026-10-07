@@ -14,11 +14,13 @@ export async function archiveConversationImages(
   for (const attachment of attachments) {
     const bytes = await readCachedImage(attachment);
     if (bytes.length !== attachment.size) {throw new Error("Incomplete image attachment");}
-    captures.push(await store.save(Buffer.from(bytes), {
+    const capture = await store.save(Buffer.from(bytes), {
       kind: "attachment",
       target: attachment.id,
       label: attachment.name.replace(/\.[^.]+$/, ""),
-    }));
+    });
+    attachment.imageNumber = Number(capture.id.slice("screenshot-".length));
+    captures.push(capture);
   }
   return captures;
 }
