@@ -50,6 +50,8 @@ export const chat = {
     attach: "添加附件",
     removeImage: "移除图片",
     enlargeImage: "放大 {name}",
+    imageReference: "图片 {number}",
+    insertImageReference: "将图片 {number} 添加到消息",
     closeImagePreview: "关闭图片预览",
     zoomIn: "放大",
     zoomOut: "缩小",

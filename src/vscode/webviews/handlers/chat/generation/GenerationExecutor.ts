@@ -1,6 +1,6 @@
+import { CaptureService } from "@/infrastructure/capture/CaptureService";
 import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 import { logWarning } from "@/shared/logging/Logger";
-import { CaptureService } from "@/infrastructure/capture/CaptureService";
 import * as vscode from "vscode";
 import {
   mapReasoningEffort,
@@ -18,7 +18,6 @@ import { PartialStreamError } from "@/application/errors/PartialStreamError";
 import type { ToolRegistry } from "@/application/tools";
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
 import { runWithToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
-import {
   createUsageAggregate,
   isOfficialDeepSeekEndpoint,
   recordUsage,
@@ -31,7 +30,6 @@ import type {
 import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
 import { extractHttpsUrls } from "@/infrastructure/browser/NetworkPolicy";
 import { isCancellationError } from "@/shared/utils/Cancellation";
-import {
   captureWorkspaceRunSnapshot,
   type WorkspaceRunSnapshot,
 } from "@/vscode/workspace";
@@ -40,7 +38,6 @@ import { sendMessageStreaming } from "../streaming/Streaming";
 import type { SendMessagePayload } from "../Types";
 import { appendToolAvailabilityContext } from "../prompt/RuntimeContext";
 import { getErrorMessage } from "../ChatErrors";
-import {
   buildGenerationMessages,
   fitGenerationRequestContext,
 } from "./GenerationContext";
@@ -48,7 +45,6 @@ import { recordToolCycleCompaction } from "./GenerationCompactionRecorder";
 import { GenerationResultStore } from "./GenerationResultStore";
 import { createGenerationRunRecord, createGenerationState } from "./GenerationRunFactory";
 import { GenerationRunFinalizer } from "./GenerationRunFinalizer";
-import {
   createGenerationEventSink,
   publishGenerationTerminal,
   transitionGenerationRun,
@@ -238,6 +234,13 @@ export class GenerationExecutor {
       imageAttachments: payload.imageAttachments,
     });
     record.userMessage = userMessage;
+    await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
+    if (!runState.isIncognito()) {
+      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
+      if (payload.imageAttachments?.length) {
+        await runState.updateMessageAttachments(userMessage.id, payload.imageAttachments);
+      }
+    }
     let messages = await buildGenerationMessages({
       payload,
       config,
@@ -247,10 +250,6 @@ export class GenerationExecutor {
       excludedGenerationId: generationId,
       signal,
     });
-    await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
-    if (!runState.isIncognito()) {
-      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
-    }
     this.dependencies.syncSelectedConversation(runState);
     await this.dependencies.checkpoint(record, true);
 
@@ -324,8 +323,8 @@ export class GenerationExecutor {
           trustedUserRequest: payload.text,
           authorizedUserUrls: extractHttpsUrls(payload.text),
           budgetManager: record.budgetManager,
-          analyzeImages: visionAnalyzer,
           captureScreenshot: runState.isIncognito() ? undefined : (request, captureSignal) => new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal),
+          analyzeImages: visionAnalyzer,
           onContextCompacted: ({ estimatedTokensBefore, estimatedTokensAfter }) =>
             recordToolCycleCompaction({
               state: runState,

@@ -227,7 +227,7 @@ function validateSendMessageFields(value: Record<string, unknown>, keys: readonl
 function isImageAttachment(value: unknown): boolean {
   if (!isRecord(value) || !hasOnlyKeys(value, [
     "id", "fileId", "name", "mediaType", "size", "source", "uploadedAt", "expiresAt",
-    "apiBaseUrl", "cacheFileName", "previewUri",
+    "apiBaseUrl", "cacheFileName", "previewUri", "imageNumber",
   ])) {return false;}
   return isImageAttachmentShape(value) &&
     isNonEmptyBoundedString(value.id, 512) &&

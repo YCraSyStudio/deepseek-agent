@@ -170,6 +170,14 @@ export class ConversationState {
     }
   }
 
+  async updateMessageAttachments(messageId: string, attachments: NonNullable<StoredConversationMessage["imageAttachments"]>): Promise<void> {
+    if (!this.activeConversation) {throw new Error("No active conversation");}
+    const message = this.activeConversation.messages.find((item) => item.id === messageId);
+    if (!message) {throw new Error("Conversation message not found");}
+    message.imageAttachments = structuredClone(attachments);
+    if (this.persistenceMode === "persistent") {await this.conversationStore.save(this.activeConversation);}
+  }
+
   async saveContextSummary(summary: ConversationContextSummary): Promise<void> {
     if (!this.activeConversation) {
       throw new Error("Cannot save context summary without an active conversation");

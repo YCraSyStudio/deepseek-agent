@@ -113,8 +113,11 @@ export class ImageAttachmentController {
     const store = new ScreenshotStore(conversationId);
     this.allowPreviewDirectory(webview, store.directory);
     for (const attachment of attachments) {
-      const capture = await store.lookup(attachment.id);
-      if (capture) {attachment.previewUri = webview.asWebviewUri(vscode.Uri.file(capture.path)).toString();}
+      const capture = await store.lookup(attachment.imageNumber ? String(attachment.imageNumber) : attachment.id);
+      if (capture) {
+        attachment.imageNumber = Number(capture.metadata.id.slice("screenshot-".length));
+        attachment.previewUri = webview.asWebviewUri(vscode.Uri.file(capture.path)).toString();
+      }
     }
   }
 
