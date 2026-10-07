@@ -78,4 +78,5 @@ export type MessagesSectionProps = {
   onContextWindowUpdated?: (contextWindow: ContextWindowStatus) => void;
   onContextCompactionResult?: (result: { requestId: string; status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }) => void;
   onFocusInput?: () => void;
+  onReferenceImage?: (number: number) => void;
 };

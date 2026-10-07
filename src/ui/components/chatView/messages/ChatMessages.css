@@ -75,7 +75,12 @@
   }
 }
 
+.messageImage {
+  position: relative;
+}
+
 .messageImageButton {
+  position: relative;
   background: none;
   border: 0;
   border-radius: 8px;
@@ -92,6 +97,25 @@
   &:focus-visible {
     outline: 1px solid var(--vscode-focusBorder, var(--accent-color));
     outline-offset: 1px;
+  }
+}
+
+.messageImageNumber {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  border: 0;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+  font-size: 11px;
+  line-height: 1.2;
+
+  &:hover,
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder, var(--accent-color));
   }
 }
 

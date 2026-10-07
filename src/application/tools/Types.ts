@@ -35,8 +35,8 @@ export interface ToolHandlerContext {
   availableToolNames?: readonly string[];
   authorizedUserUrls?: readonly string[];
   webTainted?: boolean;
-  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
   captureScreenshot?: (request: CaptureScreenshotRequest, signal?: AbortSignal) => Promise<CaptureScreenshotResult>;
+  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
 }
 
 export interface ValidationResult {

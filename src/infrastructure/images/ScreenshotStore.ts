@@ -37,7 +37,8 @@ export class ScreenshotStore {
       await this.assertDirectory();
       const index = await this.index();
       const target = description.target.slice(0, 2048);
-      const duplicate = index.items.find((item) => item.sha256 === sha256 && item.kind === description.kind && item.target === target);
+      const duplicate = index.items.find((item) => item.sha256 === sha256 && item.kind === description.kind &&
+        (description.kind === "attachment" || item.target === target));
       if (duplicate && await this.validFile(duplicate)) {
         duplicate.accessedAt = Date.now();
         await this.writeIndex(index);
@@ -79,6 +80,7 @@ export class ScreenshotStore {
   async automaticCount(): Promise<number> {return this.lock(async () => (await this.index()).automaticTotal ?? 0);}
 
   async lookup(id = "latest"): Promise<{ metadata: ScreenshotMetadata; bytes: Buffer; path: string } | undefined> {
+    if (/^[1-9]\d*$/.test(id)) {id = `screenshot-${id}`;}
     return this.lock(async () => {
       const index = await this.index();
       const item = id === "latest"
@@ -94,6 +96,10 @@ export class ScreenshotStore {
   }
 
   private lock<T>(operation: () => Promise<T>): Promise<T> {return withFileLock(path.join(this.historyRoot, ".mutations"), operation);}
+  async list(): Promise<ScreenshotMetadata[]> {
+    return this.lock(async () => (await this.index()).items
+      .sort((a, b) => Number(a.id.slice("screenshot-".length)) - Number(b.id.slice("screenshot-".length))));
+  }
   private async assertDirectory(): Promise<void> {
     for (const directory of [path.join(this.historyRoot, this.conversationId), this.directory]) {
       if ((await lstat(directory)).isSymbolicLink()) {throw new Error("Screenshot storage cannot use symbolic links");}

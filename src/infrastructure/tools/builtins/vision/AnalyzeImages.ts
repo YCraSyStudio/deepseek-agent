@@ -14,7 +14,7 @@ export const analyzeImagesTool: RegisteredTool = {
             type: "string",
             description: "The precise visual question to answer. Include the details needed to complete the user's task.",
           },
-          screenshot_ids: { type: "array", maxItems: 8, items: { type: "string" }, description: "Stored screenshot ids, or latest." },
+          screenshot_ids: { type: "array", maxItems: 8, items: { type: "string" }, description: "Conversation image references: screenshot-1 or its numeric alias 1, or latest. For example, compare images 1, 3 and a newly attached image 4 using [\"1\", \"3\", \"4\"]. Numbers are scoped to the current conversation." },
           paths: { type: "array", maxItems: 8, items: { type: "string" }, description: "Workspace-relative image paths; never secrets or files outside the workspace." },
           image_ids: {
             type: "array",
