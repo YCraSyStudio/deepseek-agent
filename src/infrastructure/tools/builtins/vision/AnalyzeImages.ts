@@ -5,7 +5,7 @@ export const analyzeImagesTool: RegisteredTool = {
     type: "function",
     function: {
       name: "analyze_images",
-      description: "Inspect message attachments, stored screenshots or workspace image files using DeepSeek V4.1 Flash. Use screenshot_ids (or latest) after capture_screenshot to review UI output. Workspace images are explicitly uploaded only when this tool is called. Call this before answering any question that depends on visual details. The result is a text description for the current model.",
+      description: "Delegate visual analysis to DeepSeek V4.1 Flash when the current model cannot read images natively. Inspect message attachments, stored screenshots or workspace image files. Use screenshot_ids (or latest) after capture_screenshot to review UI output. Workspace images are explicitly uploaded only when this tool is called. The result is a text description for the current model.",
       strict: true,
       parameters: {
         type: "object",
