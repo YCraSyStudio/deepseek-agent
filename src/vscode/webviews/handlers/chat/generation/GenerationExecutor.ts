@@ -18,6 +18,7 @@ import { PartialStreamError } from "@/application/errors/PartialStreamError";
 import type { ToolRegistry } from "@/application/tools";
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
 import { runWithToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import {
   createUsageAggregate,
   isOfficialDeepSeekEndpoint,
   recordUsage,
@@ -30,6 +31,7 @@ import type {
 import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
 import { extractHttpsUrls } from "@/infrastructure/browser/NetworkPolicy";
 import { isCancellationError } from "@/shared/utils/Cancellation";
+import {
   captureWorkspaceRunSnapshot,
   type WorkspaceRunSnapshot,
 } from "@/vscode/workspace";
@@ -38,6 +40,7 @@ import { sendMessageStreaming } from "../streaming/Streaming";
 import type { SendMessagePayload } from "../Types";
 import { appendToolAvailabilityContext } from "../prompt/RuntimeContext";
 import { getErrorMessage } from "../ChatErrors";
+import {
   buildGenerationMessages,
   fitGenerationRequestContext,
 } from "./GenerationContext";
@@ -45,6 +48,7 @@ import { recordToolCycleCompaction } from "./GenerationCompactionRecorder";
 import { GenerationResultStore } from "./GenerationResultStore";
 import { createGenerationRunRecord, createGenerationState } from "./GenerationRunFactory";
 import { GenerationRunFinalizer } from "./GenerationRunFinalizer";
+import {
   createGenerationEventSink,
   publishGenerationTerminal,
   transitionGenerationRun,
