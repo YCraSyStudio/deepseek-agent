@@ -35,6 +35,7 @@ export interface ToolHostCommandResult {
   truncated: { stdout: boolean; stderr: boolean };
   terminationConfirmed?: boolean;
   shell?: string;
+  sandbox?: { backend: string; network: "deny" | "unrestricted"; warnings: readonly string[] };
 }
 
 export interface ToolHostDocumentSymbol {
@@ -53,6 +54,7 @@ export interface ToolWorkspaceHost {
   resolvePath?(path: string, allowSensitive: boolean): Promise<string>;
   resolveLocalPath?(path?: string): Promise<ResolvedWorkspacePath>;
   getCommandShell?(): string;
+  getExecutionMode?(): "restricted" | "full-access";
   executeCommand?(command: string, options: ToolHostCommandOptions): Promise<ToolHostCommandResult>;
   realPath?(absolutePath: string): Promise<string>;
   findFiles?(options: ToolWorkspaceFindOptions): Promise<string[]>;

@@ -1,6 +1,38 @@
 # #66 — Propuesta de aislamiento local del agente
 
-Estado: propuesta de investigación, revisable en `agent/66-local-sandbox-proposal`, basada directamente en `develop-agent`. No cambia la ejecución de producción. Resultados reproducibles en `scripts/research/sandbox-probe.mjs`; registros inicial y corregido junto a este documento. Consulta de fuentes: 30 de septiembre de 2026.
+Estado actualizado: implementación inicial de los backends de comandos en `agent/66-local-sandbox-proposal` (15 de octubre de 2026). El prototipo de investigación del 30 de septiembre se conserva como antecedente. Los resultados antiguos no validan por sí mismos esta implementación.
+
+## Implementación actual
+
+`src/infrastructure/execution/LocalExecutionBroker.ts` aplica la política común a `run_terminal_command`, tanto desde el adaptador de VS Code como desde el fallback de infraestructura. Cada comando recibe una ejecución nueva, sin reutilizar una shell anterior. El modo `default` y `auto-approve` mantienen la misma frontera; solo el `full-access` ya seleccionado por el usuario la desactiva. El resultado incluye `sandbox.backend`, red efectiva y advertencias.
+
+| Sistema | Backend implementado | Requisito | Validación actual |
+| --- | --- | --- | --- |
+| Linux/WSL2 | Bubblewrap + filtro seccomp propio x64/ARM64 | `bwrap` instalado y namespaces habilitados | Fixtures nativos aprobados en este host Linux x64; WSL2/ARM64 pendientes |
+| macOS | Seatbelt mediante `/usr/bin/sandbox-exec`, perfil generado con deny-default | Seatbelt disponible | Contrato del perfil probado; ejecución nativa pendiente |
+| Windows | SDK oficial `@microsoft/mxc-sdk` 1.0.0, ProcessContainer | BaseContainer o AppContainer+BFS con denied-path support; runtime compatible con MXC | Contratos y rechazo de fallback débil probados; ejecución nativa pendiente |
+
+En Linux el filtro comprueba el ABI, bloquea sockets (incluidos Unix), ptrace, operaciones de namespaces/montajes y otras interfaces privilegiadas. La red IP también queda aislada por namespace. No es una copia del perfil seccomp de Codex ni una certificación equivalente. En macOS se permite lectura de las raíces de runtime declaradas, metadata para traversing, procesos y temporales; se deniega red y acceso a rutas protegidas. Windows consulta disponibilidad y vuelve a probar la política concreta antes de iniciar; rechaza el tier DACL-only y cualquier solicitud que requiera augmentación de ACL del host. No instala usuarios ni modifica firewall desde la extensión.
+
+La política permite escritura en el workspace y en temporales privados; expone toolchains de sistema en lectura. Descubre rutas sensibles con la política existente del repositorio, protege `.agents`, `.codex`, `.aws`, `.ssh` y `.gnupg`, y cubre aliases hardlink existentes. Los symlinks no amplían los montajes. La exploración está limitada a 250000 entradas y falla si no puede producir una política completa. El entorno se construye desde cero: no hereda claves, sockets de agentes, proxies, `NODE_OPTIONS`, dotfiles de shell ni configuración global de Git. HOME y cachés pertenecen a la ejecución y se eliminan al terminar.
+
+`deepseek-agent.sandbox.readOnlyToolchainRoots` permite declarar instalaciones adicionales desde configuración de usuario/máquina. El adaptador ignora valores de workspace y folder. Son grants de lectura: no colocar secretos dentro de esas instalaciones. Internet, descargas de paquetes y servicios del host siguen bloqueados en modo restringido. Las confirmaciones actuales no generan aún grants técnicos de red; esa UX es trabajo posterior.
+
+La terminal integrada usa `vscode.Pseudoterminal` como vista de salida de un proceso aislado; no lanza una segunda shell fuera del broker. Es ejecución no interactiva, con stdin cerrado, timeout, salida acotada, cancelación, cierre y limpieza de procesos. Un canal privado confirma el arranque Unix. No hay fallback automático sin aislamiento si falta el backend. No se mantienen procesos de desarrollo detachados después de la ejecución.
+
+El build copia SDK, DLL/executables Windows x64/ARM64, módulos FFI y licencias dentro de `dist/node_modules`; el SDK no se carga en Linux/macOS. Los lockfiles fijan la dependencia. Windows requiere Node 24.21+ en la línea 24 o Node 26.8+ en la línea 26 para transferencia nativa de stdio: verificar el runtime del extension host, no solo el Node del terminal. El SDK añade tamaño al VSIX; no se descarga en el primer comando.
+
+### Verificación y límites
+
+- `pnpm run compile`, `pnpm run lint` y pruebas unitarias cubren política, rutas, perfiles y configuración de peticiones Windows, además de la ejecución previa en full-access explícito.
+- `pnpm run test:sandbox` usa archivos y servicio sintéticos para verificar escritura permitida, protección de secretos/hardlinks/controles, symlinks externos, herencia de hijos, red del host, truncado, timeout, cancelación, descendientes y concurrencia. No requiere API del modelo.
+- `.github/workflows/sandbox-backends.yml` prepara contratos en Linux/macOS/Windows y fixtures nativos Unix. Windows nativo usa un runner self-hosted Windows 11 con etiqueta `mxc`, activado por workflow_dispatch. Windows Server de runners hospedados no demuestra compatibilidad MXC.
+- Las herramientas directas de archivos, SearXNG, capturas y el host de extensión mantienen sus controles actuales; esta entrega aplica aislamiento OS a los comandos y sus hijos. El broker de archivos/red unificado sigue pendiente.
+- En macOS, la limpieza usa grupos de procesos y es best-effort frente a hijos que crean otra sesión; no se promete reaping de daemons arbitrarios. El fixture de descendientes detachados solo exige esa garantía en Linux/Windows.
+- Falta validación nativa de macOS, Windows, WSL2, ARM64, SSH y Dev Containers, además de builds reales con dependencias y límites CPU/RAM. No se declara soporte verificado para esos escenarios.
+- La protección de nombres sensibles puede bloquear código de dependencias que coincida con dichos nombres. No certifica ausencia de carreras frente a modificaciones concurrentes externas del workspace. Mantener la revisión y los controles existentes.
+
+El diseño de investigación y sus fases siguientes se conservan debajo.
 
 ## Recomendación
 
@@ -138,3 +170,9 @@ Decisiones abiertas: lecturas públicas del sistema frente a lista mínima; UX d
 - [AppContainer, Microsoft](https://learn.microsoft.com/en-us/windows/win32/secauthz/implementing-an-appcontainer): modelo SID/capacidades/DACL; no implica compatibilidad demostrada de toolchains.
 - [App Sandbox, Apple](https://developer.apple.com/documentation/security/app-sandbox) y [discusión técnica de Apple sobre sandbox-exec](https://developer.apple.com/forums/thread/661939): interfaz soportada de entitlements y advertencia sobre SBPL no documentado para terceros.
 - [Seguridad de Docker Engine](https://docs.docker.com/engine/security/) y [licencia Docker Desktop](https://docs.docker.com/subscription-billing/desktop-license/): aislamiento dependiente de capacidades/montajes y condiciones de distribución/comerciales.
+
+## Corrección del host Electron (15 de octubre de 2026)
+
+La prueba inicial con Node no cubría el filesystem virtual de Electron: `fs` presentaba `node_modules.asar` como directorio, y el escaneo generaba máscaras para miembros internos que Bubblewrap no podía montar. La implementación usa ahora `original-fs` en Electron para política, escaneo y preparación de mounts; los archivos ASAR se tratan como archivos físicos. No modifica `process.noAsar`, que afectaría operaciones concurrentes del host. En Node normal conserva `node:fs`.
+
+`node scripts/test-electron-sandbox.mjs <ejecutable-de-VS-Code>` ejecuta el comando de regresión con ASAR habilitado y un bundle CJS como el de la extensión, explorando el workspace real. Verificado con VS Code 1.142.0, Electron 43.7.7 y Node 24.21.0: `printf 'sandbox funcionando\n'` termina con exit 0 y backend `linux-bubblewrap-seccomp`.

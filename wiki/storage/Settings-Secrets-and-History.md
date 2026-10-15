@@ -53,3 +53,9 @@ History is limited by retention and quota and excludes the active conversation f
 - Completing or deleting a conversation removes its checkpoint; anything other than a valid schema-3 record is deleted during recovery.
 
 [Back](INDEX.md)
+
+## Compact message chunks
+
+New writes use chunk storage schema 2. Message `content` remains authoritative. A timeline content event identical to it stores `{ id, type: "content", contentRef: "message" }`; the reader expands the reference before validation and presentation. An identical `contextContent` and empty optional attachment/tool/timeline arrays are omitted. Distinct model context and incremental timeline fragments are retained. Usage totals and phase breakdowns retain their existing semantics.
+
+Schema-1 expanded histories remain readable and are compacted when the conversation is next saved. The conversation's application schema remains 2. Reported history size uses actual manifest and chunk bytes. Older extension builds that only understand chunk schema 1 cannot read new schema-2 writes.

@@ -40,6 +40,12 @@ Example lifecycle:
 
 Do not use SemVer suffixes such as `-beta.1` or `-preview.1` for Marketplace package versions. The version number and the `preview` gallery flag together identify release stability.
 
+## Saved conversation compatibility
+
+Pre-release updates may change the conversation storage format and can make chats created by earlier `0.x` versions unavailable. Copy or export any conversation you need to keep before updating.
+
+Backward compatibility for saved chats becomes a release commitment on the first stable line (`0.2.x`). That line is cut only once daily use stops surfacing errors.
+
 ## Target release
 
 For the current branch, `0.1.15` is the current preview target. Keep `package.json` and the root lockfile aligned to that release until it is cut.

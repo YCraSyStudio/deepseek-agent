@@ -6,6 +6,12 @@ allowBuilds:
   esbuild: true
   fsevents: true
   keytar: true
+  koffi: true
+  node-pty: false
+
+supportedArchitectures:
+  os: [current, win32]
+  cpu: [current, x64, arm64]
 
 overrides:
   diff: 9.0.0

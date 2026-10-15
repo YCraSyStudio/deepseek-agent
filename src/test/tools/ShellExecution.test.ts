@@ -119,6 +119,7 @@ function createUnusedWorkspaceHost(rootPath: string): ToolWorkspaceHost {
   };
   return {
     getRootPath: () => rootPath,
+    getExecutionMode: () => "full-access",
     readFile: unused,
     writeFile: unused,
     stat: unused,

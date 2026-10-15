@@ -146,6 +146,20 @@
           "visibility": "visible"
         }
       ]
+    },
+    "configuration": {
+      "title": "YCraSy Agent sandbox",
+      "properties": {
+        "deepseek-agent.sandbox.readOnlyToolchainRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "machine",
+          "markdownDescription": "Absolute installation roots for additional toolchains (for example a Node version manager or .NET SDK). Commands receive read-only access to these paths. Secrets stored inside these roots are also readable. Network remains denied. Add trusted installations only; sandbox settings cannot be supplied by workspace files."
+        }
+      }
     }
   },
   "scripts": {
@@ -153,8 +167,8 @@
     "compile": "tsc -p ./ --noEmit",
     "watch": "tsc -watch -p ./ --noEmit",
     "audit:dead-code": "knip --no-progress",
-    "build": "node esbuild.js --production && vite build --config src/ui/vite.config.mts",
-    "build:extension": "node esbuild.js --production",
+    "build": "pnpm run build:extension && pnpm run build:webview",
+    "build:extension": "node esbuild.js --production && node scripts/package-sandbox-runtime.mjs",
     "build:webview": "vite build --config src/ui/vite.config.mts",
     "dev:webview": "vite --config src/ui/vite.config.mts --host 0.0.0.0 --port 5175 --strictPort",
     "pretest": "pnpm run compile && pnpm run lint",
@@ -166,9 +180,11 @@
     "verify:searxng-runtime-config": "node scripts/verify-searxng-runtime-config.mjs",
     "verify:searxng-runtime": "node scripts/verify-searxng-runtime-release.mjs",
     "package:vsix": "node scripts/prepare-artifacts.mjs && vsce package --no-dependencies --out artifacts",
-    "verify:vsix": "node scripts/assert-vsix-contents.mjs"
+    "verify:vsix": "node scripts/assert-vsix-contents.mjs",
+    "test:sandbox": "node scripts/test-sandbox-runtime.mjs"
   },
   "dependencies": {
+    "@microsoft/mxc-sdk": "1.0.0",
     "@vscode/codicons": "^0.0.45",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

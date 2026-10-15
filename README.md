@@ -2,9 +2,7 @@
 
 A DeepSeek-only coding assistant built for VS Code. Chat with DeepSeek, share workspace context, review its reasoning and tool activity, and let it work on your project under the permission mode you choose.
 
-> **Release channels:** Version lines alternate by minor number. Even minor lines (`0.2.x`, `0.4.x`, ...) are stable; odd minor lines (`0.1.x`, `0.3.x`, ...) are pre-release builds that keep `preview: true`. The current line is `0.1.x`, so the extension is still under active development: updates on a pre-release line may change the conversation storage format and can make chats created by earlier `0.x` versions unavailable. Copy or export any conversation you need to keep before updating. Backward compatibility for saved chats becomes a release commitment on the first stable line (`0.2.x`), which is cut only once daily use stops surfacing errors.
->
-> Review proposed workspace changes carefully and keep important project work under version control.
+> **Preview:** This extension is still under active development. Bugs and breaking changes may occur.
 
 ## Highlights
 
@@ -47,7 +45,7 @@ A DeepSeek-only coding assistant built for VS Code. Chat with DeepSeek, share wo
 
 YCraSy DeepSeek Agent does not collect usage telemetry. Prompts, referenced content, uploaded images, conversation context, and generated responses sent to DeepSeek are handled under DeepSeek's current privacy policy and API terms. Images use DeepSeek's Files API and are referenced by file ID instead of embedding Base64 in chat history or provider messages. Do not send confidential, personal, or regulated information unless those terms meet your requirements.
 
-Workspace tools follow the selected permission mode and VS Code Workspace Trust. Terminal commands are non-interactive but are not OS-sandboxed. Inspect tool calls carefully, especially when using unattended modes.
+Workspace tools follow the selected permission mode and VS Code Workspace Trust. Terminal commands run non-interactively through the local sandbox in restricted permission modes; full access disables isolation. Review tool calls and proposed workspace changes carefully, and keep important project work under version control.
 
 YCraSy DeepSeek Agent is an independent third-party extension. It is not affiliated with, endorsed by, sponsored by, or officially maintained by DeepSeek.
 

@@ -65,7 +65,9 @@ export function createVsCodeToolWorkspace(
       return VSCODE_TERMINAL_SHELL_DESCRIPTION;
     },
 
-    executeCommand: executeInVsCodeTerminal,
+    getExecutionMode: () => options.unrestricted === true ? "full-access" : "restricted",
+
+    executeCommand: (command, commandOptions) => executeInVsCodeTerminal(command, commandOptions, options.unrestricted === true),
 
     async isPathInsideWorkspace(rawPath: string): Promise<boolean> {
       if (path.isAbsolute(rawPath) || path.win32.isAbsolute(rawPath)) {

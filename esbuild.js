@@ -55,7 +55,7 @@ async function main() {
     sourcesContent: false,
     platform: "node",
     outfile: "dist/extension.js",
-    external: ["vscode"],
+    external: ["vscode", "@microsoft/mxc-sdk/v1"],
     logLevel: "silent",
     plugins: [aliasPlugin, esbuildProblemMatcherPlugin],
   });

@@ -122,6 +122,7 @@ function createValidatingWorkspaceHost(host: ToolWorkspaceHost): ToolWorkspaceHo
     resolvePath: host.resolvePath?.bind(host),
     resolveLocalPath: host.resolveLocalPath?.bind(host),
     getCommandShell: host.getCommandShell?.bind(host),
+    getExecutionMode: host.getExecutionMode?.bind(host),
     executeCommand: host.executeCommand?.bind(host),
     realPath: host.realPath?.bind(host),
     findFiles: host.findFiles

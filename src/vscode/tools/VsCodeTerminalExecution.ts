@@ -1,251 +1,57 @@
-import * as path from "node:path";
 import * as vscode from "vscode";
 import type { ToolHostCommandOptions, ToolHostCommandResult } from "@/application/ports";
-import { BoundedOutput } from "@/infrastructure/tools/builtins/terminal/ShellExecution";
+import { executeSandboxedCommand } from "@/infrastructure/execution/LocalExecutionBroker";
 
-const TERMINAL_NAME = "YCraSy DeepSeek Agent";
-export const VSCODE_TERMINAL_SHELL_DESCRIPTION = "VS Code integrated terminal (default profile)";
-const SHELL_INTEGRATION_TIMEOUT_MS = 10_000;
-const OUTPUT_DRAIN_GRACE_MS = 500;
-
-interface ManagedTerminal {
-  terminal: vscode.Terminal;
-  cwd: string;
-  closed: boolean;
-}
-
-interface TerminalOutcome {
-  exitCode: number | null;
-  signal: string | null;
-  timedOut: boolean;
-  terminationConfirmed?: boolean;
-}
-
-const terminals = new Map<string, ManagedTerminal>();
-let executionQueue: Promise<void> = Promise.resolve();
-
-export function executeInVsCodeTerminal(
-  command: string,
-  options: ToolHostCommandOptions,
-): Promise<ToolHostCommandResult> {
-  const operation = executionQueue.then(() => executeQueued(command, options));
-  executionQueue = operation.then(() => undefined, () => undefined);
-  return operation;
-}
+export const VSCODE_TERMINAL_SHELL_DESCRIPTION = process.platform === "win32" ? "cmd.exe (isolated command runner)" : "/bin/sh (isolated command runner)";
+const terminals = new Map<vscode.Terminal, AbortController>();
 
 export function shutdownVsCodeTerminals(): void {
-  for (const managed of terminals.values()) {
-    managed.terminal.dispose();
-    managed.closed = true;
-  }
+  for (const [terminal, controller] of terminals) { controller.abort(); terminal.dispose(); }
   terminals.clear();
 }
 
-async function executeQueued(command: string, options: ToolHostCommandOptions): Promise<ToolHostCommandResult> {
-  throwIfAborted(options.signal);
-  let managed = getOrCreateTerminal(options.cwd);
-  let keepOpen = false;
-  try {
-    let integration = await waitForShellIntegration(managed, options.signal);
-
-    if (integration.cwd?.scheme === "file" && !samePath(integration.cwd.fsPath, options.cwd)) {
-      disposeManagedTerminal(managed);
-      managed = getOrCreateTerminal(options.cwd);
-      integration = await waitForShellIntegration(managed, options.signal);
-    }
-
-    throwIfAborted(options.signal);
-    managed.terminal.show(true);
-    const startedAt = performance.now();
-    const execution = integration.executeCommand(command);
-    const output = new BoundedOutput(options.maxOutputBytes);
-    const drain = drainExecutionOutput(execution, output).catch(() => undefined);
-    const outcome = await waitForExecutionEnd(managed, execution, options);
-    await Promise.race([drain, delay(OUTPUT_DRAIN_GRACE_MS)]);
-    keepOpen = !outcome.timedOut;
-
-    return {
-      stdout: output.toString(),
-      stderr: "",
-      exitCode: outcome.exitCode,
-      signal: outcome.signal,
-      timedOut: outcome.timedOut,
-      durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
-      truncated: { stdout: output.truncated, stderr: false },
-      terminationConfirmed: outcome.terminationConfirmed,
-      shell: managed.terminal.state.shell ?? VSCODE_TERMINAL_SHELL_DESCRIPTION,
-    };
-  } finally {
-    if (!managed.closed && !keepOpen) {disposeManagedTerminal(managed);}
-  }
-}
-
-function getOrCreateTerminal(cwd: string): ManagedTerminal {
-  const key = pathKey(cwd);
-  const existing = terminals.get(key);
-  if (existing && !existing.closed) {
-    return existing;
-  }
-
+export async function executeInVsCodeTerminal(
+  command: string, options: ToolHostCommandOptions, fullAccess = false,
+): Promise<ToolHostCommandResult> {
+  const controller = new AbortController();
+  const signal = options.signal ? AbortSignal.any([controller.signal, options.signal]) : controller.signal;
+  const writes = new vscode.EventEmitter<string>();
+  let operation: Promise<ToolHostCommandResult> | undefined;
+  let complete!: (result: ToolHostCommandResult) => void;
+  let fail!: (reason: unknown) => void;
+  const result = new Promise<ToolHostCommandResult>((resolve, reject) => { complete = resolve; fail = reject; });
   const terminal = vscode.window.createTerminal({
-    name: TERMINAL_NAME,
-    cwd: vscode.Uri.file(cwd),
-    env: {
-      DOTNET_CLI_USE_MSBUILD_SERVER: "0",
-      MSBUILDDISABLENODEREUSE: "1",
-      UseSharedCompilation: "false",
+    name: `YCraSy Agent (${fullAccess ? "full-access" : "sandbox"})`,
+    pty: {
+      onDidWrite: writes.event,
+      open: () => {
+        writes.fire(`[${fullAccess ? "full-access: isolation disabled" : `sandbox: ${process.platform}; network denied`}]\r\n`);
+        const setting = vscode.workspace.getConfiguration("deepseek-agent").inspect<string[]>("sandbox.readOnlyToolchainRoots");
+        // Ignore workspace/folder values even if a hand-edited settings file contains a machine setting.
+        const readRoots = setting?.globalValue ?? setting?.defaultValue ?? [];
+        operation = executeSandboxedCommand(command, { ...options, signal }, fullAccess,
+          (chunk) => writes.fire(chunk.replace(/\r?\n/g, "\r\n")), readRoots);
+        operation.then((value) => {
+          writes.fire(`\r\n[${value.sandbox?.backend}; exit ${value.exitCode ?? "unknown"}${value.timedOut ? "; timeout" : ""}]\r\n`);
+          for (const warning of value.sandbox?.warnings ?? []) {writes.fire(`[sandbox warning] ${warning}\r\n`);}
+          complete(value);
+        }, (error: unknown) => {
+          writes.fire(`\r\n${error instanceof Error ? error.message : "Sandbox execution failed"}\r\n`);
+          fail(error);
+        });
+      },
+      close: () => {
+        controller.abort();
+        terminals.delete(terminal);
+        writes.dispose();
+        if (!operation) {fail(Object.assign(new Error("Command terminal closed before execution"), { name: "AbortError" }));}
+      },
+      // Noninteractive command execution: no input is forwarded to another shell.
     },
   });
-  const managed: ManagedTerminal = { terminal, cwd, closed: false };
-  terminals.set(key, managed);
-  const closeSubscription = vscode.window.onDidCloseTerminal((closedTerminal) => {
-    if (closedTerminal !== terminal) {return;}
-    managed.closed = true;
-    if (terminals.get(key) === managed) {
-      terminals.delete(key);
-    }
-    closeSubscription.dispose();
-  });
+  terminals.set(terminal, controller);
   terminal.show(true);
-  return managed;
-}
-
-function waitForShellIntegration(
-  managed: ManagedTerminal,
-  signal?: AbortSignal,
-): Promise<vscode.TerminalShellIntegration> {
-  if (managed.terminal.shellIntegration) {
-    return Promise.resolve(managed.terminal.shellIntegration);
-  }
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (callback: () => void) => {
-      if (settled) {return;}
-      settled = true;
-      clearTimeout(timeout);
-      integrationSubscription.dispose();
-      closeSubscription.dispose();
-      signal?.removeEventListener("abort", onAbort);
-      callback();
-    };
-    const onAbort = () => finish(() => reject(createAbortError()));
-    const integrationSubscription = vscode.window.onDidChangeTerminalShellIntegration((event) => {
-      if (event.terminal === managed.terminal) {
-        finish(() => resolve(event.shellIntegration));
-      }
-    });
-    const closeSubscription = vscode.window.onDidCloseTerminal((terminal) => {
-      if (terminal === managed.terminal) {
-        finish(() => reject(new Error("The YCraSy DeepSeek Agent terminal was closed before shell integration became available.")));
-      }
-    });
-    const timeout = setTimeout(() => finish(() => reject(new Error(
-      "VS Code shell integration is unavailable. Enable terminal shell integration and retry the command.",
-    ))), SHELL_INTEGRATION_TIMEOUT_MS);
-    signal?.addEventListener("abort", onAbort, { once: true });
-    if (signal?.aborted) {onAbort();}
-  });
-}
-
-function waitForExecutionEnd(
-  managed: ManagedTerminal,
-  execution: vscode.TerminalShellExecution,
-  options: ToolHostCommandOptions,
-): Promise<TerminalOutcome> {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (callback: () => void) => {
-      if (settled) {return;}
-      settled = true;
-      clearTimeout(timeout);
-      endSubscription.dispose();
-      closeSubscription.dispose();
-      options.signal?.removeEventListener("abort", onAbort);
-      callback();
-    };
-    const onAbort = () => {
-      finish(() => {
-        disposeManagedTerminal(managed);
-        reject(createAbortError(true));
-      });
-    };
-    const endSubscription = vscode.window.onDidEndTerminalShellExecution((event) => {
-      if (event.execution === execution) {
-        finish(() => resolve({
-          exitCode: event.exitCode ?? null,
-          signal: event.exitCode === undefined ? "terminal_exit_unknown" : null,
-          timedOut: false,
-        }));
-      }
-    });
-    const closeSubscription = vscode.window.onDidCloseTerminal((terminal) => {
-      if (terminal === managed.terminal) {
-        finish(() => resolve({
-          exitCode: null,
-          signal: "terminal_closed",
-          timedOut: false,
-          terminationConfirmed: true,
-        }));
-      }
-    });
-    const timeout = setTimeout(() => {
-      finish(() => {
-        disposeManagedTerminal(managed);
-        resolve({
-          exitCode: null,
-          signal: null,
-          timedOut: true,
-          terminationConfirmed: true,
-        });
-      });
-    }, options.timeoutMs);
-    options.signal?.addEventListener("abort", onAbort, { once: true });
-    if (options.signal?.aborted) {onAbort();}
-  });
-}
-
-async function drainExecutionOutput(
-  execution: vscode.TerminalShellExecution,
-  output: BoundedOutput,
-): Promise<void> {
-  for await (const chunk of execution.read()) {
-    output.append(Buffer.from(stripTerminalControlSequences(chunk), "utf8"));
-  }
-}
-
-function stripTerminalControlSequences(value: string): string {
-  const escape = String.fromCharCode(27);
-  const csi = new RegExp(`${escape}\\[[0-?]*[ -/]*[@-~]`, "g");
-  const osc = new RegExp(`${escape}\\][^${escape}\\u0007]*(?:\\u0007|${escape}\\\\)`, "g");
-  return value.replace(osc, "").replace(csi, "").replace(/\r\n?/g, "\n");
-}
-
-function disposeManagedTerminal(managed: ManagedTerminal): void {
-  managed.closed = true;
-  terminals.delete(pathKey(managed.cwd));
-  managed.terminal.dispose();
-}
-
-function samePath(left: string, right: string): boolean {
-  return pathKey(left) === pathKey(right);
-}
-
-function pathKey(value: string): string {
-  const normalized = path.resolve(value);
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
-
-function throwIfAborted(signal?: AbortSignal): void {
-  if (signal?.aborted) {throw createAbortError();}
-}
-
-function createAbortError(terminationConfirmed?: boolean): Error {
-  const error = new Error("Command execution cancelled");
-  error.name = "AbortError";
-  Object.assign(error, { terminationConfirmed });
-  return error;
-}
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  // Settling a command does not close its output view. VS Code calls pty.close
+  // when the user closes the terminal, which releases its remaining resources.
+  return result;
 }

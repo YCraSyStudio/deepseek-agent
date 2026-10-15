@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile, stat } from "node:fs/promises";
 import { isConversation } from "@/application/chat/ConversationValidation";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -28,10 +28,29 @@ suite("conversation storage round trip", () => {
       const screenshots = new ScreenshotStore(id);
       const capture = await screenshots.save(png, { kind: "web", target: "http://localhost:3000" });
       await purgeLegacyConversationStorage();
-      await state.saveMessages({ messages: [state.createMessage("assistant", "Hola")], model: "deepseek-chat" });
+      const reply = state.createMessage("assistant", "Hola", {
+        contextContent: "Hola",
+        timeline: [{ id: "reasoning", type: "reasoning", content: "Pensando" }, { id: "final", type: "content", content: "Hola" }],
+      });
+      await state.saveMessages({ messages: [reply], model: "deepseek-chat" });
       const record = await readStoredConversationRecord(path.join(getHistoryDirectory(), encodeURIComponent(id)));
       assert.deepEqual(record?.conversation.messages.map((message) => message.content), ["hola", "Hola"]);
       assert.equal((await readdir(getHistoryDirectory())).length, 1);
+      const storedText = await readFile(path.join(storedDirectory, "0.json"), "utf8");
+      const compact = JSON.parse(storedText)[1];
+      assert.equal(compact.contextContent, undefined);
+      assert.deepEqual(compact.timeline[1], { id: "final", type: "content", contentRef: "message" });
+      assert.deepEqual(record?.conversation.messages[1].timeline, reply.timeline);
+      assert.equal(record?.sizeBytes, (await stat(path.join(storedDirectory, "manifest.json"))).size + Buffer.byteLength(storedText));
+      // Existing schema-1 expanded chunks remain readable after upgrading.
+      const legacyManifest = JSON.parse(await readFile(path.join(storedDirectory, "manifest.json"), "utf8"));
+      legacyManifest.storageSchemaVersion = 1;
+      await writeFile(path.join(storedDirectory, "manifest.json"), JSON.stringify(legacyManifest));
+      await writeFile(path.join(storedDirectory, "0.json"), JSON.stringify(record!.conversation.messages));
+      const legacy = await readConversationFile(id);
+      assert.deepEqual(legacy?.messages[1].timeline, reply.timeline);
+      await writeConversationStorage(legacy!);
+      assert.equal(JSON.parse(await readFile(path.join(storedDirectory, "manifest.json"), "utf8")).storageSchemaVersion, 2);
       assert.deepEqual((await screenshots.lookup(capture.id))?.bytes, png);
       await deleteConversationStorage(id);
       assert.equal(await screenshots.lookup("latest"), undefined);

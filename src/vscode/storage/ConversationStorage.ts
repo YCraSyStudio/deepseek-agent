@@ -6,17 +6,18 @@ import type { StoredConversation } from "@/application/chat/ProviderTranscript";
 import { writeJsonFileAtomic } from "@/infrastructure/persistence/JsonFileStorage";
 import { getHistoryDirectory } from "@/infrastructure/persistence/UserDataPaths";
 import { normalizeConversation } from "./ConversationNormalization";
+import { decodeConversationMessage, encodeConversationMessage } from "./ConversationStorageCodec";
 
 export const MAX_CONVERSATION_BYTES = 64 * 1024 * 1024;
 const MAX_CHUNK_BYTES = 4 * 1024 * 1024;
 const MAX_CHUNK_COUNT = 10_000;
-const CHUNK_STORAGE_SCHEMA_VERSION = 1;
+const CHUNK_STORAGE_SCHEMA_VERSION = 2;
 const MANIFEST_FILE_NAME = "manifest.json";
 const CHUNK_FILE_PATTERN = /^(\d{1,5})\.json$/;
 const LEGACY_SEGMENT_DIRECTORY_NAME = ".segments";
 
 interface ConversationManifest {
-  storageSchemaVersion: typeof CHUNK_STORAGE_SCHEMA_VERSION;
+  storageSchemaVersion: 1 | typeof CHUNK_STORAGE_SCHEMA_VERSION;
   conversation: Omit<StoredConversation, "messages">;
   chunks: number;
 }
@@ -39,11 +40,11 @@ export async function readConversationFile(id: string): Promise<StoredConversati
   const directoryPath = getConversationDirectory(id);
   try {
     const parsed = await readConversationStorage(directoryPath);
-    if (!parsed || parsed.id !== id) {
+    if (!parsed || parsed.conversation.id !== id) {
       await deleteIncompatibleConversation(directoryPath);
       return undefined;
     }
-    return normalizeConversation(parsed);
+    return normalizeConversation(parsed.conversation);
   } catch (error) {
     if (!isFileNotFoundError(error)) {
       await deleteIncompatibleConversation(directoryPath);
@@ -55,14 +56,14 @@ export async function readConversationFile(id: string): Promise<StoredConversati
 export async function readStoredConversationRecord(directoryPath: string): Promise<StoredConversationRecord | undefined> {
   try {
     const parsed = await readConversationStorage(directoryPath);
-    if (!parsed || path.resolve(directoryPath) !== path.resolve(getConversationDirectory(parsed.id))) {
+    if (!parsed || path.resolve(directoryPath) !== path.resolve(getConversationDirectory(parsed.conversation.id))) {
       await deleteIncompatibleConversation(directoryPath);
       return undefined;
     }
     return {
-      conversation: normalizeConversation(parsed),
+      conversation: normalizeConversation(parsed.conversation),
       directoryPath,
-      sizeBytes: Buffer.byteLength(JSON.stringify(parsed), "utf8"),
+      sizeBytes: parsed.sizeBytes,
     };
   } catch {
     await deleteIncompatibleConversation(directoryPath);
@@ -73,7 +74,7 @@ export async function readStoredConversationRecord(directoryPath: string): Promi
 export async function writeConversationStorage(conversation: StoredConversation): Promise<void> {
   const directoryPath = getConversationDirectory(conversation.id);
   await mkdir(directoryPath, { recursive: true });
-  const chunks = chunkConversationMessages(conversation.messages);
+  const chunks = chunkConversationMessages(conversation.messages.map(encodeConversationMessage));
   for (let index = 0; index < chunks.length; index += 1) {
     await writeJsonFileAtomic(path.join(directoryPath, `${index}.json`), chunks[index]);
   }
@@ -106,9 +107,9 @@ async function deleteIncompatibleConversation(directoryPath: string): Promise<vo
   await rm(directoryPath, { recursive: true, force: true }).catch(() => undefined);
 }
 
-function chunkConversationMessages(messages: StoredConversation["messages"]): StoredConversation["messages"][] {
-  const chunks: StoredConversation["messages"][] = [];
-  let current: StoredConversation["messages"] = [];
+function chunkConversationMessages(messages: unknown[]): unknown[][] {
+  const chunks: unknown[][] = [];
+  let current: unknown[] = [];
   let currentBytes = 2;
   for (const message of messages) {
     const bytes = Buffer.byteLength(JSON.stringify(message), "utf8") + 1;
@@ -124,8 +125,9 @@ function chunkConversationMessages(messages: StoredConversation["messages"]): St
   return chunks;
 }
 
-async function readConversationStorage(directoryPath: string): Promise<StoredConversation | undefined> {
-  const parsed = JSON.parse(await readFile(path.join(directoryPath, MANIFEST_FILE_NAME), "utf8")) as unknown;
+async function readConversationStorage(directoryPath: string): Promise<{ conversation: StoredConversation; sizeBytes: number } | undefined> {
+  const manifestText = await readFile(path.join(directoryPath, MANIFEST_FILE_NAME), "utf8");
+  const parsed = JSON.parse(manifestText) as unknown;
   if (!isConversationManifest(parsed)) {return undefined;}
   const chunkPaths = await listChunkPaths(directoryPath, parsed.chunks);
   if (!chunkPaths) {return undefined;}
@@ -138,10 +140,10 @@ async function readConversationStorage(directoryPath: string): Promise<StoredCon
     if (totalBytes > MAX_CONVERSATION_BYTES) {return undefined;}
     const chunk = JSON.parse(await readFile(chunkPath, "utf8")) as unknown;
     if (!Array.isArray(chunk)) {return undefined;}
-    messages.push(...chunk as StoredConversation["messages"]);
+    messages.push(...chunk.map(decodeConversationMessage) as StoredConversation["messages"]);
   }
   const conversation = { ...parsed.conversation, messages };
-  return isConversation(conversation) ? conversation : undefined;
+  return isConversation(conversation) ? { conversation, sizeBytes: totalBytes + Buffer.byteLength(manifestText, "utf8") } : undefined;
 }
 
 async function listChunkPaths(directoryPath: string, expectedChunks: number): Promise<string[] | undefined> {
@@ -163,7 +165,7 @@ function isConversationManifest(value: unknown): value is ConversationManifest {
   if (!value || typeof value !== "object") {return false;}
   const manifest = value as Partial<ConversationManifest>;
   const chunks = manifest.chunks;
-  return manifest.storageSchemaVersion === CHUNK_STORAGE_SCHEMA_VERSION &&
+  return (manifest.storageSchemaVersion === 1 || manifest.storageSchemaVersion === CHUNK_STORAGE_SCHEMA_VERSION) &&
     !!manifest.conversation && typeof manifest.conversation === "object" &&
     typeof chunks === "number" && Number.isSafeInteger(chunks) && chunks >= 0 && chunks <= MAX_CHUNK_COUNT;
 }

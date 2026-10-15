@@ -63,3 +63,12 @@ A positive reviewer decision is cached only when every justifying fact is reprod
 Terminal commands remain finite, non-interactive, cancellable, and outside an OS sandbox. Mechanical validation, workspace binding, schema validation, mutation serialization, output bounds, and process-tree cancellation remain local enforcement rather than risk classification.
 
 [Back](INDEX.md)
+
+
+## Local command sandbox
+
+`run_terminal_command` runs through a shared local execution broker. Restricted modes use Bubblewrap+seccomp on Linux/WSL2, Seatbelt on macOS, and Microsoft MXC ProcessContainer on Windows. Automatic approval does not remove isolation. Only the explicitly selected `full-access` mode disables it; the result and terminal show the effective backend.
+
+Restricted commands can write to their workspace and private temporary files, read declared toolchains, and cannot access host networking. Additional installations may be declared in the machine/user setting `deepseek-agent.sandbox.readOnlyToolchainRoots`; workspace settings cannot grant access. Missing backends fail closed. Commands are finite and noninteractive. Shell-specific profile initialization, global Git credentials and background servers are not inherited.
+
+Windows requires a compatible MXC host and extension-host Node runtime; DACL-only fallback is rejected. Native macOS, Windows and WSL validation is still pending. Direct editor/filesystem tools and service helpers retain their existing controls. See [the implementation and validation notes](../../docs/technical-decisions/66-local-execution-sandbox.md) for exact scope and remaining work.

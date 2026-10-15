@@ -1,0 +1,55 @@
+name: Sandbox backends
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+    inputs:
+      windows_native:
+        description: Run native MXC fixtures on a provisioned Windows 11 runner
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  contracts-and-unix:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run compile
+      - run: pnpm run lint
+      - run: pnpm run test:unit
+      - name: Install Bubblewrap
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - name: Native Unix isolation
+        if: runner.os != 'Windows'
+        run: pnpm run test:sandbox
+      - run: pnpm run build:extension
+      - name: Check Windows SDK package import
+        if: runner.os == 'Windows'
+        run: node -e "import('./dist/node_modules/@microsoft/mxc-sdk/dist/v1/index.js').then(sdk => console.log(typeof sdk.spawn))"
+
+  windows-native:
+    if: github.event_name == 'workflow_dispatch' && inputs.windows_native
+    runs-on: [self-hosted, Windows, mxc]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test:sandbox
