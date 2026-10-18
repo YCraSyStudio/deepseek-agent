@@ -6,7 +6,7 @@ import type { CaptureScreenshotRequest } from "@/contracts/Capture";
 import type { CaptureBackend, CaptureFrame } from "./CaptureService";
 import { runCaptureHelper } from "./HelperProcess";
 
-export async function findSystemBrowser(): Promise<string | undefined> {
+async function findSystemBrowser(): Promise<string | undefined> {
   const names = process.platform === "win32" ? ["chrome.exe", "msedge.exe"] : ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge"];
   const candidates = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean).flatMap((directory) => names.map((name) => path.join(directory, name)));
   if (process.platform === "darwin") {candidates.push("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge");}

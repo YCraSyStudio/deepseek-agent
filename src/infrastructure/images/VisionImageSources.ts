@@ -5,7 +5,7 @@ import { realpath } from "node:fs/promises";
 import { detectImageMediaType, type ImageMediaType } from "./ImageFormat";
 import { ScreenshotStore } from "./ScreenshotStore";
 
-export const MAX_VISION_IMAGES = 8;
+const MAX_VISION_IMAGES = 8;
 export const MAX_VISION_BYTES = 32 * 1024 * 1024;
 export interface LocalVisionImage { name: string; source: string; bytes: Uint8Array; mediaType: ImageMediaType }
 export async function resolveVisionImageSources(request: AnalyzeImagesRequest, attachments: ImageAttachment[], screenshots?: ScreenshotStore): Promise<{ attachments: ImageAttachment[]; local: LocalVisionImage[] }> {

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import type { ImageAttachment, ReferencedFile } from "@/contracts";
 import {
+  clearSavedChatState,
   getSavedChatState,
   isImageAttachment,
   isReferencedFile,
@@ -16,7 +17,7 @@ suite("persistent chat state", () => {
       acquireVsCodeApi: () => ({
         postMessage: () => undefined,
         getState: () => savedState,
-        setState: (state: unknown) => state,
+        setState: (state: Record<string, unknown>) => { savedState = state; return state; },
       }),
     };
   });
@@ -69,6 +70,55 @@ suite("persistent chat state", () => {
 
     savedState = undefined;
     assert.strictEqual(getSavedChatState(), undefined);
+  });
+
+  test("does not restore a deleted conversation after the chat remounts", () => {
+    savedState = {
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "deleted-chat",
+      draft: "old draft",
+      referencedFiles: [file("src/a.ts")],
+      imageAttachments: [image(Date.now() + 60_000)],
+    };
+
+    clearSavedChatState("deleted-chat");
+
+    assert.deepStrictEqual(getSavedChatState(), {
+      schemaVersion: 5,
+      mode: "persistent",
+      draft: "",
+      referencedFiles: [],
+      imageAttachments: [],
+      conversationId: undefined,
+    });
+  });
+
+  test("keeps the current conversation when another conversation is deleted", () => {
+    savedState = { schemaVersion: 5, mode: "persistent", conversationId: "current-chat", draft: "keep me" };
+    const original = savedState;
+
+    clearSavedChatState("other-chat");
+
+    assert.strictEqual(savedState, original);
+  });
+
+  test("clears restoration data before resetting the chat", () => {
+    savedState = { schemaVersion: 5, mode: "persistent", conversationId: "old-chat", draft: "old draft" };
+
+    clearSavedChatState();
+
+    assert.strictEqual(getSavedChatState()?.conversationId, undefined);
+    assert.strictEqual(getSavedChatState()?.draft, "");
+  });
+
+  test("preserves incognito state when resetting the chat", () => {
+    savedState = { schemaVersion: 3, mode: "incognito" };
+    const original = savedState;
+
+    clearSavedChatState();
+
+    assert.strictEqual(savedState, original);
   });
 });
 

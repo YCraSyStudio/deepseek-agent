@@ -48,7 +48,7 @@ function HistoryView() {
         setConversations(message.conversations);
         setIsLoading(false);
         setError(null);
-      } else if (message.type === "historyError") {
+      } else if (message.type === "historyError" && !message.requestId) {
         setIsLoading(false);
         setError(message.error || t("history.historyCouldNotBeLoaded"));
       } else if (message.type === "conversationDeleted") {

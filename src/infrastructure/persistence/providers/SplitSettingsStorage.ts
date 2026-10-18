@@ -7,8 +7,8 @@ import { writeJsonFileAtomic } from "../JsonFileStorage";
 import { getSettingsFilePath } from "../UserDataPaths";
 import { getProviderDataPaths } from "./ProviderDataPaths";
 
-export const DEEPSEEK_SETTING_KEYS: readonly StoredSettingKey[] = ["baseUrl", "model", "thinkingMode", "reasoningEffort", "temperature", "topP", "maxTokens"];
-export interface SettingsStorage { read(): unknown; recover(): Promise<void>; write(settings: StoredSettings): Promise<void> }
+const DEEPSEEK_SETTING_KEYS: readonly StoredSettingKey[] = ["baseUrl", "model", "thinkingMode", "reasoningEffort", "temperature", "topP", "maxTokens"];
+interface SettingsStorage { read(): unknown; recover(): Promise<void>; write(settings: StoredSettings): Promise<void> }
 interface Transaction { version: 1; shared: Record<string, unknown>; provider: Record<string, unknown>; sharedBefore: string | null; providerBefore: string | null }
 
 /** Caller holds the shared settings lock, which also coordinates provider changes. */

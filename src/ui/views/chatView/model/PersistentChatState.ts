@@ -10,6 +10,18 @@ export interface PersistentChatViewState {
   conversationId?: string;
 }
 
+export function clearSavedChatState(conversationId?: string): void {
+  const state = getSavedChatState();
+  if (!state || (conversationId !== undefined && state.conversationId !== conversationId)) {return;}
+  getVsCodeApi()?.setState<PersistentChatViewState>({
+    schemaVersion: 5,
+    mode: "persistent",
+    draft: "",
+    referencedFiles: [],
+    imageAttachments: [],
+  });
+}
+
 export function getSavedChatState(): PersistentChatViewState | undefined {
   const state = getVsCodeApi()?.getState<Record<string, unknown>>();
   if (!state || typeof state !== "object") {

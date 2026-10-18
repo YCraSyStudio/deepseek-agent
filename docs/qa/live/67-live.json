@@ -1,0 +1,127 @@
+{
+  "passed": true,
+  "directPipeline": {
+    "checkedAt": "2026-10-18T14:24:32.358Z",
+    "search": {
+      "provider": "deepseek",
+      "results": 2
+    },
+    "fetch": {
+      "url": "https://api-docs.deepseek.com/updates",
+      "sections": 1
+    },
+    "model": "deepseek-flash",
+    "answer": "DeepSeek publicó el 17 de octubre de 2026 una actualización que abre su API de búsqueda interna (motor propio que indexa cientos de miles de millones de páginas, multilingüe y con filtrado de spam SEO y contenido AIGC de baja calidad) y actualiza su modelo a DeepSeek-V4.1-Flash-1017, con mejoras en varios benchmarks sin cambios en método de llamada ni precios, accesible vía «deepseek-flash». Fuente: https://api-docs.deepseek.com/updates",
+    "usage": {
+      "prompt_tokens": 578,
+      "completion_tokens": 123,
+      "total_tokens": 701,
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 578
+    },
+    "requestCounts": {
+      "/v1/tools/search": 1,
+      "/v1/tools/fetch": 1,
+      "/v1/chat/completions": 1
+    },
+    "webRequestCostCny": 0.01,
+    "scope": "Actual extension tool handlers and model provider; one Search, one Fetch, one capped Flash completion. No autonomous tool-selection or UI test.",
+    "modelCostEstimateCny": 0.00107,
+    "totalCostEstimateCny": 0.01107
+  },
+  "firstAgentAttempt": {
+    "passed": false,
+    "error": "Initial read_web validation rejected reading filters with search_id; corrected and regression-tested.",
+    "requestCounts": {
+      "/v1/tools/search": 1,
+      "/v1/chat/completions": 2
+    },
+    "usage": [
+      {
+        "prompt_tokens": 1258,
+        "completion_tokens": 66,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 1258
+      },
+      {
+        "prompt_tokens": 1912,
+        "completion_tokens": 115,
+        "prompt_cache_hit_tokens": 1280,
+        "prompt_cache_miss_tokens": 632
+      }
+    ],
+    "modelCostEstimateCny": 0.0026395999999999998,
+    "totalCostEstimateCny": 0.0076396
+  },
+  "correctedAgentFlow": {
+    "checkedAt": "2026-10-18T14:27:30.654Z",
+    "passed": true,
+    "scope": "Live model selected and executed the actual extension search_web/read_web tool schemas and handlers; UI was tested separately by the installed-VSIX smoke test.",
+    "trace": [
+      {
+        "round": 1,
+        "finishReason": "tool_calls",
+        "usage": {
+          "prompt_tokens": 1321,
+          "completion_tokens": 62,
+          "total_tokens": 1383,
+          "prompt_cache_hit_tokens": 896,
+          "prompt_cache_miss_tokens": 425
+        },
+        "tools": [
+          {
+            "name": "search_web",
+            "arguments": {
+              "query": "DeepSeek API docs search fetch endpoints",
+              "max_results": 1
+            }
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "finishReason": "tool_calls",
+        "usage": {
+          "prompt_tokens": 1969,
+          "completion_tokens": 92,
+          "total_tokens": 2061,
+          "prompt_cache_hit_tokens": 1280,
+          "prompt_cache_miss_tokens": 689
+        },
+        "tools": [
+          {
+            "name": "read_web",
+            "arguments": {
+              "search_id": "search_8ac02d88606a463e9457573e77e2e423",
+              "url": "https://api-docs.deepseek.com/guides/search/?utm_source=pixelstech.net"
+            }
+          }
+        ]
+      },
+      {
+        "round": 3,
+        "finishReason": "stop",
+        "usage": {
+          "prompt_tokens": 3797,
+          "completion_tokens": 78,
+          "total_tokens": 3875,
+          "prompt_cache_hit_tokens": 2048,
+          "prompt_cache_miss_tokens": 1749
+        },
+        "tools": []
+      }
+    ],
+    "requestCounts": {
+      "/v1/chat/completions": 3,
+      "/v1/tools/search": 1,
+      "/v1/tools/fetch": 1
+    },
+    "answer": "Según la documentación oficial de DeepSeek, Search usa `POST https://api.deepseek.com/v1/tools/search` y Fetch usa `POST https://api.deepseek.com/v1/tools/fetch`, ambos con autenticación Bearer. Enlace consultado: https://api-docs.deepseek.com/guides/search/?utm_source=pixelstech.net",
+    "modelCostEstimateCny": 0.003876,
+    "webCostEstimateCny": 0.01,
+    "totalCostEstimateCny": 0.013876
+  },
+  "totalCostEstimateCny": 0.0325856,
+  "budgetAuthorizedCny": 10,
+  "pricingBasis": "Official off-peak Flash pricing (Sunday): CNY 1/M uncached input, 0.02/M cached input, 4/M output; CNY 0.005 per successful Search/Fetch. Estimate based on reported usage, not an account balance audit."
+}
