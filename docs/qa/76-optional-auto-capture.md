@@ -9,3 +9,9 @@ The hook rereads settings at turn end, so disabling the setting during generatio
 Next-turn runtime context exposes only the latest screenshot id/dimensions; vision remains an explicit `analyze_images` decision. No image is automatically uploaded. Enabling the setting permits capture activity for previously selected targets; browser capture may open an owned tab or request origin permission. Incognito/remote targets are no-ops.
 
 Branch includes #69, #70, #71, #73, #72 and #74 prerequisite commits, each distinct. Tests cover trigger filtering, known-target precision, disabled mode, cap/no-op/failure, persistent counting and deduplication. Compile/lint/unit suite pass. Manual VS Code validation remains: opt in, establish target, edit UI, inspect one timeline thumbnail, run unchanged UI, reopen conversation, reach cap, disable while generation runs, cancel and verify no late event, and test no target/remote/Wayland.
+
+## Cloud acceptance, 2026-10-18
+
+Read issue #76 before testing. Compile, lint and 522 unit tests pass. Production automatic-capture orchestration, CaptureService, ScreenshotStore and the X11 native backend captured an owned window after a completed CSS mutation fixture. The fixture window was explicitly resized to supply changed pixels; this was not a full model-driven UI edit/render loop. Disabled defaults performed no capture; duplicate pixels reused the stored screenshot; the cumulative cap survived reopening storage and prevented another backend call. Screen targets and terminal-only mutations were not inferred. Evidence: [76-auto.json](live/76-auto.json).
+
+The resulting 648 × 480 native PNG passed real Flash-native and Pro-delegated vision, path validation and upload-cache reuse. Both remote files were deleted. Estimated model cost CNY 0.002469; [76-vision.json](live/76-vision.json). Windows/macOS, remote sessions and incognito still have the platform limits described above.

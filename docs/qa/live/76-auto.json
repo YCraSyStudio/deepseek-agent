@@ -1,0 +1,13 @@
+{
+  "branch": 76,
+  "passed": true,
+  "platform": "linux-x11",
+  "checks": {
+    "disabledByDefault": true,
+    "realAutomaticCapture": true,
+    "hashDeduplicated": true,
+    "capPersistsAfterReopen": true,
+    "noScreenOrTerminalGuess": true
+  },
+  "limitation": "Owned native window resized to supply a fresh frame; full model-driven UI edit loop not driven"
+}
