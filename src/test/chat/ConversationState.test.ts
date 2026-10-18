@@ -1,9 +1,29 @@
 import * as assert from "assert";
-import type { AssistantTimelineEvent, Conversation } from "@/contracts";
+import type { AssistantTimelineEvent, Conversation, ImageAttachment } from "@/contracts";
 import { ConversationState } from "@/application/chat/ConversationState";
 import { createProviderTranscript } from "@/application/chat/ProviderTranscript";
 
 suite("ConversationState", () => {
+  test("persists archive-assigned image numbers without duplicating the user message", async () => {
+    const saves: Conversation[] = [];
+    const state = new ConversationState({ save: async (conversation) => {saves.push(structuredClone(conversation));} });
+    const attachment: ImageAttachment = {
+      id: "attachment", fileId: "file-api-test", name: "image.png", mediaType: "image/png", size: 1,
+      source: "clipboard", uploadedAt: 1, expiresAt: Date.now() + 60_000,
+      apiBaseUrl: "https://api.deepseek.com", cacheFileName: "image.png",
+    };
+    const message = state.createMessage("user", "Compare images 1 and 3", { imageAttachments: [attachment] });
+    await state.saveMessages({ messages: [message], model: "test-model" });
+    attachment.imageNumber = 4;
+    await state.updateMessageAttachments(message.id, [attachment]);
+    assert.strictEqual(saves[0].messages[0].imageAttachments?.[0].imageNumber, undefined);
+    assert.strictEqual(saves[1].messages.length, 1);
+    const restored = new ConversationState({ save: async () => undefined });
+    restored.load(saves[1]);
+    assert.strictEqual(restored.getConversation()?.messages[0].imageAttachments?.[0].imageNumber, 4);
+    attachment.imageNumber = 99;
+    assert.strictEqual(state.getConversation()?.messages[0].imageAttachments?.[0].imageNumber, 4);
+  });
   test("keeps incognito turns in memory until an explicit promotion", async () => {
     const saves: Conversation[] = [];
     const state = new ConversationState(

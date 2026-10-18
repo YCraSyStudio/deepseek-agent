@@ -34,6 +34,7 @@ function MessagesSection({
   onContextWindowUpdated,
   onContextCompactionResult,
   onFocusInput,
+  onReferenceImage,
   earlierMessagesLoaded = 0,
   historyCursor,
 }: MessagesSectionProps) {
@@ -210,6 +211,7 @@ function MessagesSection({
                 isProcessing={isProcessing}
                 activeToolCallGroups={tools.activeTimelineGroups}
                 renderToolCallGroups={renderToolCallGroups}
+                onReferenceImage={onReferenceImage}
               />
             </>
           )}

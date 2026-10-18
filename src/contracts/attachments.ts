@@ -17,6 +17,7 @@ const MAX_CACHE_FILE_NAME_LENGTH = 256;
 export function isImageAttachmentShape(value: unknown): value is ImageAttachment {
   if (!isRecord(value)) {return false;}
   return isBoundedString(value.id, MAX_IDENTIFIER_LENGTH) &&
+    (value.imageNumber === undefined || (Number.isSafeInteger(value.imageNumber) && (value.imageNumber as number) > 0)) &&
     isBoundedString(value.fileId, MAX_IDENTIFIER_LENGTH) && FILE_ID_PATTERN.test(value.fileId) &&
     isBoundedString(value.name, MAX_IDENTIFIER_LENGTH) &&
     IMAGE_MEDIA_TYPES.includes(value.mediaType as ImageAttachment["mediaType"]) &&

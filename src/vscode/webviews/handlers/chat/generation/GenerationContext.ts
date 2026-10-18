@@ -8,6 +8,7 @@ import { appendCurrentTimeToUserTurn, createSystemMessage, getTextContent } from
 import { modelSupportsVision } from "@/contracts/deepseek/Models";
 import { ContextCompactor, referencedFileNeedsCompaction } from "@/application/chat/context/ContextCompaction";
 import { buildFileContext } from "@/application/chat/context/FileReferences";
+import { buildImageReferenceContext } from "@/application/chat/context/ImageReferences";
 import type { ConversationState } from "@/application/chat/ConversationState";
 import { buildSteeringContinuationInstruction } from "@/application/chat/SteeringContinuation";
 import type { ModelProvider } from "@/application/ports";
@@ -23,6 +24,7 @@ import { transitionGenerationRun, type GenerationRunRecord } from "./GenerationR
 import type { ProviderUsage, UsagePhase } from "@/shared/usage/Usage";
 import type { GenerationEventSink } from "@/application/ports";
 import { resolveAuxiliaryModel } from "@/application/chat/AuxiliaryModelPolicy";
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 
 interface BuildGenerationMessagesOptions {
   payload: SendMessagePayload;
@@ -65,11 +67,11 @@ ${payload.text}`
     : payload.text;
   const attachments = payload.imageAttachments?.filter((attachment) => attachment.expiresAt > Date.now()) ?? [];
   const readsImagesNatively = modelSupportsVision(payload.modelId || config.model);
-  if (attachments.length > 0 && !readsImagesNatively) {
-    userText += `\n\nAttached images available through analyze_images:\n${attachments
-      .map((attachment) => `- id=${attachment.id}; name=${attachment.name}`)
-      .join("\n")}`;
-  }
+  const conversationId = state.getActiveConversationId();
+  const images = conversationId && !state.isIncognito()
+    ? await new ScreenshotStore(conversationId).list()
+    : [];
+  userText += buildImageReferenceContext(images, attachments, readsImagesNatively);
   const userContent: ChatMessage["content"] = appendCurrentTimeToUserTurn(
     attachments.length > 0 && readsImagesNatively
       ? [

@@ -40,6 +40,10 @@ suite("persistent chat state", () => {
 
     const attachment = image(Date.now() + 60_000);
     assert.strictEqual(isImageAttachment(attachment), true);
+    assert.strictEqual(isImageAttachment({ ...attachment, imageNumber: 4 }), true);
+    for (const imageNumber of [0, -1, 1.5, "4", Number.MAX_SAFE_INTEGER + 1]) {
+      assert.strictEqual(isImageAttachment({ ...attachment, imageNumber }), false);
+    }
     assert.strictEqual(isImageAttachment({ ...attachment, previewUri: undefined }), false);
     assert.strictEqual(isImageAttachment(image(Date.now() - 1)), false);
   });

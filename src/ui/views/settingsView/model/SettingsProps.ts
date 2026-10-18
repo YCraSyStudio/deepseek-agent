@@ -33,7 +33,7 @@ export type GeneralSectionProps = {
 };
 
 export type ToolsSectionProps = {
-  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled">;
+  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "browserAccess" | "automaticCaptureEnabled" | "automaticCaptureLimit">;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
   permissionUpdatePending?: boolean;

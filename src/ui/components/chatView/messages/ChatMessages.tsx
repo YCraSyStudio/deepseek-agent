@@ -18,6 +18,7 @@ interface ChatMessagesProps {
   isProcessing?: boolean;
   renderToolCallGroups?: (groups: ToolCallGroup[]) => React.ReactNode;
   activeToolCallGroups?: ToolCallGroup[];
+  onReferenceImage?: (number: number) => void;
 }
 
 const NO_TOOL_CALL_GROUPS: ToolCallGroup[] = [];
@@ -27,6 +28,7 @@ function ChatMessages({
   isProcessing = false,
   renderToolCallGroups,
   activeToolCallGroups = NO_TOOL_CALL_GROUPS,
+  onReferenceImage,
 }: ChatMessagesProps) {
   const [enlargedImage, setEnlargedImage] = useState<LightboxImage | null>(null);
 
@@ -45,6 +47,7 @@ function ChatMessages({
             activeToolCallGroups={isLastAssistant ? activeToolCallGroups : NO_TOOL_CALL_GROUPS}
             renderToolCallGroups={renderToolCallGroups}
             onEnlargeImage={setEnlargedImage}
+            onReferenceImage={onReferenceImage}
           />
         );
       })}
@@ -60,6 +63,7 @@ interface MessageRowProps {
   activeToolCallGroups: ToolCallGroup[];
   renderToolCallGroups?: (groups: ToolCallGroup[]) => React.ReactNode;
   onEnlargeImage: (image: LightboxImage) => void;
+  onReferenceImage?: (number: number) => void;
 }
 
 const MessageRow = memo(function MessageRow({
@@ -68,6 +72,7 @@ const MessageRow = memo(function MessageRow({
   activeToolCallGroups,
   renderToolCallGroups,
   onEnlargeImage,
+  onReferenceImage,
 }: MessageRowProps) {
   const toolCallGroups = useMemo(
     () => mergeToolCallGroups(buildMessageToolCallGroups(message), activeToolCallGroups),
@@ -82,6 +87,7 @@ const MessageRow = memo(function MessageRow({
         toolCallGroups={toolCallGroups}
         renderToolCallGroups={renderToolCallGroups}
         onEnlargeImage={onEnlargeImage}
+        onReferenceImage={onReferenceImage}
       />
     </div>
   );
@@ -93,12 +99,14 @@ function MessageBody({
   toolCallGroups,
   renderToolCallGroups,
   onEnlargeImage,
+  onReferenceImage,
 }: {
   message: ChatMessage;
   isActive: boolean;
   toolCallGroups: ToolCallGroup[];
   renderToolCallGroups?: (groups: ToolCallGroup[]) => React.ReactNode;
   onEnlargeImage: (image: LightboxImage) => void;
+  onReferenceImage?: (number: number) => void;
 }) {
   if (message.role === "error") {
     return <div className="errorMessage">{message.content}</div>;
@@ -130,18 +138,29 @@ function MessageBody({
               const previewUri = attachment.previewUri;
               return previewUri
                 ? (
+                  <div key={attachment.id} className="messageImage">
                   <button
-                    key={attachment.id}
                     type="button"
                     className="messageImageButton"
-                    title={attachment.name}
+                    title={attachment.imageNumber ? `#${attachment.imageNumber} · ${attachment.name}` : attachment.name}
                     aria-label={t("chat.enlargeImage", { name: attachment.name })}
                     onClick={() => onEnlargeImage({ id: attachment.id, src: previewUri, name: attachment.name })}
                   >
                     <img src={previewUri} alt={attachment.name} />
                   </button>
+                  {attachment.imageNumber ? (
+                    <button
+                      type="button"
+                      className="messageImageNumber"
+                      title={t("chat.insertImageReference", { number: attachment.imageNumber })}
+                      aria-label={t("chat.insertImageReference", { number: attachment.imageNumber })}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => onReferenceImage?.(attachment.imageNumber!)}
+                    >#{attachment.imageNumber}</button>
+                  ) : null}
+                  </div>
                 )
-                : <span key={attachment.id} className="messageImageFallback"><span className="codicon codicon-file-media" /> {attachment.name}</span>;
+                : <span key={attachment.id} className="messageImageFallback"><span className="codicon codicon-file-media" /> {attachment.imageNumber ? `#${attachment.imageNumber} · ` : ""}{attachment.name}</span>;
             })}
           </div>
         ) : null}

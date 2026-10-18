@@ -1,4 +1,3 @@
-export { SCREENSHOT_DIRECTORY_NAME } from "@/infrastructure/images/ScreenshotStore";
 import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { isConversation } from "@/application/chat/ConversationValidation";

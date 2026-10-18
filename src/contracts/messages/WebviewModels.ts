@@ -57,6 +57,7 @@ export interface ConversationMessage {
 
 export interface ImageAttachment {
   id: string;
+  imageNumber?: number;
   fileId: string;
   name: string;
   mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";

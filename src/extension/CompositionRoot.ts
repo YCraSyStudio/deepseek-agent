@@ -1,3 +1,7 @@
+import { NativeCaptureBackend } from "@/infrastructure/capture/NativeCaptureBackend";
+import { NativeDebugAnchor } from "@/vscode/tools/capture/NativeDebugAnchor";
+import { registerCaptureBackend } from "@/infrastructure/capture/CaptureService";
+import { WebCaptureBackend } from "@/vscode/tools/capture/WebCaptureBackend";
 import * as vscode from "vscode";
 import { ToolRegistry } from "@/application/tools";
 import { createHeadlessWebTools } from "@/infrastructure/browser/BrowserTools";
@@ -24,6 +28,15 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
   constructor(context: vscode.ExtensionContext) {
     this.secrets = new VsCodeSecretStore(context);
     this.history = new HistoryManager(this.settings);
+    registerCaptureBackend("web", new WebCaptureBackend(this.settings));
+    const debugAnchor = new NativeDebugAnchor();
+    context.subscriptions.push(debugAnchor);
+    const nativeCapture = new NativeCaptureBackend(() => debugAnchor.pid());
+    const desktopCapture = { capture: (request: Parameters<NativeCaptureBackend["capture"]>[0], signal: AbortSignal) => {
+      if (vscode.env.remoteName || vscode.env.uiKind !== vscode.UIKind.Desktop) {throw new Error("Native capture requires a local desktop extension host; remote workspaces cannot capture the UI machine");}
+      return nativeCapture.capture(request, signal);
+    }};
+    for (const target of ["window", "debug", "screen"] as const) {registerCaptureBackend(target, desktopCapture);}
     const webClient = new DeepSeekWebClient(async () => {
       const config = this.settings.load();
       if (!config.webSearchEnabled) {throw new Error("Web search is disabled in settings.");}

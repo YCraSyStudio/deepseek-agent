@@ -33,6 +33,11 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
     case "getAvailableTools":
     case "getGenerationSnapshot":
       return hasOnlyKeys(value, ["type"]);
+    case "getScreenshotPreview":
+    case "openScreenshot":
+      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "screenshotId"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) && typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
+        typeof value.screenshotId === "string" && /^screenshot-\d+$/.test(value.screenshotId);
     case "newConversation":
       return hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128);
     case "selectAttachments":
@@ -222,7 +227,7 @@ function validateSendMessageFields(value: Record<string, unknown>, keys: readonl
 function isImageAttachment(value: unknown): boolean {
   if (!isRecord(value) || !hasOnlyKeys(value, [
     "id", "fileId", "name", "mediaType", "size", "source", "uploadedAt", "expiresAt",
-    "apiBaseUrl", "cacheFileName", "previewUri",
+    "apiBaseUrl", "cacheFileName", "previewUri", "imageNumber",
   ])) {return false;}
   return isImageAttachmentShape(value) &&
     isNonEmptyBoundedString(value.id, 512) &&
@@ -273,6 +278,9 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
     isOptionalBoolean(value.includeHomeAgents) &&
     isOptionalBoolean(value.usageBreakdown) &&
     (value.usageCostCurrency === undefined || isEnumOf(value.usageCostCurrency, USAGE_CURRENCIES)) &&
+    isOptionalBoolean(value.automaticCaptureEnabled) &&
+    (value.automaticCaptureLimit === undefined || (Number.isSafeInteger(value.automaticCaptureLimit) && (value.automaticCaptureLimit as number) >= 1 && (value.automaticCaptureLimit as number) <= 40)) &&
+    (value.browserAccess === undefined || isEnumOf(value.browserAccess, ["ask", "always", "never"])) &&
     isOptionalBoolean(value.webSearchEnabled) &&
     isOptionalBoundedString(value.userId, 256)
   );

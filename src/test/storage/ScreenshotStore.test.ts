@@ -66,6 +66,15 @@ suite("screenshot storage", () => {
     const index = JSON.parse(await readFile(path.join(root, "conversation-1", ".screenshots", "index.json"), "utf8"));
     assert.equal(index.next, 4);
   });
+  test("automatic capture accounting survives retention and duplicates do not consume its cap", async () => {
+    const store = new ScreenshotStore("conversation-1", root, 1);
+    await store.save(png, { kind: "web", target: "one", automatic: true, automaticLimit: 2 });
+    await store.save(png, { kind: "web", target: "one", automatic: true, automaticLimit: 2 });
+    assert.equal(await store.automaticCount(), 1);
+    await store.save(png, { kind: "web", target: "two", automatic: true, automaticLimit: 2 });
+    assert.equal(await new ScreenshotStore("conversation-1", root).automaticCount(), 2);
+    await assert.rejects(store.save(png, { kind: "web", target: "three", automatic: true, automaticLimit: 2 }), /limit/);
+  });
   test("deleted conversations cannot be recreated by a late capture", async () => {
     await rm(path.join(root, "conversation-1"), { recursive: true });
     await assert.rejects(new ScreenshotStore("conversation-1", root).save(png, { kind: "web", target: "app" }));

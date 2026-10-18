@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { upsertUserTurn } from "@/ui/views/chatView/model/UserTurnUpdates";
 import type { AppConfig, ContextWindowStatus, HandlerToWebviewMessage } from "@/contracts";
 import type { ConversationUsageSnapshot } from "@/shared/usage/Usage";
 import type { ChatMessage, InitialConfig, StoredToolCall } from "../../views/chatView/ChatViewTypes";
@@ -75,6 +76,9 @@ export function useChatMessagesController({
         flushTimelineDeltas();
         const { wasStreamed, ...rest } = message;
         setMessages((current) => {
+          if (rest.role === "user") {
+            return upsertUserTurn(current, { ...rest, id: nextMessageId(), role: "user" });
+          }
           if (wasStreamed && rest.role === "assistant") {
             if (!streamingMessageIdRef.current) {
               return [...current, {

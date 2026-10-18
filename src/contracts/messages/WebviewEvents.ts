@@ -1,3 +1,4 @@
+import type { CaptureScreenshotResult } from "../Capture";
 import type { ToolCall } from "../deepseek/Chat";
 import type { ConversationUsageSnapshot, UsageAggregate } from "@/shared/usage/Usage";
 import type {
@@ -24,6 +25,7 @@ export type HandlerToWebviewMessage =
   | { type: "protocolReady"; protocolVersion: 5 }
   | { type: "protocolError"; supportedVersion: 5; error: string }
   | { type: "requestRejected"; requestId?: string; action?: string; error: string }
+  | { type: "screenshotPreview"; requestId: string; conversationId: string; uri?: string; metadata?: CaptureScreenshotResult; error?: string }
   | { type: "configLoaded"; revision: number; config: Partial<WebviewConfig> }
   | {
       type: "historyTransitionRequired";

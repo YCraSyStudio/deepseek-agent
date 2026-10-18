@@ -17,7 +17,7 @@ const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
   "permissionMode", "autoContext", "historyEnabled",
-  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled",
+  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "automaticCaptureEnabled", "automaticCaptureLimit", "browserAccess", "webSearchEnabled",
 ];
 
 const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
@@ -45,6 +45,9 @@ export function normalizeConfig(value: unknown): AppConfig {
     includeHomeAgents: normalizeBoolean(config.includeHomeAgents, DEFAULT_CONFIG.includeHomeAgents),
     usageBreakdown: normalizeBoolean(config.usageBreakdown, DEFAULT_CONFIG.usageBreakdown),
     usageCostCurrency: normalizeUsageCurrency(config.usageCostCurrency),
+    automaticCaptureEnabled: normalizeBoolean(config.automaticCaptureEnabled, false),
+    automaticCaptureLimit: clampInteger(config.automaticCaptureLimit, 1, 40, 10),
+    browserAccess: config.browserAccess === "always" || config.browserAccess === "never" ? config.browserAccess : "ask",
     webSearchEnabled: normalizeBoolean(config.webSearchEnabled, DEFAULT_CONFIG.webSearchEnabled),
   };
 }
@@ -62,6 +65,9 @@ export function isStoredSettingKey(key: string): key is StoredSettingKey {
 }
 
 export function normalizeSettingValue(key: StoredSettingKey, value: unknown): unknown {
+  if (key === "automaticCaptureEnabled") {return normalizeBoolean(value, false);}
+  if (key === "automaticCaptureLimit") {return clampInteger(value, 1, 40, 10);}
+  if (key === "browserAccess") {return value === "always" || value === "never" ? value : "ask";}
   if (key === "interfaceLanguage") {return normalizeInterfaceLanguage(value);}
   if (key === "permissionMode") {return normalizePermissionMode(value);}
   if (key === "reasoningEffort") {return normalizeReasoningEffort(value);}

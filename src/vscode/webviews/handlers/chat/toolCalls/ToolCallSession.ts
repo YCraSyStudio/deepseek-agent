@@ -251,6 +251,7 @@ export class ToolCallSession {
       availableToolNames: options.tools.map((tool) => tool.function.name),
       authorizedUserUrls: options.authorizedUserUrls,
       analyzeImages: options.analyzeImages,
+      captureScreenshot: options.captureScreenshot,
       isWebTainted: () => this.webTainted,
       markWebTainted: () => {this.webTainted = true;},
       isWorkspaceTrusted: options.isWorkspaceTrusted,

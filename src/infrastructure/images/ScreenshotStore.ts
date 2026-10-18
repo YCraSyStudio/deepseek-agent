@@ -10,10 +10,11 @@ export interface ScreenshotMetadata {
   id: string; fileName: string; kind: "web" | "window" | "debug" | "screen" | "attachment";
   target: string; windowTitle?: string; pid?: number;
   width: number; height: number; bytes: number; sha256: string;
+  automatic?: boolean;
   createdAt: number; accessedAt: number;
 }
-interface ScreenshotIndex { next: number; items: ScreenshotMetadata[] }
-export type CaptureDescription = Pick<ScreenshotMetadata, "kind" | "target" | "windowTitle" | "pid"> & { label?: string };
+interface ScreenshotIndex { automaticTotal?: number; next: number; items: ScreenshotMetadata[] }
+export type CaptureDescription = Pick<ScreenshotMetadata, "kind" | "target" | "windowTitle" | "pid"> & { label?: string; automatic?: boolean; automaticLimit?: number };
 
 export class ScreenshotStore {
   readonly directory: string;
@@ -36,14 +37,17 @@ export class ScreenshotStore {
       await this.assertDirectory();
       const index = await this.index();
       const target = description.target.slice(0, 2048);
-      const duplicate = index.items.find((item) => item.sha256 === sha256 && item.kind === description.kind && item.target === target);
+      const duplicate = index.items.find((item) => item.sha256 === sha256 && item.kind === description.kind &&
+        (description.kind === "attachment" || item.target === target));
       if (duplicate && await this.validFile(duplicate)) {
         duplicate.accessedAt = Date.now();
         await this.writeIndex(index);
         return duplicate;
       }
+      if (description.automatic && (index.automaticTotal ?? 0) >= (description.automaticLimit ?? 10)) {throw new Error("Automatic capture limit reached");}
       const number = index.next++;
       if (!Number.isSafeInteger(index.next)) {throw new Error("Screenshot sequence exhausted");}
+      if (description.automatic) {index.automaticTotal = (index.automaticTotal ?? 0) + 1;}
       const label = (description.label ?? description.kind).replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 64) || "capture";
       const fileName = `${number}-${label}.${dimensions.mediaType === "image/jpeg" ? "jpg" : "png"}`;
       const destination = path.join(this.directory, fileName);
@@ -52,6 +56,7 @@ export class ScreenshotStore {
         id: `screenshot-${number}`, fileName, kind: description.kind,
         target, windowTitle: description.windowTitle?.slice(0, 512), pid: description.pid,
         width: dimensions.width, height: dimensions.height, bytes: bytes.length, sha256,
+        automatic: description.automatic || undefined,
         createdAt: Date.now(), accessedAt: Date.now(),
       };
       let committed = false;
@@ -72,7 +77,10 @@ export class ScreenshotStore {
     });
   }
 
+  async automaticCount(): Promise<number> {return this.lock(async () => (await this.index()).automaticTotal ?? 0);}
+
   async lookup(id = "latest"): Promise<{ metadata: ScreenshotMetadata; bytes: Buffer; path: string } | undefined> {
+    if (/^[1-9]\d*$/.test(id)) {id = `screenshot-${id}`;}
     return this.lock(async () => {
       const index = await this.index();
       const item = id === "latest"
@@ -88,6 +96,10 @@ export class ScreenshotStore {
   }
 
   private lock<T>(operation: () => Promise<T>): Promise<T> {return withFileLock(path.join(this.historyRoot, ".mutations"), operation);}
+  async list(): Promise<ScreenshotMetadata[]> {
+    return this.lock(async () => (await this.index()).items
+      .sort((a, b) => Number(a.id.slice("screenshot-".length)) - Number(b.id.slice("screenshot-".length))));
+  }
   private async assertDirectory(): Promise<void> {
     for (const directory of [path.join(this.historyRoot, this.conversationId), this.directory]) {
       if ((await lstat(directory)).isSymbolicLink()) {throw new Error("Screenshot storage cannot use symbolic links");}
@@ -103,7 +115,8 @@ export class ScreenshotStore {
       if (!Number.isSafeInteger(index.next) || index.next < 1 || !Array.isArray(index.items) || index.items.length > 1000 || !index.items.every(validMetadata) ||
         new Set(index.items.map((item) => item.id)).size !== index.items.length ||
         new Set(index.items.map((item) => item.fileName)).size !== index.items.length ||
-        index.items.some((item) => Number(item.id.slice("screenshot-".length)) >= index.next)) {throw new Error("Corrupt screenshot index");}
+        index.items.some((item) => Number(item.id.slice("screenshot-".length)) >= index.next) ||
+        (index.automaticTotal !== undefined && (!Number.isSafeInteger(index.automaticTotal) || index.automaticTotal < 0))) {throw new Error("Corrupt screenshot index");}
       return index;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {

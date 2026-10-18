@@ -1,3 +1,4 @@
+import type { CaptureScreenshotRequest, CaptureScreenshotResult } from "@/contracts/Capture";
 import type { ToolDefinition } from "@/contracts";
 import type { ToolExecutionOutcome } from "@/domain/tools/ToolExecutionOutcome";
 
@@ -11,6 +12,7 @@ export interface ToolMetadata {
   requiresConfirmation: boolean;
   scope?: "workspace" | "global";
   effect?: ToolEffect;
+  alwaysConfirmWhen?: { argument: string; values: readonly string[] };
 }
 
 export interface RegisteredTool {
@@ -20,6 +22,12 @@ export interface RegisteredTool {
   metadata: ToolMetadata;
 }
 
+export interface AnalyzeImagesRequest {
+  question: string;
+  attachmentIds?: string[];
+  screenshotIds?: string[];
+  paths?: string[];
+}
 export interface ToolHandlerContext {
   signal?: AbortSignal;
   generationId?: string;
@@ -27,7 +35,8 @@ export interface ToolHandlerContext {
   availableToolNames?: readonly string[];
   authorizedUserUrls?: readonly string[];
   webTainted?: boolean;
-  analyzeImages?: (question: string, imageIds: string[], signal?: AbortSignal) => Promise<string>;
+  captureScreenshot?: (request: CaptureScreenshotRequest, signal?: AbortSignal) => Promise<CaptureScreenshotResult>;
+  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
 }
 
 export interface ValidationResult {

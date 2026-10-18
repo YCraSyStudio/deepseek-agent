@@ -50,6 +50,8 @@ export const chat = {
     attach: "Adjuntar",
     removeImage: "Quitar imagen",
     enlargeImage: "Ampliar {name}",
+    imageReference: "imagen {number}",
+    insertImageReference: "Añadir imagen {number} al mensaje",
     closeImagePreview: "Cerrar vista de imagen",
     zoomIn: "Acercar",
     zoomOut: "Alejar",

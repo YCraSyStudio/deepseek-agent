@@ -40,6 +40,7 @@ export function isImageAttachment(value: unknown): value is ImageAttachment {
   if (!value || typeof value !== "object") {return false;}
   const image = value as Partial<ImageAttachment>;
   return typeof image.id === "string" && typeof image.fileId === "string" &&
+    (image.imageNumber === undefined || (Number.isSafeInteger(image.imageNumber) && image.imageNumber > 0)) &&
     typeof image.name === "string" && typeof image.previewUri === "string" &&
     typeof image.expiresAt === "number" && image.expiresAt > Date.now();
 }

@@ -47,6 +47,9 @@ export interface AppConfig {
   includeHomeAgents: boolean;
   usageBreakdown: boolean;
   usageCostCurrency: UsageCurrency;
+  automaticCaptureEnabled: boolean;
+  automaticCaptureLimit: number;
+  browserAccess: "ask" | "always" | "never";
   webSearchEnabled: boolean;
 
   userId?: string;
@@ -77,5 +80,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   includeHomeAgents: false,
   usageBreakdown: false,
   usageCostCurrency: DEFAULT_USAGE_CURRENCY,
+  automaticCaptureEnabled: false,
+  automaticCaptureLimit: 10,
+  browserAccess: "ask",
   webSearchEnabled: true,
 };

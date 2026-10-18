@@ -253,7 +253,15 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
           <div className="composerImageAttachments">
             {pendingImages.map((image) => (
               <div className="composerImageAttachment" key={image.requestId}>
-                <img src={image.previewUri} alt={image.name} />
+                <button
+                  type="button"
+                  className="composerImagePreview"
+                  title={image.name}
+                  aria-label={t("chat.enlargeImage", { name: image.name })}
+                  onClick={() => setEnlargedImage({ id: image.requestId, src: image.previewUri, name: image.name })}
+                >
+                  <img src={image.previewUri} alt={image.name} />
+                </button>
                 <button type="button" className="composerImageRemove" aria-label={t("chat.removeImage")} onClick={() => onRemovePendingImage?.(image.requestId)}>
                   <span className="codicon codicon-close" aria-hidden="true" />
                 </button>

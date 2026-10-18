@@ -3,6 +3,7 @@ import { selectGenerationTools } from "@/application/chat/GenerationToolSelectio
 import { ToolRegistry } from "@/application/tools/ToolRegistry";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { DEEPSEEK_FLASH_MODEL_ID, DEEPSEEK_PRO_MODEL_ID } from "@/contracts";
+import { analyzeImagesTool } from "@/infrastructure/tools/builtins/vision/AnalyzeImages";
 
 suite("generation tool selection", () => {
   test("keeps global tools when workspace files are unavailable", () => {
@@ -29,14 +30,28 @@ suite("generation tool selection", () => {
     );
   });
 
-  test("exposes image analysis only to Pro generations with image attachments", () => {
+  test("exposes local-source vision without attachments for supported models", () => {
     const registry = createRegistry();
     const withoutImages = selectGenerationTools(registry, availability({ hasImageAttachments: false }));
     const visionModel = selectGenerationTools(registry, availability({ modelId: DEEPSEEK_FLASH_MODEL_ID }));
 
-    assert.ok(!names(withoutImages).includes("analyze_images"));
-    assert.ok(!names(visionModel).includes("analyze_images"));
+    assert.ok(names(withoutImages).includes("analyze_images"));
+    assert.ok(names(visionModel).includes("analyze_images"));
     assert.ok(names(selectGenerationTools(registry, availability())).includes("analyze_images"));
+  });
+
+  test("routes Flash attachments natively while preserving delegated vision for Pro", () => {
+    const registry = new ToolRegistry();
+    registry.register(analyzeImagesTool);
+    const flash = selectGenerationTools(registry, availability({ modelId: DEEPSEEK_FLASH_MODEL_ID }))[0];
+    const pro = selectGenerationTools(registry, availability({ modelId: DEEPSEEK_PRO_MODEL_ID }))[0];
+    assert.match(flash.function.description ?? "", /read attached images natively/);
+    assert.match(flash.function.description ?? "", /without calling this tool/);
+    assert.match(flash.function.description ?? "", /stored images whose visual content is unavailable/);
+    assert.match(pro.function.description ?? "", /current model cannot read images natively/);
+    assert.strictEqual(pro, analyzeImagesTool.definition);
+    assert.deepStrictEqual(flash.function.parameters, pro.function.parameters);
+    assert.strictEqual(registry.get("analyze_images")?.definition, pro);
   });
 });
 

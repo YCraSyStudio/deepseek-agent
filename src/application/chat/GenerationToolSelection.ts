@@ -1,6 +1,7 @@
 import type { ToolDefinition } from "@/contracts";
-import { DEEPSEEK_PRO_MODEL_ID } from "@/contracts/deepseek/Models";
+import { DEEPSEEK_PRO_MODEL_ID, DEEPSEEK_FLASH_MODEL_ID } from "@/contracts/deepseek/Models";
 import type { ToolRegistry } from "@/application/tools/ToolRegistry";
+import { NATIVE_IMAGE_ANALYSIS_DESCRIPTION } from "./context/ImageReferences";
 
 const WEB_TOOL_NAMES = new Set(["search_web", "read_web"]);
 const TERMINAL_TOOL_NAME = "run_terminal_command";
@@ -22,8 +23,10 @@ export function selectGenerationTools(
     const name = tool.function.name;
     const registered = registry.get(name);
 
+    if (name === "capture_screenshot" && !availability.files) {return false;}
+
     if (name === IMAGE_ANALYSIS_TOOL_NAME) {
-      return availability.modelId === DEEPSEEK_PRO_MODEL_ID && availability.hasImageAttachments;
+      return ([DEEPSEEK_PRO_MODEL_ID, DEEPSEEK_FLASH_MODEL_ID] as readonly string[]).includes(availability.modelId);
     }
 
     if (registered?.metadata.scope !== "global") {
@@ -40,5 +43,7 @@ export function selectGenerationTools(
     }
 
     return true;
-  });
+  }).map((tool) => tool.function.name === IMAGE_ANALYSIS_TOOL_NAME && availability.modelId === DEEPSEEK_FLASH_MODEL_ID
+    ? { ...tool, function: { ...tool.function, description: NATIVE_IMAGE_ANALYSIS_DESCRIPTION } }
+    : tool);
 }
