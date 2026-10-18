@@ -6,6 +6,7 @@ import type { CaptureBackend, CaptureFrame } from "@/infrastructure/capture/Capt
 import { connectCdpProxy, captureCdpViewport } from "@/infrastructure/capture/CdpViewport";
 import { SystemBrowserCapture } from "@/infrastructure/capture/SystemBrowserCapture";
 import type { SettingsRepository } from "@/application/ports";
+import { abortable, waitForOwnedCdpProxy } from "@/infrastructure/capture/OwnedCdpProxy";
 
 export class WebCaptureBackend implements CaptureBackend {
   private readonly allowedOrigins = new Set<string>();
@@ -34,20 +35,35 @@ export class WebCaptureBackend implements CaptureBackend {
 
   private async integrated(request: CaptureScreenshotRequest, signal: AbortSignal): Promise<CaptureFrame> {
     const name = `YCraSy UI capture ${randomUUID()}`;
-    const owned = await launchOwnedSession<vscode.DebugSession>({
-      signal,
-      subscribe: (onSession) => vscode.debug.onDidStartDebugSession((session) => {
-        if (session.name === name && ["editor-browser", "pwa-editor-browser"].includes(session.type)) {onSession(session);}
-      }),
-      launch: () => vscode.debug.startDebugging(undefined, { type: "editor-browser", request: "launch", name, url: request.url, noDebug: false }),
-      stop: (session) => vscode.debug.stopDebugging(session),
-    });
+    const sessions: vscode.DebugSession[] = [];
+    const observed = vscode.debug.onDidStartDebugSession((session) => sessions.push(session));
+    const stop = (session: vscode.DebugSession) => abortable(vscode.debug.stopDebugging(session), AbortSignal.timeout(2000));
+    let concrete: vscode.DebugSession | undefined;
     try {
-      signal.throwIfAborted();
-      const proxy = await owned.session.customRequest("requestCDPProxy") as { host: string; port: number; path: string };
-      const connection = await connectCdpProxy(proxy, signal);
-      try {return { bytes: await captureCdpViewport(connection, request, signal), target: request.url! };}
-      finally {connection.close();}
-    } finally {await owned.dispose();}
+      const owned = await launchOwnedSession<vscode.DebugSession>({
+        signal,
+        timeoutMs: 20_000,
+        subscribe: (onSession) => vscode.debug.onDidStartDebugSession((session) => {
+          if (session.name === name && ["editor-browser", "pwa-editor-browser"].includes(session.type)) {onSession(session);}
+        }),
+        launch: () => vscode.debug.startDebugging(undefined, { type: "editor-browser", request: "launch", name, url: request.url, noDebug: false }),
+        stop,
+      });
+      try {
+        signal.throwIfAborted();
+        const ready = await waitForOwnedCdpProxy(owned.session, () => sessions, (session) => session.id === owned.session.id ? Promise.resolve(undefined) : session.customRequest("requestCDPProxy"), signal);
+        concrete = ready.session;
+        const connection = await connectCdpProxy(ready.address, signal);
+        try {return { bytes: await captureCdpViewport(connection, request, signal), target: request.url! };}
+        finally {
+          try {await abortable(connection.request("Page.close"), AbortSignal.timeout(2000));}
+          catch { /* The target may already be closed or cancelled. */ }
+          finally {connection.close();}
+        }
+      } finally {
+        try {if (concrete && concrete.id !== owned.session.id) {await stop(concrete);}}
+        finally {await owned.dispose();}
+      }
+    } finally {observed.dispose();}
   }
 }

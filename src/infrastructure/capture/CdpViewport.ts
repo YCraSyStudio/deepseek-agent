@@ -70,7 +70,9 @@ export async function captureCdpViewport(connection: CdpConnection, request: Cap
   signal.throwIfAborted();
   if (request.wait_ms) {await waitForCapture(request.wait_ms, signal);}
   signal.throwIfAborted();
-  const response = await connection.request("Page.captureScreenshot", { format: "png", fromSurface: true, captureBeyondViewport: false });
+  // Clip to the requested emulated viewport even when the editor pane is narrower.
+  const response = await connection.request("Page.captureScreenshot", { format: "png", fromSurface: true, captureBeyondViewport: true,
+    clip: { x: 0, y: 0, width: request.width ?? 1280, height: request.height ?? 720, scale: 1 } });
   if (typeof response.data !== "string" || response.data.length > 24 * 1024 * 1024) {throw new Error("CDP returned an invalid or oversized screenshot");}
   return Buffer.from(response.data, "base64");
 }

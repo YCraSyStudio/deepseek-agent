@@ -8,7 +8,8 @@ suite("Web viewport capture", () => {
     assert.equal((await captureCdpViewport(connection, { target: "web", url: "http://localhost", width: 800, height: 600 }, new AbortController().signal)).toString(), "png");
     assert.equal(calls[1].params?.width, 800);
     assert.equal(calls[1].params?.deviceScaleFactor, 1);
-    assert.equal(calls.at(-1)?.params?.captureBeyondViewport, false);
+    assert.equal(calls.at(-1)?.params?.captureBeyondViewport, true);
+    assert.deepEqual(calls.at(-1)?.params?.clip, { x: 0, y: 0, width: 800, height: 600, scale: 1 });
     assert.match(String(calls[2].params?.expression), /setTimeout/);
   });
   test("reports page-side load failure instead of capturing an unpainted page", async () => {
