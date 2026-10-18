@@ -1,0 +1,20 @@
+{
+  "branch": 74,
+  "passed": true,
+  "platform": "linux-x11",
+  "checks": {
+    "exactTitleAndPid": true,
+    "debugPid": true,
+    "missingTargetRejected": true,
+    "waylandRejected": true
+  },
+  "dimensions": {
+    "width": 640,
+    "height": 480,
+    "mediaType": "image/png"
+  },
+  "bytes": 3899,
+  "limitations": [
+    "Windows and macOS require their own host acceptance tests"
+  ]
+}

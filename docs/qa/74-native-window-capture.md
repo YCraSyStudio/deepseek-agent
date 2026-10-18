@@ -19,3 +19,9 @@ Manual: Unity/JavaFX/Avalonia/WinUI visible, occluded, minimized and GPU windows
 ## Unity Game view
 
 Window capture requires no project edits. A clean Game-view capture may use a requested `Assets/Editor` helper calling `ScreenCapture.CaptureScreenshot` from an Editor menu while playing. Generate that helper only when the user requests it; it is not inserted by this implementation.
+
+## Cloud acceptance, 2026-10-18
+
+Read issue #74 before testing. Production `wmctrl` enumeration and ImageMagick capture ran on an owned X11 window, selected by exact title plus PID and by debug PID. Both produced the same nonuniform 640 × 480 PNG. Missing exact targets and Wayland were rejected explicitly. Flash read the native PNG directly; Pro delegated `analyze_images` to Flash. Both uploaded files were deleted; estimated model cost CNY 0.002775. Evidence: [74-native.json](live/74-native.json), [74-vision.json](live/74-vision.json).
+
+This is Linux/X11 acceptance only. Windows PrintWindow/occlusion and macOS screen-recording permission paths still require their respective hosts. A window covered by the VS Code test host produced a uniform image here and was correctly rejected; the visible owned fixture passed after raising it.
