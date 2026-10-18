@@ -1,0 +1,85 @@
+{
+  "branch": "73",
+  "passed": true,
+  "checks": {
+    "localArchive": {
+      "id": "screenshot-1",
+      "width": 640,
+      "height": 480,
+      "deduplicated": true
+    },
+    "flashNative": {
+      "answer": "LUNA 42",
+      "unnecessaryToolCall": false
+    },
+    "proDelegated": {
+      "tool": "analyze_images",
+      "answer": "LUNA 42"
+    },
+    "workspacePathAndReuse": true,
+    "remoteCleanup": {
+      "uploaded": 2,
+      "deleted": 2
+    }
+  },
+  "usage": [
+    {
+      "model": "deepseek-flash",
+      "usage": {
+        "prompt_tokens": 955,
+        "completion_tokens": 4,
+        "total_tokens": 959,
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 187
+      }
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "usage": {
+        "prompt_tokens": 585,
+        "completion_tokens": 91,
+        "total_tokens": 676,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 73
+      }
+    },
+    {
+      "model": "deepseek-flash",
+      "usage": {
+        "prompt_tokens": 228,
+        "completion_tokens": 4,
+        "total_tokens": 232,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 228
+      }
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "usage": {
+        "prompt_tokens": 159,
+        "completion_tokens": 4,
+        "total_tokens": 163,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 159
+      }
+    },
+    {
+      "model": "deepseek-flash",
+      "usage": {
+        "prompt_tokens": 224,
+        "completion_tokens": 4,
+        "total_tokens": 228,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 224
+      }
+    }
+  ],
+  "requestCounts": {
+    "POST /v1/files": 2,
+    "POST /v1/chat/completions": 5,
+    "DELETE /v1/files/:id": 2
+  },
+  "modelCostEstimateCny": 0.0031060000000000003,
+  "remainingRemoteUploads": 0,
+  "checkedAt": "2026-10-18T14:58:55.612Z"
+}
