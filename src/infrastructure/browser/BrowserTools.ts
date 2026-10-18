@@ -222,9 +222,19 @@ function normalizeReadArguments(
   generationId: string | undefined,
 ): Record<string, unknown> {
   const normalized = { ...args };
+  for (const key of ["search_id", "document_id", "url", "focus", "query", "cursor"]) {
+    if (normalized[key] === null) {delete normalized[key];}
+  }
   if (normalized.url === undefined && typeof normalized.document_id === "string" && /^https:\/\//i.test(normalized.document_id)) {
     normalized.url = normalized.document_id;
     delete normalized.document_id;
+  }
+  if (normalized.document_id === undefined && normalized.query !== undefined) {
+    if (normalized.focus !== undefined && normalized.focus !== normalized.query) {
+      throw new Error("Use only one reading filter: focus or query");
+    }
+    normalized.focus = normalized.query;
+    delete normalized.query;
   }
   if (normalized.search_id !== undefined || normalized.document_id !== undefined || normalized.url === undefined) {return normalized;}
   let url: string;
@@ -241,14 +251,14 @@ function resolveReadMode(args: Record<string, unknown>): "search_result" | "docu
   if (modes !== 1) {throw new Error("read_web requires exactly one source: search_id with url, document_id, or a direct url");}
   if (args.search_id !== undefined) {
     if (args.url === undefined) {throw new Error("url is required with search_id");}
-    if (args.cursor !== undefined || args.query !== undefined || args.focus !== undefined) {throw new Error("cursor, query, and focus are not valid with search_id");}
+    if (args.cursor !== undefined) {throw new Error("cursor is only valid with document_id returned by read_web");}
     return "search_result";
   }
   if (args.document_id !== undefined) {
     if (args.url !== undefined || args.focus !== undefined) {throw new Error("url and focus are not valid with document_id");}
     return "document";
   }
-  if (args.cursor !== undefined || args.query !== undefined) {throw new Error("cursor and query are not valid with a direct url");}
+  if (args.cursor !== undefined) {throw new Error("cursor is only valid with document_id returned by read_web");}
   return "url";
 }
 
@@ -294,7 +304,9 @@ const readWebDefinition: ToolDefinition = {
         search_id: { type: "string", description: "Identifier returned by search_web; mandatory together with url for search results." },
         document_id: { type: "string", description: "Identifier returned by read_web; never a URL." },
         url: { type: "string", description: "Exact unchanged HTTPS URL returned by search_web, or explicitly written by the user." },
-        focus: { type: "string" }, cursor: { type: "string" }, query: { type: "string" },
+        focus: { type: "string", description: "Optional text filter when opening a URL, including a search result." },
+        cursor: { type: "string", description: "Only with document_id: copy next_cursor returned by read_web; never invent one." },
+        query: { type: "string", description: "Text filter for retained document sections; also accepted instead of focus when opening a URL." },
       },
       required: [], additionalProperties: false,
     },

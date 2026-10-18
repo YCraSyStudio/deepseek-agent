@@ -2,6 +2,29 @@ import * as assert from "node:assert";
 import { createHeadlessWebTools } from "@/infrastructure/browser/BrowserTools";
 
 suite("web search tools", () => {
+  test("opens a search result with the model's focus/query filter and null optional fields", async () => {
+    let reads = 0;
+    const tools = createHeadlessWebTools({ render: async () => {
+      reads++;
+      return { title: "API", url: "https://example.com/api", content: "Search endpoint", sections: ["Search endpoint", "Unrelated section"],
+        outline: [], links: [], contentHash: "a".repeat(64), injectionRisk: "none" };
+    } }, {
+      systemLocale: () => "en", vscodeLanguage: () => "en",
+      search: async () => ({ urls: ["https://example.com/api"], contentHash: "a".repeat(64) }),
+    });
+    const search = tools.find((tool) => tool.definition.function.name === "search_web")!;
+    const read = tools.find((tool) => tool.definition.function.name === "read_web")!;
+    const context = { generationId: "first" };
+    const found = JSON.parse(await search.handler({ query: "API" }, context)) as { search_id: string; urls: string[] };
+    for (const filter of [{ focus: "Search", query: null }, { query: "Search", focus: null }]) {
+      const output = JSON.parse(await read.handler({ search_id: found.search_id, url: found.urls[0],
+        document_id: null, cursor: null, ...filter }, context)) as { sections: Array<{ content: string }> };
+      assert.deepStrictEqual(output.sections.map((section) => section.content), ["Search endpoint"]);
+    }
+    await assert.rejects(() => read.handler({ search_id: found.search_id, url: found.urls[0], cursor: "MA" }, context), /only valid with document_id/);
+    assert.strictEqual(reads, 2);
+  });
+
   test("passes validated search preferences and grants result URLs only to their generation", async () => {
     const controller = new AbortController();
     const tools = createHeadlessWebTools({ render: async () => { throw new Error("unexpected page request"); } }, {

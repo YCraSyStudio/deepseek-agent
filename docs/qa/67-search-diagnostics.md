@@ -16,9 +16,17 @@ This branch replaces SearXNG completely with the standalone DeepSeek Search and 
 
 Controlled API fixtures check actual endpoint paths, Bearer headers, JSON bodies, summaries, Unicode limits, empty results, unsafe/duplicate URLs, malformed and oversized responses, HTTP 401/402/403/429/5xx, cancellation and credential redirects. Web-tool tests check locale/site filters, per-generation URL ownership and terminal failures. Existing security and settings tests cover explicit URL authorization, inert output, output limits and retired settings.
 
-Verified locally: compile, lint, production build, 481 unit tests, 11 extension-host integration tests in VS Code 1.142.0 on Linux, one installed-VSIX smoke test, VSIX content validation (16 entries), and a documentation check/build (32 checked files, 24 generated pages). The dead-code audit still reports three pre-existing unused exports: `detectImageMediaType`, `ImageMediaType`, and the `ConversationStorage` re-export of `SCREENSHOT_DIRECTORY_NAME`; this migration introduces no new unused exports.
+Verified locally: compile, lint, production build, 482 unit tests, 11 extension-host integration tests in VS Code 1.142.0 on Linux, one installed-VSIX smoke test, VSIX content validation (16 entries), and a documentation check/build (32 checked files, 24 generated pages). The dead-code audit still reports three pre-existing unused exports: `detectImageMediaType`, `ImageMediaType`, and the `ConversationStorage` re-export of `SCREENSHOT_DIRECTORY_NAME`; this migration introduces no new unused exports.
 
 Live acceptance requires an API credential configured in VS Code: enable Web search, ask for a current fact, verify `search_web` returns DeepSeek results, read one result with `read_web`, and inspect source links. Disable Web search and verify neither tool is offered. Verify operation without Python, SearXNG or any local port. No paid live API request is performed by the fixture tests.
+
+## Live API acceptance — 18 October 2026
+
+With a temporary user-authorized credential, the actual tool handlers successfully searched the official documentation, fetched a returned page, and passed bounded source text to Flash. A separate live model loop then selected `search_web`, selected `read_web` with its returned search ID and URL, and answered with the documented `/v1/tools/search` and `/v1/tools/fetch` endpoints and the consulted HTTPS link. Captured model arguments also passed the extension's tool-registry validation.
+
+The first model loop failed because `read_web` rejected the model's argument combination with `search_id`. The interface now makes the reading modes explicit: opening a search result supports `focus` and its `query` alias, while paging cursors still require a retained `document_id`. A regression test covers focused search-result reads, missing optional values, and rejection of fabricated first-read cursors. The subsequent recorded live model loop completed successfully.
+
+All live attempts together used three Search requests, two Fetch requests, and six capped Flash completions. Reported usage and the official Sunday off-peak prices give an estimated total of **CNY 0.0325856**, below the CNY 10 authorization. This is a usage-based estimate, not a balance audit. No credential is stored in this repository or in the sanitized reports. No additional UI interaction was claimed: installed-artifact activation and extension-host behavior were tested separately as described above.
 
 ## Official sources
 
