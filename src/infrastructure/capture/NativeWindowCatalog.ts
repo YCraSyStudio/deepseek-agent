@@ -25,7 +25,7 @@ export function resolveNativeWindow(windows: NativeWindow[], selector: { window?
   if (matches.length !== 1) {throw new Error("Window selector is ambiguous; supply the exact window id");}
   return matches[0];
 }
-export const WINDOWS_CATALOG = `Add-Type @'
+const WINDOWS_CATALOG = `Add-Type @'
 using System; using System.Runtime.InteropServices; using System.Text; using System.Collections.Generic;
 public class Catalog {
  public delegate bool Callback(IntPtr h, IntPtr p);
@@ -42,7 +42,7 @@ public class Catalog {
 }
 '@
 ConvertTo-Json -Compress -InputObject @([Catalog]::List())`;
-export const MAC_CATALOG = `ObjC.import('CoreGraphics'); var list=ObjC.deepUnwrap($.CGWindowListCopyWindowInfo(1,0)); JSON.stringify(list.filter(w=>w.kCGWindowLayer===0).map(w=>({id:String(w.kCGWindowNumber),pid:w.kCGWindowOwnerPID,title:w.kCGWindowName||w.kCGWindowOwnerName,x:w.kCGWindowBounds.X,y:w.kCGWindowBounds.Y,width:w.kCGWindowBounds.Width,height:w.kCGWindowBounds.Height,visible:w.kCGWindowIsOnscreen!==false})))`;
+const MAC_CATALOG = `ObjC.import('CoreGraphics'); var list=ObjC.deepUnwrap($.CGWindowListCopyWindowInfo(1,0)); JSON.stringify(list.filter(w=>w.kCGWindowLayer===0).map(w=>({id:String(w.kCGWindowNumber),pid:w.kCGWindowOwnerPID,title:w.kCGWindowName||w.kCGWindowOwnerName,x:w.kCGWindowBounds.X,y:w.kCGWindowBounds.Y,width:w.kCGWindowBounds.Width,height:w.kCGWindowBounds.Height,visible:w.kCGWindowIsOnscreen!==false})))`;
 export async function listNativeWindows(signal: AbortSignal): Promise<NativeWindow[]> {
   if (process.platform === "linux") {
     if (process.env.XDG_SESSION_TYPE === "wayland" || process.env.WAYLAND_DISPLAY) {throw new Error("Wayland window capture requires portal consent and is unavailable; no screen fallback will be attempted");}
