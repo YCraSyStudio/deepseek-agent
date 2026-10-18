@@ -87,10 +87,10 @@ export const userManual: PageContent = {
     {
       title: "Web search",
       items: [
-        "When Web search is enabled, the default http://127.0.0.1:8888 endpoint is managed by the extension. The first start downloads the pinned SearXNG runtime for the current platform, verifies its expected size and SHA-256 digest, and runs it only on loopback without requiring system Python, Docker, Podman, or Chromium.",
-        "Settings loads the configured instance's engine catalog. Leaving the selection automatic uses the instance defaults; selecting engines sends their validated shortcuts with each search.",
-        "A compatible custom SearXNG endpoint can be configured. Non-loopback endpoints must use HTTPS, and URLs containing credentials are rejected.",
-        "search_web returns up to ten normalized HTTPS results. read_web accepts only a URL registered by that search or explicitly supplied by the user, then extracts bounded inert page sections.",
+        "Web search uses DeepSeek Search and Fetch with the API credential saved for the configured origin. No local search runtime, engine catalog, endpoint selector, Python or container is required.",
+        "search_web returns up to ten public HTTPS URLs and bounded summaries. The query, site filters and lang: operator together must fit 128 Unicode characters. Language defaults to the system locale; domain filters use site: syntax.",
+        "read_web sends an authorized URL to DeepSeek Fetch and returns bounded sections of its Markdown response. Only URLs returned by the current generation’s search or explicitly supplied by the user are accepted. Remote retrieval and redirect handling are performed by DeepSeek.",
+        "Search and Fetch are charged separately from model tokens: currently CNY 5 per 1,000 successful requests with results. Empty searches and failed requests are not charged. The token usage popover does not include these request charges. Check the official pricing for changes.",
       ],
     },
     {

@@ -2,6 +2,10 @@
 
 Each release links to its extended notes in the [documentation](https://ycrasystudio.github.io/deepseek-agent/en/changelog/).
 
+## [Unreleased]
+
+- Replace the local SearXNG service with DeepSeek Search and Fetch, using the configured origin’s API credential. Remove runtime downloads, engine selection, start/stop commands and sidecar release workflows. Search summaries and fetched Markdown remain bounded, untrusted tool data; Search/Fetch request charges are separate from model token usage.
+
 ## [0.1.15] - 2026-09-13 [details](https://ycrasystudio.github.io/deepseek-agent/en/changelog/#v0-1-15)
 
 - **Added the `move_path` tool**: moves or renames a file or a whole directory inside the workspace, creating the destination's parent folder. It never overwrites, so an existing destination fails before anything is touched, and an optional `expectedBeforeHash` rejects the move if the source file changed after the preview.

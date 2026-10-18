@@ -24,8 +24,8 @@ Detached/background launchers are rejected because they can outlive the owned te
 
 ## Web tools
 
-- `search_web`: uses the selected isolated headless search engine and returns up to ten normalized organic HTTPS URLs.
-- `read_web`: reads only a URL registered to a search ID or explicitly supplied by the user, and returns bounded inert page sections.
+- `search_web`: calls DeepSeek Search (`POST /v1/tools/search`) and returns up to ten public HTTPS URLs with bounded summaries; the query plus `site:` and `lang:` filters must fit 128 Unicode characters.
+- `read_web`: calls DeepSeek Fetch (`POST /v1/tools/fetch`) for a URL registered to the current generation’s search or explicitly supplied by the user, and returns bounded Markdown sections as untrusted data.
 
 The Web search toggle controls both definitions. When disabled, neither tool is sent to DeepSeek.
 

@@ -24,13 +24,6 @@ export function mapReasoningEffort(reasoning: string | undefined): ReasoningEffo
   return reasoning === "max" ? "max" : "high";
 }
 
-export interface SearxngEngineOption {
-  name: string;
-  shortcut: string;
-  categories: string[];
-  enabled: boolean;
-}
-
 export interface AppConfig {
   interfaceLanguage: InterfaceLanguage;
   apiKey: string;
@@ -55,10 +48,6 @@ export interface AppConfig {
   usageBreakdown: boolean;
   usageCostCurrency: UsageCurrency;
   webSearchEnabled: boolean;
-  webSearchEngine: "searxng";
-  searxngUrl: string;
-  searxngEngines: string[];
-  searxngEngineCatalog: SearxngEngineOption[];
 
   userId?: string;
 }
@@ -89,8 +78,4 @@ export const DEFAULT_CONFIG: AppConfig = {
   usageBreakdown: false,
   usageCostCurrency: DEFAULT_USAGE_CURRENCY,
   webSearchEnabled: true,
-  webSearchEngine: "searxng",
-  searxngUrl: "http://127.0.0.1:8888",
-  searxngEngines: [],
-  searxngEngineCatalog: [],
 };

@@ -87,10 +87,10 @@ export const userManual: PageContent = {
     {
       title: "网页搜索",
       items: [
-        "启用网页搜索时，扩展会管理默认的 http://127.0.0.1:8888 端点。首次启动会下载当前平台对应的固定 SearXNG 运行时，验证预期大小和 SHA-256 摘要，并且只在 loopback 上运行；无需系统 Python、Docker、Podman 或 Chromium。",
-        "Settings 会加载已配置实例的引擎目录。保持自动选择时使用实例默认值；手动选择引擎后，每次搜索都会发送经过验证的快捷名称。",
-        "也可以配置兼容的自定义 SearXNG 端点。非 loopback 端点必须使用 HTTPS，并且拒绝包含凭据的 URL。",
-        "search_web 最多返回十个规范化 HTTPS 结果。read_web 只接受该搜索已登记或用户明确提供的 URL，然后提取有界、惰性的页面分段。",
+        "网页搜索通过 DeepSeek Search 和 Fetch 使用配置来源对应的 API 凭据。不再需要本地搜索运行时、引擎目录、端点选择器、Python 或容器。",
+        "search_web 最多返回十个公共 HTTPS URL 和有界摘要。查询、site: 过滤条件与 lang: 操作符合计不得超过 128 个 Unicode 字符。默认语言来自系统区域设置。",
+        "read_web 将授权 URL 发送至 DeepSeek Fetch，并将 Markdown 响应作为有界分段返回。仅接受当前生成中搜索返回的 URL 或用户明确提供的 URL。远程抓取和重定向处理由 DeepSeek 完成。",
+        "Search 和 Fetch 独立于模型 token 计费：当前每 1,000 次成功且有结果的请求收取 5 元。空搜索和失败请求不计费。token 用量面板不包含这些请求费用。请以官方最新定价为准。",
       ],
     },
     {

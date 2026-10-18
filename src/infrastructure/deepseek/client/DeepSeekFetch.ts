@@ -126,6 +126,8 @@ function getSafeHttpErrorMessage(status: number): string {
   switch (status) {
     case 401:
       return "Invalid API credentials.";
+    case 402:
+      return "Insufficient API balance.";
     case 403:
       return "API access denied.";
     case 429:

@@ -8,7 +8,7 @@ import { initializeLogger, logInfo } from "@/shared/logging/Logger";
 import { getWebRuntimeDiagnostics } from "@/vscode/tools/browser";
 import { ExtensionCompositionRoot } from "../CompositionRoot";
 
-type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled" | "searxngEngines" | "searxngEngineCatalog"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes";
+type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes";
 
 const LEGACY_SETTING_KEYS: ReadonlyArray<LegacySettingKey> = [
   "baseUrl",
@@ -51,7 +51,6 @@ async function initializeUserSettings(): Promise<void> {
   const legacyWebConfig = vscode.workspace.getConfiguration(`${CONFIG_SECTION}.webSearch`);
   const initialSettings: Record<string, unknown> = Object.fromEntries(LEGACY_SETTING_KEYS.map((key) => [key, legacyConfig.get(key)]));
   initialSettings.includeHomeAgents = legacyConfig.get(INCLUDE_HOME_AGENTS_KEY);
-  initialSettings.webSearchEngine = "searxng";
   await SettingsManager.initialize(initialSettings);
 
   const removals: Thenable<void>[] = [];

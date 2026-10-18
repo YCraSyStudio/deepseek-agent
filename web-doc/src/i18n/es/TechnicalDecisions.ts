@@ -12,7 +12,7 @@ export const technicalDecisions: PageContent = {
       items: [
         "contracts contiene modelos serializables de DeepSeek, configuración y protocolo webview v5, sin dependencias de UI, VS Code, filesystem o HTTP.",
         "application contiene las reglas de conversación, contexto, generación y herramientas independientes del proveedor mediante puertos explícitos.",
-        "infrastructure contiene chat DeepSeek, SSE, Files API, búsqueda SearXNG y extracción de páginas, revisión de mutaciones y tools concretas.",
+        "infrastructure contiene chat DeepSeek, SSE, Files API, DeepSeek Search y Fetch, revisión de mutaciones y tools concretas.",
         "platform/vscode contiene secretos, workspace, almacenamiento, procesos, confirmaciones, subida/caché de adjuntos, routing y diffs nativos.",
         "ui contiene la webview React y solo cambia el estado autoritativo de una herramienta después de recibir mensajes del host. Chat y Settings se agrupan por feature con imports internos explícitos.",
       ],
@@ -58,7 +58,7 @@ export const technicalDecisions: PageContent = {
       items: [
         "SSE admite comentarios, CRLF, campos data con o sin espacios, eventos multilínea, finalización del decoder, diagnósticos de JSON inválido y cancelación del reader.",
         "Las peticiones a DeepSeek normalizan URLs, usan un timeout de 60 segundos por intento y un máximo de tres intentos para fallos transitorios, respetando Retry-After.",
-        "La búsqueda web usa SearXNG. El endpoint loopback predeterminado se apoya en un runtime de plataforma cuya versión, tamaño y digest SHA-256 están fijados en el VSIX; los endpoints compatibles personalizados requieren HTTPS fuera de loopback y no pueden contener credenciales.",
+        "La búsqueda web usa DeepSeek Search y Fetch con la credencial API guardada para el origen configurado. No requiere un runtime de búsqueda local, catálogo de motores, selector de endpoints, Python ni contenedores. read_web envía una URL autorizada a DeepSeek Fetch y devuelve secciones acotadas de su respuesta Markdown. Solo acepta URLs devueltas por una búsqueda de la generación actual o proporcionadas explícitamente por el usuario. DeepSeek realiza la captura remota y gestiona las redirecciones.",
         "Los ajustes, el historial con esquema v2 y los checkpoints con esquema 3 viven bajo ~/.deepseek-agent/. Las credenciales viven separadas en Secret Storage de VS Code por origen normalizado; la webview solo recibe estado enmascarado. Los checkpoints nunca contienen una clave y los historiales o checkpoints incompatibles se eliminan sin migración.",
         "Las peticiones a DeepSeek rechazan URLs con credenciales, exigen HTTPS fuera de loopback, conservan el origen elegido durante redirecciones y eliminan valores sensibles de errores visibles.",
         "Las capacidades registradas de DeepSeek V4.1 Flash usan 1M tokens de contexto total y 384K de salida máxima. La reserva configurada es 384.000 por defecto y reduce el presupuesto de entrada junto con el margen de seguridad.",

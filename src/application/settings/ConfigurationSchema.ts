@@ -5,7 +5,6 @@ import {
   type AppConfig,
   type InterfaceLanguage,
   type PermissionMode,
-  type SearxngEngineOption,
 } from "@/contracts";
 import { normalizeApiBaseUrlOrDefault } from "@/shared/security/ApiOrigin";
 import { normalizeUsageCurrency } from "@/shared/usage/UsageCurrency";
@@ -18,7 +17,7 @@ const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
   "permissionMode", "autoContext", "historyEnabled",
-  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled", "webSearchEngine", "searxngUrl", "searxngEngines", "searxngEngineCatalog",
+  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled",
 ];
 
 const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
@@ -47,10 +46,6 @@ export function normalizeConfig(value: unknown): AppConfig {
     usageBreakdown: normalizeBoolean(config.usageBreakdown, DEFAULT_CONFIG.usageBreakdown),
     usageCostCurrency: normalizeUsageCurrency(config.usageCostCurrency),
     webSearchEnabled: normalizeBoolean(config.webSearchEnabled, DEFAULT_CONFIG.webSearchEnabled),
-    webSearchEngine: "searxng",
-    searxngUrl: normalizeSearxngUrl(config.searxngUrl),
-    searxngEngines: normalizeSearxngEngines(config.searxngEngines),
-    searxngEngineCatalog: normalizeSearxngEngineCatalog(config.searxngEngineCatalog),
   };
 }
 
@@ -81,10 +76,6 @@ export function normalizeSettingValue(key: StoredSettingKey, value: unknown): un
   if (key === "maxTokens") {return clampInteger(value, 1, MAX_OUTPUT_TOKENS, DEFAULT_CONFIG.maxTokens);}
   if (key === "maxConcurrentGenerations") {return clampInteger(value, 1, 16, DEFAULT_CONFIG.maxConcurrentGenerations);}
   if (key === "historyRetentionDays") {return clampInteger(value, 0, 3650, DEFAULT_CONFIG.historyRetentionDays);}
-  if (key === "webSearchEngine") {return "searxng";}
-  if (key === "searxngUrl") {return normalizeSearxngUrl(value);}
-  if (key === "searxngEngines") {return normalizeSearxngEngines(value);}
-  if (key === "searxngEngineCatalog") {return normalizeSearxngEngineCatalog(value);}
   return value;
 }
 
@@ -99,56 +90,6 @@ function normalizePermissionMode(value: unknown): PermissionMode {
   return value === "default" || value === "full-access" || value === "auto-approve"
     ? value
     : DEFAULT_CONFIG.permissionMode;
-}
-
-function normalizeSearxngUrl(value: unknown): string {
-  if (typeof value !== "string" || value.trim().length === 0) {return DEFAULT_CONFIG.searxngUrl;}
-  try {
-    const url = new URL(value.trim());
-    if (url.username || url.password) {return DEFAULT_CONFIG.searxngUrl;}
-    const hostname = url.hostname.toLowerCase();
-    const loopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-    if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {return DEFAULT_CONFIG.searxngUrl;}
-    url.search = "";
-    url.hash = "";
-    url.pathname = url.pathname.replace(/\/+$/, "");
-    return url.toString().replace(/\/$/, "");
-  } catch {return DEFAULT_CONFIG.searxngUrl;}
-}
-
-function normalizeSearxngEngines(value: unknown): string[] {
-  if (!Array.isArray(value)) {return DEFAULT_CONFIG.searxngEngines;}
-  const seen = new Set<string>();
-  for (const item of value) {
-    if (typeof item !== "string") {continue;}
-    const shortcut = item.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,64}$/.test(shortcut)) {continue;}
-    seen.add(shortcut);
-    if (seen.size >= 512) {break;}
-  }
-  return [...seen];
-}
-
-function normalizeSearxngEngineCatalog(value: unknown): SearxngEngineOption[] {
-  if (!Array.isArray(value)) {return DEFAULT_CONFIG.searxngEngineCatalog;}
-  const seen = new Set<string>();
-  const engines: SearxngEngineOption[] = [];
-  for (const item of value) {
-    if (!isRecord(item) || typeof item.name !== "string" || typeof item.shortcut !== "string") {continue;}
-    const shortcut = item.shortcut.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,64}$/.test(shortcut) || seen.has(shortcut)) {continue;}
-    seen.add(shortcut);
-    engines.push({
-      name: item.name.trim().slice(0, 256) || shortcut,
-      shortcut,
-      categories: Array.isArray(item.categories)
-        ? item.categories.filter((category): category is string => typeof category === "string").map((category) => category.slice(0, 128)).slice(0, 16)
-        : [],
-      enabled: item.enabled === true,
-    });
-    if (engines.length >= 512) {break;}
-  }
-  return engines;
 }
 
 function normalizeBoolean(value: unknown, fallback: boolean): boolean {

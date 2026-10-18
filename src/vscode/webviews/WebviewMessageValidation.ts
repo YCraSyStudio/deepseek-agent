@@ -242,12 +242,11 @@ const INTERFACE_LANGUAGES = ["auto", "en", "es", "zh"] as const;
 const PERMISSION_MODES = ["default", "auto-approve", "full-access"] as const;
 const USAGE_CURRENCIES = ["usd", "cny"] as const;
 
-const WEBVIEW_FORBIDDEN_SETTING_KEYS: ReadonlyArray<keyof AppConfig> = ["searxngEngineCatalog"];
 const WEBVIEW_ONLY_CONFIG_KEYS: ReadonlyArray<keyof AppConfig> = ["apiKey", "userId"];
 
 /** Derived from the stored settings so a new persisted key cannot be forgotten here. */
 const APP_CONFIG_KEYS: ReadonlyArray<keyof AppConfig> = [
-  ...SETTING_KEYS_LIST.filter((key) => !WEBVIEW_FORBIDDEN_SETTING_KEYS.includes(key)),
+  ...SETTING_KEYS_LIST,
   ...WEBVIEW_ONLY_CONFIG_KEYS,
 ];
 
@@ -275,26 +274,7 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
     isOptionalBoolean(value.usageBreakdown) &&
     (value.usageCostCurrency === undefined || isEnumOf(value.usageCostCurrency, USAGE_CURRENCIES)) &&
     isOptionalBoolean(value.webSearchEnabled) &&
-    (value.webSearchEngine === undefined || value.webSearchEngine === "bing" || value.webSearchEngine === "google" || value.webSearchEngine === "baidu" || value.webSearchEngine === "searxng") &&
-    (value.searxngUrl === undefined || isAllowedSearxngUrl(value.searxngUrl)) &&
-    (value.searxngEngines === undefined || isSearxngEngineSelection(value.searxngEngines)) &&
     isOptionalBoundedString(value.userId, 256)
   );
-}
-
-function isAllowedSearxngUrl(value: unknown): boolean {
-  if (!isNonEmptyBoundedString(value, 2048)) {return false;}
-  try {
-    const url = new URL(value.trim());
-    if (url.username || url.password) {return false;}
-    const hostname = url.hostname.toLowerCase();
-    const loopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-    return url.protocol === "https:" || (url.protocol === "http:" && loopback);
-  } catch {return false;}
-}
-
-function isSearxngEngineSelection(value: unknown): boolean {
-  return Array.isArray(value) && value.length <= 512 && value.every((item) =>
-    typeof item === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(item));
 }
 

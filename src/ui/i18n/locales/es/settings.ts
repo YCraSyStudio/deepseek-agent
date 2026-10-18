@@ -60,19 +60,8 @@ export const settings = {
     },
     webSearch: {
       title: "Búsqueda web",
-      description: "La extensión usa SearXNG para buscar en la web pública y combinar varios motores de búsqueda.",
+      description: "Busca y lee páginas con DeepSeek usando tu credencial API configurada. Las peticiones Search y Fetch se facturan por separado de los tokens del modelo.",
       enabled: "Habilitar búsqueda web",
-      engine: "Buscador",
-      searxngUrl: "Endpoint de SearXNG",
-      searxngManagedHint: "El endoint por defecto es http://127.0.0.1:8888, puedes personalizarlo para evitar conflictos de puertos",
-      engines: "Motores de búsqueda",
-      enginesDefault: "Automático (motores habilitados por SearXNG)",
-      enginesSelected: "seleccionados",
-      filterEngines: "Filtrar motores…",
-      useDefaults: "Usar predeterminados",
-      enabledByDefault: "Predeterminado",
-      noEngines: "Todavía no hay motores disponibles. Abre de nuevo Herramientas cuando SearXNG termine de iniciarse.",
-      enginesHint: "Si no seleccionas ninguno, SearXNG usa sus motores habilitados por defecto. Puedes seleccionar varios para combinarlos en la misma búsqueda."
     },
     sampling: {
       temperature: "Temperatura",

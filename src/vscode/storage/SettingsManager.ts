@@ -189,14 +189,7 @@ export class SettingsManager {
 }
 
 function cloneConfig(config: AppConfig): AppConfig {
-  return {
-    ...config,
-    searxngEngines: [...config.searxngEngines],
-    searxngEngineCatalog: config.searxngEngineCatalog.map((engine) => ({
-      ...engine,
-      categories: [...engine.categories],
-    })),
-  };
+  return { ...config };
 }
 
 function isPermissionAffectingPatch(partial: Partial<AppConfig>): boolean {

@@ -87,10 +87,10 @@ export const userManual: PageContent = {
     {
       title: "Búsqueda web",
       items: [
-        "Con la búsqueda web activa, la extensión administra el endpoint predeterminado http://127.0.0.1:8888. El primer inicio descarga el runtime SearXNG fijado para la plataforma actual, verifica su tamaño y digest SHA-256 esperados y lo ejecuta solo en loopback, sin requerir Python del sistema, Docker, Podman ni Chromium.",
-        "Settings carga el catálogo de motores de la instancia configurada. La selección automática usa los valores predeterminados de la instancia; al elegir motores se envían sus shortcuts validados con cada búsqueda.",
-        "Se puede configurar un endpoint SearXNG compatible. Los endpoints fuera de loopback deben usar HTTPS y se rechazan las URL con credenciales.",
-        "search_web devuelve hasta diez resultados HTTPS normalizados. read_web solo acepta una URL registrada por esa búsqueda o proporcionada explícitamente por el usuario y extrae secciones inertes y acotadas de la página.",
+        "La búsqueda web usa DeepSeek Search y Fetch con la credencial API guardada para el origen configurado. No requiere un runtime de búsqueda local, catálogo de motores, selector de endpoints, Python ni contenedores.",
+        "search_web devuelve hasta diez URLs HTTPS públicas y resúmenes acotados. La consulta, los filtros de sitios y el operador lang: deben ocupar juntos como máximo 128 caracteres Unicode. El idioma predeterminado procede del sistema; los filtros de dominio usan site:.",
+        "read_web envía una URL autorizada a DeepSeek Fetch y devuelve secciones acotadas de su respuesta Markdown. Solo acepta URLs devueltas por una búsqueda de la generación actual o proporcionadas explícitamente por el usuario. DeepSeek realiza la captura remota y gestiona las redirecciones.",
+        "Search y Fetch se facturan por separado de los tokens del modelo: actualmente 5 CNY por cada 1.000 peticiones exitosas con resultados. Las búsquedas vacías y las peticiones fallidas no se cobran. El panel de uso de tokens no incluye estos cargos. Consulta las tarifas oficiales por si cambian.",
       ],
     },
     {

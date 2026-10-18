@@ -1,4 +1,4 @@
-type WebSearchProviderId = "searxng";
+type WebSearchProviderId = "deepseek";
 
 export interface WebSecurityMetadata {
   source: "live_web";
@@ -10,8 +10,11 @@ export interface WebSecurityMetadata {
 export interface WebSearchResult {
   kind: "web_search_results";
   search_id: string;
+  warning_before: string;
+  warning_after: string;
   provider: WebSearchProviderId;
   urls: string[];
+  results?: Array<{ url: string; title: string; summary: string }>;
   trust: "untrusted_web_content";
   security: WebSecurityMetadata;
 }

@@ -12,7 +12,7 @@ export const technicalDecisions: PageContent = {
       items: [
         "contracts owns serializable DeepSeek, configuration, and protocol-v5 webview models without UI, VS Code, filesystem, or HTTP dependencies.",
         "application owns provider-independent conversation, context, generation, and tool rules through explicit ports.",
-        "infrastructure owns DeepSeek chat, SSE, Files API, SearXNG search and page extraction, mutation review, and concrete built-in tools.",
+        "infrastructure owns DeepSeek chat, SSE, Files API, DeepSeek Search and Fetch, mutation review, and concrete built-in tools.",
         "platform/vscode owns secrets, workspace access, storage, terminal processes, confirmations, attachment upload/cache, host-webview routing, and native change diffs.",
         "ui owns the React webview and changes authoritative tool state only after host messages. Chat and Settings are grouped by feature with explicit internal imports.",
       ],
@@ -58,7 +58,7 @@ export const technicalDecisions: PageContent = {
       items: [
         "SSE supports comments, CRLF, data fields with or without spaces, multiline events, decoder finalization, malformed JSON diagnostics, and reader cancellation.",
         "DeepSeek requests use normalized URLs, a 60-second per-attempt timeout, and at most three retries for transient failures while respecting Retry-After.",
-        "Web search uses SearXNG. The default loopback endpoint is backed by a platform runtime whose version, size, and SHA-256 digest are pinned in the VSIX; compatible custom endpoints require HTTPS outside loopback and cannot contain credentials.",
+        "Web search uses DeepSeek Search and Fetch with the API credential saved for the configured origin. No local search runtime, engine catalog, endpoint selector, Python or container is required. read_web sends an authorized URL to DeepSeek Fetch and returns bounded sections of its Markdown response. Only URLs returned by the current generation’s search or explicitly supplied by the user are accepted. Remote retrieval and redirect handling are performed by DeepSeek.",
         "Settings, schema-v2 conversation history, and schema-3 generation checkpoints live under ~/.deepseek-agent/. API credentials live separately in VS Code Secret Storage, keyed by normalized origin; only masked status reaches the webview. Checkpoints never contain a key, and incompatible history or checkpoint files are deleted without migration.",
         "DeepSeek requests reject credential-bearing URLs, require HTTPS outside loopback, preserve the selected origin across redirects, and redact sensitive values from surfaced errors.",
         "Registered DeepSeek V4.1 Flash capabilities use a 1M-token total context and 384K maximum output. The configured output allowance defaults to 384,000 and reduces the input budget alongside a safety margin.",

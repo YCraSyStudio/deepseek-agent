@@ -1,8 +1,8 @@
-const MAX_QUERY_CHARS = 500;
+const MAX_QUERY_CHARS = 128;
 const MAX_FOCUS_CHARS = 500;
 
 export function validateSearchQuery(value: unknown): string {
-  if (typeof value !== "string" || value.trim().length === 0 || value.trim().length > MAX_QUERY_CHARS) {
+  if (typeof value !== "string" || value.trim().length === 0 || Array.from(value.trim()).length > MAX_QUERY_CHARS) {
     throw new Error(`query must contain between 1 and ${MAX_QUERY_CHARS} characters`);
   }
   return value.trim();
@@ -55,14 +55,6 @@ export function validateLanguage(value: unknown): string | undefined {
     throw new Error("language must be a BCP-47 language tag such as es or es-ES");
   }
   return value.trim();
-}
-
-export function validateRegion(value: unknown): string | undefined {
-  if (value === undefined) {return undefined;}
-  if (typeof value !== "string" || !/^(?:[A-Za-z]{2}|\d{3})$/.test(value.trim())) {
-    throw new Error("region must be a two-letter country code or three-digit UN M49 code");
-  }
-  return value.trim().toUpperCase();
 }
 
 export function validateCursor(value: unknown): string | undefined {
