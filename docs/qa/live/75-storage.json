@@ -1,0 +1,12 @@
+{
+  "branch": 75,
+  "passed": true,
+  "checks": {
+    "realFilesMigrated": true,
+    "idempotent": true,
+    "liveModelFromMigratedSettings": true,
+    "interruptedMigrationRecovered": true,
+    "noCredentialWritten": true
+  },
+  "modelCostCny": 0.000023
+}
