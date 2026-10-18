@@ -60,19 +60,8 @@ export const settings = {
     },
     webSearch: {
       title: "Web 搜索",
-      description: "扩展使用 SearXNG 搜索公共网页，并可组合多个搜索引擎。",
+      description: "使用已配置的 API 凭据通过 DeepSeek 搜索和读取网页。Search 和 Fetch 请求独立于模型 token 计费。",
       enabled: "启用 Web 搜索",
-      engine: "搜索引擎",
-      searxngUrl: "SearXNG 端点",
-      searxngManagedHint: "默认端点为 http://127.0.0.1:8888，可自定义以避免端口冲突。",
-      engines: "搜索引擎",
-      enginesDefault: "自动（使用 SearXNG 已启用的引擎）",
-      enginesSelected: "个已选择",
-      filterEngines: "筛选引擎…",
-      useDefaults: "使用默认值",
-      enabledByDefault: "默认",
-      noEngines: "暂时没有可用引擎。SearXNG 启动完成后重新打开“工具”即可。",
-      enginesHint: "未选择任何引擎时，SearXNG 使用其默认启用的引擎。可选择多个引擎并在同一次搜索中组合使用。"
     },
     sampling: {
       temperature: "温度",

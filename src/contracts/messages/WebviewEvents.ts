@@ -1,4 +1,3 @@
-import type { SearchDiagnostics } from "../SearchDiagnostics";
 import type { ToolCall } from "../deepseek/Chat";
 import type { ConversationUsageSnapshot, UsageAggregate } from "@/shared/usage/Usage";
 import type {
@@ -22,7 +21,6 @@ import type {
 } from "./WebviewModels";
 
 export type HandlerToWebviewMessage =
-  | { type: "webSearchDiagnostics"; diagnostics?: SearchDiagnostics }
   | { type: "protocolReady"; protocolVersion: 5 }
   | { type: "protocolError"; supportedVersion: 5; error: string }
   | { type: "requestRejected"; requestId?: string; action?: string; error: string }

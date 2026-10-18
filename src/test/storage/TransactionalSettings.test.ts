@@ -7,6 +7,7 @@ import { getSettingsFilePath } from "@/infrastructure/persistence/UserDataPaths"
 import { getGenerationCheckpointDirectory } from "@/infrastructure/persistence/UserDataPaths";
 import { GenerationCheckpointStore } from "@/vscode/storage/GenerationCheckpointStore";
 import { VsCodeSettingsRepository } from "@/vscode/storage/RepositoryAdapters";
+import { normalizeConfig, toStoredSettings } from "@/application/settings/ConfigurationSchema";
 
 suite("transactional settings", () => {
   const previousNodeEnv = process.env.NODE_ENV;
@@ -35,29 +36,27 @@ suite("transactional settings", () => {
     assert.strictEqual(SettingsManager.getRevision(), revision);
   });
 
-  test("persists normalized web search settings with safe defaults", async () => {
-    assert.strictEqual(SettingsManager.load().webSearchEngine, "searxng");
+  test("persists the web search toggle and discards retired search settings", async () => {
     assert.strictEqual(SettingsManager.load().webSearchEnabled, true);
-    assert.strictEqual(SettingsManager.load().searxngUrl, "http://127.0.0.1:8888");
-    assert.deepStrictEqual(SettingsManager.load().searxngEngines, []);
     await SettingsManager.save({ webSearchEnabled: false });
     assert.strictEqual(SettingsManager.load().webSearchEnabled, false);
-    await SettingsManager.save({
-      webSearchEngine: "searxng",
-      searxngUrl: "https://search.example.com/",
-      searxngEngines: ["g", "ddg", "g"],
-    });
-    assert.strictEqual(SettingsManager.load().webSearchEngine, "searxng");
-    assert.strictEqual(SettingsManager.load().searxngUrl, "https://search.example.com");
-    assert.deepStrictEqual(SettingsManager.load().searxngEngines, ["g", "ddg"]);
     const disk = JSON.parse(readFileSync(getSettingsFilePath(), "utf8")) as Record<string, unknown>;
-    assert.strictEqual(disk.webSearchEngine, "searxng");
-    assert.strictEqual(disk.searxngUrl, "https://search.example.com");
-    assert.deepStrictEqual(disk.searxngEngines, ["g", "ddg"]);
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(disk, "webSearchBrowserVisible"), false);
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(disk, "usageBudgets"), false);
-    await SettingsManager.save({ webSearchEngine: "searxng", searxngUrl: "http://127.0.0.1:8888", searxngEngines: [] });
+    assert.strictEqual(disk.webSearchEnabled, false);
+    for (const key of ["webSearchEngine", "searxngUrl", "searxngEngines", "searxngFallbackEngines", "searxngEngineCatalog"]) {
+      assert.strictEqual(Object.prototype.hasOwnProperty.call(disk, key), false, key);
+    }
     await SettingsManager.save({ webSearchEnabled: true });
+  });
+
+  test("drops retired endpoint and engine fields when loading old settings", () => {
+    const retired = { webSearchEngine: "searxng", searxngUrl: "https://old.example.com",
+      searxngEngines: ["g"], searxngFallbackEngines: ["ddg"], searxngEngineCatalog: [{ name: "Old" }] };
+    const normalized = normalizeConfig({ ...retired, webSearchEnabled: false });
+    assert.strictEqual(normalized.webSearchEnabled, false);
+    for (const key of Object.keys(retired)) {
+      assert.ok(!Object.hasOwn(normalized, key));
+      assert.ok(!Object.hasOwn(toStoredSettings(normalized), key));
+    }
   });
 
   test("rolls back memory and revision when persistence fails", async () => {

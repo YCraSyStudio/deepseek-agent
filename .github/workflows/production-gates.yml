@@ -36,10 +36,6 @@ jobs:
       - run: pnpm run lint
       - run: pnpm run audit:dead-code
       - run: pnpm run test:unit
-      - run: pnpm run verify:searxng-runtime-config
-      - name: Verify published SearXNG runtime
-        if: steps.release-mode.outputs.release == 'true'
-        run: pnpm run verify:searxng-runtime
       - name: Validate release tag and changelog
         if: steps.release-mode.outputs.release == 'true'
         env:

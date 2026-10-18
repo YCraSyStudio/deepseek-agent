@@ -1,6 +1,3 @@
-import type { SearchDiagnostics } from "@/contracts/SearchDiagnostics";
-import { getVsCodeApi } from "@webview/VsCodeApi";
-import { useEffect, useMemo, useState } from "react";
 import type { PermissionMode } from "@/contracts";
 import { Toggle } from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
@@ -14,54 +11,11 @@ const PERMISSION_MODE_OPTIONS: Array<{ value: PermissionMode; label: string; des
 ];
 
 function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePending = false }: ToolsSectionProps) {
-  const [diagnostics, setDiagnostics] = useState<SearchDiagnostics>();
-  useEffect(() => {
-    const receive = (event: MessageEvent) => {
-      if (event.data.type === "webSearchDiagnostics") {setDiagnostics(event.data.diagnostics);}
-    };
-    window.addEventListener("message", receive);
-    getVsCodeApi()?.postMessage({ type: "getConfig" });
-    return () => window.removeEventListener("message", receive);
-  }, []);
-  const [engineFilter, setEngineFilter] = useState("");
   const selectedPermission = PERMISSION_MODE_OPTIONS.find((option) => option.value === config.permissionMode) ?? PERMISSION_MODE_OPTIONS[0];
-  const isAutomaticEngineSelection = config.searxngEngines.length === 0;
-  const defaultEngines = useMemo(
-    () => config.searxngEngineCatalog.filter((engine) => engine.enabled).map((engine) => engine.shortcut),
-    [config.searxngEngineCatalog],
-  );
-  const effectiveSelectedEngines = useMemo(
-    () => new Set(isAutomaticEngineSelection ? defaultEngines : config.searxngEngines),
-    [config.searxngEngines, defaultEngines, isAutomaticEngineSelection],
-  );
-  const visibleEngines = useMemo(() => {
-    const query = engineFilter.trim().toLowerCase();
-    if (!query) {return config.searxngEngineCatalog;}
-    return config.searxngEngineCatalog.filter((engine) =>
-      engine.name.toLowerCase().includes(query) ||
-      engine.shortcut.toLowerCase().includes(query) ||
-      engine.categories.some((category) => category.toLowerCase().includes(query)));
-  }, [config.searxngEngineCatalog, engineFilter]);
-
   const updatePermissionMode = (permissionMode: PermissionMode) => {
     updateConfig("permissionMode", permissionMode);
     saveOnBlur("permissionMode", permissionMode);
   };
-
-  const updateEngines = (engines: string[]) => {
-    updateConfig("searxngEngines", engines);
-    saveOnBlur("searxngEngines", engines);
-  };
-
-  const toggleEngine = (shortcut: string, checked: boolean) => {
-    const next = new Set(isAutomaticEngineSelection ? defaultEngines : config.searxngEngines);
-    if (checked) {next.add(shortcut);} else {next.delete(shortcut);}
-    updateEngines([...next]);
-  };
-
-  const engineSummary = isAutomaticEngineSelection
-    ? t("settings.webSearch.enginesDefault")
-    : `${config.searxngEngines.length} ${t("settings.webSearch.enginesSelected")}`;
 
   return (
     <section className="settingsSection toolsSection">
@@ -101,90 +55,6 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
             saveOnBlur("webSearchEnabled", enabled);
           }}
         />
-
-        <div className="settingRow searxngEndpointRow">
-          <label htmlFor="searxngUrl">{t("settings.webSearch.searxngUrl")}</label>
-          <input
-            id="searxngUrl"
-            type="url"
-            spellCheck={false}
-            value={config.searxngUrl}
-            disabled={!config.webSearchEnabled}
-            onChange={(event) => updateConfig("searxngUrl", event.currentTarget.value)}
-            onBlur={(event) => saveOnBlur("searxngUrl", event.currentTarget.value)}
-          />
-          <small className="settingsHint">{t("settings.webSearch.searxngManagedHint")}</small>
-        </div>
-
-        <div className="settingRow">
-          <label htmlFor="searxngFallbackEngines">Fallback engines (shortcuts, comma separated)</label>
-          <input id="searxngFallbackEngines" defaultValue={config.searxngFallbackEngines.join(", ")} disabled={!config.webSearchEnabled}
-            onBlur={(event) => {const engines = event.currentTarget.value.split(",").map((value) => value.trim()).filter(Boolean); updateConfig("searxngFallbackEngines", engines); saveOnBlur("searxngFallbackEngines", engines);}} />
-          <small>One retry when engines are unavailable. Empty disables fallback.</small>
-        </div>
-        {diagnostics ? <div className="settingsHint" role="status">
-          Last search: {diagnostics.availability}{diagnostics.singleEngine ? " · single-engine dependency" : ""}
-          {diagnostics.attempts.map((attempt, index) => <div key={index}>
-            {attempt.status} · {attempt.elapsedMs} ms · {attempt.contributingEngines.join(", ") || "engine metadata unavailable"}
-            {attempt.unavailableEngines.map((engine) => <div key={engine.engine}>{engine.engine}: {engine.reason}</div>)}
-          </div>)}
-        </div> : null}
-        <div className="settingRow searxngEnginesRow">
-          <label>{t("settings.webSearch.engines")}</label>
-          <details className="searxngEnginePicker">
-            <summary className="searxngEnginePickerSummary" aria-label={t("settings.webSearch.engines")}>
-              {engineSummary}
-            </summary>
-            <div className="searxngEnginePickerPanel">
-              <div className="searxngEnginePickerToolbar">
-                <input
-                  type="search"
-                  value={engineFilter}
-                  disabled={!config.webSearchEnabled}
-                  placeholder={t("settings.webSearch.filterEngines")}
-                  aria-label={t("settings.webSearch.filterEngines")}
-                  onChange={(event) => setEngineFilter(event.currentTarget.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={!config.webSearchEnabled || isAutomaticEngineSelection}
-                  onClick={() => updateEngines([])}
-                >
-                  {t("settings.webSearch.useDefaults")}
-                </button>
-              </div>
-
-              {visibleEngines.length > 0 ? (
-                <div className="searxngEngineList">
-                  {visibleEngines.map((engine) => {
-                    const toggleId = `searxng-engine-${engine.shortcut}`;
-                    return (
-                      <div className="searxngEngineOption" key={engine.shortcut}>
-                        <label className="searxngEngineOptionText" htmlFor={toggleId}>
-                          <span className="searxngEngineName" title={engine.name}>{engine.name}</span>
-                          <span className="searxngEngineMeta">
-                            !{engine.shortcut}
-                            {engine.enabled ? ` · ${t("settings.webSearch.enabledByDefault")}` : ""}
-                          </span>
-                        </label>
-                        <Toggle
-                          id={toggleId}
-                          checked={effectiveSelectedEngines.has(engine.shortcut)}
-                          disabled={!config.webSearchEnabled}
-                          onToggle={(checked) => toggleEngine(engine.shortcut, checked)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="searxngEngineEmpty">{t("settings.webSearch.noEngines")}</div>
-              )}
-            </div>
-          </details>
-          <small className="settingsHint">{t("settings.webSearch.enginesHint")}</small>
-        </div>
       </div>
     </section>
   );

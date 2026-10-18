@@ -21,7 +21,7 @@ suite("tool execution pipeline context", () => {
     const { context } = createExecutionContext({ executor: createToolExecutorStub({ metadata }).executor });
 
     assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("read_file", { path: "README.md" })), false);
-    assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("search_web", { query: "searxng" })), false);
+    assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("search_web", { query: "web search" })), false);
     assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("edit_file", { path: "src/app.ts" })), true);
     assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("unknown_tool")), true);
   });
@@ -45,7 +45,7 @@ suite("tool execution pipeline context", () => {
     assert.strictEqual(getPathArgument(toolCall("edit_file", { path: "src/app.ts" })), "src/app.ts");
     assert.strictEqual(getPathArgument(toolCall("run_terminal_command", { command: "npm test" })), undefined);
     assert.strictEqual(getPathArgument(toolCall("run_terminal_command", { command: "npm test", cwd: "/workspace" })), "/workspace");
-    assert.strictEqual(getPathArgument(toolCall("search_web", { query: "searxng" })), undefined);
+    assert.strictEqual(getPathArgument(toolCall("search_web", { query: "web search" })), undefined);
     assert.strictEqual(getPathArgument(toolCall("read_file", { path: "   " })), undefined);
     assert.strictEqual(getPathArgument({
       id: "call:broken",

@@ -1,5 +1,4 @@
-import type { SearchDiagnostics } from "@/contracts/SearchDiagnostics";
-type WebSearchProviderId = "searxng";
+type WebSearchProviderId = "deepseek";
 
 export interface WebSecurityMetadata {
   source: "live_web";
@@ -11,10 +10,11 @@ export interface WebSecurityMetadata {
 export interface WebSearchResult {
   kind: "web_search_results";
   search_id: string;
+  warning_before: string;
+  warning_after: string;
   provider: WebSearchProviderId;
   urls: string[];
-  diagnostics?: SearchDiagnostics;
-  provenance?: Array<{ url: string; engines: string[] }>;
+  results?: Array<{ url: string; title: string; summary: string }>;
   trust: "untrusted_web_content";
   security: WebSecurityMetadata;
 }
@@ -24,7 +24,6 @@ export interface WebSearchFailure {
   terminal: true;
   provider: WebSearchProviderId;
   reason: string;
-  diagnostics?: SearchDiagnostics;
   trust: "untrusted_web_content";
 }
 

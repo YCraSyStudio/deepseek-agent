@@ -60,19 +60,8 @@ export const settings = {
     },
     webSearch: {
       title: "Web search",
-      description: "The extension uses SearXNG to search the public web and combine multiple search engines.",
+      description: "Search and read web pages with DeepSeek using your configured API credential. Search and Fetch requests are billed separately from model tokens.",
       enabled: "Enable web search",
-      engine: "Search engine",
-      searxngUrl: "SearXNG endpoint",
-      searxngManagedHint: "The default endpoint is http://127.0.0.1:8888. You can customize it to avoid port conflicts.",
-      engines: "Search engines",
-      enginesDefault: "Automatic (SearXNG enabled engines)",
-      enginesSelected: "selected",
-      filterEngines: "Filter engines…",
-      useDefaults: "Use defaults",
-      enabledByDefault: "Default",
-      noEngines: "No engines are available yet. Reopen Tools after SearXNG finishes starting.",
-      enginesHint: "When none are selected, SearXNG uses its enabled engines. Select multiple engines to combine them in the same search."
     },
     sampling: {
       temperature: "Temperature",

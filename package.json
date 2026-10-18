@@ -51,16 +51,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "deepseek-agent.startSearxng",
-        "title": "YCraSy DeepSeek Agent: Start Local SearXNG",
-        "category": "YCraSy DeepSeek Agent"
-      },
-      {
-        "command": "deepseek-agent.stopSearxng",
-        "title": "YCraSy DeepSeek Agent: Stop Local SearXNG",
-        "category": "YCraSy DeepSeek Agent"
-      },
-      {
         "command": "deepseek-agent.openChat",
         "title": "YCraSy DeepSeek Agent: Open Chat",
         "category": "YCraSy DeepSeek Agent"
@@ -163,8 +153,6 @@
     "test:unit": "node scripts/run-unit-tests.mjs",
     "prepare:integration": "pnpm run build && node scripts/build-integration-tests.mjs",
     "test:integration": "pnpm run prepare:integration && vscode-test",
-    "verify:searxng-runtime-config": "node scripts/verify-searxng-runtime-config.mjs",
-    "verify:searxng-runtime": "node scripts/verify-searxng-runtime-release.mjs",
     "package:vsix": "node scripts/prepare-artifacts.mjs && vsce package --no-dependencies --out artifacts",
     "verify:vsix": "node scripts/assert-vsix-contents.mjs"
   },
