@@ -1,0 +1,29 @@
+{
+  "branch": 72,
+  "passed": true,
+  "checks": {
+    "integrated": {
+      "dimensions": {
+        "width": 640,
+        "height": 480,
+        "mediaType": "image/png"
+      },
+      "bytes": 15109,
+      "target": "http://127.0.0.1:46305/fixture"
+    },
+    "disabledBeforeLaunch": true,
+    "systemBrowser": {
+      "passed": false,
+      "error": "Error: Capture helper timed out"
+    }
+  },
+  "vscode": "1.142.0",
+  "startedOwnedSessions": [
+    "YCraSy UI capture c98f41b1-9a24-436e-bce3-874bc7b748aa",
+    " « YCraSy UI capture c98f41b1-9a24-436e-bce3-874bc7b748aa"
+  ],
+  "terminatedSessions": [
+    " « YCraSy UI capture c98f41b1-9a24-436e-bce3-874bc7b748aa",
+    "YCraSy UI capture c98f41b1-9a24-436e-bce3-874bc7b748aa"
+  ]
+}
