@@ -88,6 +88,16 @@
         "command": "deepseek-agent.clearDiagnostics",
         "title": "YCraSy DeepSeek Agent: Clear Diagnostics",
         "category": "YCraSy DeepSeek Agent"
+      },
+      {
+        "command": "deepseek-agent.completeEditor",
+        "title": "%editor.complete%",
+        "category": "YCraSy DeepSeek Agent"
+      },
+      {
+        "command": "deepseek-agent.refactorEditor",
+        "title": "%editor.refactor%",
+        "category": "YCraSy DeepSeek Agent"
       }
     ],
     "menus": {
@@ -100,20 +110,35 @@
       ],
       "editor/context": [
         {
-          "command": "deepseek-agent.addSelectionToChat",
-          "when": "editorHasSelection",
+          "submenu": "deepseek-agent.editorActions",
+          "when": "editorTextFocus && !editorReadonly",
           "group": "navigation@50"
-        },
-        {
-          "command": "deepseek-agent.reviewChanges",
-          "when": "resourceScheme == file",
-          "group": "navigation@51"
         }
       ],
       "scm/title": [
         {
           "command": "deepseek-agent.reviewChanges",
           "group": "navigation@50"
+        }
+      ],
+      "deepseek-agent.editorActions": [
+        {
+          "command": "deepseek-agent.completeEditor",
+          "group": "1_code@1"
+        },
+        {
+          "command": "deepseek-agent.refactorEditor",
+          "group": "1_code@2"
+        },
+        {
+          "command": "deepseek-agent.addSelectionToChat",
+          "when": "editorHasSelection",
+          "group": "2_context@0"
+        },
+        {
+          "command": "deepseek-agent.reviewChanges",
+          "when": "resourceScheme == file",
+          "group": "2_context@1"
         }
       ]
     },
@@ -136,7 +161,13 @@
           "visibility": "visible"
         }
       ]
-    }
+    },
+    "submenus": [
+      {
+        "id": "deepseek-agent.editorActions",
+        "label": "YCraSy DeepSeek Agent"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "pnpm run build",

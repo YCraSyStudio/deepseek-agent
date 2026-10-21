@@ -2,6 +2,7 @@ import type { TranslationCatalog } from "../Types";
 
 export const chat = {
   chat: {
+    acceptSuggestion: "有可用建议。按 Tab 接受，按 Escape 关闭。",
     incognitoActive: "无痕模式已启用。重新加载扩展后，本聊天将丢失。",
     applyingPermissions: "正在应用权限...",
     apiKeyMissing: "缺少 API key",
@@ -95,7 +96,8 @@ export const chat = {
         securityReview: "安全检查",
         contextSummary: "上下文摘要",
         fileCompaction: "文件压缩",
-        visionAnalysis: "视觉分析"
+        visionAnalysis: "视觉分析",
+        codeCompletion: "Beta 代码补全"
       }
     }
   }

@@ -58,6 +58,8 @@ suite("DeepSeek command safety reviewer", () => {
     });
     assert.strictEqual(review.risk, "routine");
     assert.strictEqual(payload.toolName, "create_file");
+    assert.ok(!Object.hasOwn(payload, "workspaceRoot"));
+    assert.ok(Object.hasOwn(payload, "scopeFacts"));
     assert.doesNotMatch(JSON.stringify(payload), /PRIVATE-CONTENT/);
   });
 

@@ -85,11 +85,28 @@ export const userManual: PageContent = {
       ],
     },
     {
+      title: "Funciones beta opcionales",
+      items: [
+        "En Ajustes → General, Habilitar funciones beta de DeepSeek está desactivado por defecto. Al activarlo se ofrece al agente complete_code para completar un prefijo de respuesta o rellenar un hueco (FIM), y se habilitan los esquemas estrictos de herramientas. Chat Prefix Completion también admite un prefijo de razonamiento proporcionado por quien llama, con el modo de razonamiento activado.",
+        "Puedes pedir al agente que rellene el cuerpo de una función mediante FIM o continúe un prefijo concreto. La herramienta devuelve texto y no modifica archivos; las herramientas de edición mantienen sus permisos. La herramienta del agente sigue bajo demanda. Los ajustes independientes Sugerencias en el editor y Sugerencias en el chat muestran texto gris tras una breve pausa: Tab acepta y Escape descarta. El editor usa FIM; el chat continúa el final del borrador y da prioridad a las rutas ./.",
+        "Las peticiones conservan el origen y la credencial configurados y usan la ruta beta. El límite predeterminado es de 1.024 tokens de salida, con un máximo de 4.096 o el límite configurado si es menor. El consumo aparece en Completación beta de código. Desactivar bloquea nuevas llamadas beta y devuelve las siguientes rondas de herramientas al chat estable; las peticiones en curso pueden terminar. Al activar, la herramienta está disponible para las nuevas generaciones.",
+        "Clic derecho en un editor → YCraSy DeepSeek Agent → Completar o Refactorizar. La selección tiene prioridad; una línea vacía toma el archivo completo; en otro caso se usa el símbolo más pequeño que contiene el cursor, con una sentencia o línea como alternativa. Revisa el diff y elige Aplicar o Descartar. Los cambios admiten deshacer y no sobrescriben un documento que haya cambiado. Completar requiere beta; Refactorizar usa la API estable.",
+        "Las sugerencias automáticas envían código cercano acotado o el borrador actual, sin razonamiento, con 256/96 tokens de salida y cancelación/caché. Consumen API; el tooltip de DeepSeek en la barra de estado muestra este uso separado del chat. Requieren confianza en el workspace y excluyen nombres de archivos sensibles. Desactivar beta detiene estas peticiones.",
+      ],
+    },
+    {
+      title: "Privacidad",
+      items: [
+        "Ajustes → General → Privacidad activa por defecto la minimización de metadatos como mejor esfuerzo: los avisos automáticos omiten las rutas absolutas del workspace, no se envían identificadores opcionales de usuario ni nombres de imágenes, y las fechas usan UTC sin el nombre de la zona horaria local. Se conservan las rutas relativas y las referencias necesarias para las herramientas. No anonimiza mensajes, código, salidas de herramientas, contenido o metadatos incrustados en imágenes ni el historial existente. No garantiza anonimato ni cumplimiento del RGPD. No se recopila telemetría de uso; el proveedor API sigue recibiendo los datos necesarios para responder y la IP de conexión.",
+      ],
+    },
+    {
       title: "Búsqueda web",
       items: [
         "La búsqueda web usa DeepSeek Search y Fetch con la credencial API guardada para el origen configurado. No requiere un runtime de búsqueda local, catálogo de motores, selector de endpoints, Python ni contenedores.",
-        "search_web devuelve hasta diez URLs HTTPS públicas y resúmenes acotados. La consulta, los filtros de sitios y el operador lang: deben ocupar juntos como máximo 128 caracteres Unicode. El idioma predeterminado procede del sistema; los filtros de dominio usan site:.",
-        "read_web envía una URL autorizada a DeepSeek Fetch y devuelve secciones acotadas de su respuesta Markdown. Solo acepta URLs devueltas por una búsqueda de la generación actual o proporcionadas explícitamente por el usuario. DeepSeek realiza la captura remota y gestiona las redirecciones.",
+        "La búsqueda está orientada al desarrollo: prioriza documentación de las versiones del proyecto, repositorios originales y discusiones pertinentes. Solicita ocho resultados por defecto, admite hasta 50 y conserva los datos disponibles de relevancia, autoridad y fecha en una salida acotada. Consulta y operadores deben caber en 128 caracteres Unicode. Las fuentes técnicas en inglés siguen disponibles salvo que restrinjas el idioma explícitamente.",
+        "read_web reutiliza el contenido disponible en Search o en lecturas anteriores de la generación actual, y llama a DeepSeek Fetch cuando falta ese contenido. Solo acepta URLs devueltas por búsquedas de la generación actual o proporcionadas explícitamente por ti. Las secciones devueltas siguen estando acotadas y se tratan como datos no fiables.",
+        "En Ajustes → Herramientas, la búsqueda es Global por defecto. Elige Automático para usar el país configurado en el sistema local, o un código como ES. Puedes pedir otro país o una búsqueda mundial en el chat. Es una preferencia de relevancia y no garantiza el orden geográfico de los resultados. La región del sistema no equivale a ubicación física. No se consulta ni se añade la IP a los parámetros de búsqueda; el proveedor API sigue viendo la dirección de conexión habitual.",
         "Search y Fetch se facturan por separado de los tokens del modelo: actualmente 5 CNY por cada 1.000 peticiones exitosas con resultados. Las búsquedas vacías y las peticiones fallidas no se cobran. El panel de uso de tokens no incluye estos cargos. Consulta las tarifas oficiales por si cambian.",
       ],
     },

@@ -11,8 +11,18 @@ export function resolveSearchLocale(
   vscodeLanguage: string | undefined,
 ): SearchLocale {
   const base = parseLocale(languageArgument ?? systemLocale ?? vscodeLanguage ?? "en");
-  const region = regionArgument ?? base.region;
+  const region = regionArgument === "global" ? undefined
+    : regionArgument ?? base.region ?? parseLocale(systemLocale ?? "en").region;
   return { language: base.language, region, tag: region ? `${base.language}-${region}` : base.language };
+}
+
+export function resolveSearchRegion(value: unknown, systemLocale: string | undefined): string | undefined {
+  if (value === "global") {return undefined;}
+  if (value === undefined || value === "auto") {return parseLocale(systemLocale ?? "en").region;}
+  if (typeof value !== "string" || !/^[A-Za-z]{2}$/.test(value)) {
+    throw new Error("region must be a two-letter country code or global");
+  }
+  return value.toUpperCase();
 }
 
 export function addDomainConstraint(query: string, domains: readonly string[]): string {

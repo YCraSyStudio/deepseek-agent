@@ -51,6 +51,11 @@ export interface AppConfig {
   automaticCaptureLimit: number;
   browserAccess: "ask" | "always" | "never";
   webSearchEnabled: boolean;
+  webSearchRegion: string;
+  privacyMinimizeData: boolean;
+  betaFeaturesEnabled: boolean;
+  editorSuggestionsEnabled: boolean;
+  chatSuggestionsEnabled: boolean;
 
   userId?: string;
 }
@@ -84,4 +89,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   automaticCaptureLimit: 10,
   browserAccess: "ask",
   webSearchEnabled: true,
+  webSearchRegion: "global",
+  privacyMinimizeData: true,
+  betaFeaturesEnabled: false,
+  editorSuggestionsEnabled: true,
+  chatSuggestionsEnabled: true,
 };

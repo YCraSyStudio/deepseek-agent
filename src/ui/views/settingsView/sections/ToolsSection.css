@@ -12,7 +12,7 @@
     padding-bottom: 14px;
   }
 
-  .permissionModeLabel,
+  .permissionModeRow .settingLabel,
   .subsectionTitle {
     color: var(--text-primary);
     font-size: 13px;
@@ -25,15 +25,6 @@
 
   .permissionModeSelect {
     width: 100%;
-  }
-
-  .permissionModeDescription {
-    color: var(--text-secondary);
-    line-height: 1.4;
-  }
-
-  .settingsHint {
-    margin: 0 0 4px;
   }
 
 }

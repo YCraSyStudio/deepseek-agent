@@ -1,6 +1,7 @@
 import type { CaptureScreenshotRequest, CaptureScreenshotResult } from "@/contracts/Capture";
 import type { ToolDefinition } from "@/contracts";
 import type { ToolExecutionOutcome } from "@/domain/tools/ToolExecutionOutcome";
+import type { CodeCompletionRequest } from "@/contracts/CodeCompletion";
 
 export type DangerLevel = "safe" | "caution" | "dangerous" | "destructive";
 
@@ -37,6 +38,7 @@ export interface ToolHandlerContext {
   webTainted?: boolean;
   captureScreenshot?: (request: CaptureScreenshotRequest, signal?: AbortSignal) => Promise<CaptureScreenshotResult>;
   analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
+  completeCode?: (request: CodeCompletionRequest, signal?: AbortSignal) => Promise<string>;
 }
 
 export interface ValidationResult {

@@ -70,6 +70,8 @@ export interface ToolCallRunOptions {
   onContextCompacted?: (data: { estimatedTokensBefore: number; estimatedTokensAfter: number }) => Promise<void> | void;
   captureScreenshot?: ToolHandlerContext["captureScreenshot"];
   analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
+  completeCode?: ToolHandlerContext["completeCode"];
+  isBetaFeaturesEnabled?: () => boolean;
 }
 
 export interface ToolCallRunResult {
@@ -109,6 +111,7 @@ export interface ToolExecutionContext {
   permissionFingerprint?: string;
   captureScreenshot?: ToolHandlerContext["captureScreenshot"];
   analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
+  completeCode?: ToolHandlerContext["completeCode"];
 }
 
 export interface HandleExecutionResultOptions {

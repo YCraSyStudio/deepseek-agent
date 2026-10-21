@@ -4,6 +4,12 @@ Each release links to its extended notes in the [documentation](https://ycrasyst
 
 ## [Unreleased]
 
+- Add native editor inline suggestions and gray chat-draft continuations with separate beta-gated switches, debounce, cancellation, bounded context, caching and usage reporting. Add an editor submenu for Complete/Refactor, using the selection, enclosing symbol or whole file on blank lines, with a diff preview, undoable application and stale-document protection.
+- Condense settings labels and move explanatory text into keyboard-accessible help tooltips.
+- Add an opt-in Beta features switch for DeepSeek Chat Prefix Completion, FIM code completion and strict function calling. The agent's `complete_code` tool generates bounded text without editing files, reports its usage separately, and blocks new requests when beta is disabled. Chat routing preserves the configured API origin and proxy prefix, and returns to the stable path when disabled.
+- Add a Privacy section with best-effort automatic-metadata minimization enabled by default: omit absolute workspace roots from generated notices/review metadata, optional user identifiers and image filenames; use UTC timestamps without a named local time zone. Explicit content and existing history are not rewritten. Clarify the distinction between no usage telemetry and necessary API transmission.
+
+- Optimize web research for software development with version-matched technical sources, relevance/authority/date metadata, and global search by default with configurable country or automatic system-region preference, without IP lookup or an IP localization parameter. Explicit country/global requests override the preference; English technical sources remain available. Reuse Search page content and previously read documents to reduce Fetch calls.
 - Replace the local SearXNG service with DeepSeek Search and Fetch, using the configured origin’s API credential. Remove runtime downloads, engine selection, start/stop commands and sidecar release workflows. Search summaries and fetched Markdown remain bounded, untrusted tool data; Search/Fetch request charges are separate from model token usage.
 
 ## [0.1.15] - 2026-09-13 [details](https://ycrasystudio.github.io/deepseek-agent/en/changelog/#v0-1-15)

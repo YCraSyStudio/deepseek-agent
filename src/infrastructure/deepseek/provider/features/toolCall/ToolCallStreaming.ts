@@ -4,6 +4,7 @@ import type { ProviderUsage } from "@/shared/usage/Usage";
 import { buildToolCallRequest } from "./ToolCallRequest";
 import { assertUniqueToolCallIds } from "../ChatResponseValidation";
 import type { ToolCallCycleOptions } from "@/application/chat/toolCall/ToolCallTypes";
+import { normalizeBetaToolMessages } from "../StrictTools";
 
 interface StreamToolCallRoundOptions {
   messages: ChatMessage[];
@@ -23,6 +24,7 @@ export async function streamToolCallRound(options: StreamToolCallRoundOptions): 
 
 async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, conciseRecovery: boolean): Promise<ChatResponse> {
   const { messages, tools, model, apiKey, baseUrl, cycleOptions, emitStreamEvents = true } = options;
+  const betaEnabled = cycleOptions.betaFeaturesEnabled === true && (cycleOptions.isBetaFeaturesEnabled?.() ?? true);
   const effectiveMessages = conciseRecovery ? withConciseRecoveryInstruction(messages) : messages;
   const effectiveCycleOptions = conciseRecovery
     ? { ...cycleOptions, thinkingMode: false, reasoningEffort: undefined }
@@ -75,6 +77,7 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
         }
       },
       signal: combinedSignal,
+      betaFeaturesEnabled: betaEnabled,
     });
   } catch (error) {
     if (stoppedForExcessiveReasoning && !cycleOptions.signal?.aborted && cycleOptions.budgetManager) {
@@ -107,7 +110,7 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
     choices: [
       {
         index: 0,
-        message,
+        message: betaEnabled ? normalizeBetaToolMessages([message], tools)[0] : message,
         finish_reason: finishReason as "stop" | "length" | "tool_calls" | "content_filter" | "insufficient_system_resource" | null,
       },
     ],

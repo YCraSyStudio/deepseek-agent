@@ -1,17 +1,16 @@
 import type { PermissionMode } from "@/contracts";
-import { Toggle } from "@webview/components/settingsView";
+import { SettingLabel, Toggle } from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
 import type { ToolsSectionProps } from "../model";
 import "./ToolsSection.css";
 
-const PERMISSION_MODE_OPTIONS: Array<{ value: PermissionMode; label: string; description: string }> = [
-  { value: "default", label: t("tools.default"), description: t("tools.defaultDescription") },
-  { value: "auto-approve", label: t("tools.autoApprove"), description: t("tools.autoApproveModeDescription") },
-  { value: "full-access", label: t("tools.fullAccess"), description: t("tools.fullAccessDescription") },
-];
-
 function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePending = false }: ToolsSectionProps) {
-  const selectedPermission = PERMISSION_MODE_OPTIONS.find((option) => option.value === config.permissionMode) ?? PERMISSION_MODE_OPTIONS[0];
+  const permissionOptions: Array<{ value: PermissionMode; label: string; description: string }> = [
+    { value: "default", label: t("tools.default"), description: t("tools.defaultDescription") },
+    { value: "auto-approve", label: t("tools.autoApprove"), description: t("tools.autoApproveModeDescription") },
+    { value: "full-access", label: t("tools.fullAccess"), description: t("tools.fullAccessDescription") },
+  ];
+  const selectedPermission = permissionOptions.find((option) => option.value === config.permissionMode) ?? permissionOptions[0];
   const updatePermissionMode = (permissionMode: PermissionMode) => {
     updateConfig("permissionMode", permissionMode);
     saveOnBlur("permissionMode", permissionMode);
@@ -22,12 +21,11 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
       <h3 className="sectionTitle">{t("settings.tab.tools")}</h3>
 
       <div className="permissionModeRow">
-        <label className="permissionModeLabel" htmlFor="permissionMode">{t("tools.permissionMode")}</label>
+        <SettingLabel htmlFor="permissionMode" label={t("tools.permissionMode")} help={selectedPermission.description} />
         <select
           id="permissionMode"
           className="permissionModeSelect"
           aria-label={t("tools.permissionMode")}
-          aria-describedby="permissionModeDescription"
           value={config.permissionMode}
           disabled={permissionUpdatePending}
           aria-busy={permissionUpdatePending}
@@ -36,43 +34,67 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
             if (permissionMode) {updatePermissionMode(permissionMode);}
           }}
         >
-          {PERMISSION_MODE_OPTIONS.map((option) => (
+          {permissionOptions.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
-        <small id="permissionModeDescription" className="permissionModeDescription">{selectedPermission.description}</small>
       </div>
 
       <div className="settingRow">
-        <label htmlFor="browserAccess">Browser capture access</label>
+        <label htmlFor="browserAccess">{t("settings.browser.access")}</label>
         <select id="browserAccess" value={config.browserAccess} onChange={(event) => {
           const value = event.currentTarget.value as "ask" | "always" | "never";
           updateConfig("browserAccess", value); saveOnBlur("browserAccess", value);
-        }}><option value="ask">Ask per origin</option><option value="always">Always</option><option value="never">Never</option></select>
+        }}><option value="ask">{t("settings.browser.ask")}</option><option value="always">{t("settings.browser.always")}</option><option value="never">{t("settings.browser.never")}</option></select>
       </div>
       <div className="settingRow">
-        <label htmlFor="automaticCaptureEnabled">Automatic capture after UI changes</label>
-        <Toggle id="automaticCaptureEnabled" checked={config.automaticCaptureEnabled} onToggle={(checked) => {
+        <Toggle id="automaticCaptureEnabled" label={t("settings.browser.automatic")} help={t("settings.browser.automaticHelp")} checked={config.automaticCaptureEnabled} onToggle={(checked) => {
           updateConfig("automaticCaptureEnabled", checked); saveOnBlur("automaticCaptureEnabled", checked);
         }} />
-        <small>Uses the last explicitly captured target. Captures stay local until analyzed.</small>
       </div>
       <div className="settingRow">
-        <label htmlFor="automaticCaptureLimit">Automatic captures per conversation</label>
+        <label htmlFor="automaticCaptureLimit">{t("settings.browser.limit")}</label>
         <input id="automaticCaptureLimit" type="number" min={1} max={40} value={config.automaticCaptureLimit} onChange={(event) => updateConfig("automaticCaptureLimit", Number(event.currentTarget.value))} onBlur={(event) => saveOnBlur("automaticCaptureLimit", Number(event.currentTarget.value))} />
       </div>
       <div className="webSearchSettings">
         <h4 className="subsectionTitle">{t("settings.webSearch.title")}</h4>
-        <p className="settingsHint">{t("settings.webSearch.description")}</p>
         <Toggle
           id="webSearchEnabled"
           label={t("settings.webSearch.enabled")}
+          help={t("settings.webSearch.description")}
           checked={config.webSearchEnabled}
           onToggle={(enabled) => {
             updateConfig("webSearchEnabled", enabled);
             saveOnBlur("webSearchEnabled", enabled);
           }}
         />
+        <SettingLabel htmlFor="webSearchRegion" label={t("settings.webSearch.region")} help={t("settings.webSearch.regionHint")} />
+        <select
+          id="webSearchRegion"
+          value={["global", "auto"].includes(config.webSearchRegion) ? config.webSearchRegion : "custom"}
+          onChange={(event) => {
+            const value = event.currentTarget.value === "custom" ? "" : event.currentTarget.value;
+            updateConfig("webSearchRegion", value);
+            if (value) {saveOnBlur("webSearchRegion", value);}
+          }}
+        >
+          <option value="global">{t("settings.webSearch.global")}</option>
+          <option value="auto">{t("settings.webSearch.auto")}</option>
+          <option value="custom">{t("settings.webSearch.custom")}</option>
+        </select>
+        {!["global", "auto"].includes(config.webSearchRegion) ? (
+          <input
+            aria-label={t("settings.webSearch.countryCode")}
+            placeholder="ES"
+            data-tooltip={t("settings.webSearch.countryCode")}
+            autoCapitalize="characters"
+            spellCheck={false}
+            value={config.webSearchRegion}
+            maxLength={2}
+            onChange={(event) => updateConfig("webSearchRegion", event.currentTarget.value.toUpperCase())}
+            onBlur={(event) => saveOnBlur("webSearchRegion", event.currentTarget.value.trim() || "global")}
+          />
+        ) : null}
       </div>
     </section>
   );
@@ -81,5 +103,5 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
 export default ToolsSection;
 
 function parsePermissionMode(value: string): PermissionMode | undefined {
-  return PERMISSION_MODE_OPTIONS.find((option) => option.value === value)?.value;
+  return value === "default" || value === "auto-approve" || value === "full-access" ? value : undefined;
 }

@@ -22,11 +22,13 @@ export async function uploadDeepSeekImage(options: {
   mediaType: string;
   expiresAfterSeconds?: number;
   signal?: AbortSignal;
+  minimizeMetadata?: boolean;
 }): Promise<DeepSeekFile> {
   if (options.bytes.byteLength === 0 || options.bytes.byteLength > MAX_FILE_BYTES) {
     throw new Error("Images uploaded to DeepSeek must be between 1 byte and 64 MiB.");
   }
-  const filename = options.filename.slice(0, MAX_FILENAME_LENGTH);
+  const extension = ({ "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" } as Record<string, string>)[options.mediaType] ?? "bin";
+  const filename = options.minimizeMetadata !== false ? `image.${extension}` : options.filename.slice(0, MAX_FILENAME_LENGTH);
   const form = new FormData();
   form.append("purpose", "user_data");
   if (options.expiresAfterSeconds !== undefined) {

@@ -20,17 +20,21 @@ export class HeadlessWebRuntime {
   async render(url: string, policy: WebAccessPolicy, signal?: AbortSignal): Promise<RenderedPage> {
     const authorized = policy.assertNavigationAllowed(url).toString();
     const page = await this.client.fetchPage(authorized, signal);
-    const content = page.content.replace(/<(script|style|iframe|object)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "").trim();
-    if (!content) {throw new Error("The web page did not return readable text content");}
-    return {
-      title: page.title, url: authorized, content, sections: [content], outline: [], links: [],
-      contentHash: createHash("sha256").update(content).digest("hex"),
-      injectionRisk: detectPromptInjection(content) ? "suspected" : "none",
-    };
+    return createRenderedPage(page.title, authorized, page.content);
   }
 
   getDiagnostics(): Record<string, unknown> {return this.client.getDiagnostics();}
   async dispose(): Promise<void> {this.client.dispose();}
+}
+
+export function createRenderedPage(title: string, url: string, rawContent: string): RenderedPage {
+  const content = rawContent.replace(/<(script|style|iframe|object)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "").trim();
+  if (!content) {throw new Error("The web page did not return readable text content");}
+  return {
+    title, url, content, sections: [content], outline: [], links: [],
+    contentHash: createHash("sha256").update(content).digest("hex"),
+    injectionRisk: detectPromptInjection(content) ? "suspected" : "none",
+  };
 }
 
 export function detectPromptInjection(content: string): boolean {

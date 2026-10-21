@@ -1,0 +1,39 @@
+.settingLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+
+  label {
+    min-width: 0;
+  }
+}
+
+.settingHelp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: help;
+
+  .codicon {
+    font-size: 13px;
+  }
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--input-bg);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+  }
+}

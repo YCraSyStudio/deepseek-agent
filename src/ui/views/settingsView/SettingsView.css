@@ -79,6 +79,13 @@
     gap: 5px;
     display: flex;
   }
+  .privacySection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 14px;
+  }
   .notification {
     min-height: 28px;
     border: 1px solid var(--border-color);

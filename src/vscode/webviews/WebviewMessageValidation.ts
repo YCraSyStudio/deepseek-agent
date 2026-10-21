@@ -39,7 +39,11 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
         isNonEmptyBoundedString(value.requestId, 128) && typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
         typeof value.screenshotId === "string" && /^screenshot-\d+$/.test(value.screenshotId);
     case "newConversation":
+    case "cancelChatSuggestion":
       return hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128);
+    case "getChatSuggestion":
+      return hasOnlyKeys(value, ["type", "requestId", "prefix"]) && isNonEmptyBoundedString(value.requestId, 128) &&
+        isNonEmptyBoundedString(value.prefix, 12_000);
     case "selectAttachments":
       return hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
@@ -282,6 +286,11 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
     (value.automaticCaptureLimit === undefined || (Number.isSafeInteger(value.automaticCaptureLimit) && (value.automaticCaptureLimit as number) >= 1 && (value.automaticCaptureLimit as number) <= 40)) &&
     (value.browserAccess === undefined || isEnumOf(value.browserAccess, ["ask", "always", "never"])) &&
     isOptionalBoolean(value.webSearchEnabled) &&
+    isOptionalBoolean(value.privacyMinimizeData) &&
+    isOptionalBoolean(value.betaFeaturesEnabled) &&
+    isOptionalBoolean(value.editorSuggestionsEnabled) &&
+    isOptionalBoolean(value.chatSuggestionsEnabled) &&
+    (value.webSearchRegion === undefined || (typeof value.webSearchRegion === "string" && /^(?:auto|global|[A-Za-z]{2})$/.test(value.webSearchRegion))) &&
     isOptionalBoundedString(value.userId, 256)
   );
 }

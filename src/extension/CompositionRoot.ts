@@ -16,6 +16,10 @@ import {
 } from "@/vscode/storage/RepositoryAdapters";
 import { WebviewProvider } from "@/vscode/webviews/WebviewProvider";
 import { DeepSeekModelProviderFactory } from "@/infrastructure/deepseek/provider/DeepSeekModelProviderFactory";
+import { CompletionService } from "@/vscode/completions/CompletionService";
+import { registerEditorFeatures } from "@/vscode/completions/EditorFeatures";
+import { SettingsManager } from "@/vscode/storage/SettingsManager";
+import { formatUsageCost } from "@/shared/usage/Usage";
 
 export class ExtensionCompositionRoot implements vscode.Disposable {
   readonly settings = new VsCodeSettingsRepository();
@@ -24,10 +28,26 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
   readonly webRuntime: HeadlessWebRuntime;
   readonly toolRegistry: ToolRegistry;
   readonly webviewProvider: WebviewProvider;
+  readonly completions: CompletionService;
 
   constructor(context: vscode.ExtensionContext) {
     this.secrets = new VsCodeSecretStore(context);
     this.history = new HistoryManager(this.settings);
+    const completionStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 15);
+    completionStatus.text = "$(sparkle) DeepSeek";
+    completionStatus.command = "deepseek-agent.openChat";
+    this.completions = new CompletionService(this.settings, this.secrets, new DeepSeekModelProviderFactory(),
+      () => vscode.workspace.isTrusted, (usage) => {
+        const cost = formatUsageCost(usage.costUsd, { currency: "usd", locale: vscode.env.language, unavailable: "—" });
+        completionStatus.tooltip = `DeepSeek · ${usage.count} requests · ${usage.totalTokens ?? "—"} tokens · ${cost}\nEditor/chat suggestions and editor actions (this session).`;
+        completionStatus.show();
+      });
+    const unsubscribe = SettingsManager.onDidChange(() => {
+      this.completions.invalidate();
+      if (!this.settings.load().betaFeaturesEnabled) {completionStatus.hide();}
+    });
+    context.subscriptions.push(completionStatus, { dispose: unsubscribe }, { dispose: () => this.completions.invalidate() });
+    registerEditorFeatures(context, this.completions);
     registerCaptureBackend("web", new WebCaptureBackend(this.settings));
     const debugAnchor = new NativeDebugAnchor();
     context.subscriptions.push(debugAnchor);
@@ -48,9 +68,10 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
     this.toolRegistry = new ToolRegistry();
     for (const tool of BUILT_IN_TOOLS) {this.toolRegistry.register(tool);}
     for (const tool of createHeadlessWebTools(this.webRuntime, {
-      systemLocale: () => Intl.DateTimeFormat().resolvedOptions().locale,
+      systemLocale: () => vscode.env.remoteName ? undefined : Intl.DateTimeFormat().resolvedOptions().locale,
       vscodeLanguage: () => vscode.env.language,
-      search: (query, _locale, limit, signal) => webClient.search(query, limit, signal),
+      searchRegion: () => this.settings.load().webSearchRegion,
+      search: (query, _locale, limit, signal, options) => webClient.search(query, limit, signal, options),
     })) {
       this.toolRegistry.register(tool);
     }
@@ -62,6 +83,7 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
       settings: this.settings,
       secrets: this.secrets,
       modelProviderFactory: new DeepSeekModelProviderFactory(),
+      completions: this.completions,
     });
   }
 

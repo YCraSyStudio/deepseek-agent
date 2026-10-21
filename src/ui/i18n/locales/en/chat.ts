@@ -2,6 +2,7 @@ import type { TranslationCatalog } from "../Types";
 
 export const chat = {
   chat: {
+    acceptSuggestion: "Suggestion available. Tab to accept, Escape to dismiss.",
     incognitoActive: "Incognito mode is active. This chat will be lost when the extension reloads.",
     applyingPermissions: "Applying permissions...",
     apiKeyMissing: "API key missing",
@@ -95,7 +96,8 @@ export const chat = {
         securityReview: "Security review",
         contextSummary: "Context summary",
         fileCompaction: "File compaction",
-        visionAnalysis: "Vision analysis"
+        visionAnalysis: "Vision analysis",
+        codeCompletion: "Beta code completion"
       }
     }
   }

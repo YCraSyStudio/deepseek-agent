@@ -27,13 +27,13 @@ export type AdvancedSectionProps = {
 };
 
 export type GeneralSectionProps = {
-  config: Pick<SettingsConfig, "interfaceLanguage" | "historyEnabled" | "historyRetentionDays" | "includeHomeAgents" | "usageBreakdown" | "usageCostCurrency">;
+  config: Pick<SettingsConfig, "interfaceLanguage" | "historyEnabled" | "historyRetentionDays" | "includeHomeAgents" | "usageBreakdown" | "usageCostCurrency" | "privacyMinimizeData" | "betaFeaturesEnabled" | "editorSuggestionsEnabled" | "chatSuggestionsEnabled">;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
 };
 
 export type ToolsSectionProps = {
-  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "browserAccess" | "automaticCaptureEnabled" | "automaticCaptureLimit">;
+  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "webSearchRegion" | "browserAccess" | "automaticCaptureEnabled" | "automaticCaptureLimit">;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
   permissionUpdatePending?: boolean;

@@ -24,9 +24,9 @@ export function validateOptionalFocus(value: unknown): string | undefined {
 }
 
 export function validateResultLimit(value: unknown): number {
-  if (value === undefined) {return 10;}
-  if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 10) {
-    throw new Error("max_results must be an integer between 1 and 10");
+  if (value === undefined) {return 8;}
+  if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 50) {
+    throw new Error("max_results must be an integer between 1 and 50");
   }
   return value as number;
 }

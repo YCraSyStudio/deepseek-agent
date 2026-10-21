@@ -152,6 +152,7 @@ export class ImageAttachmentController {
       baseUrl,
       bytes,
       filename: name,
+      minimizeMetadata: this.settings.load().privacyMinimizeData,
       mediaType,
       expiresAfterSeconds: FILE_EXPIRY_SECONDS,
     });

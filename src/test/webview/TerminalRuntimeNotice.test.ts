@@ -3,7 +3,7 @@ import type { WorkspaceRunSnapshot } from "@/vscode/workspace";
 import { buildTerminalRuntimeNotice } from "@/vscode/webviews/handlers/chat/prompt/TerminalRuntimeNotice";
 
 suite("terminal runtime workspace notice", () => {
-  test("anchors a single-root agent to the trusted host path", () => {
+  test("anchors a single-root agent without disclosing the absolute host path", () => {
     const notice = buildTerminalRuntimeNotice({
       folders: [{
         alias: "Testing",
@@ -14,7 +14,8 @@ suite("terminal runtime workspace notice", () => {
       }],
     } as unknown as WorkspaceRunSnapshot, "cmd.exe");
 
-    assert.match(notice, /Active workspace root: C:\\workspace\\Testing/);
+    assert.match(notice, /Active workspace root: \. \(workspace-relative\)/);
+    assert.ok(!notice.includes("C:\\workspace"));
     assert.match(notice, /Omit cwd to run there/);
     assert.match(notice, /Do not call a tool to discover this path/);
   });
@@ -39,8 +40,14 @@ suite("terminal runtime workspace notice", () => {
       ],
     } as unknown as WorkspaceRunSnapshot, "cmd.exe");
 
-    assert.match(notice, /api \(C:\\workspace\\api\)/);
-    assert.match(notice, /web \(C:\\workspace\\web\)/);
+    assert.match(notice, /Valid cwd roots: api, web/);
+    assert.ok(!notice.includes("C:\\workspace"));
     assert.match(notice, /never guess another absolute path/);
+  });
+
+  test("retains host paths when metadata minimization is disabled", () => {
+    const snapshot = { folders: [{ alias: "api", localPath: "/home/alice/project" }] } as unknown as WorkspaceRunSnapshot;
+    assert.match(buildTerminalRuntimeNotice(snapshot, "bash", false), /\/home\/alice\/project/);
+    assert.ok(!buildTerminalRuntimeNotice(snapshot, "bash", true).includes("alice"));
   });
 });

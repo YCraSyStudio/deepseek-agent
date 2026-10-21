@@ -13,6 +13,7 @@ export interface GenerationToolAvailability {
   webSearchEnabled: boolean;
   modelId: string;
   hasImageAttachments: boolean;
+  betaFeaturesEnabled?: boolean;
 }
 
 export function selectGenerationTools(
@@ -22,6 +23,7 @@ export function selectGenerationTools(
   return registry.getDefinitionsForAPI().filter((tool) => {
     const name = tool.function.name;
     const registered = registry.get(name);
+    if (name === "complete_code" && !availability.betaFeaturesEnabled) {return false;}
 
     if (name === "capture_screenshot" && !availability.files) {return false;}
 

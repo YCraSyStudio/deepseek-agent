@@ -7,6 +7,8 @@ import ImageLightbox, { type LightboxImage } from "@webview/components/shared/im
 import { useVsCode } from "@webview/views/chatView/contexts";
 import { t } from "@webview/i18n";
 import { usePathCompletions } from "./UsePathCompletions";
+import { useChatSuggestions } from "./UseChatSuggestions";
+import ChatGhostText from "./ChatGhostText";
 
 type Props = {
   input: string;
@@ -87,6 +89,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       vscode,
       workspaceRevision,
     });
+    const ghost = useChatSuggestions(input, setInput, taRef, vscode, Boolean(pathToken));
 
     useImperativeHandle(ref, () => taRef.current!, [taRef]);
 
@@ -110,6 +113,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       }
 
       clearCompletions();
+      ghost.dismiss();
       submissionPendingRef.current = true;
       try {
         const uploaded = pendingImages.length ? await onPrepareImages?.() ?? [] : [];
@@ -130,7 +134,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       } catch (error: unknown) {
         onImagePasteError?.(error instanceof Error ? error.message : String(error));
       } finally {submissionPendingRef.current = false;}
-    }, [input, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, vscode, canSend, clearCompletions, selectedModelRef, reasoningRef, referencedFiles, conversationId, workspaceRevision, onSend]);
+    }, [input, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, vscode, canSend, clearCompletions, ghost, selectedModelRef, reasoningRef, referencedFiles, conversationId, workspaceRevision, onSend]);
 
     const handleCancel = useCallback(() => {
       if (activeGenerationId && conversationId) {
@@ -148,6 +152,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       if ((!text && imageAttachments.length + pendingImages.length === 0) || !vscode || !canSend || !conversationId || !activeGenerationId || submissionPendingRef.current) {
         return;
       }
+      ghost.dismiss();
       submissionPendingRef.current = true;
       try {
         const uploaded = pendingImages.length ? await onPrepareImages?.() ?? [] : [];
@@ -169,10 +174,11 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       } catch (error: unknown) {
         onImagePasteError?.(error instanceof Error ? error.message : String(error));
       } finally {submissionPendingRef.current = false;}
-    }, [activeGenerationId, canSend, conversationId, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, input, onSend, reasoningRef, referencedFiles, selectedModelRef, vscode, workspaceRevision]);
+    }, [activeGenerationId, canSend, conversationId, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, input, onSend, ghost, reasoningRef, referencedFiles, selectedModelRef, vscode, workspaceRevision]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.nativeEvent.isComposing) {return;}
         if (completions.length > 0) {
           if (e.key === "ArrowDown") {
             e.preventDefault();
@@ -196,6 +202,8 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
           }
         }
 
+        if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && ghost.accept()) {e.preventDefault(); return;}
+        if (e.key === "Escape") {ghost.dismiss();}
         if (e.key === "Enter" && !e.shiftKey && canSend) {
           e.preventDefault();
           if (!isProcessing) {
@@ -207,7 +215,7 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
           }
         }
       },
-      [activeIndex, canSend, clearCompletions, completions, handleSend, handleSteer, insertCompletion, isProcessing, setActiveIndex],
+      [activeIndex, canSend, clearCompletions, completions, ghost, handleSend, handleSteer, insertCompletion, isProcessing, setActiveIndex],
     );
 
     const handleChange = useCallback(
@@ -219,11 +227,12 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
     );
 
     const handleCursorChange = useCallback(() => {
+      ghost.cursorChanged();
       const textarea = taRef.current;
       if (textarea) {
         requestPathCompletions(input, textarea.selectionStart);
       }
-    }, [input, requestPathCompletions]);
+    }, [input, requestPathCompletions, ghost]);
 
     const handlePaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const images = Array.from(event.clipboardData.items)
@@ -313,6 +322,10 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
               : ""}
           </span>
 
+          <ChatGhostText prefix={input} suggestion={ghost.suggestion} textarea={taRef} />
+          <span className="srOnly" id="chat-ghost-help" role="status" aria-live="polite">
+            {ghost.suggestion ? t("chat.acceptSuggestion") : ""}
+          </span>
           <textarea
             ref={taRef}
             className="Input"
@@ -320,11 +333,17 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
             value={input}
             onChange={handleChange}
             onClick={handleCursorChange}
+            onSelect={ghost.cursorChanged}
+            onFocus={ghost.onFocus}
+            onBlur={ghost.onBlur}
+            onCompositionStart={ghost.onCompositionStart}
+            onCompositionEnd={ghost.onCompositionEnd}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             rows={rows}
             aria-label={t("chat.chatMessage")}
-            aria-autocomplete="list"
+            aria-autocomplete={ghost.suggestion ? "both" : "list"}
+            aria-describedby={ghost.suggestion ? "chat-ghost-help" : undefined}
             aria-expanded={completions.length > 0 && Boolean(pathToken)}
             aria-controls={completions.length > 0 ? "path-completion-listbox" : undefined}
             aria-activedescendant={completions.length > 0 ? `path-completion-option-${activeIndex}` : undefined}

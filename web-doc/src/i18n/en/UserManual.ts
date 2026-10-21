@@ -85,11 +85,28 @@ export const userManual: PageContent = {
       ],
     },
     {
+      title: "Optional beta features",
+      items: [
+        "In Settings → General, Enable DeepSeek beta features is off by default. Enabling adds the agent’s complete_code tool for assistant-prefix completion and FIM (fill in the middle), and enables strict function schemas. A caller-supplied reasoning prefix is supported with Chat Prefix Completion when thinking is enabled.",
+        "Ask the agent to fill a missing function body with FIM, or continue a specified response prefix. The tool returns text and does not edit files; normal edit tools retain their permissions. The agent tool remains on demand. Separate Editor suggestions and Chat suggestions switches enable gray text after a short typing pause (Tab accepts, Escape dismisses). Editor suggestions use FIM; chat suggestions continue your draft at its end and yield to ./ path completion.",
+        "Calls use the same API origin and credential with the beta path, default to 1,024 output tokens, and are capped at 4,096 or the lower configured output limit. Usage appears under Beta code completion. Disabling blocks new beta calls and switches subsequent tool rounds to stable chat; already-running requests can finish. Enabling makes the tool available to new generations.",
+        "Right-click a code editor → YCraSy DeepSeek Agent → Complete or Refactor. A selection takes priority; a blank line targets the whole file; otherwise the innermost enclosing symbol is used, with a statement/line fallback. Review the diff and choose Apply or Discard. Edits support undo and refuse to overwrite a changed document. Complete requires beta; Refactor uses the stable API.",
+        "Automatic suggestions send bounded nearby code or the current chat draft, without thinking, with 256/96 output tokens and cancellation/caching. API charges apply; interactive usage is shown in the DeepSeek status-bar tooltip separately from conversation usage. Automatic suggestions require workspace trust and exclude sensitive file names. Disabling beta stops interactive requests.",
+      ],
+    },
+    {
+      title: "Privacy",
+      items: [
+        "Settings → General → Privacy enables best-effort metadata minimization by default: generated runtime notices omit absolute workspace roots, optional user IDs and image filenames are not sent, and timestamps use UTC without a named local time zone. Relative paths and tool references remain when required. Messages, code, tool output, image contents/embedded metadata and existing history are not anonymized. This does not guarantee anonymity or GDPR compliance. No usage telemetry is collected; the API provider still receives the data needed to answer and the connection source IP.",
+      ],
+    },
+    {
       title: "Web search",
       items: [
         "Web search uses DeepSeek Search and Fetch with the API credential saved for the configured origin. No local search runtime, engine catalog, endpoint selector, Python or container is required.",
-        "search_web returns up to ten public HTTPS URLs and bounded summaries. The query, site filters and lang: operator together must fit 128 Unicode characters. Language defaults to the system locale; domain filters use site: syntax.",
-        "read_web sends an authorized URL to DeepSeek Fetch and returns bounded sections of its Markdown response. Only URLs returned by the current generation’s search or explicitly supplied by the user are accepted. Remote retrieval and redirect handling are performed by DeepSeek.",
+        "Search is optimized for development: prefer documentation for the project’s versions, upstream repositories and relevant issue discussions. It requests eight results by default, supports up to 50, and exposes available relevance, authority and date metadata in bounded output. Queries and operators must fit 128 Unicode characters. English technical sources remain available unless you explicitly restrict language.",
+        "read_web reuses available page content from Search or earlier reads in the current generation, and calls DeepSeek Fetch only when content is absent. Only URLs returned by the current generation’s search or explicitly supplied by you are accepted. Returned page sections remain bounded and untrusted.",
+        "In Settings → Tools, search defaults to Global. Choose Automatic to use the country in your local system locale, or choose a country code such as ES. You can request another country or worldwide research in chat. This is a soft relevance preference and does not guarantee geographic ranking. System region is not physical geolocation. No IP lookup is performed and no IP address is added to search parameters; the API provider still sees the normal connection source address.",
         "Search and Fetch are charged separately from model tokens: currently CNY 5 per 1,000 successful requests with results. Empty searches and failed requests are not charged. The token usage popover does not include these request charges. Check the official pricing for changes.",
       ],
     },

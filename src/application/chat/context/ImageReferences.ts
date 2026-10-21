@@ -8,6 +8,7 @@ export function buildImageReferenceContext(
   images: readonly ConversationImageReference[],
   attachments: readonly ImageAttachment[],
   readsImagesNatively: boolean,
+  minimizeMetadata = false,
 ): string {
   const blocks: string[] = [];
   if (images.length) {
@@ -15,7 +16,7 @@ export function buildImageReferenceContext(
       ? "Image numbers identify conversation images; they do not require a tool call. Read images already present as visual file parts directly. Use analyze_images with screenshot_ids only when the requested image is not available visually, for example a new capture or an older image removed by context compaction."
       : "Use analyze_images with screenshot_ids when the user refers to image numbers; the current model does not read images natively.";
     blocks.push(`Conversation image references (stable numbers within this conversation):\n${images
-      .map((image) => `- image ${image.id.slice("screenshot-".length)}: screenshot_id=${image.id}; name=${JSON.stringify(image.fileName)}`)
+      .map((image) => `- image ${image.id.slice("screenshot-".length)}: screenshot_id=${image.id}${minimizeMetadata ? "" : `; name=${JSON.stringify(image.fileName)}`}`)
       .join("\n")}\n${routing} Include newly attached images when comparing the previous and current state. A missing number may have been removed by retention; never substitute a different image.`);
   }
   if (attachments.length) {
@@ -23,7 +24,7 @@ export function buildImageReferenceContext(
       ? "Attached images are included as native visual file parts below. Inspect them directly; do not call analyze_images for these attachments or their image numbers."
       : "Attached images are available through analyze_images. The current model needs delegated vision to inspect them.";
     blocks.push(`${routing}\n${attachments
-      .map((attachment) => `- ${attachment.imageNumber ? `image ${attachment.imageNumber}; ` : ""}id=${attachment.id}; name=${JSON.stringify(attachment.name)}`)
+      .map((attachment) => `- ${attachment.imageNumber ? `image ${attachment.imageNumber}; ` : ""}id=${attachment.id}${minimizeMetadata ? "" : `; name=${JSON.stringify(attachment.name)}`}`)
       .join("\n")}`);
   }
   return blocks.length ? `\n\n${blocks.join("\n\n")}` : "";

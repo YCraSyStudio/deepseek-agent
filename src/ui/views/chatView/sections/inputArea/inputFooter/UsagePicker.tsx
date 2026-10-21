@@ -23,6 +23,7 @@ const PHASE_LABELS: Record<UsagePhase, Parameters<typeof t>[0]> = {
   context_summary: "chat.usage.phases.contextSummary",
   file_compaction: "chat.usage.phases.fileCompaction",
   vision_analysis: "chat.usage.phases.visionAnalysis",
+  code_completion: "chat.usage.phases.codeCompletion",
 };
 
 const RING_RADIUS = 9;

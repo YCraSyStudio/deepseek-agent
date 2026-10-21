@@ -17,7 +17,7 @@ const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
   "permissionMode", "autoContext", "historyEnabled",
-  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "automaticCaptureEnabled", "automaticCaptureLimit", "browserAccess", "webSearchEnabled",
+  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "automaticCaptureEnabled", "automaticCaptureLimit", "browserAccess", "webSearchEnabled", "webSearchRegion", "privacyMinimizeData", "betaFeaturesEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled",
 ];
 
 const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
@@ -49,6 +49,11 @@ export function normalizeConfig(value: unknown): AppConfig {
     automaticCaptureLimit: clampInteger(config.automaticCaptureLimit, 1, 40, 10),
     browserAccess: config.browserAccess === "always" || config.browserAccess === "never" ? config.browserAccess : "ask",
     webSearchEnabled: normalizeBoolean(config.webSearchEnabled, DEFAULT_CONFIG.webSearchEnabled),
+    webSearchRegion: normalizeSearchRegion(config.webSearchRegion),
+    privacyMinimizeData: normalizeBoolean(config.privacyMinimizeData, DEFAULT_CONFIG.privacyMinimizeData),
+    betaFeaturesEnabled: normalizeBoolean(config.betaFeaturesEnabled, DEFAULT_CONFIG.betaFeaturesEnabled),
+    editorSuggestionsEnabled: normalizeBoolean(config.editorSuggestionsEnabled, DEFAULT_CONFIG.editorSuggestionsEnabled),
+    chatSuggestionsEnabled: normalizeBoolean(config.chatSuggestionsEnabled, DEFAULT_CONFIG.chatSuggestionsEnabled),
   };
 }
 
@@ -65,6 +70,7 @@ export function isStoredSettingKey(key: string): key is StoredSettingKey {
 }
 
 export function normalizeSettingValue(key: StoredSettingKey, value: unknown): unknown {
+  if (key === "webSearchRegion") {return normalizeSearchRegion(value);}
   if (key === "automaticCaptureEnabled") {return normalizeBoolean(value, false);}
   if (key === "automaticCaptureLimit") {return clampInteger(value, 1, 40, 10);}
   if (key === "browserAccess") {return value === "always" || value === "never" ? value : "ask";}
@@ -72,7 +78,7 @@ export function normalizeSettingValue(key: StoredSettingKey, value: unknown): un
   if (key === "permissionMode") {return normalizePermissionMode(value);}
   if (key === "reasoningEffort") {return normalizeReasoningEffort(value);}
   if (key === "usageCostCurrency") {return normalizeUsageCurrency(value);}
-  if (["thinkingMode", "autoContext", "historyEnabled", "includeHomeAgents", "usageBreakdown", "webSearchEnabled"].includes(key)) {
+  if (["thinkingMode", "autoContext", "historyEnabled", "includeHomeAgents", "usageBreakdown", "webSearchEnabled", "privacyMinimizeData", "betaFeaturesEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled"].includes(key)) {
     return normalizeBoolean(value, DEFAULT_CONFIG[key] as boolean);
   }
   if (key === "model") {return normalizeNonEmptyString(value, DEFAULT_CONFIG.model);}
@@ -83,6 +89,11 @@ export function normalizeSettingValue(key: StoredSettingKey, value: unknown): un
   if (key === "maxConcurrentGenerations") {return clampInteger(value, 1, 16, DEFAULT_CONFIG.maxConcurrentGenerations);}
   if (key === "historyRetentionDays") {return clampInteger(value, 0, 3650, DEFAULT_CONFIG.historyRetentionDays);}
   return value;
+}
+
+function normalizeSearchRegion(value: unknown): string {
+  return typeof value === "string" && /^(?:auto|global|[A-Za-z]{2})$/.test(value.trim())
+    ? (/^(auto|global)$/.test(value.trim()) ? value.trim() : value.trim().toUpperCase()) : "global";
 }
 
 function normalizeInterfaceLanguage(value: unknown): InterfaceLanguage {

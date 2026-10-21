@@ -5,6 +5,8 @@ export type WebviewToHandlerMessage =
   | { type: "initializeProtocol"; protocolVersion: 5 }
   | { type: "getScreenshotPreview" | "openScreenshot"; requestId: string; conversationId: string; screenshotId: string }
   | { type: "getConfig" }
+  | { type: "getChatSuggestion"; requestId: string; prefix: string }
+  | { type: "cancelChatSuggestion"; requestId: string }
   | { type: "saveConfig"; requestId: string; config: Partial<AppConfig> }
   | { type: "resetConfig"; requestId: string }
   | { type: "resolveHistoryTransition"; requestId: string; decision: "stop" | "save" | "discard" | "cancel" }

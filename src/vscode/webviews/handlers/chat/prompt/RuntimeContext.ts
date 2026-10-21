@@ -7,6 +7,7 @@ export function appendToolAvailabilityContext(
   permissionMode: PermissionMode,
   tools: ToolDefinition[],
   workspaceSnapshot?: WorkspaceRunSnapshot,
+  minimizeMetadata = true,
 ): void {
   const systemMessage = messages.find((message) => message.role === "system");
   if (!systemMessage) {
@@ -26,7 +27,7 @@ export function appendToolAvailabilityContext(
     ? `\n- Unattended tools: ${delegatedTools.join(", ")}. The user explicitly delegated these approvals. Each call executes immediately, so call them only when necessary, directly aligned with the request, and with the narrowest safe arguments.`
     : "";
   const terminalNotice = availableToolNames.includes("run_terminal_command")
-    ? buildTerminalRuntimeNotice(workspaceSnapshot)
+    ? buildTerminalRuntimeNotice(workspaceSnapshot, undefined, minimizeMetadata)
     : "";
   systemMessage.content = `${systemMessage.content ?? ""}\n\nRuntime permissions:\n- Permission mode: ${permissionMode}\n- Available tools: ${availableToolNames.length > 0 ? availableToolNames.join(", ") : "none"}${delegationNotice}\n- ${capabilityNotice}${terminalNotice}`;
 }

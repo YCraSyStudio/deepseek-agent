@@ -5,16 +5,11 @@ import { validatePublicWebUrl } from "@/infrastructure/browser/NetworkPolicy";
 import { validateResultLimit, validateSearchQuery } from "@/infrastructure/browser/Validation";
 import { normalizeApiBaseUrl } from "@/shared/security/ApiOrigin";
 import { isRecord } from "@/shared/utils/TypeGuards";
-
-interface WebSearchItem {
-  url: string;
-  title: string;
-  summary: string;
-}
+import type { WebSearchOptions, WebSearchPage } from "@/infrastructure/browser/Types";
 
 export interface DeepSeekSearchResult {
   urls: string[];
-  results: WebSearchItem[];
+  results: WebSearchPage[];
   contentHash: string;
 }
 
@@ -30,12 +25,15 @@ export class DeepSeekWebClient {
 
   constructor(private readonly credentials: () => Promise<WebCredentials>) {}
 
-  async search(query: string, limit: number, signal?: AbortSignal): Promise<DeepSeekSearchResult> {
+  async search(query: string, limit: number, signal?: AbortSignal, options: WebSearchOptions = {}): Promise<DeepSeekSearchResult> {
+    const originalQuestion = Array.from(options.originalQuestion?.trim() || query);
+    const preference = options.region && options.region !== "global" ? `Prefer sources relevant to ${options.region}. ` : "";
     const value = await this.request("search", {
-      query: validateSearchQuery(query), count: validateResultLimit(limit), need_content: false,
+      query: validateSearchQuery(query), count: validateResultLimit(limit), need_content: options.needContent ?? true,
+      ori_question: preference + originalQuestion.slice(0, 128 - Array.from(preference).length).join(""),
     }, signal);
     if (!isRecord(value) || !Array.isArray(value.results)) {throw new Error("DeepSeek returned an invalid search response.");}
-    const results: WebSearchItem[] = [];
+    const results: WebSearchPage[] = [];
     const seen = new Set<string>();
     for (const item of value.results) {
       if (!isRecord(item) || typeof item.url !== "string") {continue;}
@@ -48,6 +46,11 @@ export class DeepSeekWebClient {
         title: typeof item.title === "string" ? item.title.slice(0, 256) : "",
         summary: typeof item.summary === "string" ? item.summary.slice(0, 1_200)
           : typeof item.snippet === "string" ? item.snippet.slice(0, 1_200) : "",
+        ...(typeof item.content === "string" && item.content.trim() ? { content: item.content.slice(0, 64 * 1024) } : {}),
+        ...(typeof item.rerank_score === "number" && Number.isFinite(item.rerank_score) && item.rerank_score >= 0 && item.rerank_score <= 3 ? { rerank_score: item.rerank_score } : {}),
+        ...(Number.isInteger(item.authority) && (item.authority as number) >= -1 && (item.authority as number) <= 4 ? { authority: item.authority as number } : {}),
+        ...(typeof item.date === "string" && item.date.length <= 40 && Number.isFinite(Date.parse(item.date)) ? { date: item.date } : {}),
+        ...(typeof item.site_name === "string" ? { site_name: item.site_name.slice(0, 128) } : {}),
       });
       if (results.length >= limit) {break;}
     }

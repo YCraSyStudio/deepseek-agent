@@ -4,8 +4,15 @@ import { ToolRegistry } from "@/application/tools/ToolRegistry";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { DEEPSEEK_FLASH_MODEL_ID, DEEPSEEK_PRO_MODEL_ID } from "@/contracts";
 import { analyzeImagesTool } from "@/infrastructure/tools/builtins/vision/AnalyzeImages";
+import { completeCodeTool } from "@/infrastructure/tools/builtins/code/CompleteCode";
 
 suite("generation tool selection", () => {
+  test("offers beta code generation only when explicitly enabled", () => {
+    const registry = createRegistry();
+    registry.register(completeCodeTool);
+    assert.ok(!names(selectGenerationTools(registry, availability())).includes("complete_code"));
+    assert.ok(names(selectGenerationTools(registry, availability({ betaFeaturesEnabled: true, files: false }))).includes("complete_code"));
+  });
   test("keeps global tools when workspace files are unavailable", () => {
     const registry = createRegistry();
     assert.deepStrictEqual(

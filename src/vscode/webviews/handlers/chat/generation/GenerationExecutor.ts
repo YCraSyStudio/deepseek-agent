@@ -15,6 +15,7 @@ import { ConversationState } from "@/application/chat/ConversationState";
 import { getGenerationStopReason, type GenerationTask } from "@/application/chat/GenerationCoordinator";
 import { selectGenerationTools } from "@/application/chat/GenerationToolSelection";
 import { createDelegatedVisionAnalyzer } from "@/infrastructure/deepseek/provider/DelegatedVisionAnalyzer";
+import { createBetaCodeCompleter } from "@/infrastructure/deepseek/provider/features/CodeCompletion";
 import { createProviderTranscript } from "@/application/chat/ProviderTranscript";
 import { PartialStreamError } from "@/application/errors/PartialStreamError";
 import type { ToolRegistry } from "@/application/tools";
@@ -277,12 +278,14 @@ export class GenerationExecutor {
         webSearchEnabled: providerConfig.webSearchEnabled,
         modelId: providerConfig.model,
         hasImageAttachments: imageAttachments.length > 0,
+        betaFeaturesEnabled: providerConfig.betaFeaturesEnabled,
       });
       appendToolAvailabilityContext(
         messages,
         initialPermissionSnapshot.permissionMode,
         tools,
         workspaceSnapshot,
+        providerConfig.privacyMinimizeData,
       );
       if (config.automaticCaptureEnabled && !runState.isIncognito()) {
         const latest = await new ScreenshotStore(task.conversationId).lookup().catch(() => undefined);
@@ -336,6 +339,9 @@ export class GenerationExecutor {
           budgetManager: record.budgetManager,
           captureScreenshot: runState.isIncognito() ? undefined : (request, captureSignal) => new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal),
           analyzeImages: visionAnalyzer,
+          completeCode: createBetaCodeCompleter(providerConfig, () => this.dependencies.settings.load().betaFeaturesEnabled,
+            (usage, model) => recordUsage(usageAggregate, "code_completion", usage, model)),
+          isBetaFeaturesEnabled: () => this.dependencies.settings.load().betaFeaturesEnabled,
           onContextCompacted: ({ estimatedTokensBefore, estimatedTokensAfter }) =>
             recordToolCycleCompaction({
               state: runState,

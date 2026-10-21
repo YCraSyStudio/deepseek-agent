@@ -1,5 +1,17 @@
 # DeepSeek Search and Fetch (#67)
 
+## Development defaults, regional preference and privacy
+
+Search now requests eight results by default (up to 50 on demand), retains available page content for `read_web`, and preserves relevance, authority, publication date and site metadata. Documents share the existing bounded cache and generation ownership. Search output stays below eight KiB and does not include full page bodies. Higher-ranked pages are retained preferentially when the cache fills. Missing content falls back to Fetch; repeated reads and pagination reuse retained content.
+
+Search is global by default. The user may select a country or Automatic to use the local system locale's country code. An explicit per-search country/global request overrides the setting, as instructed through the model's tool guidance. This is not a deterministic natural-language country detector. Regional preference is bounded textual context in `ori_question`, not a guaranteed geographic ranking or verified physical location. Remote hosts do not infer the user's country from the server locale. No public-IP lookup or `localization` address is used. Default technical research keeps English sources available; language is restricted only when explicitly requested.
+
+Privacy settings enable best-effort automatic metadata minimization by default. Generated runtime notices and duplicate review metadata omit absolute workspace roots, optional user IDs are omitted, image upload filenames are generic, image references omit display names, and generated timestamps use UTC without the local time-zone name. Required root aliases, relative paths, file IDs and tool references remain usable. User content, tool output, image pixels/embedded metadata and existing history are not rewritten. The provider still sees the connection IP and authentication information; this does not establish anonymity or GDPR compliance.
+
+These changes use controlled API fixtures and local verification without paid live API calls. No claim is made about measured search quality by country. The earlier implementation and live acceptance below describe the 18 October baseline.
+
+## Original implementation and acceptance
+
 This branch replaces SearXNG completely with the standalone DeepSeek Search and Fetch APIs. Existing search-engine settings are discarded when settings are normalized and persisted. The Web search toggle continues to control both tools.
 
 ## Contract

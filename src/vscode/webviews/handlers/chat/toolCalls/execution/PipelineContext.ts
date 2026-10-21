@@ -15,6 +15,7 @@ export function handlerContext(ctx: ToolExecutionContext): ToolHandlerContext {
     authorizedUserUrls: ctx.authorizedUserUrls,
     webTainted: ctx.isWebTainted?.(),
     analyzeImages: ctx.analyzeImages,
+    completeCode: ctx.completeCode,
     captureScreenshot: ctx.captureScreenshot,
   };
 }

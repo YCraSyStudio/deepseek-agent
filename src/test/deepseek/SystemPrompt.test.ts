@@ -39,6 +39,14 @@ suite("system tool guidance", () => {
     assert.match(stamped as string, /never assume an outdated year/);
   });
 
+  test("minimizes generated time metadata without modifying the user's own sensitive text", () => {
+    const text = "Contact alice@example.test about this code";
+    const stamped = appendCurrentTimeToUserTurn(text, new Date("2026-10-21T13:45:00Z"), true) as string;
+    assert.ok(stamped.startsWith(text));
+    assert.match(stamped, /<current_time>2026-10-21T13:45Z<\/current_time>/);
+    assert.doesNotMatch(stamped, /Europe\/|Atlantic\/|America\//);
+  });
+
   test("appends the timestamp to the text part of a message that carries file references", () => {
     const stamped = appendCurrentTimeToUserTurn(
       [

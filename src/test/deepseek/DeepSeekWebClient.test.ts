@@ -15,9 +15,9 @@ suite("DeepSeek Search and Fetch APIs", () => {
       const headers = new Headers(init?.headers);
       assert.strictEqual(headers.get("authorization"), "Bearer test-key");
       assert.strictEqual(headers.get("content-type"), "application/json");
-      assert.deepStrictEqual(JSON.parse(String(init?.body)), { query: "DeepSeek lang:es", count: 2, need_content: false });
+      assert.deepStrictEqual(JSON.parse(String(init?.body)), { query: "DeepSeek lang:es", count: 2, need_content: true, ori_question: "DeepSeek lang:es" });
       return json({ results: [
-        { title: "Release", url: "https://example.com/release", snippet: "Short", summary: "Detailed summary", content: "" },
+        { title: "Release", url: "https://example.com/release", snippet: "Short", summary: "Detailed summary", content: "# Release", rerank_score: 2.5, authority: 4, date: "2026-10-21T00:00:00Z", site_name: "Upstream" },
         { title: "Duplicate", url: "https://example.com/release" },
         { title: "Private", url: "https://127.0.0.1/private" },
         { title: "Insecure", url: "http://example.com/" },
@@ -28,6 +28,10 @@ suite("DeepSeek Search and Fetch APIs", () => {
     const result = await client().search("DeepSeek lang:es", 2);
     assert.deepStrictEqual(result.urls, ["https://example.com/release", "https://example.org/"]);
     assert.strictEqual(result.results[0].summary, "Detailed summary");
+    assert.strictEqual(result.results[0].content, "# Release");
+    assert.strictEqual(result.results[0].rerank_score, 2.5);
+    assert.strictEqual(result.results[0].authority, 4);
+    assert.strictEqual(result.results[0].date, "2026-10-21T00:00:00Z");
     assert.strictEqual(result.results[1].summary, "Snippet only");
     assert.match(result.contentHash, /^[a-f0-9]{64}$/);
   });
@@ -75,11 +79,31 @@ suite("DeepSeek Search and Fetch APIs", () => {
     assert.strictEqual(calls, 1);
     await assert.rejects(() => api.search("😀".repeat(129), 1), /128/);
     await assert.rejects(() => api.search(" ", 1), /query/);
-    await assert.rejects(() => api.search("query", 11), /max_results/);
+    await assert.rejects(() => api.search("query", 51), /max_results/);
     await assert.rejects(() => api.fetchPage("https://user:password@example.com"), /credential/);
     await assert.rejects(() => api.fetchPage("https://localhost/private"), /local/);
     const missing = new DeepSeekWebClient(async () => ({ baseUrl: "https://api.deepseek.com", apiKey: "" }));
     await assert.rejects(() => missing.search("query", 1), /No API key/);
+    assert.strictEqual(calls, 1);
+  });
+
+  test("sends a bounded regional preference without IP discovery or a localization address", async () => {
+    let calls = 0;
+    globalThis.fetch = async (input, init) => {
+      calls++;
+      assert.strictEqual(String(input), "https://api.deepseek.com/v1/tools/search");
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.strictEqual(body.query, "TypeScript release notes");
+      assert.strictEqual(body.need_content, false);
+      assert.strictEqual(body.count, 50);
+      assert.ok(!Object.hasOwn(body, "localization"));
+      assert.ok(Array.from(String(body.ori_question)).length <= 128);
+      assert.ok(String(body.ori_question).startsWith("Prefer sources relevant to ES. "));
+      return json({ results: [] });
+    };
+    await client().search("TypeScript release notes", 50, undefined, {
+      originalQuestion: "😀".repeat(150), region: "ES", needContent: false,
+    });
     assert.strictEqual(calls, 1);
   });
 

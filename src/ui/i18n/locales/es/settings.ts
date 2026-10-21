@@ -2,6 +2,7 @@ import type { TranslationCatalog } from "../Types";
 
 export const settings = {
   settings: {
+    help: "Ayuda: {setting}",
     tab: {
       api: "API",
       tools: "Herramientas",
@@ -58,10 +59,39 @@ export const settings = {
     advanced: {
       title: "Avanzado"
     },
+    beta: {
+      title: "Funciones beta",
+      enabled: "Activar funciones beta",
+      description: "Activa Chat Prefix, FIM y herramientas estrictas. Desactivado por defecto. Al apagarlo se bloquean nuevas peticiones beta y se detienen las sugerencias automáticas.",
+      editorSuggestions: "Sugerencias en el editor",
+      chatSuggestions: "Sugerencias en el chat",
+      suggestionsHelp: "Tras una breve pausa al escribir, envía el código cercano o el borrador del chat a DeepSeek. Consume API. Tab acepta; Escape descarta. Requiere funciones beta.",
+    },
+    privacy: {
+      title: "Privacidad",
+      minimize: "Minimizar metadatos",
+      description: "Omite rutas absolutas del contexto automático, nombres de imágenes e identificadores opcionales. Usa fechas UTC sin el nombre de tu zona horaria.",
+      limits: "Mejor esfuerzo: no modifica mensajes, código, salidas de herramientas, imágenes ni historial. No garantiza anonimato; el proveedor sigue viendo la IP de conexión.",
+    },
+    browser: {
+      access: "Permiso de capturas",
+      ask: "Preguntar por sitio",
+      always: "Siempre",
+      never: "Nunca",
+      automatic: "Capturas automáticas",
+      automaticHelp: "Captura tras cambios en la interfaz usando el último destino capturado explícitamente. Las capturas permanecen locales hasta analizarlas.",
+      limit: "Máximo de capturas por conversación",
+    },
     webSearch: {
       title: "Búsqueda web",
-      description: "Busca y lee páginas con DeepSeek usando tu credencial API configurada. Las peticiones Search y Fetch se facturan por separado de los tokens del modelo.",
+      description: "Busca y lee páginas con tu API key de DeepSeek. Search y Fetch tienen un coste adicional al de los tokens.",
       enabled: "Habilitar búsqueda web",
+      region: "Región de búsqueda",
+      global: "Global (por defecto)",
+      auto: "Automática (sistema)",
+      custom: "Elegir un país",
+      countryCode: "Código de país de dos letras, como ES o US",
+      regionHint: "Global no prioriza ningún país. Automática usa el país del sistema local, sin consultar ni añadir tu IP como parámetro. Lo que pidas en el chat tiene prioridad y se mantienen las fuentes técnicas de otros idiomas.",
     },
     sampling: {
       temperature: "Temperatura",
@@ -88,13 +118,11 @@ export const settings = {
         cancel: "Cancelar"
       },
       store: "Guardar historial del chat",
-      retention: "Días de retención del historial (0 = ilimitado)"
+      retention: "Conservar historial (días)",
+      retentionHelp: "Usa 0 para conservarlo sin límite de tiempo.",
     },
     instructions: {
       globalAgents: "Usar las instrucciones globales de AGENTS.md"
-    },
-    beta: {
-      enable: "Activar funciones beta"
     },
     language: {
       label: "Idioma de la interfaz",
@@ -112,7 +140,7 @@ export const settings = {
     },
     limits: {
       maxTokens: "Tokens máximos de salida",
-      maxTokensDescription: "Reserva de salida por petición. DeepSeek V4 tiene 1M tokens de contexto total y admite hasta 384K de salida; el valor conservador predeterminado de 8.192 ayuda a limitar consumo y coste de la API.",
+      maxTokensDescription: "Límite de salida por petición. El valor predeterminado (8.192 tokens) ayuda a controlar el consumo y el coste de la API.",
       maxConcurrentGenerations: "Generaciones simultáneas"
     }
   }

@@ -71,7 +71,7 @@ ${payload.text}`
   const images = conversationId && !state.isIncognito()
     ? await new ScreenshotStore(conversationId).list()
     : [];
-  userText += buildImageReferenceContext(images, attachments, readsImagesNatively);
+  userText += buildImageReferenceContext(images, attachments, readsImagesNatively, config.privacyMinimizeData);
   const userContent: ChatMessage["content"] = appendCurrentTimeToUserTurn(
     attachments.length > 0 && readsImagesNatively
       ? [
@@ -79,6 +79,8 @@ ${payload.text}`
           ...attachments.map((attachment) => ({ type: "file" as const, file_id: attachment.fileId })),
         ]
       : userText,
+    undefined,
+    config.privacyMinimizeData,
   );
 
   const projectInstructions = await loadProjectInstructions(workspaceSnapshot, config.includeHomeAgents, signal);
@@ -254,6 +256,7 @@ async function rebuildGenerationMessages(
     options.permissionMode,
     options.enabledTools,
     options.workspaceSnapshot,
+    options.config.privacyMinimizeData,
   );
   return messages;
 }

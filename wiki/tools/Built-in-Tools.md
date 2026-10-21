@@ -22,10 +22,20 @@ Detached/background launchers are rejected because they can outlive the owned te
 
 - `compact_context`: requests a tool-cycle context compaction. Its handler is a read-only no-op; the active tool protocol is rolled over into a compacted continuation at the next round. The model is expected to trust prior successful tool outcomes and not repeat completed mutations.
 
+## Beta code completion
+
+`complete_code` is offered only when `betaFeaturesEnabled` is enabled in Settings → General. `mode: prefix` continues an assistant prefix through `/beta/chat/completions`; `mode: fim` fills between code `prefix` and optional `suffix` through `/beta/completions`. Prefix mode also accepts a task `instruction` and a caller-supplied `reasoning_prefix` when thinking is enabled. A suffix is FIM-only; chat instructions and reasoning prefixes are prefix-only. Optional `stop` accepts up to 16 non-empty sequences. Output defaults to 1,024 tokens and never exceeds 4,096 or the configured lower output limit. Calls have a 60-second deadline, support cancellation and are not automatically retried. Results contain API response text and do not modify files; normal mutation tools retain their permission checks. Usage is tracked under `code_completion`.
+
+The beta switch also enables strict schemas for function calls, with all object properties required, closed objects, and supported schema keywords. Optional values use a nullable enum branch and are omitted before host validation/execution when returned as null. Original host schemas and their validation remain intact. Disabling beta removes the completion tool from later rounds, blocks new completion calls, strips `strict`, and selects the stable chat endpoint. Existing requests may finish; enabling the setting exposes the completion tool to new generations. This does not enable another provider or change the stored API origin.
+
+Official references: [Chat Prefix Completion](https://api-docs.deepseek.com/guides/chat_prefix_completion), [FIM Completion](https://api-docs.deepseek.com/guides/fim_completion), [Strict tool calls](https://api-docs.deepseek.com/guides/tool_calls#strict-mode-beta), and [FIM API](https://api-docs.deepseek.com/api/create-completion). The beta `reasoning_content` input is part of Chat Prefix Completion, rather than an independent feature. Normal thinking-mode reasoning history is still supported when beta is off.
+
 ## Web tools
 
-- `search_web`: calls DeepSeek Search (`POST /v1/tools/search`) and returns up to ten public HTTPS URLs with bounded summaries; the query plus `site:` and `lang:` filters must fit 128 Unicode characters.
-- `read_web`: calls DeepSeek Fetch (`POST /v1/tools/fetch`) for a URL registered to the current generation’s search or explicitly supplied by the user, and returns bounded Markdown sections as untrusted data.
+- `search_web`: calls DeepSeek Search (`POST /v1/tools/search`), requests eight results by default (up to 50 on demand), and returns public HTTPS URLs with bounded summaries and available relevance, authority, date and site metadata. The query plus operators must fit 128 Unicode characters. Technical guidance favors version-matched official documentation, upstream repositories and issue discussions. Language is restricted only when explicitly requested.
+- `read_web`: reads a URL registered to the current generation’s search or explicitly supplied by the user, returning bounded Markdown sections as untrusted data. It reuses content returned by Search (`need_content: true` by default) or already read in that generation. DeepSeek Fetch (`POST /v1/tools/fetch`) is used only when retained content is absent. `need_content: false` supports discovery-only searches.
+
+`webSearchRegion` defaults to `global`. Selecting `auto` reads the local system locale's country code, not the user's physical location. Remote extension hosts do not use their server locale as the user's region. `global` disables regional preference; a two-letter country code selects another preference. A per-search `region` overrides the setting. The preference is natural-language context in the bounded `ori_question` field; it is a soft hint, not guaranteed geographic ranking. Search never discovers the public IP or sends a `localization` IP address. The API provider still observes the connection's source IP. Useful English technical sources remain available, and no country-specific domain filter is added automatically.
 
 The Web search toggle controls both definitions. When disabled, neither tool is sent to DeepSeek.
 

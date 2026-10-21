@@ -2,6 +2,7 @@ import type { TranslationCatalog } from "../Types";
 
 export const settings = {
   settings: {
+    help: "Help: {setting}",
     tab: {
       api: "API",
       tools: "Tools",
@@ -58,10 +59,39 @@ export const settings = {
     advanced: {
       title: "Advanced"
     },
+    beta: {
+      title: "Beta features",
+      enabled: "Enable beta features",
+      description: "Enables Chat Prefix, FIM and strict tools. Off by default. Disabling blocks new beta requests and stops automatic suggestions.",
+      editorSuggestions: "Editor suggestions",
+      chatSuggestions: "Chat suggestions",
+      suggestionsHelp: "After a short typing pause, sends nearby code or your chat draft to DeepSeek. API charges apply. Tab accepts; Escape dismisses. Requires beta features.",
+    },
+    privacy: {
+      title: "Privacy",
+      minimize: "Minimize metadata",
+      description: "Omits absolute paths from automatic context, image filenames and optional identifiers. Uses UTC timestamps without your time-zone name.",
+      limits: "Best effort: messages, code, tool output, images and history are unchanged. Anonymity is not guaranteed; the provider still sees the connection IP.",
+    },
+    browser: {
+      access: "Capture permission",
+      ask: "Ask per site",
+      always: "Always",
+      never: "Never",
+      automatic: "Automatic captures",
+      automaticHelp: "Captures after UI changes using the last explicitly captured target. Captures stay local until analyzed.",
+      limit: "Max captures per conversation",
+    },
     webSearch: {
       title: "Web search",
-      description: "Search and read web pages with DeepSeek using your configured API credential. Search and Fetch requests are billed separately from model tokens.",
+      description: "Search and read pages using your DeepSeek API key. Search and Fetch cost extra beyond model tokens.",
       enabled: "Enable web search",
+      region: "Search region",
+      global: "Global (default)",
+      auto: "Automatic (system)",
+      custom: "Choose a country",
+      countryCode: "Two-letter country code, such as ES or US",
+      regionHint: "Global has no country preference. Automatic uses the local system country, without looking up or adding your IP as a parameter. Your chat instructions take priority; technical sources in other languages remain available.",
     },
     sampling: {
       temperature: "Temperature",
@@ -88,13 +118,11 @@ export const settings = {
         cancel: "Cancel"
       },
       store: "Store chat history",
-      retention: "History retention days (0 = unlimited)"
+      retention: "Keep history (days)",
+      retentionHelp: "Use 0 to keep history indefinitely.",
     },
     instructions: {
       globalAgents: "Use global AGENTS.md instructions"
-    },
-    beta: {
-      enable: "Enable Beta Features"
     },
     language: {
       label: "Interface language",
@@ -112,7 +140,7 @@ export const settings = {
     },
     limits: {
       maxTokens: "Max output tokens",
-      maxTokensDescription: "Output allowance per request. DeepSeek V4 has a 1M-token total context and supports up to 384K output; the conservative 8,192 default helps limit API usage and cost.",
+      maxTokensDescription: "Output limit per request. The default (8,192 tokens) helps control API usage and cost.",
       maxConcurrentGenerations: "Concurrent generations"
     }
   }

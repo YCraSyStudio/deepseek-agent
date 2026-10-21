@@ -18,6 +18,22 @@
   display: flex;
   position: relative;
 
+  .chatGhost {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .chatGhostContent {
+    padding: 7px 9px 4px;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    font: inherit;
+  }
+  .chatGhostPrefix { color: transparent; }
+  .chatGhostSuggestion { color: var(--vscode-editorGhostText-foreground, #888888); }
+
   .Input {
     background: transparent;
     border: 0;

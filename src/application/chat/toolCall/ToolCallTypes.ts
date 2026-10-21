@@ -30,6 +30,9 @@ export interface ToolCallCycleOptions {
   reasoningEffort?: ReasoningEffort;
   maxTokens?: number;
   userId?: string;
+  privacyMinimizeData?: boolean;
+  betaFeaturesEnabled?: boolean;
+  isBetaFeaturesEnabled?: () => boolean;
   budgetManager?: GenerationBudgetManager;
   onRecoveryStarted?: () => Promise<void> | void;
   reviewCompletion?: (context: CompletionReviewContext) => Promise<CompletionReviewDecision>;

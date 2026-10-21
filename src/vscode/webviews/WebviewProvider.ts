@@ -21,6 +21,8 @@ import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/ap
 import { ImageAttachmentController } from "./ImageAttachmentController";
 import { AttachmentSelectionController } from "./AttachmentSelectionController";
 import { registerWebviewProtocol } from "./WebviewProtocolSession";
+import type { CompletionService } from "@/vscode/completions/CompletionService";
+import { ChatSuggestionController } from "./ChatSuggestionController";
 
 type ChatCommandMessage = { type: "addReferencedFiles"; files: ReferencedFilePayload[] } | { type: "setDraft"; text: string };
 const MAX_PENDING_WEBVIEW_MESSAGES = 128;
@@ -33,6 +35,7 @@ export interface WebviewProviderDependencies {
   settings: SettingsRepository;
   secrets: SecretStore;
   modelProviderFactory: ModelProviderFactory;
+  completions: CompletionService;
 }
 
 export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -46,6 +49,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   private readonly changeDiffViewer: ChangeDiffViewer;
   private readonly imageAttachments: ImageAttachmentController;
   private readonly attachmentSelection: AttachmentSelectionController;
+  private readonly chatSuggestions: ChatSuggestionController;
   private readonly commandDispatcher = new WebviewCommandDispatcher();
   private readonly disposables: vscode.Disposable[] = [];
   private readonly pendingMessages: ChatCommandMessage[] = [];
@@ -58,6 +62,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     dependencies: WebviewProviderDependencies,
   ) {
     this.historyManager = dependencies.historyManager;
+    this.chatSuggestions = new ChatSuggestionController(dependencies.completions);
     this.settings = dependencies.settings;
     this.changeDiffViewer = new ChangeDiffViewer();
     this.imageAttachments = new ImageAttachmentController(this._context, dependencies.settings, dependencies.secrets);
@@ -169,6 +174,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   }
 
   private disposeViewRegistrations(): void {
+    this.chatSuggestions.dispose();
     const registrations = this.viewDisposables;
     this.viewDisposables = [];
     for (const registration of registrations) {
@@ -260,6 +266,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   }
 
   private registerMessageHandlers(): void {
+    this.commandDispatcher.registerMany(["getChatSuggestion", "cancelChatSuggestion"] as const,
+      (message, view) => this.chatSuggestions.handle(message, view));
     this.commandDispatcher.registerMany([
       "sendMessage", "steerGeneration", "cancelGeneration", "getGenerationSnapshot",
       "consumeRecoveredDraft", "getAvailableTools", "executeToolCall",

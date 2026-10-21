@@ -7,6 +7,13 @@ const attachments: ImageAttachment[] = [{ id: "attachment-1", imageNumber: 1, na
   mediaType: "image/png", size: 100, source: "clipboard", uploadedAt: 1, expiresAt: 2, apiBaseUrl: "https://api.deepseek.com", cacheFileName: "attachment-1.png" }];
 
 suite("image reference routing", () => {
+  test("omits image filenames while preserving numbered references under metadata minimization", () => {
+    const context = buildImageReferenceContext(images, [{ ...attachments[0], name: "alice-private-project.png" }], true, true);
+    assert.ok(!context.includes("alice-private-project.png"));
+    assert.ok(!context.includes("1-attachment.png"));
+    assert.match(context, /image 1; id=attachment-1/);
+    assert.match(context, /screenshot_id=screenshot-1/);
+  });
   test("Flash reads its numbered attachment directly rather than delegating it", () => {
     const context = buildImageReferenceContext(images, attachments, true);
     assert.match(context, /image 1: screenshot_id=screenshot-1/);

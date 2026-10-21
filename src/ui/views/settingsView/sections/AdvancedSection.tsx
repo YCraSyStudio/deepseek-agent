@@ -3,7 +3,7 @@ import "./AdvancedSection.css";
 import { MAX_OUTPUT_TOKENS } from "@/contracts";
 import { getApiOrigin, isLoopbackApiBaseUrl } from "@/shared/security/ApiOrigin";
 import type { AdvancedSectionProps } from "../model";
-import { Slider } from "@webview/components/settingsView";
+import { SettingLabel, Slider } from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
 
 function AdvancedSection({ config, updateConfig, saveOnBlur }: AdvancedSectionProps) {
@@ -74,16 +74,7 @@ function AdvancedSection({ config, updateConfig, saveOnBlur }: AdvancedSectionPr
 
         <div className="tokenLimits">
           <div className="limitField">
-            <div
-              className="limitLabel"
-              tabIndex={0}
-              aria-label={`${t("settings.limits.maxTokens")}. ${t("settings.limits.maxTokensDescription")}`}
-              data-tooltip={t("settings.limits.maxTokensDescription")}
-              data-tooltip-position="bottom"
-            >
-              <label htmlFor="maxTokensInput">{t("settings.limits.maxTokens")}</label>
-              <span className="codicon codicon-question" aria-hidden="true" />
-            </div>
+            <SettingLabel htmlFor="maxTokensInput" label={t("settings.limits.maxTokens")} help={t("settings.limits.maxTokensDescription")} />
             <input
               id="maxTokensInput"
               type="number"

@@ -48,6 +48,20 @@ suite("transactional settings", () => {
     await SettingsManager.save({ webSearchEnabled: true });
   });
 
+  test("persists the search-region preference without adding IP settings", async () => {
+    assert.strictEqual(normalizeConfig({}).webSearchRegion, "global");
+    assert.strictEqual(normalizeConfig({}).privacyMinimizeData, true);
+    await SettingsManager.save({ webSearchRegion: "es" });
+    assert.strictEqual(SettingsManager.load().webSearchRegion, "ES");
+    const disk = JSON.parse(readFileSync(getSettingsFilePath(), "utf8")) as Record<string, unknown>;
+    assert.strictEqual(disk.webSearchRegion, "ES");
+    assert.strictEqual(normalizeConfig({ webSearchRegion: "global" }).webSearchRegion, "global");
+    assert.strictEqual(normalizeConfig({ webSearchRegion: "1.1.1.1" }).webSearchRegion, "global");
+    await SettingsManager.save({ webSearchRegion: "global", privacyMinimizeData: false });
+    assert.strictEqual(SettingsManager.load().privacyMinimizeData, false);
+    await SettingsManager.save({ privacyMinimizeData: true });
+  });
+
   test("drops retired endpoint and engine fields when loading old settings", () => {
     const retired = { webSearchEngine: "searxng", searxngUrl: "https://old.example.com",
       searxngEngines: ["g"], searxngFallbackEngines: ["ddg"], searxngEngineCatalog: [{ name: "Old" }] };
@@ -57,6 +71,16 @@ suite("transactional settings", () => {
       assert.ok(!Object.hasOwn(normalized, key));
       assert.ok(!Object.hasOwn(toStoredSettings(normalized), key));
     }
+  });
+
+  test("keeps beta capabilities opt-in and persists the user's selection", async () => {
+    assert.strictEqual(normalizeConfig({}).betaFeaturesEnabled, false);
+    assert.strictEqual(normalizeConfig({ betaFeaturesEnabled: "true" }).betaFeaturesEnabled, false);
+    await SettingsManager.save({ betaFeaturesEnabled: true });
+    assert.strictEqual(SettingsManager.load().betaFeaturesEnabled, true);
+    assert.strictEqual(JSON.parse(readFileSync(getSettingsFilePath(), "utf8")).betaFeaturesEnabled, true);
+    await SettingsManager.save({ betaFeaturesEnabled: false });
+    assert.strictEqual(SettingsManager.load().betaFeaturesEnabled, false);
   });
 
   test("rolls back memory and revision when persistence fails", async () => {

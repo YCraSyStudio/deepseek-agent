@@ -1,7 +1,8 @@
 import type { GeneralSectionProps } from "../model";
 import { isUsageCurrency, type UsageCurrency } from "@/shared/usage/Usage";
-import { Toggle } from "@webview/components/settingsView";
+import { SettingLabel, Toggle } from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
+import PrivacySection from "./PrivacySection";
 
 function GeneralSection({ config, updateConfig, saveOnBlur }: GeneralSectionProps) {
   return (
@@ -28,7 +29,7 @@ function GeneralSection({ config, updateConfig, saveOnBlur }: GeneralSectionProp
       </div>
 
       <div className="settingRow">
-        <label htmlFor="historyRetentionDays">{t("settings.history.retention")}</label>
+        <SettingLabel htmlFor="historyRetentionDays" label={t("settings.history.retention")} help={t("settings.history.retentionHelp")} />
         <input
           id="historyRetentionDays"
           type="number"
@@ -80,6 +81,40 @@ function GeneralSection({ config, updateConfig, saveOnBlur }: GeneralSectionProp
         }}
       />
 
+      <h3 className="sectionTitle">{t("settings.beta.title")}</h3>
+      <Toggle
+        id="betaFeaturesEnabled"
+        label={t("settings.beta.enabled")}
+        help={t("settings.beta.description")}
+        checked={config.betaFeaturesEnabled}
+        onToggle={(enabled) => {
+          updateConfig("betaFeaturesEnabled", enabled);
+          saveOnBlur("betaFeaturesEnabled", enabled);
+        }}
+      />
+      <Toggle
+        id="editorSuggestionsEnabled"
+        label={t("settings.beta.editorSuggestions")}
+        help={t("settings.beta.suggestionsHelp")}
+        disabled={!config.betaFeaturesEnabled}
+        checked={config.editorSuggestionsEnabled}
+        onToggle={(enabled) => {
+          updateConfig("editorSuggestionsEnabled", enabled);
+          saveOnBlur("editorSuggestionsEnabled", enabled);
+        }}
+      />
+      <Toggle
+        id="chatSuggestionsEnabled"
+        label={t("settings.beta.chatSuggestions")}
+        help={t("settings.beta.suggestionsHelp")}
+        disabled={!config.betaFeaturesEnabled}
+        checked={config.chatSuggestionsEnabled}
+        onToggle={(enabled) => {
+          updateConfig("chatSuggestionsEnabled", enabled);
+          saveOnBlur("chatSuggestionsEnabled", enabled);
+        }}
+      />
+      <PrivacySection config={config} updateConfig={updateConfig} saveOnBlur={saveOnBlur} />
     </section>
   );
 }

@@ -59,7 +59,8 @@ export function createDelegatedVisionAnalyzer({ attachments = [], providerConfig
             await remove(oldest[1].id); uploads.delete(oldest[0]);
           }
           const file = await upload({ apiKey: providerConfig.apiKey, baseUrl: providerConfig.baseUrl, bytes: image.bytes,
-            filename: image.name, mediaType: image.mediaType, expiresAfterSeconds: 3600, signal });
+            filename: image.name, mediaType: image.mediaType, expiresAfterSeconds: 3600, signal,
+            minimizeMetadata: providerConfig.privacyMinimizeData });
           cached = { id: file.id, bytes: image.bytes.length }; uploads.set(hash, cached);
         }
         pinned.add(hash);

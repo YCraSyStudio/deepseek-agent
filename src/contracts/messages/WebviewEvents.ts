@@ -22,6 +22,7 @@ import type {
 } from "./WebviewModels";
 
 export type HandlerToWebviewMessage =
+  | { type: "chatSuggestion"; requestId: string; text: string }
   | { type: "protocolReady"; protocolVersion: 5 }
   | { type: "protocolError"; supportedVersion: 5; error: string }
   | { type: "requestRejected"; requestId?: string; action?: string; error: string }
