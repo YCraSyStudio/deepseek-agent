@@ -1,8 +1,11 @@
 import type { TranslationCatalog } from "../Types";
-
 export const settings = {
   settings: {
+    number: { increase: "Increase value", decrease: "Decrease value" },
+    help: "Help: {setting}",
+    snapshots: { storageLimit: "Snapshot storage limit (MiB)", storageHint: "Total limit for all chat recovery copies. If space is insufficient, the message continues with a warning and cannot be reverted." },
     tab: {
+      customization: "Customization",
       api: "API",
       tools: "Tools",
       general: "General"
@@ -14,6 +17,15 @@ export const settings = {
       label: "Settings sections"
     },
     loading: "Loading settings…",
+    storage: {
+      title: "Storage",
+      directory: "Data folder",
+      browse: "Select folder",
+      default: "Default",
+      reload: "Reload VS Code",
+      reloadHint: "Applies after reload. Existing data stays in its original folder.",
+      error: "Could not save the path.",
+    },
     retry: "Retry",
     reset: {
       label: "Reset to Defaults",
@@ -58,21 +70,47 @@ export const settings = {
     advanced: {
       title: "Advanced"
     },
+    beta: {
+      title: "Beta features",
+      enabled: "Enable beta features",
+      description: "Enables DeepSeek API beta features: Chat Prefix, FIM and strict tools. Off by default. Disabling blocks new beta requests and stops automatic suggestions.",
+      editorSuggestions: "Editor suggestions",
+      chatSuggestions: "Chat suggestions",
+      editorSuggestionsHelp: "After an 800 ms typing pause, sends nearby code to DeepSeek for completion. API charges apply. Tab accepts; Escape dismisses. Requires beta features and a trusted workspace.",
+      chatSuggestionsHelp: "Click Suggest message beside the context indicator to generate a prompt or continue your draft using a brief project summary. Typing never requests suggestions. No source contents or chat history are sent. API charges apply. Tab accepts; Escape dismisses. Requires beta features, a configured API key and a trusted workspace.",
+    },
+    privacy: {
+      title: "Privacy",
+      minimize: "Minimize metadata",
+      description: "Omits absolute paths from automatic context, image filenames and optional identifiers. Uses UTC timestamps without your time-zone name.",
+      limits: "Best effort: messages, code, tool output, images and history are unchanged. Anonymity is not guaranteed; the provider still sees the connection IP.",
+    },
+    browser: {
+      access: "Capture permission",
+      ask: "Ask per site",
+      always: "Always",
+      never: "Never",
+      automatic: "Automatic captures",
+      automaticHelp: "Captures after UI changes using the last explicitly captured target. Captures stay local until analyzed.",
+      limit: "Max captures per conversation",
+    },
     webSearch: {
       title: "Web search",
-      description: "The extension uses SearXNG to search the public web and combine multiple search engines.",
+      description: "Search with your DeepSeek API key and read pages locally in Chromium. Search costs extra beyond model tokens; local page reads do not use DeepSeek Fetch.",
       enabled: "Enable web search",
-      engine: "Search engine",
-      searxngUrl: "SearXNG endpoint",
-      searxngManagedHint: "The default endpoint is http://127.0.0.1:8888. You can customize it to avoid port conflicts.",
-      engines: "Search engines",
-      enginesDefault: "Automatic (SearXNG enabled engines)",
-      enginesSelected: "selected",
-      filterEngines: "Filter engines…",
-      useDefaults: "Use defaults",
-      enabledByDefault: "Default",
-      noEngines: "No engines are available yet. Reopen Tools after SearXNG finishes starting.",
-      enginesHint: "When none are selected, SearXNG uses its enabled engines. Select multiple engines to combine them in the same search."
+      region: "Search region",
+      global: "Global (default)",
+      auto: "Automatic (system)",
+      custom: "Choose a country",
+      countryCode: "Two-letter country code, such as ES or US",
+      regionHint: "Global has no country preference. Automatic uses the local system country, without looking up or adding your IP as a parameter. Your chat instructions take priority; technical sources in other languages remain available.",
+    },
+    toolCatalog: {
+      label: "Tool list",
+      loading: "Loading tools…",
+      empty: "No tools registered",
+      noDescription: "No description available.",
+      searchDisabled: "Unavailable while web search is disabled.",
     },
     sampling: {
       temperature: "Temperature",
@@ -99,13 +137,43 @@ export const settings = {
         cancel: "Cancel"
       },
       store: "Store chat history",
-      retention: "History retention days (0 = unlimited)"
+      retention: "Keep history (days)",
+      retentionHelp: "Use 0 to keep history indefinitely.",
+    },
+    reusable: {
+      title: "Instructions",
+      template: "Template",
+      templateHelp: "Blank.md starts an empty instruction; git.md provides a Git workflow; commit.md includes commit message conventions and checks. Choose one, adjust the name and activation description, then edit its contents in VS Code.",
+      create: "Create instruction",
+      help: "Names and descriptions are listed for DeepSeek. The full file is read only when relevant to the current task, for example commit conventions. Global instructions apply to every project; workspace instructions apply only to that project.",
+      scope: "Save in",
+      global: "Global",
+      workspace: "Workspace",
+      name: "File name",
+      nameHelp: "Enter a base name, for example commit. The .md extension is fixed and added automatically. Other extensions are part of the name: commit.txt becomes commit.txt.md. Letters, numbers, dots, hyphens and underscores are supported. Existing files are opened without overwriting.",
+      description: "When to use it",
+      descriptionPlaceholder: "When creating or reviewing a Git commit",
+      createAndEdit: "Create and edit",
+      cancel: "Cancel",
+      loading: "Loading instructions…",
+      empty: "No instructions yet.",
+      edit: "Edit",
+    },
+    customization: {
+      workspaceTitle: "Workspace instructions",
+      generateWorkspaceAgents: "Generate AGENTS.md",
+      editWorkspaceAgents: "Edit AGENTS.md",
+      workspaceFolder: "Workspace folder",
+      workspaceLoading: "Loading workspace instructions…",
+      workspaceUnavailable: "Open a local workspace folder to create its instructions.",
+      workspaceOpenError: "Could not open the workspace AGENTS.md.",
+
+      openGlobalAgents: "Open global AGENTS.md",
+      globalAgentsHelp: "Apply your personal instructions to every workspace. Save the file in VS Code; saved changes are loaded before each message.",
+      openError: "Could not open the global AGENTS.md.",
     },
     instructions: {
       globalAgents: "Use global AGENTS.md instructions"
-    },
-    beta: {
-      enable: "Enable Beta Features"
     },
     language: {
       label: "Interface language",
@@ -123,7 +191,7 @@ export const settings = {
     },
     limits: {
       maxTokens: "Max output tokens",
-      maxTokensDescription: "Output allowance per request. DeepSeek V4 has a 1M-token total context and supports up to 384K output; the conservative 8,192 default helps limit API usage and cost.",
+      maxTokensDescription: "Output limit per request. The default (8,192 tokens) helps control API usage and cost.",
       maxConcurrentGenerations: "Concurrent generations"
     }
   }

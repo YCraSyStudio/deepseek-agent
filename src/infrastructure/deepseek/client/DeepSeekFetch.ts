@@ -3,6 +3,7 @@ import { buildDeepSeekAuthHeaders } from "@/infrastructure/deepseek/auth/AuthHea
 import { ApiOriginError, assertSameApiOrigin, normalizeApiBaseUrl } from "@/shared/security/ApiOrigin";
 import { isRecord } from "@/shared/utils/TypeGuards";
 import { readBoundedJson } from "./BoundedResponseJson";
+import { redactSensitiveText } from "@/shared/security/Redaction";
 
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 const CONNECTION_TIMEOUT_MS = 30_000;
@@ -39,10 +40,10 @@ export async function deepseekFetch(options: DeepSeekFetchOptions): Promise<Resp
         await wait(delay, requestInit.signal);
         continue;
       }
-      const errorDescriptor = await readSafeErrorDescriptor(response);
+      const errorDescriptor = await readSafeErrorDescriptor(response, apiKey);
       throw new DeepSeekApiError(
         response.status,
-        getSafeHttpErrorMessage(response.status),
+        getSafeHttpErrorMessage(response.status) + (errorDescriptor.detail ? ` ${errorDescriptor.detail}` : ""),
         errorDescriptor.code ?? String(response.status),
         errorDescriptor.reason,
       );
@@ -126,6 +127,8 @@ function getSafeHttpErrorMessage(status: number): string {
   switch (status) {
     case 401:
       return "Invalid API credentials.";
+    case 402:
+      return "Insufficient API balance.";
     case 403:
       return "API access denied.";
     case 429:
@@ -138,9 +141,10 @@ function getSafeHttpErrorMessage(status: number): string {
 interface SafeErrorDescriptor {
   code?: string;
   reason?: "model_unavailable";
+  detail?: string;
 }
 
-async function readSafeErrorDescriptor(response: Response): Promise<SafeErrorDescriptor> {
+async function readSafeErrorDescriptor(response: Response, apiKey: string): Promise<SafeErrorDescriptor> {
   if (!response.headers.get("content-type")?.toLowerCase().includes("json")) {
     await response.body?.cancel().catch(() => undefined);
     return {};
@@ -150,15 +154,19 @@ async function readSafeErrorDescriptor(response: Response): Promise<SafeErrorDes
     if (!isRecord(value) || !isRecord(value.error)) {return {};}
     const code = safeIdentifier(value.error.code);
     const type = safeIdentifier(value.error.type);
-    const message = typeof value.error.message === "string" && value.error.message.length <= 512
-      ? value.error.message.toLowerCase()
+    const rawMessage = typeof value.error.message === "string" && value.error.message.length <= 2048
+      ? value.error.message
       : "";
+    const message = rawMessage.toLowerCase();
     const normalized = `${code ?? ""} ${type ?? ""}`.toLowerCase();
     const modelCode = /(?:model_not_found|model_not_available|model_unavailable|unsupported_model|invalid_model)/.test(normalized);
     const modelMessage = /\bmodel\b.{0,80}\b(?:not found|not available|unavailable|unsupported|does not exist|not exist|retired|deprecated)\b/.test(message);
     return {
       ...(code ? { code } : {}),
       ...((modelCode || modelMessage) ? { reason: "model_unavailable" as const } : {}),
+      ...((response.status === 400 || response.status === 422) && rawMessage.trim()
+        ? { detail: redactSensitiveText(rawMessage, [apiKey]).replace(/[\u0000-\u001f\u007f]+/g, " ").trim() }
+        : {}),
     };
   } catch {
     return {};

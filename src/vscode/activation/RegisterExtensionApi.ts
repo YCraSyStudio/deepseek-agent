@@ -43,7 +43,7 @@ export function registerExtensionApi(
           permissionMode: config.permissionMode,
           features: {
             thinkingMode: config.thinkingMode,
-            autoContext: config.autoContext,
+            workspaceSnapshots: true,
             historyEnabled: config.historyEnabled,
             includeHomeAgents: config.includeHomeAgents,
           },

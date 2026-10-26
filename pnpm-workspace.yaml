@@ -5,8 +5,13 @@ allowBuilds:
   '@vscode/vsce-sign': true
   esbuild: true
   fsevents: true
-  keytar: true
+
+minimumReleaseAgeExclude:
+  - knip@6.43.0
 
 overrides:
   diff: 9.0.0
-  serialize-javascript: 7.0.7
+  serialize-javascript: 7.1.4
+  "mocha>glob": 13.0.6
+  "@azure/identity>@azure/msal-node": 7.1.1
+  "get-uri>basic-ftp": 6.2.3

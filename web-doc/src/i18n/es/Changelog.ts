@@ -5,8 +5,21 @@ export const changelog: PageContent = {
   title: "Changelog",
   seoTitle: "Notas de versión y changelog",
   description: "Todas las pre-versiones 0.1.x publicadas de YCraSy DeepSeek Agent con sus cambios visibles para el usuario.",
-  lead: "La preview 0.1.15 añade move_path y delete_path con aprobación respaldada por Git, devuelve DeepSeek V4 Pro con las preguntas de imagen delegadas a Flash e informa de la ventana de contexto con compactación a demanda.",
+  lead: "La preview 0.1.16 incorpora snapshots recuperables del workspace, migración del almacenamiento, personalización de instrucciones, junto con completados beta y búsqueda web renovada.",
   sections: [
+    {
+      title: "0.1.16 recuperación del workspace y personalización",
+      items: [
+        "Añade revisión y recuperación de cambios por turno, con snapshots acotados que protegen las ediciones previas y posteriores.",
+        "Guarda borradores y adjuntos de imagen independientes por chat, los restaura tras recargar y corrige conflictos de historial entre ventanas.",
+        "Incorpora instrucciones globales y del workspace, plantillas editables y referencias a instrucciones en el chat.",
+        "Añade completados opcionales en el editor, sugerencias manuales para el chat y herramientas beta de generación de código, con controles y uso separados.",
+        "Usa un navegador Chromium instalado para leer páginas y hacer capturas; si no lo encuentra, descarga y actualiza Chrome Headless Shell. La búsqueda sigue usando DeepSeek, pero la lectura ya no llama a su API Fetch.",
+        "Mejora las pruebas visuales con sesiones de aplicaciones gestionadas, capturas nativas de ventanas Wayland y recortes más precisos.",
+        "Reutiliza un terminal por chat, renueva los ajustes y menús, y añade controles de privacidad para los metadatos generados automáticamente.",
+        "Migra el almacenamiento antiguo, reúne los borradores y datos de recuperación, y actualiza las dependencias.",
+      ],
+    },
     {
       title: "0.1.15 herramientas de rutas, visión y ventana de contexto",
       items: [

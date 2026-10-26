@@ -15,6 +15,24 @@ pnpm run test:integration
 git diff --check
 ```
 
+## Dependency updates
+
+Use Node 24 and the pnpm version pinned in package.json (currently 12.15.0). CI uses pnpm install --frozen-lockfile for the complete workspace, including web-doc. npm ci is also supported for the extension through package-lock.json; install the documentation with pnpm. Keep both lockfiles synchronized when updating root dependencies and audit the full pnpm workspace, not only npm's root graph.
+
+Keep security overrides consistent in package.json and pnpm-workspace.yaml: diff 9, serialize-javascript 7.1.4, glob 13 under Mocha, and MSAL Node 7.1.1 under Azure Identity. These patch the legacy Mocha used by @vscode/test-cli and the Entra authentication dependency of VSCE; remove overrides when their upstream ranges include safe versions. Do not force Mocha 12 into test-cli, whose programmatic runner still requires Mocha 11. The extension's unit runner uses Mocha 12 and the integration runner is verified separately in VS Code.
+
+TypeScript stays on 6 because typescript-eslint and Astro do not yet accept 7, and the architecture checks use its JavaScript compiler API. Node types stay on 24; VS Code types are pinned below the extension's minimum supported editor version. Raising either type baseline requires reviewing runtime/editor compatibility.
+
+Only esbuild and @vscode/vsce-sign need npm lifecycle-script approvals here. npm approvals are version-pinned in allowScripts; pnpm uses the allowBuilds list. Review newly requested scripts individually rather than enabling all scripts. VSCE 4 removes the old keytar/prebuild-install chain.
+
+## Maintaining the test suite
+
+Keep tests for observable behavior, regressions, public contracts and failure handling. Protect security decisions, workspace boundaries, cancellation, concurrency, persistence and recovery in particular.
+
+Avoid assertions that copy exact prompt wording, descriptions or helper return objects without exercising a decision. Such tests do not demonstrate model behavior and should not prevent editorial changes. Keep behavioral properties such as cache stability, privacy and bounded output instead.
+
+When a rendering or execution test already covers a helper branch, prefer that behavioral test over a duplicate helper-only assertion. Group validation inputs with the same setup in a labeled case table, retaining every error case. Test count is not a coverage target; do not delete unique regressions or merge unrelated scenarios just to lower it.
+
 ## Web documentation
 
 Run in `web-doc`:
@@ -79,6 +97,14 @@ recursively and explicitly excludes `src/test/integration`; VS Code integration
 tests use their own build and runner.
 
 ## API validation
+
+Before accepting visual-capture changes, verify a responsive page at 1440×900, 800×600 and 320×480 using the headless capture backend. Check the actual CSS layout and image dimensions, not only the returned PNG size. No visible browser tab/window or VS Code browser debug session should open or receive focus, including on capture failure. The capture must use the requested viewport or fail explicitly. Verify cancellation and a failed navigation terminate the owned browser processes and remove temporary profiles. A missing browser must return an error without launching a visible alternative. Reload the conversation and verify both thumbnails and image-number analysis references survive.
+
+Verify a managed native preview by starting it through `application_session`, capturing in a later sequential tool call while the same PID remains alive, and stopping it afterward. A foreground terminal timeout must not gate the capture. Test early nonzero exit, a preview that exits on stdin EOF, bounded output, repeated status polls, owned descendants, cancellation, chat deletion, turn completion and extension shutdown. Other chat sessions and unrelated processes must remain alive.
+
+Test native capture separately with a running application. On X11/Windows/macOS use an exact window title/PID. On Wayland select that window in the system portal chooser, inspect the actual PNG and verify that the sharing indicator disappears after one frame. Repeat with chooser cancellation, extension cancellation and a closed window; no image should be stored and no sharing session should remain. Verify missing/older portals or unavailable window sources fail without falling back to a monitor. Unit tests exercise negotiation and cancellation against a private D-Bus portal, without accessing the desktop. Compilation and mock portal tests alone are not real visual validation.
+
+For Wayland window cropping, verify a small native window yields its actual pixel dimensions rather than a monitor-sized PNG with padding. Move/resize it and inspect the complete window, including decorations. Synthetic frame tests inject real `GstVideoCropMeta`, encode/decode through GStreamer and compare every output pixel, including legitimate black borders, odd output sizes, zero offsets, missing metadata, monitor captures and invalid rectangles. Never derive the crop rectangle from black-pixel bounds or portal compositor-coordinate sizes.
 
 Review [Official DeepSeek references](../deepseek-api/Official-References.md) when changing:
 

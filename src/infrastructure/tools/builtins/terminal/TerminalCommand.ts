@@ -75,7 +75,7 @@ const DETACHED_PROCESS_PATTERNS = [
 
 export function getTerminalLifecycleError(command: string): string | undefined {
   if (!DETACHED_PROCESS_PATTERNS.some((pattern) => pattern.test(command))) {return undefined;}
-  return "Error: background process launch rejected. run_terminal_command owns one finite foreground process tree; do not use Start-Process, start, jobs, nohup, disown, or similar detachment. For startup verification, run the server in the foreground with a bounded timeout.";
+  return "Error: background process launch rejected. run_terminal_command owns one finite foreground process tree; do not use Start-Process, start, jobs, nohup, disown, or similar detachment. For a GUI/server that must stay alive during a capture, use application_session action=start with its foreground command, capture_screenshot, then action=stop.";
 }
 
 export function getTerminalRoutingError(command: string, context?: ToolHandlerContext): string | undefined {
@@ -149,7 +149,7 @@ export const terminalCommandDefinition: ToolDefinition = {
   function: {
     name: "run_terminal_command",
     description:
-      "Run one finite, non-interactive executable workflow such as a build, test, Git operation, or package-manager command. When file tools are available, never use shell commands or inline scripts to list, read, search, edit, check, or inspect line endings in workspace files. Stay inside the workspace unless the user explicitly requests external computer access and the active permission mode allows it. Never use Start-Process, start, jobs, nohup, disown, or any mechanism that detaches a process. Run temporary servers only in the foreground with a bounded timeout. The structured result is authoritative; do not add verification-only reads unless output is ambiguous or verification was requested. Commands cannot answer prompts or use a TTY.",
+      "Run one finite, non-interactive executable workflow such as a build, test, Git operation, or package-manager command. This tool waits until the command EXITS and tools run sequentially. To keep a GUI/server alive while capturing it, build here then use application_session action=start, capture_screenshot and application_session action=stop; never queue capture behind a timed foreground preview. When file tools are available, never use shell commands or inline scripts to list, read, search, edit, check, or inspect line endings in workspace files. Stay inside the workspace unless the user explicitly requests external computer access and the active permission mode allows it. Never use Start-Process, start, jobs, nohup, disown, or any mechanism that detaches a process. The structured result is authoritative; do not add verification-only reads unless output is ambiguous or verification was requested. Commands cannot answer prompts or use a TTY.",
     strict: true,
     parameters: {
       type: "object",

@@ -1,3 +1,4 @@
+import { orderPathCompletions } from "@webview/components/chatView/fileSelector/CompletionGroups";
 import {
   useCallback,
   useEffect,
@@ -50,7 +51,7 @@ export function usePathCompletions({
           (candidate) => candidate.path === item.path && candidate.type === item.type,
         ) === index,
       );
-      setCompletions(uniqueItems);
+      setCompletions(orderPathCompletions(uniqueItems));
       setActiveIndex(0);
       setHasCompletionResponse(true);
     };
@@ -112,9 +113,15 @@ export function usePathCompletions({
   );
 
   const clearCompletions = useCallback(() => {
+    if (completionTimerRef.current) {clearTimeout(completionTimerRef.current);completionTimerRef.current = null;}
+    activeRequestIdRef.current = ++requestIdRef.current;
+    lastCompletionQueryRef.current = null;
+    setHasCompletionResponse(false);
     setCompletions([]);
     setPathToken(null);
   }, []);
+
+  useEffect(() => {clearCompletions();}, [clearCompletions, conversationId, workspaceRevision]);
 
   const insertCompletion = useCallback(
     (completion: PathCompletionItem) => {
@@ -122,9 +129,16 @@ export function usePathCompletions({
         return;
       }
       const textarea = textareaRef.current;
-      const nextInput = `${input.slice(0, pathToken.start)}${completion.path}${input.slice(pathToken.end)}`;
-      const cursor = pathToken.start + completion.path.length;
+      const inserted = completion.type === "instruction" ? `${completion.path} ` : completion.path;
+      const nextInput = `${input.slice(0, pathToken.start)}${inserted}${input.slice(pathToken.end)}`;
+      const cursor = pathToken.start + inserted.length;
       setInput(nextInput);
+      if (completion.type === "directory") {
+        lastCompletionQueryRef.current = null;
+        requestPathCompletions(nextInput, cursor, true);
+      } else {
+        clearCompletions();
+      }
 
       requestAnimationFrame(() => {
         if (!textarea) {
@@ -133,12 +147,6 @@ export function usePathCompletions({
         textarea.selectionStart = cursor;
         textarea.selectionEnd = cursor;
         textarea.focus();
-        if (completion.type === "directory") {
-          lastCompletionQueryRef.current = null;
-          requestPathCompletions(nextInput, cursor, true);
-        } else {
-          clearCompletions();
-        }
       });
     },
     [clearCompletions, input, pathToken, requestPathCompletions, setInput, textareaRef],

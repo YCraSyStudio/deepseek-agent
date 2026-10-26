@@ -1,6 +1,12 @@
 import * as assert from "assert";
 import type { ImageAttachment, ReferencedFile } from "@/contracts";
 import {
+  clearSavedChatState,
+  getChatDraft,
+  saveChatDraft,
+  selectNewChatDraft,
+  savePendingDraftImages,
+  restorePendingDraftImages,
   getSavedChatState,
   isImageAttachment,
   isReferencedFile,
@@ -16,9 +22,58 @@ suite("persistent chat state", () => {
       acquireVsCodeApi: () => ({
         postMessage: () => undefined,
         getState: () => savedState,
-        setState: (state: unknown) => state,
+        setState: (state: Record<string, unknown>) => { savedState = state; return state; },
       }),
     };
+  });
+
+  setup(() => {savedState = undefined; clearSavedChatState();});
+
+  test("keeps independent drafts, files and images for new and existing chats", () => {
+    const attached = image(Date.now() + 60_000);
+    saveChatDraft({ schemaVersion: 5, mode: "persistent", draft: "hola", referencedFiles: [file("new.ts"), { ...file("external.ts"), scope: "external-snapshot", content: "private-external-content" }], imageAttachments: [attached] });
+    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "one", draft: "chat uno", referencedFiles: [file("one.ts")], imageAttachments: [] });
+    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "two", draft: "chat dos", referencedFiles: [], imageAttachments: [] });
+    selectNewChatDraft();
+    assert.equal(getSavedChatState()?.draft, "hola");
+    assert.equal(getChatDraft("one")?.draft, "chat uno");
+    assert.equal(getChatDraft("two")?.draft, "chat dos");
+    assert.equal(getChatDraft()?.imageAttachments[0].id, attached.id);
+    assert.equal(getChatDraft("one")?.referencedFiles[0].path, "one.ts");
+    assert.equal(getChatDraft()?.referencedFiles[1].content, "private-external-content");
+    assert.ok(!JSON.stringify(savedState).includes("private-external-content"));
+    clearSavedChatState("one");
+    assert.equal(getChatDraft("one"), undefined);
+    assert.equal(getChatDraft("two")?.draft, "chat dos");
+    assert.equal(getSavedChatState()?.draft, "hola");
+    saveChatDraft(getChatDraft("two")!);
+    clearSavedChatState("two");
+    assert.equal(getSavedChatState()?.draft, "hola");
+  });
+
+  test("moves an accepted new-chat draft to its assigned conversation without reviving sent text", () => {
+    saveChatDraft({ schemaVersion: 5, mode: "persistent", draft: "send me", referencedFiles: [], imageAttachments: [] });
+    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "accepted", draft: "", referencedFiles: [], imageAttachments: [] }, { conversationId: undefined });
+    selectNewChatDraft();
+    assert.equal(getSavedChatState()?.draft, "");
+    assert.equal(getChatDraft("accepted")?.draft, "");
+  });
+
+  test("restores local pasted files with fresh previews and clears them per chat", () => {
+    const file = new File(["image bytes"], "paste.png", { type: "image/png" });
+    savePendingDraftImages(undefined, [{ requestId: "old", name: file.name, file, previewUri: "blob:revoked" }]);
+    const first = restorePendingDraftImages();
+    const second = restorePendingDraftImages();
+    try {
+      assert.equal(first[0].file, file);
+      assert.notEqual(first[0].previewUri, "blob:revoked");
+      assert.notEqual(first[0].requestId, second[0].requestId);
+      assert.deepEqual(restorePendingDraftImages("another"), []);
+      clearSavedChatState();
+      assert.deepEqual(restorePendingDraftImages(), []);
+    } finally {
+      URL.revokeObjectURL(first[0].previewUri); URL.revokeObjectURL(second[0].previewUri);
+    }
   });
 
   test("drops duplicate referenced paths while keeping the first occurrence", () => {
@@ -40,6 +95,10 @@ suite("persistent chat state", () => {
 
     const attachment = image(Date.now() + 60_000);
     assert.strictEqual(isImageAttachment(attachment), true);
+    assert.strictEqual(isImageAttachment({ ...attachment, imageNumber: 4 }), true);
+    for (const imageNumber of [0, -1, 1.5, "4", Number.MAX_SAFE_INTEGER + 1]) {
+      assert.strictEqual(isImageAttachment({ ...attachment, imageNumber }), false);
+    }
     assert.strictEqual(isImageAttachment({ ...attachment, previewUri: undefined }), false);
     assert.strictEqual(isImageAttachment(image(Date.now() - 1)), false);
   });
@@ -65,6 +124,55 @@ suite("persistent chat state", () => {
 
     savedState = undefined;
     assert.strictEqual(getSavedChatState(), undefined);
+  });
+
+  test("does not restore a deleted conversation after the chat remounts", () => {
+    savedState = {
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "deleted-chat",
+      draft: "old draft",
+      referencedFiles: [file("src/a.ts")],
+      imageAttachments: [image(Date.now() + 60_000)],
+    };
+
+    clearSavedChatState("deleted-chat");
+
+    assert.deepStrictEqual(getSavedChatState(), {
+      schemaVersion: 5,
+      mode: "persistent",
+      draft: "",
+      referencedFiles: [],
+      imageAttachments: [],
+      conversationId: undefined,
+    });
+  });
+
+  test("keeps the current conversation when another conversation is deleted", () => {
+    savedState = { schemaVersion: 5, mode: "persistent", conversationId: "current-chat", draft: "keep me" };
+    const original = savedState;
+
+    clearSavedChatState("other-chat");
+
+    assert.strictEqual(savedState, original);
+  });
+
+  test("clears restoration data before resetting the chat", () => {
+    savedState = { schemaVersion: 5, mode: "persistent", conversationId: "old-chat", draft: "old draft" };
+
+    clearSavedChatState();
+
+    assert.strictEqual(getSavedChatState()?.conversationId, undefined);
+    assert.strictEqual(getSavedChatState()?.draft, "");
+  });
+
+  test("preserves incognito state when resetting the chat", () => {
+    savedState = { schemaVersion: 3, mode: "incognito" };
+    const original = savedState;
+
+    clearSavedChatState();
+
+    assert.strictEqual(savedState, original);
   });
 });
 

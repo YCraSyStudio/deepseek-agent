@@ -40,6 +40,10 @@ Example lifecycle:
 
 Do not use SemVer suffixes such as `-beta.1` or `-preview.1` for Marketplace package versions. The version number and the `preview` gallery flag together identify release stability.
 
+## Saved-state compatibility
+
+Pre-release updates may change conversation and storage formats, making chats or state saved by earlier versions unavailable. Copy or export important conversations before updating. Backward compatibility for saved chats becomes a release commitment with the first stable line (`0.2.x`).
+
 ## Target release
 
 For the current branch, `0.1.15` is the current preview target. Keep `package.json` and the root lockfile aligned to that release until it is cut.
@@ -113,17 +117,6 @@ A pre-release build (odd minor) must never be republished as stable with the sam
 
 ## GitHub release
 
-Before creating the extension tag, publish the immutable SearXNG sidecar release from the exact `main` commit intended for the release:
-
-```bash
-gh workflow run searxng-runtime.yml --ref main
-gh run list --workflow searxng-runtime.yml --limit 1
-gh run watch <run-id> --exit-status
-pnpm run verify:searxng-runtime
-```
-
-The runtime workflow reads the `v2` metadata pinned in the extension, builds and smoke-tests all five supported binaries, verifies their sizes and SHA-256 digests against the VSIX trust anchor, and creates the prerelease atomically. It refuses to modify an existing runtime release.
-
 Push a `vX.Y.Z` tag after `main` points at the release commit:
 
 ```bash
@@ -182,7 +175,7 @@ Publish only after installing the packaged VSIX in a clean profile and testing a
 - Open a long conversation and verify only its newest messages mount, that `Show N earlier messages` reveals more without moving the message being read, and that a pending `edit_file` or `apply_patch` preview does not steal focus.
 - Click an attached image and verify the viewer fits, zooms, and can be dragged to pan without squashing the image.
 - Verify a finished turn ends with the edited-files summary and that `Review` opens every change of the turn.
-- Verify SearXNG starts automatically, exposes its engine catalog, respects custom engine selection, and performs `search_web` without requiring Chromium, Docker, Podman, or a system Python installation.
+- Verify DeepSeek web search uses the configured API credential without downloading or starting a local search service.
 - Open Diagnostics and verify generation/conversation usage summaries contain counts and phases but no prompt, response, command, or path content.
 
 ## Known constraints
@@ -194,3 +187,9 @@ Publish only after installing the packaged VSIX in a clean profile and testing a
 - Explorer clipboard URI access is not used; workspace references use path autocomplete or the unified picker. Clipboard image data is supported separately through bounded webview IPC.
 
 [Back](INDEX.md)
+
+## GitHub Pages configuration
+
+The site is prebuilt with Astro, not Jekyll. In [repository Pages settings](https://github.com/YCraSyStudio/deepseek-agent/settings/pages), choose **Deploy from a branch**, branch **main**, folder **/docs**. Keep `docs/.nojekyll` in the published folder. Publishing from the repository root makes Jekyll scan Astro source files and fail while parsing their TypeScript front matter as YAML.
+
+The Production gates workflow builds and checks the Astro documentation before packaging or publishing a release. Pages serves the generated `docs/` files committed to `main`; always include regenerated documentation when changing `web-doc/`.

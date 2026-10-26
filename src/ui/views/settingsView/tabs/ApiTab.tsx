@@ -1,3 +1,4 @@
+import BetaSection from "../sections/BetaSection";
 import { AdvancedSection, ApiSection } from "../sections";
 import type { ApiCredentialState, SaveOnBlurFn, SettingsConfig, UpdateConfigFn } from "../model";
 import type { TranslationKey } from "@webview/i18n/I18n";
@@ -17,6 +18,7 @@ interface ApiTabProps {
 function ApiTab(props: ApiTabProps) {
   return (
     <ApiSection {...props}>
+      <BetaSection config={props.config} updateConfig={props.updateConfig} saveOnBlur={props.saveOnBlur} />
       <AdvancedSection config={props.config} updateConfig={props.updateConfig} saveOnBlur={props.saveOnBlur} />
     </ApiSection>
   );

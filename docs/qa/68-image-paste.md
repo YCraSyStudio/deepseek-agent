@@ -1,0 +1,5 @@
+# Clipboard image preview (#68)
+
+Paste keeps the image local and shows an object-URL preview without reading or uploading it. The webview CSP permits blob image previews. Sending or steering starts the uploads and submits the message only after they complete; duplicate submission is blocked during upload. Upload completions are matched by request ID. Removing a local preview releases its URL without contacting the provider. Removing an uploading preview or navigating away cancels submission and discards/deletes any later remote upload. Read/upload failure preserves the local image and draft for retry. Local previews are not persisted or sent to the model.
+
+Manual QA: paste while offline and confirm an immediate preview. The composer shows only the image and its remove button, with no upload label. Check image-only messages, slow network, failed upload and retry, unreadable clipboard file, several images finishing out of order, removal before and during upload, navigation during upload, and 8-image and 16-MiB clipboard limits. Check send/steer remain disabled during submission uploads.

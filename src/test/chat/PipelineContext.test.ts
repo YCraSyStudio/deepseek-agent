@@ -5,7 +5,6 @@ import {
   addProvenFileScope,
   getPathArgument,
   handlerContext,
-  isAutomaticExecution,
   requiresWorkspaceMutationPolicy,
 } from "@/vscode/webviews/handlers/chat/toolCalls/execution/PipelineContext";
 import { createExecutionContext, createToolExecutorStub, createWorkspaceHost, toolCall } from "./executionHarness";
@@ -21,15 +20,9 @@ suite("tool execution pipeline context", () => {
     const { context } = createExecutionContext({ executor: createToolExecutorStub({ metadata }).executor });
 
     assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("read_file", { path: "README.md" })), false);
-    assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("search_web", { query: "searxng" })), false);
+    assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("search_web", { query: "web search" })), false);
     assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("edit_file", { path: "src/app.ts" })), true);
     assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("unknown_tool")), true);
-  });
-
-  test("detects the automatic execution modes", () => {
-    assert.strictEqual(isAutomaticExecution(createExecutionContext().context), false);
-    assert.strictEqual(isAutomaticExecution(createExecutionContext({ permissionMode: "auto-approve" }).context), true);
-    assert.strictEqual(isAutomaticExecution(createExecutionContext({ permissionMode: "full-access" }).context), true);
   });
 
   test("projects the handler context exposed to tools", () => {
@@ -39,13 +32,16 @@ suite("tool execution pipeline context", () => {
     context.markWebTainted?.();
     assert.strictEqual(handlerContext(context).webTainted, true);
     assert.strictEqual(handlerContext(context).trustedUserRequest, undefined);
+    context.applicationSession = async () => assert.fail("projection must not execute the callback");
+    assert.strictEqual(handlerContext(context).applicationSession, context.applicationSession);
   });
 
   test("reads the path argument of file and terminal calls", () => {
     assert.strictEqual(getPathArgument(toolCall("edit_file", { path: "src/app.ts" })), "src/app.ts");
     assert.strictEqual(getPathArgument(toolCall("run_terminal_command", { command: "npm test" })), undefined);
     assert.strictEqual(getPathArgument(toolCall("run_terminal_command", { command: "npm test", cwd: "/workspace" })), "/workspace");
-    assert.strictEqual(getPathArgument(toolCall("search_web", { query: "searxng" })), undefined);
+    assert.strictEqual(getPathArgument(toolCall("application_session", { action: "start", command: "app", cwd: "project" })), "project");
+    assert.strictEqual(getPathArgument(toolCall("search_web", { query: "web search" })), undefined);
     assert.strictEqual(getPathArgument(toolCall("read_file", { path: "   " })), undefined);
     assert.strictEqual(getPathArgument({
       id: "call:broken",

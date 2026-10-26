@@ -24,13 +24,6 @@ export function mapReasoningEffort(reasoning: string | undefined): ReasoningEffo
   return reasoning === "max" ? "max" : "high";
 }
 
-export interface SearxngEngineOption {
-  name: string;
-  shortcut: string;
-  categories: string[];
-  enabled: boolean;
-}
-
 export interface AppConfig {
   interfaceLanguage: InterfaceLanguage;
   apiKey: string;
@@ -48,17 +41,21 @@ export interface AppConfig {
   maxConcurrentGenerations: number;
   permissionMode: PermissionMode;
 
-  autoContext: boolean;
   historyEnabled: boolean;
   historyRetentionDays: number;
+  snapshotStorageLimitMb: number;
   includeHomeAgents: boolean;
   usageBreakdown: boolean;
   usageCostCurrency: UsageCurrency;
+  automaticCaptureEnabled: boolean;
+  automaticCaptureLimit: number;
+  browserAccess: "ask" | "always" | "never";
   webSearchEnabled: boolean;
-  webSearchEngine: "searxng";
-  searxngUrl: string;
-  searxngEngines: string[];
-  searxngEngineCatalog: SearxngEngineOption[];
+  webSearchRegion: string;
+  privacyMinimizeData: boolean;
+  betaFeaturesEnabled: boolean;
+  editorSuggestionsEnabled: boolean;
+  chatSuggestionsEnabled: boolean;
 
   userId?: string;
 }
@@ -82,15 +79,19 @@ export const DEFAULT_CONFIG: AppConfig = {
   maxTokens: MAX_OUTPUT_TOKENS,
   maxConcurrentGenerations: 8,
   permissionMode: "default",
-  autoContext: false,
   historyEnabled: true,
   historyRetentionDays: 30,
+  snapshotStorageLimitMb: 1024,
   includeHomeAgents: false,
   usageBreakdown: false,
   usageCostCurrency: DEFAULT_USAGE_CURRENCY,
+  automaticCaptureEnabled: false,
+  automaticCaptureLimit: 10,
+  browserAccess: "ask",
   webSearchEnabled: true,
-  webSearchEngine: "searxng",
-  searxngUrl: "http://127.0.0.1:8888",
-  searxngEngines: [],
-  searxngEngineCatalog: [],
+  webSearchRegion: "global",
+  privacyMinimizeData: true,
+  betaFeaturesEnabled: false,
+  editorSuggestionsEnabled: true,
+  chatSuggestionsEnabled: true,
 };

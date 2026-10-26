@@ -1,3 +1,6 @@
+import { isChatDraftRequest } from "@/infrastructure/persistence/ChatDraftStore";
+import { isInstructionName } from "@/shared/instructions/InstructionNames";
+import { INSTRUCTION_TEMPLATE_IDS } from "@/contracts/Customization";
 import { MAX_OUTPUT_TOKENS, WEBVIEW_INPUT_LIMITS, WEBVIEW_PROTOCOL_VERSION, isReasoningEffort, type AppConfig, type WebviewToHandlerMessage } from "@/contracts";
 import { isAllowedApiBaseUrl } from "@/shared/security/ApiOrigin";
 import { SETTING_KEYS_LIST } from "@/application/settings/ConfigurationSchema";
@@ -26,19 +29,49 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
   }
 
   switch (value.type) {
+    case "chatDraft":
+      return hasOnlyKeys(value, ["type", "requestId", "operation", "conversationId", "draft", "attachments"]) && isChatDraftRequest(value);
     case "initializeProtocol":
       return hasOnlyKeys(value, ["type", "protocolVersion"]) && value.protocolVersion === WEBVIEW_PROTOCOL_VERSION;
+    case "setStorageDirectory":
+      return hasOnlyKeys(value, ["type", "directory"]) && isNonEmptyBoundedString(value.directory, 4096);
+    case "selectStorageDirectory":
+    case "reloadStorage":
     case "getConfig":
+    case "getReusableInstructions":
+    case "getWorkspaceInstructions":
     case "getHistory":
     case "getAvailableTools":
     case "getGenerationSnapshot":
       return hasOnlyKeys(value, ["type"]);
+    case "getScreenshotPreview":
+    case "openScreenshot":
+      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "screenshotId"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) && typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
+        typeof value.screenshotId === "string" && /^screenshot-\d+$/.test(value.screenshotId);
     case "newConversation":
+    case "openGlobalAgents":
+    case "cancelChatSuggestion":
       return hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128);
+    case "getChatSuggestion":
+      return hasOnlyKeys(value, ["type", "requestId", "prefix"]) && isNonEmptyBoundedString(value.requestId, 128) &&
+        isBoundedString(value.prefix, 12_000);
     case "selectAttachments":
       return hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
         (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512));
+    case "openReusableInstruction":
+      return hasOnlyKeys(value, ["type", "requestId", "id"]) && isNonEmptyBoundedString(value.requestId, 128) && isNonEmptyBoundedString(value.id, 256);
+    case "createReusableInstruction":
+      return hasOnlyKeys(value, ["type", "requestId", "scope", "rootUri", "name", "description", "template"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) && isEnumOf(value.scope, ["global", "workspace"]) &&
+        (value.template === undefined || isEnumOf(value.template, INSTRUCTION_TEMPLATE_IDS)) &&
+        (value.scope === "workspace" ? isNonEmptyBoundedString(value.rootUri, 32768) : value.rootUri === undefined) &&
+        isInstructionName(value.name) &&
+        isNonEmptyBoundedString(value.description, 350) && !/[\r\n\u0000]/.test(value.description as string);
+    case "openWorkspaceInstructions":
+      return hasOnlyKeys(value, ["type", "requestId", "rootUri"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) && isNonEmptyBoundedString(value.rootUri, 32768);
     case "uploadClipboardImage":
       return hasOnlyKeys(value, ["type", "requestId", "name", "mediaType", "size", "dataBase64"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
@@ -144,7 +177,7 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
       );
     case "openFileDiff":
       return (
-        hasOnlyKeys(value, ["type", "path", "diff", "beforeHash", "afterHash", "preview", "conversationId", "workspaceRevision"]) &&
+        hasOnlyKeys(value, ["type", "path", "diff", "beforeHash", "afterHash", "preview", "conversationId", "generationId", "workspaceRevision"]) &&
         isNonEmptyBoundedString(value.path, 32_768) &&
         (value.diff === undefined || isBoundedString(value.diff, MAX_CHANGE_DIFF_TEXT)) &&
         (isNonEmptyBoundedString(value.diff, MAX_CHANGE_DIFF_TEXT) || isNonEmptyBoundedString(value.afterHash, 64)) &&
@@ -152,8 +185,16 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
         isOptionalBoundedString(value.afterHash, 64) &&
         isOptionalBoolean(value.preview) &&
         (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512)) &&
+        (value.generationId === undefined || isNonEmptyBoundedString(value.generationId, 200)) &&
         isOptionalBoundedString(value.workspaceRevision, 256)
       );
+    case "getWorkspaceTurn":
+    case "revertWorkspaceTurn":
+    case "reviewWorkspaceTurn":
+      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "generationId"]) &&
+        isNonEmptyBoundedString(value.requestId, 512) &&
+        typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
+        typeof value.generationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.generationId);
     default:
       return false;
   }
@@ -222,7 +263,7 @@ function validateSendMessageFields(value: Record<string, unknown>, keys: readonl
 function isImageAttachment(value: unknown): boolean {
   if (!isRecord(value) || !hasOnlyKeys(value, [
     "id", "fileId", "name", "mediaType", "size", "source", "uploadedAt", "expiresAt",
-    "apiBaseUrl", "cacheFileName", "previewUri",
+    "apiBaseUrl", "cacheFileName", "previewUri", "imageNumber",
   ])) {return false;}
   return isImageAttachmentShape(value) &&
     isNonEmptyBoundedString(value.id, 512) &&
@@ -242,12 +283,11 @@ const INTERFACE_LANGUAGES = ["auto", "en", "es", "zh"] as const;
 const PERMISSION_MODES = ["default", "auto-approve", "full-access"] as const;
 const USAGE_CURRENCIES = ["usd", "cny"] as const;
 
-const WEBVIEW_FORBIDDEN_SETTING_KEYS: ReadonlyArray<keyof AppConfig> = ["searxngEngineCatalog"];
 const WEBVIEW_ONLY_CONFIG_KEYS: ReadonlyArray<keyof AppConfig> = ["apiKey", "userId"];
 
 /** Derived from the stored settings so a new persisted key cannot be forgotten here. */
 const APP_CONFIG_KEYS: ReadonlyArray<keyof AppConfig> = [
-  ...SETTING_KEYS_LIST.filter((key) => !WEBVIEW_FORBIDDEN_SETTING_KEYS.includes(key)),
+  ...SETTING_KEYS_LIST,
   ...WEBVIEW_ONLY_CONFIG_KEYS,
 ];
 
@@ -268,33 +308,22 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
     (value.maxTokens === undefined || (Number.isSafeInteger(value.maxTokens) && (value.maxTokens as number) >= 1 && (value.maxTokens as number) <= MAX_OUTPUT_TOKENS)) &&
     (value.maxConcurrentGenerations === undefined || (Number.isSafeInteger(value.maxConcurrentGenerations) && (value.maxConcurrentGenerations as number) >= 1 && (value.maxConcurrentGenerations as number) <= 16)) &&
     (value.permissionMode === undefined || isEnumOf(value.permissionMode, PERMISSION_MODES)) &&
-    isOptionalBoolean(value.autoContext) &&
     isOptionalBoolean(value.historyEnabled) &&
     (value.historyRetentionDays === undefined || (Number.isSafeInteger(value.historyRetentionDays) && (value.historyRetentionDays as number) >= 0 && (value.historyRetentionDays as number) <= 3650)) &&
+    (value.snapshotStorageLimitMb === undefined || (Number.isSafeInteger(value.snapshotStorageLimitMb) && (value.snapshotStorageLimitMb as number) >= 64 && (value.snapshotStorageLimitMb as number) <= 65536)) &&
     isOptionalBoolean(value.includeHomeAgents) &&
     isOptionalBoolean(value.usageBreakdown) &&
     (value.usageCostCurrency === undefined || isEnumOf(value.usageCostCurrency, USAGE_CURRENCIES)) &&
+    isOptionalBoolean(value.automaticCaptureEnabled) &&
+    (value.automaticCaptureLimit === undefined || (Number.isSafeInteger(value.automaticCaptureLimit) && (value.automaticCaptureLimit as number) >= 1 && (value.automaticCaptureLimit as number) <= 40)) &&
+    (value.browserAccess === undefined || isEnumOf(value.browserAccess, ["ask", "always", "never"])) &&
     isOptionalBoolean(value.webSearchEnabled) &&
-    (value.webSearchEngine === undefined || value.webSearchEngine === "bing" || value.webSearchEngine === "google" || value.webSearchEngine === "baidu" || value.webSearchEngine === "searxng") &&
-    (value.searxngUrl === undefined || isAllowedSearxngUrl(value.searxngUrl)) &&
-    (value.searxngEngines === undefined || isSearxngEngineSelection(value.searxngEngines)) &&
+    isOptionalBoolean(value.privacyMinimizeData) &&
+    isOptionalBoolean(value.betaFeaturesEnabled) &&
+    isOptionalBoolean(value.editorSuggestionsEnabled) &&
+    isOptionalBoolean(value.chatSuggestionsEnabled) &&
+    (value.webSearchRegion === undefined || (typeof value.webSearchRegion === "string" && /^(?:auto|global|[A-Za-z]{2})$/.test(value.webSearchRegion))) &&
     isOptionalBoundedString(value.userId, 256)
   );
-}
-
-function isAllowedSearxngUrl(value: unknown): boolean {
-  if (!isNonEmptyBoundedString(value, 2048)) {return false;}
-  try {
-    const url = new URL(value.trim());
-    if (url.username || url.password) {return false;}
-    const hostname = url.hostname.toLowerCase();
-    const loopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-    return url.protocol === "https:" || (url.protocol === "http:" && loopback);
-  } catch {return false;}
-}
-
-function isSearxngEngineSelection(value: unknown): boolean {
-  return Array.isArray(value) && value.length <= 512 && value.every((item) =>
-    typeof item === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(item));
 }
 

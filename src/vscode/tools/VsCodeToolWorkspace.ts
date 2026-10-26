@@ -39,7 +39,7 @@ import {
 
 export function createVsCodeToolWorkspace(
   capturedSnapshot?: WorkspaceRunSnapshot,
-  options: { allowOutsideWorkspace?: boolean; unrestricted?: boolean } = {},
+  options: { allowOutsideWorkspace?: boolean; unrestricted?: boolean; conversationId?: string } = {},
 ): ToolWorkspaceHost {
   const inlinePreview = createInlineDiffPreview();
   const snapshot = capturedSnapshot ?? captureWorkspaceRunSnapshot(captureCurrentWorkspaceBinding());
@@ -65,7 +65,7 @@ export function createVsCodeToolWorkspace(
       return VSCODE_TERMINAL_SHELL_DESCRIPTION;
     },
 
-    executeCommand: executeInVsCodeTerminal,
+    executeCommand: (command, commandOptions) => executeInVsCodeTerminal(command, commandOptions, options.conversationId),
 
     async isPathInsideWorkspace(rawPath: string): Promise<boolean> {
       if (path.isAbsolute(rawPath) || path.win32.isAbsolute(rawPath)) {

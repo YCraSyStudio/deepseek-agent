@@ -1,6 +1,6 @@
 import "./ApiSection.css";
 import type { ApiSectionProps } from "../model";
-import { Toggle } from "@webview/components/settingsView";
+import { SettingsField, SettingsInputAction, SettingsSection, Toggle } from "@webview/components/settingsView";
 import { useApiConnectionState } from "./UseApiConnectionState";
 import { t } from "@webview/i18n";
 
@@ -15,12 +15,14 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
     });
 
   return (
-    <section className="settingsSection apiSection">
-      <h3 className="sectionTitle">{t("settings.api.title")}</h3>
+    <SettingsSection title={t("settings.api.title")} className="apiSection">
 
-      <div className="settingRow">
-        <label htmlFor="apiKeyInput">{t("settings.api.key")}</label>
-        <div className="inputWithAction">
+      <SettingsField htmlFor="apiKeyInput" label={t("settings.api.key")} layout="wide">
+        <SettingsInputAction action={
+          <button type="button" className="btn-icon apiKeyToggle" aria-label={t("settings.api.keyVisibility.label")} data-tooltip={t("settings.api.keyVisibility.tooltip")} data-tooltip-align="end" onClick={toggleShowApiKey}>
+            {showApiKey ? <span className="codicon codicon-eye-closed" /> : <span className="codicon codicon-eye" />}
+          </button>
+        }>
           <input
             className={`apiKeyInput ${apiKeyStatusClass}`}
             id="apiKeyInput"
@@ -32,10 +34,7 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
             onChange={handleApiKeyChange}
             onBlur={handleApiKeyBlur}
           />
-          <button type="button" className="btn-icon apiKeyToggle" aria-label={t("settings.api.keyVisibility.label")} data-tooltip={t("settings.api.keyVisibility.tooltip")} data-tooltip-align="end" onClick={toggleShowApiKey}>
-            {showApiKey ? <span className="codicon codicon-eye-closed" /> : <span className="codicon codicon-eye" />}
-          </button>
-        </div>
+        </SettingsInputAction>
 
         <div className="statusRow">
           {apiKeyMessage ? <span className={`statusIndicator ${apiKeyStatusClass}`}>{apiKeyMessage}</span> : null}
@@ -53,10 +52,9 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
             </button>
           </div>
         </div>
-      </div>
+      </SettingsField>
 
-      <div className="settingRow">
-        <label htmlFor="modelSelectSettings">{t("settings.model.label")}</label>
+      <SettingsField htmlFor="modelSelectSettings" label={t("settings.model.label")}>
         <select
           id="modelSelectSettings"
           value={config.model}
@@ -73,9 +71,8 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
             </option>
           ))}
         </select>
-      </div>
+      </SettingsField>
 
-      {}
       <Toggle
         id="thinkingModeToggle"
         label={t("settings.reasoning.mode")}
@@ -86,10 +83,8 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
         }}
       />
 
-      {}
       {config.thinkingMode && (
-        <div className="settingRow">
-          <label htmlFor="reasoningEffort">{t("settings.reasoning.effort")}</label>
+        <SettingsField htmlFor="reasoningEffort" label={t("settings.reasoning.effort")}>
           <select
             id="reasoningEffort"
             value={config.reasoningEffort}
@@ -106,11 +101,11 @@ function ApiSection({ config, apiKeyDraft, credential, updateConfig, saveOnBlur,
               </option>
             ))}
           </select>
-        </div>
+        </SettingsField>
       )}
 
       {children}
-    </section>
+    </SettingsSection>
   );
 }
 

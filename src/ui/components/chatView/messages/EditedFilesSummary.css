@@ -7,6 +7,25 @@
   font-size: 11px;
 }
 
+.editedFilesActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-color);
+}
+.editedFilesActions button {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.editedFilesActions button:disabled { opacity: 0.6; cursor: default; }
+.editedFilesError { color: var(--error-color, #f48771); padding: 0 10px; overflow-wrap: anywhere; }
+
 .editedFilesHeader {
   align-items: center;
   gap: 8px;

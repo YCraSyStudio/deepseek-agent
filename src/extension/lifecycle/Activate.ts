@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import { configureUserDataDirectory } from "@/infrastructure/persistence/UserDataPaths";
+import { getConfiguredStorageDirectory } from "@/vscode/storage/StorageLocation";
 import type { AppConfig } from "@/contracts";
 import { CONFIG_SECTION, INCLUDE_HOME_AGENTS_KEY } from "@/shared/constants";
 import { registerExtensionApi } from "@/vscode/activation/RegisterExtensionApi";
@@ -8,7 +10,7 @@ import { initializeLogger, logInfo } from "@/shared/logging/Logger";
 import { getWebRuntimeDiagnostics } from "@/vscode/tools/browser";
 import { ExtensionCompositionRoot } from "../CompositionRoot";
 
-type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled" | "searxngEngines" | "searxngEngineCatalog"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes";
+type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled" | "browserAccess" | "automaticCaptureEnabled" | "automaticCaptureLimit"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes" | "autoContext";
 
 const LEGACY_SETTING_KEYS: ReadonlyArray<LegacySettingKey> = [
   "baseUrl",
@@ -31,6 +33,9 @@ const LEGACY_SETTING_KEYS: ReadonlyArray<LegacySettingKey> = [
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const diagnostics = vscode.window.createOutputChannel("YCraSy DeepSeek Agent");
   context.subscriptions.push(initializeLogger(diagnostics, "info"));
+  // Stop syncing keys registered by previous versions; local data stays intact.
+  context.globalState.setKeysForSync([]);
+  configureUserDataDirectory(getConfiguredStorageDirectory(context));
   await initializeUserSettings();
   if (SettingsManager.getPersistenceError()) {
     await vscode.window.showWarningMessage(
@@ -51,7 +56,6 @@ async function initializeUserSettings(): Promise<void> {
   const legacyWebConfig = vscode.workspace.getConfiguration(`${CONFIG_SECTION}.webSearch`);
   const initialSettings: Record<string, unknown> = Object.fromEntries(LEGACY_SETTING_KEYS.map((key) => [key, legacyConfig.get(key)]));
   initialSettings.includeHomeAgents = legacyConfig.get(INCLUDE_HOME_AGENTS_KEY);
-  initialSettings.webSearchEngine = "searxng";
   await SettingsManager.initialize(initialSettings);
 
   const removals: Thenable<void>[] = [];

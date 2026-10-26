@@ -8,6 +8,7 @@ import type { ConversationUsageSnapshot } from "@/shared/usage/Usage";
 import { getVsCodeApi } from "./VsCodeApi";
 import { getUiLocale, subscribeUiLocale } from "./i18n";
 import { beginNavigationRequest, isLatestNavigationRequest, NAVIGATION_STARTED_EVENT } from "./NavigationRequests";
+import { clearSavedChatState, selectNewChatDraft } from "./views/chatView/model/PersistentChatState";
 
 type ViewType = "chat" | "settings" | "history";
 
@@ -76,10 +77,13 @@ function App() {
         setChatRevision((revision) => revision + 1);
       } else if (message.type === "conversationDeleted") {
         const deletedId = message.id;
+        clearSavedChatState(deletedId);
         setLoadedConversation((current) => (current?.id === deletedId ? null : current));
         setConversationUsage((current) => (loadedConversationIdRef.current === deletedId ? undefined : current));
         setContextWindow((current) => (loadedConversationIdRef.current === deletedId ? undefined : current));
       } else if (message.type === "clearChat") {
+        // Clear persisted restoration data before ChatView is remounted.
+        clearSavedChatState();
         setLoadedConversation(null);
         setConversationUsage(undefined);
         setContextWindow(undefined);
@@ -88,8 +92,7 @@ function App() {
         setChatRevision((revision) => revision + 1);
       } else if (message.type === "newConversationReady") {
         if (!isLatestNavigationRequest(message.requestId)) {return;}
-        const vscode = getVsCodeApi();
-        vscode?.setState({ schemaVersion: 4, mode: "persistent", draft: "", referencedFiles: [] });
+        selectNewChatDraft();
         setLoadedConversation(null);
         setConversationUsage(undefined);
         setContextWindow(undefined);

@@ -2,6 +2,16 @@ import type { TranslationCatalog } from "../Types";
 
 export const chat = {
   chat: {
+    draftAttachmentsSaveFailed: "No se han podido guardar o recuperar los adjuntos del borrador localmente. Mantén esta ventana abierta hasta que el almacenamiento esté disponible.",
+    completionFiles: "Archivos",
+    completionInstructions: "Instrucciones",
+    completionWorkspace: "Workspace",
+    completionGlobal: "Global",
+
+    suggestMessage: "Sugerir mensaje",
+    cancelSuggestion: "Cancelar sugerencia",
+    suggestionUnavailable: "No hay una sugerencia disponible. Reintenta o añade más detalles.",
+    acceptSuggestion: "Sugerencia disponible. Tab para aceptar, Escape para descartar.",
     incognitoActive: "El modo incógnito está activo. Este chat se perderá al recargar la extensión.",
     applyingPermissions: "Aplicando permisos...",
     apiKeyMissing: "Falta la API key",
@@ -29,9 +39,9 @@ export const chat = {
     chatMessage: "Mensaje de chat",
     stopGeneration: "Detener generación",
     sendMessage: "Enviar mensaje",
-    workspacePathSuggestions: "Sugerencias de rutas del workspace",
-    pathSuggestionCount: "Hay {count} sugerencias de ruta disponibles.",
-    noFilesOrFoldersFound: "No se encontraron archivos ni carpetas.",
+    workspacePathSuggestions: "Sugerencias de archivos e instrucciones",
+    pathSuggestionCount: "Hay {count} sugerencias de archivos e instrucciones disponibles.",
+    noFilesOrFoldersFound: "No se encontraron archivos, carpetas ni instrucciones.",
     deepseekIsThinking: "DeepSeek está pensando...",
     compactingContext: "Compactando el contexto de la conversación...",
     contextAutomaticallyCompacted: "Contexto compactado automáticamente",
@@ -50,6 +60,8 @@ export const chat = {
     attach: "Adjuntar",
     removeImage: "Quitar imagen",
     enlargeImage: "Ampliar {name}",
+    imageReference: "imagen {number}",
+    insertImageReference: "Añadir imagen {number} al mensaje",
     closeImagePreview: "Cerrar vista de imagen",
     zoomIn: "Acercar",
     zoomOut: "Alejar",
@@ -93,7 +105,8 @@ export const chat = {
         securityReview: "Revisión de seguridad",
         contextSummary: "Resumen de contexto",
         fileCompaction: "Compactación de archivos",
-        visionAnalysis: "Análisis visual"
+        visionAnalysis: "Análisis visual",
+        codeCompletion: "Completación beta de código"
       }
     }
   }

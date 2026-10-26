@@ -14,9 +14,11 @@
   min-width: 0;
   border: 1px solid var(--vscode-widget-border, var(--border-color));
   background: var(--vscode-editorWidget-background, var(--bg-primary));
+  background: color-mix(in srgb, var(--vscode-editorWidget-background, var(--bg-primary)) var(--floating-surface-opacity), transparent);
+  backdrop-filter: var(--floating-surface-filter);
   border-radius: 6px;
   padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.36);
+  box-shadow: 0 4px 12px #0003;
   animation: workspaceMismatchEnter 90ms ease-out;
 }
 

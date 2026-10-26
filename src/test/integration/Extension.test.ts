@@ -1,4 +1,6 @@
 import * as assert from "node:assert";
+import "./EditorFeatures.test";
+import "./TerminalLifecycle.test";
 import { createHash, randomUUID } from "node:crypto";
 import { access } from "node:fs/promises";
 import * as path from "node:path";
@@ -47,8 +49,11 @@ suite("Extension integration", () => {
     }
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes("deepseek-agent.openChat"));
-    assert.ok(commands.includes("deepseek-agent.startSearxng"));
-    assert.ok(commands.includes("deepseek-agent.stopSearxng"));
+    assert.ok(commands.includes("deepseek-agent.completeEditor"));
+    assert.ok(commands.includes("deepseek-agent.refactorEditor"));
+    assert.equal(commands.includes("deepseek-agent.reloadView"), false);
+    assert.strictEqual(commands.includes("deepseek-agent.startSearxng"), false);
+    assert.strictEqual(commands.includes("deepseek-agent.stopSearxng"), false);
     assert.strictEqual(commands.includes("deepseek-agent.installChromiumHeadless"), false);
     assert.strictEqual(commands.includes("deepseek-agent.updateChromiumHeadless"), false);
     assert.strictEqual(commands.includes("deepseek-agent.removeChromiumHeadless"), false);

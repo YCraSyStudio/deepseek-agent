@@ -1,0 +1,37 @@
+.numberInput {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+
+  > input[type="number"] {
+    padding-right: 38px;
+    appearance: textfield;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button { appearance: none; margin: 0; }
+  }
+}
+
+.numberInputControls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  width: 26px;
+  border-left: 1px solid var(--input-border);
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  padding-left: 3px;
+
+  > button {
+    padding: 0;
+    min-height: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-secondary);
+
+    > .codicon { font-size: 12px; }
+    &:hover:not(:disabled) { background: var(--control-hover-bg); color: var(--text-primary); opacity: 1; }
+    &:disabled { opacity: .35; }
+  }
+}

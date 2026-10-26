@@ -17,13 +17,18 @@ interface ChangeDiffRequest {
   beforeHash?: string;
   afterHash?: string;
   preview?: boolean;
+  conversationId?: string;
+  generationId?: string;
 }
+
+interface ReviewScope { conversationId: string; generationId: string }
 
 export class ChangeDiffViewer implements vscode.Disposable {
   private readonly documents = new Map<string, string>();
+  private readonly scopes = new Map<string, ReviewScope>();
   private readonly disposables: vscode.Disposable[];
 
-  constructor() {
+  constructor(revert?: (scope: ReviewScope) => Promise<void>) {
     const provider: vscode.TextDocumentContentProvider = {
       provideTextDocumentContent: (uri) => this.documents.get(uri.toString()) ?? "",
     };
@@ -32,9 +37,20 @@ export class ChangeDiffViewer implements vscode.Disposable {
       vscode.workspace.onDidCloseTextDocument((document) => {
         if (document.uri.scheme === CHANGE_SCHEME) {
           this.documents.delete(document.uri.toString());
+          this.scopes.delete(document.uri.toString());
         }
       }),
     ];
+    if (revert) {
+      this.disposables.push(vscode.commands.registerCommand("deepseek-agent.revertReviewedTurn", async () => {
+        const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+        const uri = input instanceof vscode.TabInputTextDiff ? input.modified : vscode.window.activeTextEditor?.document.uri;
+        const scope = uri ? this.scopes.get(uri.toString()) : undefined;
+        if (!scope) {await vscode.window.showErrorMessage("This review has no recoverable turn snapshot"); return;}
+        try {await revert(scope);}
+        catch (error) {await vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));}
+      }));
+    }
   }
 
   public async open(request: ChangeDiffRequest, binding: WorkspaceBinding): Promise<void> {
@@ -45,24 +61,30 @@ export class ChangeDiffViewer implements vscode.Disposable {
         throw new Error("The saved change is incomplete and cannot be compared.");
       }
 
-      const id = randomUUID();
-      const filename = sanitizeFilename(path.posix.basename(request.path.replace(/\\/g, "/")));
-      const beforeUri = vscode.Uri.from({ scheme: CHANGE_SCHEME, path: `/${id}/before/${filename}` });
-      const afterUri = vscode.Uri.from({ scheme: CHANGE_SCHEME, path: `/${id}/after/${filename}` });
-      this.retain(beforeUri, documents.before);
-      this.retain(afterUri, documents.after);
-
-      await vscode.commands.executeCommand(
-        "vscode.diff",
-        beforeUri,
-        afterUri,
-        `${filename} — DeepSeek change`,
-        { preview: request.preview ?? true },
-      );
+      await this.openSaved(request.path, documents, request.conversationId && request.generationId
+        ? { conversationId: request.conversationId, generationId: request.generationId } : undefined, request.preview);
     } catch (err) {
       logError(`[ChangeDiffViewer] Error opening change for '${request.path}'`, err);
       await vscode.window.showErrorMessage(err instanceof Error ? err.message : "Unable to open the saved change.");
     }
+  }
+
+  public async openSaved(filePath: string, documents: DiffDocuments, scope?: ReviewScope, preview = true): Promise<void> {
+    const id = randomUUID();
+    const filename = sanitizeFilename(path.posix.basename(filePath.replace(/\\/g, "/")));
+    const beforeUri = vscode.Uri.from({ scheme: CHANGE_SCHEME, path: `/${id}/before/${filename}` });
+    const afterUri = vscode.Uri.from({ scheme: CHANGE_SCHEME, path: `/${id}/after/${filename}` });
+    this.retain(beforeUri, documents.before);
+    this.retain(afterUri, documents.after);
+    if (scope) {this.scopes.set(beforeUri.toString(), scope); this.scopes.set(afterUri.toString(), scope);}
+
+    await vscode.commands.executeCommand(
+      "vscode.diff",
+      beforeUri,
+      afterUri,
+      `${filename} — DeepSeek change`,
+      { preview },
+    );
   }
 
   public dispose(): void {
@@ -70,6 +92,7 @@ export class ChangeDiffViewer implements vscode.Disposable {
       disposable.dispose();
     }
     this.documents.clear();
+    this.scopes.clear();
   }
 
   private retain(uri: vscode.Uri, content: string): void {
@@ -80,6 +103,7 @@ export class ChangeDiffViewer implements vscode.Disposable {
         break;
       }
       this.documents.delete(oldest);
+      this.scopes.delete(oldest);
     }
   }
 }

@@ -6,11 +6,27 @@ suite("webview message validation", () => {
     const messages = [
       { type: "initializeProtocol", protocolVersion: 5 },
       { type: "getConfig" },
+      { type: "getReusableInstructions" },
+      { type: "createReusableInstruction", requestId: "instruction-dotted-name", scope: "global", name: "commit.txt", description: "When committing" },
+      { type: "createReusableInstruction", requestId: "instruction-create", scope: "global", name: "commit.md", description: "When committing", template: "commit" },
+      { type: "createReusableInstruction", requestId: "instruction-create", scope: "workspace", rootUri: "file:///project", name: "git", description: "When using Git", template: "git" },
+      { type: "openReusableInstruction", requestId: "instruction-open", id: "global:commit" },
+      { type: "openGlobalAgents", requestId: "customization-open" },
+      { type: "getWorkspaceInstructions" },
+      { type: "openWorkspaceInstructions", requestId: "workspace-open", rootUri: "file:///project" },
+      { type: "getChatSuggestion", requestId: "suggest-1", prefix: "Write a function" },
+      { type: "getChatSuggestion", requestId: "suggest-empty", prefix: "" },
+      { type: "cancelChatSuggestion", requestId: "suggest-1" },
+      { type: "saveConfig", requestId: "suggest-settings", config: { editorSuggestionsEnabled: true, chatSuggestionsEnabled: false } },
+      { type: "selectStorageDirectory" },
+      { type: "reloadStorage" },
+      { type: "setStorageDirectory", directory: "~/.ycrasy-agent" },
       { type: "saveConfig", requestId: "config-1", config: { interfaceLanguage: "es", permissionMode: "auto-approve", temperature: 1, maxTokens: 384_000 } },
       { type: "saveConfig", requestId: "config-default", config: { permissionMode: "default" } },
-      { type: "saveConfig", requestId: "config-web", config: { webSearchEnabled: false, webSearchEngine: "baidu" } },
-      { type: "saveConfig", requestId: "config-searxng-local", config: { webSearchEngine: "searxng", searxngUrl: "http://127.0.0.1:8888" } },
-      { type: "saveConfig", requestId: "config-searxng-remote", config: { webSearchEngine: "searxng", searxngUrl: "https://search.example.com" } },
+      { type: "saveConfig", requestId: "config-web", config: { webSearchEnabled: false } },
+      { type: "saveConfig", requestId: "config-region", config: { webSearchRegion: "ES" } },
+      { type: "saveConfig", requestId: "config-privacy", config: { privacyMinimizeData: true, webSearchRegion: "auto" } },
+      { type: "saveConfig", requestId: "config-beta", config: { betaFeaturesEnabled: true } },
       { type: "saveConfig", requestId: "config-currency", config: { usageBreakdown: true, usageCostCurrency: "cny" } },
       { type: "resetConfig", requestId: "config-2" },
       { type: "resolveHistoryTransition", requestId: "history-1", decision: "stop" },
@@ -40,6 +56,7 @@ suite("webview message validation", () => {
         requestId: "image-delete-1",
         attachment: {
           id: "image-1",
+          imageNumber: 4,
           fileId: "file-api-abc123",
           name: "screenshot.png",
           mediaType: "image/png",
@@ -59,6 +76,10 @@ suite("webview message validation", () => {
       { type: "executeToolCall", generationId: "generation-1", toolCallId: "call-1", action: "execute" },
       { type: "getPathCompletions", requestId: 1, query: "./src/", conversationId: "conversation-1", workspaceRevision: "revision-1" },
       { type: "getAvailableTools" },
+      { type: "getWorkspaceTurn", requestId: "turn-query", conversationId: "chat-1", generationId: "turn-1" },
+      { type: "reviewWorkspaceTurn", requestId: "turn-review", conversationId: "chat-1", generationId: "turn-1" },
+      { type: "revertWorkspaceTurn", requestId: "turn-revert", conversationId: "chat-1", generationId: "turn-1" },
+      { type: "saveConfig", requestId: "snapshot-quota", config: { snapshotStorageLimitMb: 1024 } },
       { type: "openFile", path: "src/index.ts", line: 1 },
       { type: "openFileDiff", path: "src/index.ts", diff: "--- a/src/index.ts\n+++ b/src/index.ts\n@@ -1,1 +1,1 @@\n-old\n+new" },
       { type: "openFileDiff", path: "src/index.ts", afterHash: "a".repeat(64), beforeHash: "b".repeat(64), preview: false },
@@ -75,6 +96,15 @@ suite("webview message validation", () => {
       { type: "initializeProtocol", protocolVersion: 0 },
       { type: "initializeProtocol", protocolVersion: 5, injected: true },
       { type: "getConfig", injected: true },
+      { type: "getChatSuggestion", requestId: "suggest-1", prefix: "x".repeat(12_001) },
+      { type: "getChatSuggestion", requestId: "suggest-1", prefix: "a", apiKey: "injected" },
+      { type: "cancelChatSuggestion" },
+      { type: "selectStorageDirectory", directory: "/unexpected" },
+      { type: "openGlobalAgents" },
+      { type: "openGlobalAgents", requestId: "customization-open", path: "/unexpected/file" },
+      { type: "setStorageDirectory", directory: "" },
+      { type: "setStorageDirectory", directory: "x".repeat(4097) },
+      { type: "setStorageDirectory", directory: 42 },
       { type: "resetConfig" },
       { type: "resolveHistoryTransition", requestId: "history", decision: "wait" },
       { type: "resolveHistoryTransition", decision: "cancel" },
@@ -113,6 +143,9 @@ suite("webview message validation", () => {
       { type: "openFile", path: "file", line: 0 },
       { type: "openFileDiff", path: "file", diff: "x".repeat(2 * 1024 * 1024 + 1) },
       { type: "openFileDiff", path: "file", diff: "change", injected: true },
+      { type: "revertWorkspaceTurn", requestId: "turn-revert", conversationId: "../other", generationId: "turn-1" },
+      { type: "revertWorkspaceTurn", requestId: "turn-revert", conversationId: "chat-1", generationId: "../turn-1" },
+      { type: "saveConfig", requestId: "snapshot-quota", config: { snapshotStorageLimitMb: 0 } },
       { type: "openFileDiff", path: "file" },
       { type: "openFileDiff", path: "file", diff: "change", preview: "yes" },
       { type: "copyCode", code: "x".repeat(2 * 1024 * 1024 + 1) },
@@ -133,5 +166,35 @@ suite("webview message validation", () => {
     for (const message of messages) {
       assert.strictEqual(isWebviewToHandlerMessage(message), false, JSON.stringify(message)?.slice(0, 200));
     }
+  });
+});
+
+ suite("workspace instructions request validation", () => {
+  test("rejects missing fields and arbitrary extra paths", () => {
+    for (const message of [
+      { type: "getWorkspaceInstructions", path: "/outside" },
+      { type: "openWorkspaceInstructions", rootUri: "file:///project" },
+      { type: "openWorkspaceInstructions", requestId: "open" },
+      { type: "openWorkspaceInstructions", requestId: "open", rootUri: "" },
+      { type: "openWorkspaceInstructions", requestId: "open", rootUri: "file:///project", path: "/outside" },
+    ]) {assert.equal(isWebviewToHandlerMessage(message), false);}
+  });
+});
+
+suite("retired sync options validation", () => {
+  test("rejects removed sync settings", () => {
+    for (const key of ["syncSettingsWithVscode", "syncGlobalAgentsWithVscode"]) {
+      assert.equal(isWebviewToHandlerMessage({ type: "saveConfig", requestId: "sync", config: { [key]: true } }), false);
+    }
+  });
+});
+
+suite("reusable instructions request validation", () => {
+  test("rejects traversal, missing scope, malformed metadata and arbitrary target paths", () => {
+    const valid = { type: "createReusableInstruction", requestId: "create", scope: "global", name: "commit", description: "When committing" };
+    for (const patch of [{ template: "unknown" }, { template: "../outside" }, { name: "../outside" }, { name: "/tmp/file" }, { description: "line\nbreak" }, { scope: "other" }, { scope: "workspace" }, { rootUri: "file:///outside" }, { path: "/outside" }]) {
+      assert.equal(isWebviewToHandlerMessage({ ...valid, ...patch }), false);
+    }
+    assert.equal(isWebviewToHandlerMessage({ type: "openReusableInstruction", id: "global:commit" }), false);
   });
 });

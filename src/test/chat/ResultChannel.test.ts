@@ -1,10 +1,6 @@
 import * as assert from "node:assert";
 import { createExecutionResult } from "@/application/tools/ToolExecutor";
-import {
-  createErrorResult,
-  createRejectedResult,
-  postToolCallResult,
-} from "@/vscode/webviews/handlers/chat/toolCalls/execution/ResultChannel";
+import { postToolCallResult } from "@/vscode/webviews/handlers/chat/toolCalls/execution/ResultChannel";
 import { recordInitialToolCall } from "@/vscode/webviews/handlers/chat/toolCalls/execution/ToolCallLedger";
 import { createExecutionContext, toolCall } from "./executionHarness";
 
@@ -56,19 +52,5 @@ suite("tool result channel", () => {
 
     postToolCallResult(context, createExecutionResult(toolCall("search_web"), { kind: "completed", content: "results" }));
     assert.strictEqual(webTainted(), true);
-  });
-
-  test("builds rejected and error results with their stored status", () => {
-    const call = toolCall("edit_file", { path: "src/app.ts" });
-
-    const rejected = createRejectedResult(call, "Tool call rejected by user");
-    assert.strictEqual(rejected.outcome.kind, "rejected");
-    assert.strictEqual(rejected.status, "rejected");
-    assert.strictEqual(rejected.rejected, true);
-
-    const error = createErrorResult(call, "Tool call cycle not available");
-    assert.strictEqual(error.outcome.kind, "error");
-    assert.strictEqual(error.status, "error");
-    assert.strictEqual(error.outcome.content, "Tool call cycle not available");
   });
 });

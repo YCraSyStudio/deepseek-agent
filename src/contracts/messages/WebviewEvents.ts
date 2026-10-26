@@ -1,3 +1,5 @@
+import type { CaptureScreenshotResult } from "../Capture";
+import type { StorageInfo } from "../Storage";
 import type { ToolCall } from "../deepseek/Chat";
 import type { ConversationUsageSnapshot, UsageAggregate } from "@/shared/usage/Usage";
 import type {
@@ -21,10 +23,20 @@ import type {
 } from "./WebviewModels";
 
 export type HandlerToWebviewMessage =
+  | import("../ChatDraft").ChatDraftResult
+  | { type: "reusableInstructions"; entries: import("../Customization").ReusableInstruction[]; error?: string }
+  | { type: "reusableInstructionResult"; requestId: string; success: boolean; error?: string }
+  | { type: "workspaceInstructions"; roots: import("../Customization").WorkspaceInstructionsRoot[]; preferredRootUri?: string; error?: string }
+  | { type: "openWorkspaceInstructionsResult"; requestId: string; success: boolean; error?: string }
+  | { type: "openGlobalAgentsResult"; requestId: string; success: boolean; error?: string }
+  | { type: "chatSuggestion"; requestId: string; text: string }
+  | { type: "workspaceTurn"; requestId: string; conversationId: string; generationId: string; paths: string[]; reverted: boolean; error?: string }
+  | { type: "storageDirectoryResult"; storageInfo: StorageInfo; error?: string }
   | { type: "protocolReady"; protocolVersion: 5 }
   | { type: "protocolError"; supportedVersion: 5; error: string }
   | { type: "requestRejected"; requestId?: string; action?: string; error: string }
-  | { type: "configLoaded"; revision: number; config: Partial<WebviewConfig> }
+  | { type: "screenshotPreview"; requestId: string; conversationId: string; uri?: string; metadata?: CaptureScreenshotResult; error?: string }
+  | { type: "configLoaded"; revision: number; config: Partial<WebviewConfig>; storageInfo?: StorageInfo }
   | {
       type: "historyTransitionRequired";
       requestId: string;
@@ -40,6 +52,7 @@ export type HandlerToWebviewMessage =
       operation: "save" | "reset";
       status: "success" | "error" | "cancelled";
       config: Partial<WebviewConfig>;
+      storageInfo?: StorageInfo;
       credentialUpdated?: boolean;
       error?: string;
     }

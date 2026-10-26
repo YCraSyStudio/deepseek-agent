@@ -11,14 +11,24 @@ export function resolveSearchLocale(
   vscodeLanguage: string | undefined,
 ): SearchLocale {
   const base = parseLocale(languageArgument ?? systemLocale ?? vscodeLanguage ?? "en");
-  const region = regionArgument ?? base.region;
+  const region = regionArgument === "global" ? undefined
+    : regionArgument ?? base.region ?? parseLocale(systemLocale ?? "en").region;
   return { language: base.language, region, tag: region ? `${base.language}-${region}` : base.language };
+}
+
+export function resolveSearchRegion(value: unknown, systemLocale: string | undefined): string | undefined {
+  if (value === "global") {return undefined;}
+  if (value === undefined || value === "auto") {return parseLocale(systemLocale ?? "en").region;}
+  if (typeof value !== "string" || !/^[A-Za-z]{2}$/.test(value)) {
+    throw new Error("region must be a two-letter country code or global");
+  }
+  return value.toUpperCase();
 }
 
 export function addDomainConstraint(query: string, domains: readonly string[]): string {
   if (domains.length === 0) {return query;}
   if (domains.length === 1) {return `${query} site:${domains[0]}`;}
-  return `${query} (${domains.map((domain) => `site:${domain}`).join(" OR ")})`;
+  return `${query} ${domains.map((domain) => `site:${domain}`).join(" OR ")}`;
 }
 
 function parseLocale(locale: string): { language: string; region?: string } {

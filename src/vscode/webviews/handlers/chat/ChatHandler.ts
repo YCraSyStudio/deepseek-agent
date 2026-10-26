@@ -2,7 +2,7 @@ import type * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { GenerationCheckpointStore, HistoryManager } from "@/vscode/storage";
 import { logWarning } from "@/shared/logging/Logger";
-import type { ContextWindowStatus, QueuedGenerationMessage, ReferencedFile, WebviewToHandlerMessage, WorkspaceContextStatus } from "@/contracts";
+import type { ContextWindowStatus, ImageAttachment, QueuedGenerationMessage, ReferencedFile, WebviewToHandlerMessage, WorkspaceContextStatus } from "@/contracts";
 import type { ToolRegistry } from "@/application/tools";
 import {
   captureCurrentWorkspaceBinding,
@@ -13,7 +13,6 @@ import { GenerationCoordinator } from "@/application/chat/GenerationCoordinator"
 import { ResourceGovernor } from "@/application/chat/ResourceGovernor";
 import type { StoredConversation } from "@/application/chat/ProviderTranscript";
 import type { SendMessagePayload } from "./Types";
-import { SlashCommandService } from "./messaging/SlashCommandService";
 import {
   transitionGenerationRun,
   type GenerationEventCallbacks,
@@ -37,6 +36,8 @@ import type { HeadlessWebRuntime } from "@/infrastructure/browser/HeadlessWebRun
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
 import { estimatedContextWindow } from "./context/ContextWindow";
 import { ManualCompaction } from "./context/ManualCompaction";
+import { closeConversationTerminals } from "@/vscode/tools/VsCodeTerminalExecution";
+import { closeConversationApplications } from "@/infrastructure/tools/builtins/terminal/ManagedApplicationSessions";
 
 export class ChatHandler {
   private readonly conversationState: ConversationState;
@@ -48,7 +49,6 @@ export class ChatHandler {
   private readonly checkpoints: ChatCheckpointCoordinator;
   private readonly incognito: IncognitoSessionLifecycle;
   private readonly generationEventCallbacks: GenerationEventCallbacks;
-  private readonly slashCommands: SlashCommandService;
   private readonly generationExecutor: GenerationExecutor;
   private readonly workspaceReferences: ConversationWorkspaceReferences;
   private readonly workspaceCoordinator: ConversationWorkspaceCoordinator;
@@ -60,13 +60,13 @@ export class ChatHandler {
   private readonly lastReplayedGeneration = new WeakMap<object, string>();
 
   constructor(
-    private readonly context: vscode.ExtensionContext,
     private readonly historyManager: HistoryManager,
     private readonly toolRegistry: ToolRegistry,
     private readonly headlessWebRuntime: HeadlessWebRuntime,
     private readonly settings: SettingsRepository,
     private readonly secrets: SecretStore,
     private readonly modelProviderFactory: ModelProviderFactory,
+    private readonly archiveImages: (conversationId: string, attachments: readonly ImageAttachment[]) => Promise<void>,
   ) {
     this.checkpointStore = new GenerationCheckpointStore(this.settings);
     this.conversationState = new ConversationState(
@@ -156,15 +156,6 @@ export class ChatHandler {
       },
     };
 
-    this.slashCommands = new SlashCommandService({
-      context: this.context,
-      conversationState: this.conversationState,
-      toolRegistry: this.toolRegistry,
-      getWorkspaceBinding: (conversationId) => this.workspaceReferences.getBinding(conversationId),
-      getSelectedConversationId: () => this.selectedConversationId,
-      settings: this.settings,
-      secrets: this.secrets,
-    });
     this.generationExecutor = new GenerationExecutor({
       historyManager: this.historyManager,
       activeConversationState: this.conversationState,
@@ -184,6 +175,7 @@ export class ChatHandler {
       settings: this.settings,
       secrets: this.secrets,
       modelProviderFactory: this.modelProviderFactory,
+      archiveImages: this.archiveImages,
     });
 
     this.workspaceCoordinator = new ConversationWorkspaceCoordinator({
@@ -211,7 +203,6 @@ export class ChatHandler {
       post: (message) => this.broadcaster.post(message),
       resolveWorkspaceContext,
       settings: this.settings,
-      slashCommands: this.slashCommands,
       workspaceReferences: this.workspaceReferences,
     });
     this.manualCompaction = new ManualCompaction({
@@ -339,6 +330,12 @@ export class ChatHandler {
     return this.workspaceCoordinator.getContext(conversationId ?? this.selectedConversationId);
   }
 
+  assertWorkspaceIdle(): void {
+    if (this.coordinator.getActiveGenerations().length || this.coordinator.getQueuedConversationIds().length) {
+      throw new Error("Wait for active or queued generations to finish before reverting workspace changes");
+    }
+  }
+
   registerExternalContextFiles(files: ReferencedFile[]): void {
     this.workspaceReferences.registerExternalContextFiles(files);
   }
@@ -352,6 +349,8 @@ export class ChatHandler {
   }
 
   forgetConversation(id: string): boolean {
+    closeConversationTerminals(id);
+    void closeConversationApplications(id);
     const active = this.coordinator.getActiveForConversation(id);
     if (active) {
       this.runs.get(active.generationId)?.session.cancel();

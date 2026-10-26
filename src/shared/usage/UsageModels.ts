@@ -19,7 +19,8 @@ export type UsagePhase =
   | "security_review"
   | "context_summary"
   | "file_compaction"
-  | "vision_analysis";
+  | "vision_analysis"
+  | "code_completion";
 
 export const USAGE_PHASES: readonly UsagePhase[] = [
   "primary",
@@ -30,6 +31,7 @@ export const USAGE_PHASES: readonly UsagePhase[] = [
   "context_summary",
   "file_compaction",
   "vision_analysis",
+  "code_completion",
 ];
 
 export interface PhaseUsage {

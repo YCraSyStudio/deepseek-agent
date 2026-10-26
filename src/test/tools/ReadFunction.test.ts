@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as path from "path";
 import type { ToolHostDocumentSymbol } from "@/application/ports";
-import { readFunctionDefinition, readFunctionHandler } from "@/infrastructure/tools/builtins/fileSystem/ReadFunction";
+import { readFunctionHandler } from "@/infrastructure/tools/builtins/fileSystem/ReadFunction";
 import {
   setToolWorkspaceHost,
   type ToolWorkspaceEntryType,
@@ -266,12 +266,6 @@ suite("read function", () => {
       await readFunctionHandler({ path: "src/absent.ts", names: ["first"] }),
       /^Error reading functions from 'src\/absent\.ts'/,
     );
-  });
-
-  test("declares itself the preferred read for a named declaration", () => {
-    const description = readFunctionDefinition.function.description ?? "";
-
-    assert.match(description, /the preferred read whenever a declaration is the target/);
   });
 });
 

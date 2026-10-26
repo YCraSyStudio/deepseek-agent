@@ -170,6 +170,24 @@ export class ConversationState {
     }
   }
 
+  async updateMessageAttachments(messageId: string, attachments: NonNullable<StoredConversationMessage["imageAttachments"]>): Promise<void> {
+    if (!this.activeConversation) {throw new Error("No active conversation");}
+    const message = this.activeConversation.messages.find((item) => item.id === messageId);
+    if (!message) {throw new Error("Conversation message not found");}
+    message.imageAttachments = structuredClone(attachments);
+    this.activeConversation.updatedAt = nextUpdatedAt(this.activeConversation.updatedAt);
+    if (this.persistenceMode === "persistent") {await this.conversationStore.save(this.activeConversation);}
+  }
+
+  async updateMessageContext(messageId: string, content: string): Promise<void> {
+    if (!this.activeConversation) {throw new Error("No active conversation");}
+    const message = this.activeConversation.messages.find((item) => item.id === messageId);
+    if (!message) {throw new Error("Conversation message not found");}
+    message.contextContent = content;
+    this.activeConversation.updatedAt = nextUpdatedAt(this.activeConversation.updatedAt);
+    if (this.persistenceMode === "persistent") {await this.conversationStore.save(this.activeConversation);}
+  }
+
   async saveContextSummary(summary: ConversationContextSummary): Promise<void> {
     if (!this.activeConversation) {
       throw new Error("Cannot save context summary without an active conversation");
@@ -204,7 +222,7 @@ function toVisibleContextText(messages: StoredConversationMessage[]): string {
   return messages
     .flatMap((message) => {
       if (message.role === "user") {
-        return [`User: ${message.content}`];
+        return [`User: ${message.contextContent ?? message.content}`];
       }
       if (message.role === "assistant") {
         const content = message.contextContent ?? message.content;
@@ -223,14 +241,15 @@ function toApiMessages(messages: StoredConversationMessage[]): ChatMessage[] {
 
     if (message.role === "user") {
       const validAttachments = message.imageAttachments?.filter((attachment) => attachment.expiresAt > Date.now()) ?? [];
+      const content = message.contextContent ?? message.content;
       return [{
         role: "user" as const,
         content: validAttachments.length > 0
           ? [
-              { type: "text" as const, text: message.content || "Describe the attached image." },
+              { type: "text" as const, text: content || "Describe the attached image." },
               ...validAttachments.map((attachment) => ({ type: "file" as const, file_id: attachment.fileId })),
             ]
-          : message.content,
+          : content,
       }];
     }
 

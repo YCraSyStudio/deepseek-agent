@@ -1,10 +1,12 @@
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { migrateGenerationCheckpoints } from "@/infrastructure/persistence/UserDataMigration";
+import { logWarning } from "@/shared/logging/Logger";
+import { lstat, readdir, readFile, rm, rmdir } from "node:fs/promises";
 import * as path from "node:path";
 import type { AppConfig, AssistantTimelineEvent, ConversationMessage, PermissionSnapshot, QueuedGenerationMessage, StoredToolCall, WorkspaceBinding } from "@/contracts";
 import { isWorkspaceBinding } from "@/application/chat/ConversationValidation";
 import { isProviderTranscript, type ProviderTranscript } from "@/application/chat/ProviderTranscript";
 import { writeJsonFileAtomic } from "@/infrastructure/persistence/JsonFileStorage";
-import { getGenerationCheckpointDirectory } from "@/infrastructure/persistence/UserDataPaths";
+import { getHistoryDirectory, getGenerationCheckpointPath, getLegacyGenerationCheckpointDirectory } from "@/infrastructure/persistence/UserDataPaths";
 import type { SettingsRepository } from "@/application/ports";
 import { fitToolResultForModel } from "@/application/chat/toolCall/ToolResultFit";
 import { boundUtf8HeadTail } from "@/shared/utils/BoundedText";
@@ -60,6 +62,7 @@ export class GenerationCheckpointStore {
       ) {
         return;
       }
+      await assertCheckpointLocation(this.getPath(checkpoint.conversationId));
       await writeJsonFileAtomic(this.getPath(checkpoint.conversationId), value);
     });
     return value;
@@ -67,7 +70,13 @@ export class GenerationCheckpointStore {
 
   async delete(conversationId: string): Promise<void> {
     this.revisions.delete(conversationId);
-    await this.enqueue(conversationId, () => rm(this.getPath(conversationId), { force: true }));
+    await this.enqueue(conversationId, async () => {
+      await assertCheckpointLocation(this.getPath(conversationId));
+      await rm(this.getPath(conversationId), { force: true });
+      const legacy = getLegacyGenerationCheckpointDirectory();
+      const old = await lstat(legacy).catch(error => {if (isMissing(error)) {return undefined;} throw error;});
+      if (old?.isDirectory() && !old.isSymbolicLink()) {await rm(path.join(legacy, `${safeFileName(conversationId)}.json`), { force: true });}
+    });
   }
 
   async flush(): Promise<void> {
@@ -75,29 +84,24 @@ export class GenerationCheckpointStore {
   }
 
   async recover(): Promise<GenerationCheckpoint[]> {
-    if (!this.settings.load().historyEnabled) {
-      await this.clearAll();
-      return [];
-    }
-    const directory = getGenerationCheckpointDirectory();
-    await mkdir(directory, { recursive: true });
-    await rm(path.join(directory, "corrupt"), { recursive: true, force: true });
-    const entries = await readdir(directory, { withFileTypes: true });
+    if (!this.settings.load().historyEnabled) {await this.clearAll(); return [];}
+    await migrateGenerationCheckpoints().catch((error: unknown) => {
+      logWarning("[Storage] Could not migrate generation checkpoints; originals preserved", error);
+    });
+    await assertCheckpointLocation();
+    const entries = await listHistoryDirectories();
     const checkpoints: GenerationCheckpoint[] = [];
     for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith(".json")) {
-        continue;
-      }
-      const filePath = path.join(directory, entry.name);
+      const filePath = path.join(getHistoryDirectory(), entry, "checkpoint.json");
       try {
+        const stat = await lstat(filePath);
+        if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_CHECKPOINT_BYTES) {throw new Error("Invalid checkpoint file");}
         const parsed = JSON.parse(await readFile(filePath, "utf8")) as unknown;
-        if (!isGenerationCheckpoint(parsed) || entry.name !== `${safeFileName(parsed.conversationId)}.json`) {
-          throw new Error("Invalid generation checkpoint");
-        }
+        if (!isGenerationCheckpoint(parsed) || filePath !== this.getPath(parsed.conversationId)) {throw new Error("Invalid generation checkpoint");}
         this.revisions.set(parsed.conversationId, parsed.revision);
         checkpoints.push(parsed);
-      } catch {
-        await rm(filePath, { force: true }).catch(() => undefined);
+      } catch (error) {
+        if (!isMissing(error)) {await rm(filePath, { force: true }).catch(() => undefined);}
       }
     }
     return checkpoints;
@@ -107,16 +111,21 @@ export class GenerationCheckpointStore {
     this.epoch += 1;
     this.revisions.clear();
     await this.flush();
-    const directory = getGenerationCheckpointDirectory();
-    await mkdir(directory, { recursive: true });
-    const entries = await readdir(directory, { withFileTypes: true });
-    await Promise.all(entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .map((entry) => rm(path.join(directory, entry.name), { force: true })));
+    await assertCheckpointLocation();
+    await Promise.all((await listHistoryDirectories()).map(entry =>
+      rm(path.join(getHistoryDirectory(), entry, "checkpoint.json"), { force: true })));
+    const legacy = getLegacyGenerationCheckpointDirectory();
+    const old = await lstat(legacy).catch(error => {if (isMissing(error)) {return undefined;} throw error;});
+    if (old?.isDirectory() && !old.isSymbolicLink()) {
+      for (const entry of await readdir(legacy, { withFileTypes: true })) {
+        if (entry.isFile() && entry.name.endsWith(".json")) {await rm(path.join(legacy, entry.name), { force: true });}
+      }
+      await rmdir(legacy).catch(error => {if (isMissing(error) || ["ENOTEMPTY", "EEXIST"].includes(String(error.code))) {return;} throw error;});
+    }
   }
 
   private getPath(conversationId: string): string {
-    return path.join(getGenerationCheckpointDirectory(), `${safeFileName(conversationId)}.json`);
+    return getGenerationCheckpointPath(conversationId);
   }
 
   private enqueue(conversationId: string, operation: () => Promise<void>): Promise<void> {
@@ -125,6 +134,25 @@ export class GenerationCheckpointStore {
     this.queues.set(conversationId, next.catch(() => undefined));
     return next;
   }
+}
+
+async function listHistoryDirectories(): Promise<string[]> {
+  const entries = await readdir(getHistoryDirectory(), { withFileTypes: true }).catch((error: unknown) => {
+    if (isMissing(error)) {return [];}
+    throw error;
+  });
+  return entries.filter(entry => entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "new-chat-draft").map(entry => entry.name);
+}
+
+async function assertCheckpointLocation(filePath?: string): Promise<void> {
+  for (const directory of [getHistoryDirectory(), ...(filePath ? [path.dirname(filePath)] : [])]) {
+    const stat = await lstat(directory).catch(error => {if (isMissing(error)) {return undefined;} throw error;});
+    if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) {throw new Error("Checkpoint storage cannot use redirected directories");}
+  }
+}
+
+function isMissing(error: unknown): boolean {
+  return !!error && typeof error === "object" && "code" in error && error.code === "ENOENT";
 }
 
 function isGenerationCheckpoint(value: unknown): value is GenerationCheckpoint {

@@ -57,6 +57,7 @@ export interface ConversationMessage {
 
 export interface ImageAttachment {
   id: string;
+  imageNumber?: number;
   fileId: string;
   name: string;
   mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
@@ -164,11 +165,16 @@ export interface AvailableToolInfo {
   parameters: AvailableToolParameter[];
 }
 
-export interface PathCompletionItem {
+export type PathCompletionItem = {
   label: string;
   path: string;
-  type: "file" | "directory";
-}
+} & ({ type: "file" | "directory" } | {
+  type: "instruction";
+  instructionId: string;
+  instructionScope: "global" | "workspace";
+  description: string;
+  workspaceName?: string;
+});
 
 export interface ReferencedFile {
   path: string;

@@ -1,12 +1,13 @@
 import * as assert from "node:assert";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { SettingsManager } from "@/vscode/storage/SettingsManager";
 import { getSettingsFilePath } from "@/infrastructure/persistence/UserDataPaths";
-import { getGenerationCheckpointDirectory } from "@/infrastructure/persistence/UserDataPaths";
+import { getGenerationCheckpointPath } from "@/infrastructure/persistence/UserDataPaths";
 import { GenerationCheckpointStore } from "@/vscode/storage/GenerationCheckpointStore";
 import { VsCodeSettingsRepository } from "@/vscode/storage/RepositoryAdapters";
+import { normalizeConfig, toStoredSettings } from "@/application/settings/ConfigurationSchema";
 
 suite("transactional settings", () => {
   const previousNodeEnv = process.env.NODE_ENV;
@@ -35,29 +36,51 @@ suite("transactional settings", () => {
     assert.strictEqual(SettingsManager.getRevision(), revision);
   });
 
-  test("persists normalized web search settings with safe defaults", async () => {
-    assert.strictEqual(SettingsManager.load().webSearchEngine, "searxng");
+  test("persists the web search toggle and discards retired search settings", async () => {
     assert.strictEqual(SettingsManager.load().webSearchEnabled, true);
-    assert.strictEqual(SettingsManager.load().searxngUrl, "http://127.0.0.1:8888");
-    assert.deepStrictEqual(SettingsManager.load().searxngEngines, []);
     await SettingsManager.save({ webSearchEnabled: false });
     assert.strictEqual(SettingsManager.load().webSearchEnabled, false);
-    await SettingsManager.save({
-      webSearchEngine: "searxng",
-      searxngUrl: "https://search.example.com/",
-      searxngEngines: ["g", "ddg", "g"],
-    });
-    assert.strictEqual(SettingsManager.load().webSearchEngine, "searxng");
-    assert.strictEqual(SettingsManager.load().searxngUrl, "https://search.example.com");
-    assert.deepStrictEqual(SettingsManager.load().searxngEngines, ["g", "ddg"]);
     const disk = JSON.parse(readFileSync(getSettingsFilePath(), "utf8")) as Record<string, unknown>;
-    assert.strictEqual(disk.webSearchEngine, "searxng");
-    assert.strictEqual(disk.searxngUrl, "https://search.example.com");
-    assert.deepStrictEqual(disk.searxngEngines, ["g", "ddg"]);
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(disk, "webSearchBrowserVisible"), false);
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(disk, "usageBudgets"), false);
-    await SettingsManager.save({ webSearchEngine: "searxng", searxngUrl: "http://127.0.0.1:8888", searxngEngines: [] });
+    assert.strictEqual(disk.webSearchEnabled, false);
+    for (const key of ["webSearchEngine", "searxngUrl", "searxngEngines", "searxngFallbackEngines", "searxngEngineCatalog"]) {
+      assert.strictEqual(Object.prototype.hasOwnProperty.call(disk, key), false, key);
+    }
     await SettingsManager.save({ webSearchEnabled: true });
+  });
+
+  test("persists the search-region preference without adding IP settings", async () => {
+    assert.strictEqual(normalizeConfig({}).webSearchRegion, "global");
+    assert.strictEqual(normalizeConfig({}).privacyMinimizeData, true);
+    await SettingsManager.save({ webSearchRegion: "es" });
+    assert.strictEqual(SettingsManager.load().webSearchRegion, "ES");
+    const disk = JSON.parse(readFileSync(getSettingsFilePath(), "utf8")) as Record<string, unknown>;
+    assert.strictEqual(disk.webSearchRegion, "ES");
+    assert.strictEqual(normalizeConfig({ webSearchRegion: "global" }).webSearchRegion, "global");
+    assert.strictEqual(normalizeConfig({ webSearchRegion: "1.1.1.1" }).webSearchRegion, "global");
+    await SettingsManager.save({ webSearchRegion: "global", privacyMinimizeData: false });
+    assert.strictEqual(SettingsManager.load().privacyMinimizeData, false);
+    await SettingsManager.save({ privacyMinimizeData: true });
+  });
+
+  test("drops retired fields when loading old settings", () => {
+    const retired = { syncSettingsWithVscode: true, syncGlobalAgentsWithVscode: true, webSearchEngine: "searxng", searxngUrl: "https://old.example.com",
+      searxngEngines: ["g"], searxngFallbackEngines: ["ddg"], searxngEngineCatalog: [{ name: "Old" }] };
+    const normalized = normalizeConfig({ ...retired, webSearchEnabled: false });
+    assert.strictEqual(normalized.webSearchEnabled, false);
+    for (const key of Object.keys(retired)) {
+      assert.ok(!Object.hasOwn(normalized, key));
+      assert.ok(!Object.hasOwn(toStoredSettings(normalized), key));
+    }
+  });
+
+  test("keeps beta capabilities opt-in and persists the user's selection", async () => {
+    assert.strictEqual(normalizeConfig({}).betaFeaturesEnabled, false);
+    assert.strictEqual(normalizeConfig({ betaFeaturesEnabled: "true" }).betaFeaturesEnabled, false);
+    await SettingsManager.save({ betaFeaturesEnabled: true });
+    assert.strictEqual(SettingsManager.load().betaFeaturesEnabled, true);
+    assert.strictEqual(JSON.parse(readFileSync(getSettingsFilePath(), "utf8")).betaFeaturesEnabled, true);
+    await SettingsManager.save({ betaFeaturesEnabled: false });
+    assert.strictEqual(SettingsManager.load().betaFeaturesEnabled, false);
   });
 
   test("rolls back memory and revision when persistence fails", async () => {
@@ -121,16 +144,16 @@ suite("transactional settings", () => {
 
     await SettingsManager.save({ historyEnabled: false });
     await store.save(checkpoint);
-    const directory = getGenerationCheckpointDirectory();
-    assert.strictEqual(existsSync(directory) ? readdirSync(directory).filter((name) => name.endsWith(".json")).length : 0, 0);
+    const filePath = getGenerationCheckpointPath(checkpoint.conversationId);
+    assert.strictEqual(existsSync(filePath), false);
 
     await SettingsManager.save({ historyEnabled: true });
     await store.save(checkpoint);
-    assert.strictEqual(readdirSync(directory).filter((name) => name.endsWith(".json")).length, 1);
+    assert.strictEqual(existsSync(filePath), true);
 
     await SettingsManager.save({ historyEnabled: false });
     await store.clearAll();
-    assert.strictEqual(readdirSync(directory).filter((name) => name.endsWith(".json")).length, 0);
+    assert.strictEqual(existsSync(filePath), false);
   });
 
   test("deletes checkpoints from unsupported schemas", async () => {
@@ -148,8 +171,7 @@ suite("transactional settings", () => {
       workspaceBinding: testWorkspaceBinding(),
       updatedAt: Date.now(),
     });
-    const directory = getGenerationCheckpointDirectory();
-    const filePath = path.join(directory, readdirSync(directory).find((name) => name.endsWith(".json"))!);
+    const filePath = getGenerationCheckpointPath("legacy-budget-checkpoint");
     const persisted = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
     writeFileSync(filePath, JSON.stringify({
       ...persisted,

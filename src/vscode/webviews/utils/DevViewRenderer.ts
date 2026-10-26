@@ -18,7 +18,7 @@ export function getDevViewContent(options: DevViewRendererOptions): string {
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src ${webview.cspSource} ${devServerUrl} data:; font-src ${webview.cspSource} ${devServerUrl}; style-src ${webview.cspSource} ${devServerUrl} 'unsafe-inline'; script-src 'nonce-${nonce}' ${devServerUrl} 'unsafe-eval'; connect-src ${devServerUrl} ws://localhost:5175;"
+      content="default-src 'none'; img-src ${webview.cspSource} ${devServerUrl} data: blob:; font-src ${webview.cspSource} ${devServerUrl}; style-src ${webview.cspSource} ${devServerUrl} 'unsafe-inline'; script-src 'nonce-${nonce}' ${devServerUrl} 'unsafe-eval'; connect-src ${devServerUrl} ws://localhost:5175;"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YCraSy DeepSeek Agent</title>

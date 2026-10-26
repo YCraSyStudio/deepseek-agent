@@ -10,6 +10,8 @@ const OUTPUT_DRAIN_GRACE_MS = 500;
 
 interface ManagedTerminal {
   terminal: vscode.Terminal;
+  key: string;
+  conversationId?: string;
   cwd: string;
   closed: boolean;
 }
@@ -27,31 +29,53 @@ let executionQueue: Promise<void> = Promise.resolve();
 export function executeInVsCodeTerminal(
   command: string,
   options: ToolHostCommandOptions,
+  conversationId?: string,
 ): Promise<ToolHostCommandResult> {
-  const operation = executionQueue.then(() => executeQueued(command, options));
+  const operation = executionQueue.then(() => executeQueued(command, options, conversationId));
   executionQueue = operation.then(() => undefined, () => undefined);
   return operation;
 }
 
 export function shutdownVsCodeTerminals(): void {
-  for (const managed of terminals.values()) {
-    managed.terminal.dispose();
-    managed.closed = true;
-  }
-  terminals.clear();
+  for (const managed of terminals.values()) {disposeManagedTerminal(managed);}
 }
 
-async function executeQueued(command: string, options: ToolHostCommandOptions): Promise<ToolHostCommandResult> {
+export function closeConversationTerminals(conversationId: string): void {
+  const disposed = new Set<vscode.Terminal>();
+  for (const managed of terminals.values()) {
+    if (managed.conversationId === conversationId) {disposed.add(managed.terminal); disposeManagedTerminal(managed);}
+  }
+  // Also recognize owned terminals if the adapter was reloaded before their close event.
+  for (const terminal of vscode.window.terminals) {
+    if (!disposed.has(terminal) && (terminal.creationOptions as vscode.TerminalOptions).env?.YCRASY_AGENT_CONVERSATION_ID === conversationId) {terminal.dispose();}
+  }
+}
+
+async function executeQueued(command: string, options: ToolHostCommandOptions, conversationId?: string): Promise<ToolHostCommandResult> {
   throwIfAborted(options.signal);
-  let managed = getOrCreateTerminal(options.cwd);
+  let managed = getOrCreateTerminal(options.cwd, conversationId);
   let keepOpen = false;
   try {
     let integration = await waitForShellIntegration(managed, options.signal);
 
-    if (integration.cwd?.scheme === "file" && !samePath(integration.cwd.fsPath, options.cwd)) {
-      disposeManagedTerminal(managed);
-      managed = getOrCreateTerminal(options.cwd);
-      integration = await waitForShellIntegration(managed, options.signal);
+    if (!samePath(managed.cwd, options.cwd) || integration.cwd?.scheme === "file" && !samePath(integration.cwd.fsPath, options.cwd)) {
+      const changeDirectory = directoryChangeCommand(managed.terminal.state.shell, options.cwd);
+      if (changeDirectory) {
+        const execution = integration.executeCommand(changeDirectory);
+        const output = new BoundedOutput(options.maxOutputBytes);
+        const drain = drainExecutionOutput(execution, output).catch(() => undefined);
+        const outcome = await waitForExecutionEnd(managed, execution, { ...options, timeoutMs: Math.min(options.timeoutMs, 5000) });
+        await Promise.race([drain, delay(OUTPUT_DRAIN_GRACE_MS)]);
+        if (outcome.exitCode !== 0 || outcome.timedOut || managed.closed) {
+          throw new Error(`Could not change the chat terminal's working directory: ${output.toString()}`);
+        }
+        managed.cwd = options.cwd;
+      } else {
+        // Unknown shell syntax: replace the owned terminal rather than guess or accumulate tabs.
+        disposeManagedTerminal(managed);
+        managed = getOrCreateTerminal(options.cwd, conversationId);
+        integration = await waitForShellIntegration(managed, options.signal);
+      }
     }
 
     throwIfAborted(options.signal);
@@ -80,8 +104,8 @@ async function executeQueued(command: string, options: ToolHostCommandOptions): 
   }
 }
 
-function getOrCreateTerminal(cwd: string): ManagedTerminal {
-  const key = pathKey(cwd);
+function getOrCreateTerminal(cwd: string, conversationId?: string): ManagedTerminal {
+  const key = conversationId === undefined ? JSON.stringify([null, pathKey(cwd)]) : JSON.stringify([conversationId]);
   const existing = terminals.get(key);
   if (existing && !existing.closed) {
     return existing;
@@ -90,13 +114,17 @@ function getOrCreateTerminal(cwd: string): ManagedTerminal {
   const terminal = vscode.window.createTerminal({
     name: TERMINAL_NAME,
     cwd: vscode.Uri.file(cwd),
+    isTransient: true,
     env: {
+      YCRASY_AGENT_CONVERSATION_ID: conversationId,
+      GIT_PAGER: "cat",
+      PAGER: "cat",
       DOTNET_CLI_USE_MSBUILD_SERVER: "0",
       MSBUILDDISABLENODEREUSE: "1",
       UseSharedCompilation: "false",
     },
   });
-  const managed: ManagedTerminal = { terminal, cwd, closed: false };
+  const managed: ManagedTerminal = { terminal, key, conversationId, cwd, closed: false };
   terminals.set(key, managed);
   const closeSubscription = vscode.window.onDidCloseTerminal((closedTerminal) => {
     if (closedTerminal !== terminal) {return;}
@@ -108,6 +136,16 @@ function getOrCreateTerminal(cwd: string): ManagedTerminal {
   });
   terminal.show(true);
   return managed;
+}
+
+function directoryChangeCommand(shell: string | undefined, cwd: string): string | undefined {
+  if (shell === "pwsh") {return `Set-Location -LiteralPath '${cwd.replace(/'/g, "''")}'`;}
+  if (shell === "fish") {return `cd -- '${cwd.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;}
+  if (["bash", "sh", "zsh", "ksh", "gitbash"].includes(shell ?? "")) {
+    const directory = shell === "gitbash" ? cwd.replace(/\\/g, "/") : cwd;
+    return `cd -- '${directory.replace(/'/g, "'\\''")}'`;
+  }
+  return undefined;
 }
 
 function waitForShellIntegration(
@@ -221,8 +259,9 @@ function stripTerminalControlSequences(value: string): string {
 }
 
 function disposeManagedTerminal(managed: ManagedTerminal): void {
+  if (managed.closed) {return;}
   managed.closed = true;
-  terminals.delete(pathKey(managed.cwd));
+  if (terminals.get(managed.key) === managed) {terminals.delete(managed.key);}
   managed.terminal.dispose();
 }
 

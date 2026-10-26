@@ -1,4 +1,6 @@
 import "./Toggle.css";
+import type { ReactNode } from "react";
+import { SettingsField } from "../form/SettingsForm";
 
 type ToggleProps = {
   id: string;
@@ -6,14 +8,15 @@ type ToggleProps = {
   checked: boolean;
   onToggle: (checked: boolean) => void;
   disabled?: boolean;
+  description?: ReactNode;
+  tooltip?: string;
 };
 
-function Toggle({ id, label, checked, onToggle, disabled = false }: ToggleProps) {
+function Toggle({ id, label, checked, onToggle, disabled = false, description, tooltip }: ToggleProps) {
   return (
-    <div className="toggleSwitch">
-      {label && <label htmlFor={id}>{label}</label>}
+    <SettingsField className="toggleSwitch" label={label} htmlFor={id} layout="toggle" description={description} tooltip={tooltip}>
       <input type="checkbox" id={id} checked={checked} disabled={disabled} onChange={(e) => onToggle(e.target.checked)} />
-    </div>
+    </SettingsField>
   );
 }
 

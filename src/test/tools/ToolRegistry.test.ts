@@ -4,46 +4,20 @@ import { readFileDefinition, readFileHandler, readFileMetadata } from "@/infrast
 import { ToolRegistry } from "@/application/tools/ToolRegistry";
 
 suite("tool registry validation", () => {
-  test("rejects unknown tools", () => {
+  test("rejects invalid tool calls with the relevant schema error", () => {
     const registry = createRegistry();
-    const result = registry.validate(createToolCall("missing_tool", {}));
-
-    assert.strictEqual(result.valid, false);
-    assert.match(result.error ?? "", /Unknown tool/);
-  });
-
-  test("rejects malformed JSON arguments", () => {
-    const registry = createRegistry();
-    const result = registry.validate({
-      function: { name: "read_file", arguments: "{" },
-    });
-
-    assert.strictEqual(result.valid, false);
-    assert.match(result.error ?? "", /Invalid JSON/);
-  });
-
-  test("rejects missing required properties", () => {
-    const registry = createRegistry();
-    const result = registry.validate(createToolCall("read_file", {}));
-
-    assert.strictEqual(result.valid, false);
-    assert.match(result.error ?? "", /missing required property 'path'/);
-  });
-
-  test("rejects unknown properties for strict schemas", () => {
-    const registry = createRegistry();
-    const result = registry.validate(createToolCall("read_file", { path: "README.md", unexpected: true }));
-
-    assert.strictEqual(result.valid, false);
-    assert.match(result.error ?? "", /unknown property 'unexpected'/);
-  });
-
-  test("rejects primitive type mismatches", () => {
-    const registry = createRegistry();
-    const result = registry.validate(createToolCall("read_file", { path: 1 }));
-
-    assert.strictEqual(result.valid, false);
-    assert.match(result.error ?? "", /property 'path' must be string/);
+    const cases = [
+      { label: "unknown tool", call: createToolCall("missing_tool", {}), error: /Unknown tool/ },
+      { label: "malformed JSON", call: { function: { name: "read_file", arguments: "{" } }, error: /Invalid JSON/ },
+      { label: "missing required path", call: createToolCall("read_file", {}), error: /missing required property 'path'/ },
+      { label: "unknown strict property", call: createToolCall("read_file", { path: "README.md", unexpected: true }), error: /unknown property 'unexpected'/ },
+      { label: "invalid path type", call: createToolCall("read_file", { path: 1 }), error: /property 'path' must be string/ },
+    ];
+    for (const { label, call, error } of cases) {
+      const result = registry.validate(call);
+      assert.strictEqual(result.valid, false, label);
+      assert.match(result.error ?? "", error, label);
+    }
   });
 });
 

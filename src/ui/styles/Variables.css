@@ -29,3 +29,28 @@
   --bg-chat-user: var(--vscode-textBlockQuote-background, #2d2d2d);
   --code-bg: var(--vscode-textCodeBlock-background, #2d2d2d);
 }
+
+:root {
+  --floating-surface-opacity: 100%;
+  --floating-surface-filter: none;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  :root {
+    --floating-surface-opacity: 55%;
+    --floating-surface-filter: blur(6px) saturate(120%);
+  }
+}
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  --floating-surface-opacity: 100%;
+  --floating-surface-filter: none;
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root {
+    --floating-surface-opacity: 100%;
+    --floating-surface-filter: none;
+  }
+}

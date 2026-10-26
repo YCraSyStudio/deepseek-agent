@@ -1,5 +1,5 @@
-import * as os from "os";
 import * as vscode from "vscode";
+import { getGlobalInstructionsFilePath } from "@/infrastructure/persistence/GlobalInstructionsFile";
 import {
   captureCurrentWorkspaceBinding,
   captureWorkspaceRunSnapshot,
@@ -42,7 +42,7 @@ export async function loadProjectInstructions(
 
   if (homeAgentsAllowed) {
     candidates.push({
-      uri: vscode.Uri.joinPath(vscode.Uri.file(os.homedir()), ".deepseek-agent", AGENTS_FILE_NAME),
+      uri: vscode.Uri.file(getGlobalInstructionsFilePath()),
       scope: "home",
       precedence: 0,
     });
@@ -135,7 +135,7 @@ async function readInstructionSource(
 }
 
 function formatSourcePath(candidate: CandidateSource): string {
-  if (candidate.scope === "home") {return "~/.deepseek-agent/AGENTS.md";}
+  if (candidate.scope === "home") {return candidate.uri.fsPath;}
   const relativePath = candidate.scope === "workspace-local" ? ".deepseek-agent/AGENTS.md" : "AGENTS.md";
   return candidate.rootAlias ? `./${candidate.rootAlias}/${relativePath}` : relativePath;
 }

@@ -136,3 +136,8 @@
 .terminalStderr pre {
   color: #ffb6b6;
 }
+
+.screenshotPreview { margin: 8px 0; }
+.screenshotPreview button { display: block; padding: 0; max-width: 100%; background: transparent; }
+.screenshotPreview img { display: block; max-width: 100%; max-height: 240px; object-fit: contain; }
+.screenshotPreview figcaption { font-size: 12px; overflow-wrap: anywhere; margin-top: 4px; }

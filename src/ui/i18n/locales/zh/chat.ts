@@ -2,6 +2,16 @@ import type { TranslationCatalog } from "../Types";
 
 export const chat = {
   chat: {
+    draftAttachmentsSaveFailed: "无法在本地保存或恢复草稿附件。请在存储恢复可用前保持此窗口打开。",
+    completionFiles: "文件",
+    completionInstructions: "指令",
+    completionWorkspace: "工作区",
+    completionGlobal: "全局",
+
+    suggestMessage: "建议消息",
+    cancelSuggestion: "取消建议",
+    suggestionUnavailable: "暂无建议。请重试或补充更多细节。",
+    acceptSuggestion: "有可用建议。按 Tab 接受，按 Escape 关闭。",
     incognitoActive: "无痕模式已启用。重新加载扩展后，本聊天将丢失。",
     applyingPermissions: "正在应用权限...",
     apiKeyMissing: "缺少 API key",
@@ -29,9 +39,9 @@ export const chat = {
     chatMessage: "聊天消息",
     stopGeneration: "停止生成",
     sendMessage: "发送消息",
-    workspacePathSuggestions: "工作区路径建议",
-    pathSuggestionCount: "有 {count} 个路径建议。",
-    noFilesOrFoldersFound: "未找到文件或文件夹。",
+    workspacePathSuggestions: "文件和指令建议",
+    pathSuggestionCount: "有 {count} 条文件和指令建议。",
+    noFilesOrFoldersFound: "未找到文件、文件夹或指令。",
     deepseekIsThinking: "DeepSeek 正在思考...",
     compactingContext: "正在压缩会话上下文...",
     contextAutomaticallyCompacted: "上下文已自动压缩",
@@ -50,6 +60,8 @@ export const chat = {
     attach: "添加附件",
     removeImage: "移除图片",
     enlargeImage: "放大 {name}",
+    imageReference: "图片 {number}",
+    insertImageReference: "将图片 {number} 添加到消息",
     closeImagePreview: "关闭图片预览",
     zoomIn: "放大",
     zoomOut: "缩小",
@@ -93,7 +105,8 @@ export const chat = {
         securityReview: "安全检查",
         contextSummary: "上下文摘要",
         fileCompaction: "文件压缩",
-        visionAnalysis: "视觉分析"
+        visionAnalysis: "视觉分析",
+        codeCompletion: "Beta 代码补全"
       }
     }
   }

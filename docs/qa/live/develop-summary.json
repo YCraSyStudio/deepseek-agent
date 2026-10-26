@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-10-18",
+  "status": "validated_with_documented_limits",
+  "target": "develop",
+  "includedIssues": [
+    67,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76
+  ],
+  "deferredIssues": [
+    66
+  ],
+  "checks": {
+    "typescript": true,
+    "eslint": true,
+    "knip": true,
+    "unitTests": 531,
+    "nativeIntegrationTests": 11,
+    "installedVsixSmokeTests": 1,
+    "vscode": "1.142.0",
+    "host": "linux-x11",
+    "astroFiles": 32,
+    "astroErrors": 0,
+    "astroWarnings": 0,
+    "vsixEntries": 16
+  },
+  "estimatedTotalCostCny": 0.0692336,
+  "authorizedBudgetCny": 10,
+  "artifact": {
+    "name": "deepseek-agent-0.1.15-develop-live-tested.vsix",
+    "bytes": 480864,
+    "sha256": "7afd6b4db688da54ea776c0d93be9a74f6cada8f28a325ab10343a96bf94c2cc"
+  },
+  "limits": [
+    "External system Chromium capture timed out on this host",
+    "Windows and macOS native capture require their own hosts",
+    "Minimum VS Code 1.131 and background/minimized browser freshness remain unverified",
+    "Full chat navigation and real API first-message UI flow were not driven end to end",
+    "Issue 66 sandbox remains deferred under the earlier scope decision"
+  ]
+}

@@ -4,6 +4,7 @@ import { isConversation } from "@/application/chat/ConversationValidation";
 import type { StoredConversation } from "@/application/chat/ProviderTranscript";
 import { writeJsonFileAtomic } from "@/infrastructure/persistence/JsonFileStorage";
 import { getHistoryDirectory } from "@/infrastructure/persistence/UserDataPaths";
+import { WorkspaceSnapshotStore } from "@/infrastructure/workspace/WorkspaceSnapshot";
 import { normalizeConversation } from "./ConversationNormalization";
 
 export const MAX_CONVERSATION_BYTES = 64 * 1024 * 1024;
@@ -11,7 +12,7 @@ const MAX_CHUNK_BYTES = 4 * 1024 * 1024;
 const MAX_CHUNK_COUNT = 10_000;
 const CHUNK_STORAGE_SCHEMA_VERSION = 1;
 const MANIFEST_FILE_NAME = "manifest.json";
-const CHUNK_FILE_PATTERN = /^\d{1,5}\.json$/;
+const CHUNK_FILE_PATTERN = /^(\d{1,5})\.json$/;
 const LEGACY_SEGMENT_DIRECTORY_NAME = ".segments";
 
 interface ConversationManifest {
@@ -63,7 +64,9 @@ export async function readStoredConversationRecord(directoryPath: string): Promi
       directoryPath,
       sizeBytes: Buffer.byteLength(JSON.stringify(parsed), "utf8"),
     };
-  } catch {
+  } catch (error) {
+    if (isFileNotFoundError(error) && ((await stat(path.join(directoryPath, "draft")).catch(() => undefined))?.isDirectory() ||
+      (await stat(path.join(directoryPath, "checkpoint.json")).catch(() => undefined))?.isFile())) {return undefined;}
     await deleteIncompatibleConversation(directoryPath);
     return undefined;
   }
@@ -88,6 +91,7 @@ export async function writeConversationStorage(conversation: StoredConversation)
 
 export async function deleteConversationStorage(id: string): Promise<void> {
   await deleteIncompatibleConversation(getConversationDirectory(id));
+  await new WorkspaceSnapshotStore(id).delete();
 }
 
 export async function purgeLegacyConversationStorage(): Promise<void> {
@@ -147,6 +151,8 @@ async function listChunkPaths(directoryPath: string, expectedChunks: number): Pr
   const entries = await readdir(directoryPath, { withFileTypes: true });
   const indexed: Array<{ index: number; filePath: string }> = [];
   for (const entry of entries) {
+    if (entry.name === "checkpoint.json" && entry.isFile()) {continue;}
+    if (entry.name === "draft" && entry.isDirectory()) {continue;}
     if (entry.name === MANIFEST_FILE_NAME || entry.name.startsWith(".")) {continue;}
     const match = entry.isFile() ? CHUNK_FILE_PATTERN.exec(entry.name) : null;
     if (!match) {return undefined;}

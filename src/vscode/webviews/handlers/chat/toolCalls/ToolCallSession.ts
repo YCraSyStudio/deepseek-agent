@@ -75,7 +75,8 @@ export class ToolCallSession {
             const snapshot = await options.capturePermissionSnapshot();
             this.activePermissionSnapshot = snapshot;
             options.onPermissionSnapshot?.(snapshot);
-            return options.tools;
+            return options.isBetaFeaturesEnabled?.() === false
+              ? options.tools.filter((tool) => tool.function.name !== "complete_code") : options.tools;
           },
           signal: options.signal,
           streamFinalResponse: true,
@@ -84,6 +85,9 @@ export class ToolCallSession {
           reasoningEffort: options.providerConfig.reasoningEffort,
           maxTokens: options.providerConfig.maxTokens,
           userId: options.providerConfig.userId,
+          privacyMinimizeData: options.providerConfig.privacyMinimizeData,
+          betaFeaturesEnabled: options.providerConfig.betaFeaturesEnabled,
+          isBetaFeaturesEnabled: options.isBetaFeaturesEnabled,
           budgetManager: options.budgetManager,
           onRecoveryStarted: () => options.eventSink.publish({
             type: "generationRecoveryStarted",
@@ -251,6 +255,11 @@ export class ToolCallSession {
       availableToolNames: options.tools.map((tool) => tool.function.name),
       authorizedUserUrls: options.authorizedUserUrls,
       analyzeImages: options.analyzeImages,
+      completeCode: options.completeCode,
+      captureScreenshot: options.captureScreenshot,
+      applicationSession: options.applicationSession,
+      readInstruction: options.readInstruction,
+      revertWorkspace: options.revertWorkspace,
       isWebTainted: () => this.webTainted,
       markWebTainted: () => {this.webTainted = true;},
       isWorkspaceTrusted: options.isWorkspaceTrusted,

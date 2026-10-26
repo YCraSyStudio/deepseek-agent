@@ -2,6 +2,18 @@
 
 Each release links to its extended notes in the [documentation](https://ycrasystudio.github.io/deepseek-agent/en/changelog/).
 
+## [0.1.16] - 2026-10-24 [details](https://ycrasystudio.github.io/deepseek-agent/en/changelog/#v0-1-16)
+
+
+- Add per-turn change review and workspace recovery, with bounded snapshots that protect pre-existing and later edits.
+- Save independent drafts and image attachments for each chat, restore them after reloads, and fix cross-window history conflicts.
+- Add global and workspace instructions, editable starter templates, and instruction references in the chat composer.
+- Add optional editor completions, manual chat suggestions, and beta code-generation tools with separate controls and usage reporting.
+- Use an installed Chromium browser for local web reads and screenshots; download and update Chrome Headless Shell automatically when none is found. Web search still uses DeepSeek, while page reads no longer call its Fetch API.
+- Improve visual testing with managed application sessions, native Wayland window capture, and more accurate screenshot cropping.
+- Reuse one terminal per chat, refresh settings and menus, and add privacy controls for automatically generated metadata.
+- Migrate legacy storage, consolidate drafts and recovery data, and update dependencies.
+
 ## [0.1.15] - 2026-09-13 [details](https://ycrasystudio.github.io/deepseek-agent/en/changelog/#v0-1-15)
 
 - **Added the `move_path` tool**: moves or renames a file or a whole directory inside the workspace, creating the destination's parent folder. It never overwrites, so an existing destination fails before anything is touched, and an optional `expectedBeforeHash` rejects the move if the source file changed after the preview.

@@ -2,6 +2,16 @@ import type { TranslationCatalog } from "../Types";
 
 export const chat = {
   chat: {
+    draftAttachmentsSaveFailed: "Could not save or restore draft attachments locally. Keep this window open until storage is available.",
+    completionFiles: "Files",
+    completionInstructions: "Instructions",
+    completionWorkspace: "Workspace",
+    completionGlobal: "Global",
+
+    suggestMessage: "Suggest message",
+    cancelSuggestion: "Cancel suggestion",
+    suggestionUnavailable: "No suggestion available. Try again or add more detail.",
+    acceptSuggestion: "Suggestion available. Tab to accept, Escape to dismiss.",
     incognitoActive: "Incognito mode is active. This chat will be lost when the extension reloads.",
     applyingPermissions: "Applying permissions...",
     apiKeyMissing: "API key missing",
@@ -29,9 +39,9 @@ export const chat = {
     chatMessage: "Chat message",
     stopGeneration: "Stop generation",
     sendMessage: "Send message",
-    workspacePathSuggestions: "Workspace path suggestions",
-    pathSuggestionCount: "{count} path suggestions available.",
-    noFilesOrFoldersFound: "No files or folders found.",
+    workspacePathSuggestions: "File and instruction suggestions",
+    pathSuggestionCount: "{count} file and instruction suggestions available.",
+    noFilesOrFoldersFound: "No files, folders or instructions found.",
     deepseekIsThinking: "DeepSeek is thinking...",
     compactingContext: "Compacting conversation context...",
     contextAutomaticallyCompacted: "Context automatically compacted",
@@ -50,6 +60,8 @@ export const chat = {
     attach: "Attach",
     removeImage: "Remove image",
     enlargeImage: "Enlarge {name}",
+    imageReference: "image {number}",
+    insertImageReference: "Add image {number} to the message",
     closeImagePreview: "Close image preview",
     zoomIn: "Zoom in",
     zoomOut: "Zoom out",
@@ -93,7 +105,8 @@ export const chat = {
         securityReview: "Security review",
         contextSummary: "Context summary",
         fileCompaction: "File compaction",
-        visionAnalysis: "Vision analysis"
+        visionAnalysis: "Vision analysis",
+        codeCompletion: "Beta code completion"
       }
     }
   }

@@ -1,151 +1,49 @@
 .toolsSection {
-  .permissionModeRow,
-  .webSearchSettings {
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-    display: flex;
-  }
-
-  .permissionModeRow {
-    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
-    padding-bottom: 14px;
-  }
-
-  .permissionModeLabel,
-  .subsectionTitle {
-    color: var(--text-primary);
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .subsectionTitle {
-    margin: 0;
-  }
-
-  .permissionModeSelect {
-    width: 100%;
-  }
-
-  .permissionModeDescription {
-    color: var(--text-secondary);
-    line-height: 1.4;
-  }
-
   .settingsHint {
     margin: 0 0 4px;
   }
 
-  .searxngEnginePicker {
-    position: relative;
-    width: 100%;
-  }
-
-  .searxngEnginePickerSummary {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 34px;
-    padding: 7px 30px 7px 10px;
-    border: 1px solid var(--vscode-dropdown-border, var(--border-color));
-    border-radius: 4px;
-    background: var(--vscode-dropdown-background);
-    color: var(--vscode-dropdown-foreground);
-    cursor: pointer;
+  .toolCatalogList {
     list-style: none;
-    position: relative;
+    margin: 0;
+    padding: 0;
+
+    li {
+      margin: 0;
+      padding: 0;
+    }
   }
 
-  .searxngEnginePickerSummary::-webkit-details-marker {
-    display: none;
-  }
-
-  .searxngEnginePickerSummary::after {
-    content: "⌄";
-    position: absolute;
-    right: 10px;
-    top: 6px;
-    color: var(--text-secondary);
-  }
-
-  .searxngEnginePicker[open] .searxngEnginePickerSummary::after {
-    content: "⌃";
-  }
-
-  .searxngEnginePickerPanel {
-    margin-top: 4px;
-    padding: 8px;
-    border: 1px solid var(--vscode-dropdown-border, var(--border-color));
-    border-radius: 4px;
-    background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
-    box-shadow: 0 4px 12px color-mix(in srgb, black 28%, transparent);
-  }
-
-  .searxngEnginePickerToolbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px;
-    margin-bottom: 8px;
-  }
-
-  .searxngEngineList {
-    display: flex;
-    flex-direction: column;
-    max-height: 320px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    border-top: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
-  }
-
-  .searxngEngineOption {
+  .toolCatalogItem {
     display: flex;
     align-items: center;
-    gap: 10px;
-    min-width: 0;
-    min-height: 36px;
-    padding: 5px 8px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 45%, transparent);
-  }
-
-  .searxngEngineOption:last-child {
-    border-bottom: 0;
-  }
-
-  .searxngEngineOption:hover {
-    background: var(--vscode-list-hoverBackground);
-  }
-
-  .searxngEngineOptionText {
-    display: flex;
-    align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    min-width: 0;
-    flex: 1 1 auto;
-    white-space: nowrap;
-    cursor: pointer;
-  }
+    padding: 8px;
+    border-radius: 4px;
 
-  .searxngEngineName {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text-primary);
-  }
+    code {
+      min-width: 0;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
 
-  .searxngEngineMeta {
-    flex: 0 0 auto;
-    color: var(--text-secondary);
-    font-size: 11px;
-  }
+    .codicon {
+      flex-shrink: 0;
+      color: var(--text-secondary);
+    }
 
-  .searxngEngineOption .toggleSwitch {
-    flex: 0 0 auto;
-    width: auto;
-  }
+    &:hover,
+    &:focus-visible {
+      background: var(--vscode-list-hoverBackground, var(--bg-secondary));
+    }
 
-  .searxngEngineEmpty {
-    padding: 10px 4px;
-    color: var(--text-secondary);
-    font-size: 11px;
+    &:focus-visible {
+      outline: 1px solid var(--vscode-focusBorder);
+    }
+
+    &.toolCatalogUnavailable {
+      color: var(--text-secondary);
+    }
   }
 }

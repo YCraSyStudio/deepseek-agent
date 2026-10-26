@@ -14,19 +14,23 @@ import {
 } from "./ToolCallReconciliation";
 
 interface ChatMessagesProps {
+  conversationId?: string;
   messages: ChatMessage[];
   isProcessing?: boolean;
   renderToolCallGroups?: (groups: ToolCallGroup[]) => React.ReactNode;
   activeToolCallGroups?: ToolCallGroup[];
+  onReferenceImage?: (number: number) => void;
 }
 
 const NO_TOOL_CALL_GROUPS: ToolCallGroup[] = [];
 
 function ChatMessages({
+  conversationId,
   messages,
   isProcessing = false,
   renderToolCallGroups,
   activeToolCallGroups = NO_TOOL_CALL_GROUPS,
+  onReferenceImage,
 }: ChatMessagesProps) {
   const [enlargedImage, setEnlargedImage] = useState<LightboxImage | null>(null);
 
@@ -40,11 +44,13 @@ function ChatMessages({
           <MessageRow
             key={message.id}
             message={message}
+            conversationId={conversationId}
             isLastAssistant={isLastAssistant}
             isActive={isLastAssistant && isProcessing}
             activeToolCallGroups={isLastAssistant ? activeToolCallGroups : NO_TOOL_CALL_GROUPS}
             renderToolCallGroups={renderToolCallGroups}
             onEnlargeImage={setEnlargedImage}
+            onReferenceImage={onReferenceImage}
           />
         );
       })}
@@ -54,20 +60,24 @@ function ChatMessages({
 }
 
 interface MessageRowProps {
+  conversationId?: string;
   message: ChatMessage;
   isLastAssistant: boolean;
   isActive: boolean;
   activeToolCallGroups: ToolCallGroup[];
   renderToolCallGroups?: (groups: ToolCallGroup[]) => React.ReactNode;
   onEnlargeImage: (image: LightboxImage) => void;
+  onReferenceImage?: (number: number) => void;
 }
 
 const MessageRow = memo(function MessageRow({
+  conversationId,
   message,
   isActive,
   activeToolCallGroups,
   renderToolCallGroups,
   onEnlargeImage,
+  onReferenceImage,
 }: MessageRowProps) {
   const toolCallGroups = useMemo(
     () => mergeToolCallGroups(buildMessageToolCallGroups(message), activeToolCallGroups),
@@ -78,27 +88,33 @@ const MessageRow = memo(function MessageRow({
     <div className={`message ${message.role}`}>
       <MessageBody
         message={message}
+        conversationId={conversationId}
         isActive={isActive}
         toolCallGroups={toolCallGroups}
         renderToolCallGroups={renderToolCallGroups}
         onEnlargeImage={onEnlargeImage}
+        onReferenceImage={onReferenceImage}
       />
     </div>
   );
 });
 
 function MessageBody({
+  conversationId,
   message,
   isActive,
   toolCallGroups,
   renderToolCallGroups,
   onEnlargeImage,
+  onReferenceImage,
 }: {
+  conversationId?: string;
   message: ChatMessage;
   isActive: boolean;
   toolCallGroups: ToolCallGroup[];
   renderToolCallGroups?: (groups: ToolCallGroup[]) => React.ReactNode;
   onEnlargeImage: (image: LightboxImage) => void;
+  onReferenceImage?: (number: number) => void;
 }) {
   if (message.role === "error") {
     return <div className="errorMessage">{message.content}</div>;
@@ -117,7 +133,7 @@ function MessageBody({
           generationStatus={message.generationStatus}
           generationStopReason={message.generationStopReason}
         />
-        {isActive ? null : <EditedFilesSummary toolCallGroups={toolCallGroups} />}
+        {isActive ? null : <EditedFilesSummary toolCallGroups={toolCallGroups} conversationId={conversationId} generationId={message.generationId} />}
       </>
     );
   }
@@ -130,18 +146,29 @@ function MessageBody({
               const previewUri = attachment.previewUri;
               return previewUri
                 ? (
+                  <div key={attachment.id} className="messageImage">
                   <button
-                    key={attachment.id}
                     type="button"
                     className="messageImageButton"
-                    title={attachment.name}
+                    title={attachment.imageNumber ? `#${attachment.imageNumber} · ${attachment.name}` : attachment.name}
                     aria-label={t("chat.enlargeImage", { name: attachment.name })}
                     onClick={() => onEnlargeImage({ id: attachment.id, src: previewUri, name: attachment.name })}
                   >
                     <img src={previewUri} alt={attachment.name} />
                   </button>
+                  {attachment.imageNumber ? (
+                    <button
+                      type="button"
+                      className="messageImageNumber"
+                      title={t("chat.insertImageReference", { number: attachment.imageNumber })}
+                      aria-label={t("chat.insertImageReference", { number: attachment.imageNumber })}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => onReferenceImage?.(attachment.imageNumber!)}
+                    >#{attachment.imageNumber}</button>
+                  ) : null}
+                  </div>
                 )
-                : <span key={attachment.id} className="messageImageFallback"><span className="codicon codicon-file-media" /> {attachment.name}</span>;
+                : <span key={attachment.id} className="messageImageFallback"><span className="codicon codicon-file-media" /> {attachment.imageNumber ? `#${attachment.imageNumber} · ` : ""}{attachment.name}</span>;
             })}
           </div>
         ) : null}

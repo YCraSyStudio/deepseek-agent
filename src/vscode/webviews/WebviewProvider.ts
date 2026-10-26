@@ -1,3 +1,9 @@
+import { ChatDraftHandler } from "./handlers/ChatDraftHandler";
+import { instructionCompletionItems } from "@/application/chat/context/InstructionReferences";
+import { reusableInstructionCatalog } from "@/vscode/configuration/ReusableInstructions";
+import { ReusableInstructionsHandler } from "./handlers/ReusableInstructionsHandler";
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
+import { getHistoryDirectory } from "@/infrastructure/persistence/UserDataPaths";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { ChatHandler } from "./handlers/chat/ChatHandler";
@@ -19,6 +25,11 @@ import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/ap
 import { ImageAttachmentController } from "./ImageAttachmentController";
 import { AttachmentSelectionController } from "./AttachmentSelectionController";
 import { registerWebviewProtocol } from "./WebviewProtocolSession";
+import type { CompletionService } from "@/vscode/completions/CompletionService";
+import { ChatSuggestionController } from "./ChatSuggestionController";
+import { WorkspaceRestoreStore } from "@/infrastructure/workspace/WorkspaceRestoreStore";
+import { captureWorkspaceRunSnapshot } from "@/vscode/workspace";
+import { revertWorkspaceTurn, snapshotRoots } from "@/vscode/workspace/WorkspaceChangeTracker";
 
 type ChatCommandMessage = { type: "addReferencedFiles"; files: ReferencedFilePayload[] } | { type: "setDraft"; text: string };
 const MAX_PENDING_WEBVIEW_MESSAGES = 128;
@@ -31,6 +42,7 @@ export interface WebviewProviderDependencies {
   settings: SettingsRepository;
   secrets: SecretStore;
   modelProviderFactory: ModelProviderFactory;
+  completions: CompletionService;
 }
 
 export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -44,6 +56,9 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   private readonly changeDiffViewer: ChangeDiffViewer;
   private readonly imageAttachments: ImageAttachmentController;
   private readonly attachmentSelection: AttachmentSelectionController;
+  private readonly chatSuggestions: ChatSuggestionController;
+  private readonly chatDraftHandler: ChatDraftHandler;
+  private readonly reusableInstructionsHandler: ReusableInstructionsHandler;
   private readonly commandDispatcher = new WebviewCommandDispatcher();
   private readonly disposables: vscode.Disposable[] = [];
   private readonly pendingMessages: ChatCommandMessage[] = [];
@@ -56,19 +71,24 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     dependencies: WebviewProviderDependencies,
   ) {
     this.historyManager = dependencies.historyManager;
+    this.chatSuggestions = new ChatSuggestionController(dependencies.completions);
     this.settings = dependencies.settings;
-    this.changeDiffViewer = new ChangeDiffViewer();
+    this.changeDiffViewer = new ChangeDiffViewer(async (scope) => {
+      await this.revertTurn(scope.conversationId, scope.generationId);
+    });
     this.imageAttachments = new ImageAttachmentController(this._context, dependencies.settings, dependencies.secrets);
     this.disposables.push(this.changeDiffViewer);
     this.chatHandler = new ChatHandler(
-      this._context,
       this.historyManager,
       dependencies.toolRegistry,
       dependencies.headlessWebRuntime,
       dependencies.settings,
       dependencies.secrets,
       dependencies.modelProviderFactory,
+      (conversationId, attachments) => this.imageAttachments.archive(conversationId, attachments, this.webviewView?.webview),
     );
+    this.chatDraftHandler = new ChatDraftHandler(dependencies.settings);
+    this.reusableInstructionsHandler = new ReusableInstructionsHandler(dependencies.settings);
     this.settingsHandler = new SettingsHandler(
       this._context,
       this.chatHandler,
@@ -93,6 +113,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         const attachments = conversation.messages.flatMap((message) => message.imageAttachments ?? []);
         await Promise.allSettled(attachments.map((attachment) => this.imageAttachments.delete(attachment)));
       },
+      (conversation, webview) => this.imageAttachments.restorePreviews(
+        conversation.id, conversation.messages.flatMap((message) => message.imageAttachments ?? []), webview),
     );
     this.registerMessageHandlers();
     this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
@@ -115,8 +137,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: devServerUrl
-        ? [webviewDistUri, codiconsDistUri, this.imageAttachments.cacheRoot]
-        : [webviewDistUri, this.imageAttachments.cacheRoot],
+        ? [webviewDistUri, codiconsDistUri, this.imageAttachments.cacheRoot, vscode.Uri.file(getHistoryDirectory())]
+        : [webviewDistUri, this.imageAttachments.cacheRoot, vscode.Uri.file(getHistoryDirectory())],
       portMapping: [
         {
           webviewPort: 5175,
@@ -132,6 +154,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         : getHtmlContent(webviewView.webview, webviewDistUri);
 
     this.viewDisposables.push(registerWebviewProtocol(webviewView, (message) => this._routeMessage(message, webviewView)));
+    this.viewDisposables.push(this.settingsHandler.watchWorkspaceInstructions(webviewView), this.reusableInstructionsHandler.watch(webviewView));
     this.viewDisposables.push(webviewView.onDidDispose(() => {
       if (this.webviewView === webviewView) {
         this.webviewView = undefined;
@@ -164,6 +187,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   }
 
   private disposeViewRegistrations(): void {
+    this.chatSuggestions.dispose();
     const registrations = this.viewDisposables;
     this.viewDisposables = [];
     for (const registration of registrations) {
@@ -255,18 +279,42 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   }
 
   private registerMessageHandlers(): void {
+    this.commandDispatcher.register("chatDraft", (message, view) => {void this.chatDraftHandler.handle(message, view);});
+    this.commandDispatcher.registerMany(["getReusableInstructions", "createReusableInstruction", "openReusableInstruction"] as const,
+      (message, view) => {void this.reusableInstructionsHandler.handle(message, view);});
+
+    this.commandDispatcher.registerMany(["getChatSuggestion", "cancelChatSuggestion"] as const,
+      (message, view) => this.chatSuggestions.handle(message, view));
+    this.commandDispatcher.registerMany(["getWorkspaceTurn", "revertWorkspaceTurn", "reviewWorkspaceTurn"] as const, (message, view) => {
+      void this.handleWorkspaceTurn(message, view);
+    });
     this.commandDispatcher.registerMany([
       "sendMessage", "steerGeneration", "cancelGeneration", "getGenerationSnapshot",
       "consumeRecoveredDraft", "getAvailableTools", "executeToolCall",
       "newConversation", "getWorkspaceContext", "rebindConversationWorkspace", "openConversationWorkspace",
     ] as const, (message, view) => this.chatHandler.handle(message, view));
     this.commandDispatcher.registerMany([
-      "getConfig", "saveConfig", "resetConfig", "resolveHistoryTransition", "deleteApiKey", "testConnection",
+      "getWorkspaceInstructions", "openWorkspaceInstructions", "openGlobalAgents", "selectStorageDirectory", "setStorageDirectory", "reloadStorage", "getConfig", "saveConfig", "resetConfig", "resolveHistoryTransition", "deleteApiKey", "testConnection",
     ] as const, (message, view) => this.settingsHandler.handle(message, view));
     this.commandDispatcher.registerMany([
       "getHistory", "deleteConversation", "deleteConversations", "loadConversation", "loadConversationPage",
     ] as const, (message, view) => this.historyHandler.handle(message, view));
 
+    this.commandDispatcher.registerMany(["getScreenshotPreview", "openScreenshot"] as const, (message, view) => {
+      void (async () => {
+        try {
+          if (!await this.historyManager.getById(message.conversationId)) {throw new Error("Conversation unavailable");}
+          const capture = await new ScreenshotStore(message.conversationId).lookup(message.screenshotId);
+          if (!capture) {throw new Error("Screenshot was deleted or is unavailable");}
+          const uri = vscode.Uri.file(capture.path);
+          if (message.type === "openScreenshot") {await vscode.commands.executeCommand("vscode.open", uri);}
+          else {await view.webview.postMessage({ type: "screenshotPreview", requestId: message.requestId,
+            conversationId: message.conversationId, uri: view.webview.asWebviewUri(uri).toString(), metadata: capture.metadata });}
+        } catch (error) {
+          await view.webview.postMessage({ type: "screenshotPreview", requestId: message.requestId, conversationId: message.conversationId, error: getErrorMessage(error) });
+        }
+      })();
+    });
     this.commandDispatcher.register("selectAttachments", (message, view) => {
       void this.attachmentSelection.select(message.requestId, message.conversationId, view);
     });
@@ -308,10 +356,50 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
             beforeHash: message.beforeHash,
             afterHash: message.afterHash,
             preview: message.preview,
+            conversationId: message.conversationId,
+            generationId: message.generationId,
           },
           binding,
         ));
     });
+  }
+
+  private async recoveryWorkspace(conversationId: string, generationId: string) {
+    const conversation = await this.historyManager.getById(conversationId);
+    if (!conversation?.messages.some((message) => message.generationId === generationId)) {throw new Error("This chat turn is unavailable or was deleted");}
+    const context = await this.chatHandler.getWorkspaceContext(conversationId);
+    if (context.state !== "connected") {throw new Error("Reconnect the original workspace before reviewing or reverting its changes");}
+    return captureWorkspaceRunSnapshot(context.binding);
+  }
+
+  private async revertTurn(conversationId: string, generationId: string): Promise<void> {
+    this.chatHandler.assertWorkspaceIdle();
+    const workspace = await this.recoveryWorkspace(conversationId, generationId);
+    await revertWorkspaceTurn(conversationId, workspace, generationId, () => this.chatHandler.assertWorkspaceIdle());
+    const review = await new WorkspaceRestoreStore(conversationId).review(snapshotRoots(workspace), generationId);
+    await this.webviewView?.webview.postMessage({ type: "workspaceTurn", requestId: "native-review", conversationId, ...review });
+  }
+
+  private async handleWorkspaceTurn(message: Extract<WebviewToHandlerMessage, { type: "getWorkspaceTurn" | "revertWorkspaceTurn" | "reviewWorkspaceTurn" }>, view: vscode.WebviewView): Promise<void> {
+    try {
+      const workspace = await this.recoveryWorkspace(message.conversationId, message.generationId);
+      const store = new WorkspaceRestoreStore(message.conversationId);
+      const roots = snapshotRoots(workspace);
+      if (message.type === "revertWorkspaceTurn") {await this.revertTurn(message.conversationId, message.generationId);}
+      const review = await store.review(roots, message.generationId);
+      if (message.type === "reviewWorkspaceTurn") {
+        const file = await vscode.window.showQuickPick(review.paths, { placeHolder: "Review files changed during this turn" });
+        if (file) {
+          await this.changeDiffViewer.openSaved(file, await store.diff(roots, message.generationId, file), {
+            conversationId: message.conversationId, generationId: message.generationId,
+          });
+        }
+      }
+      await view.webview.postMessage({ type: "workspaceTurn", requestId: message.requestId, conversationId: message.conversationId, ...review });
+    } catch (error) {
+      await view.webview.postMessage({ type: "workspaceTurn", requestId: message.requestId, conversationId: message.conversationId,
+        generationId: message.generationId, paths: [], reverted: false, error: getErrorMessage(error) });
+    }
   }
 
   private async handlePathCompletions(
@@ -319,9 +407,13 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     webviewView: vscode.WebviewView,
   ): Promise<void> {
     const context = await this.chatHandler.getWorkspaceContext(message.conversationId);
-    const items = context.state === "connected" && (!message.workspaceRevision || message.workspaceRevision === context.binding.revision)
-      ? await getPathCompletionItems(message.query, context.binding)
-      : [];
+    const allowed = (context.state === "connected" || context.state === "empty") &&
+      (!message.workspaceRevision || message.workspaceRevision === context.binding.revision);
+    const [files, instructions] = allowed ? await Promise.all([
+      context.state === "connected" ? getPathCompletionItems(message.query, context.binding) : Promise.resolve([]),
+      reusableInstructionCatalog(captureWorkspaceRunSnapshot(context.binding)).then((entries) => instructionCompletionItems(message.query, entries)),
+    ]) : [[], []];
+    const items = [...files, ...instructions];
     await webviewView.webview.postMessage({
       type: "pathCompletions",
       requestId: message.requestId,

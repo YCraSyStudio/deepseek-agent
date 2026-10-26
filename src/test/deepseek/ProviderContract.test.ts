@@ -6,6 +6,27 @@ import { buildChatBody } from "@/infrastructure/deepseek/provider/features/Chat"
 import { buildToolCallRequest } from "@/infrastructure/deepseek/provider/features/toolCall/ToolCallRequest";
 
 suite("DeepSeek provider contract", () => {
+  test("omits optional user identifiers in normal and tool requests by default", async () => {
+    const originalFetch = globalThis.fetch;
+    const bodyText = "My email is alice@example.test";
+    try {
+      for (const privacyMinimizeData of [true, false]) {
+        globalThis.fetch = async (_input, init) => {
+          const body = JSON.parse(String(init?.body)) as { user_id?: string; messages: Array<{ content: string }> };
+          assert.strictEqual(body.user_id, privacyMinimizeData ? undefined : "optional-user-id");
+          assert.strictEqual(body.messages[0].content, bodyText);
+          return Response.json({ id: "privacy", object: "chat.completion", created: 1, model: "deepseek-flash",
+            choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }] });
+        };
+        const provider = new DeepSeekModelProvider({ ...DEFAULT_CONFIG, apiKey: "test-key", userId: "config-user-id", privacyMinimizeData });
+        await provider.chatCompletion({ model: "deepseek-flash", messages: [{ role: "user", content: bodyText }], user_id: "optional-user-id" } as Parameters<typeof provider.chatCompletion>[0]);
+        const request = buildToolCallRequest({ model: "deepseek-flash", messages: [], tools: [], stream: false,
+          cycleOptions: { userId: "optional-user-id", privacyMinimizeData } });
+        const serialized = JSON.parse(JSON.stringify(request)) as { user_id?: string };
+        assert.strictEqual(serialized.user_id, privacyMinimizeData ? undefined : "optional-user-id");
+      }
+    } finally {globalThis.fetch = originalFetch;}
+  });
   const tool: ToolDefinition = {
     type: "function",
     function: {

@@ -1,4 +1,4 @@
-input,
+input:not([type="checkbox"]),
 textarea {
   border: 1px solid var(--input-border);
   background-color: var(--input-bg);

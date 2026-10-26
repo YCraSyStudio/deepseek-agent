@@ -15,6 +15,11 @@ export function handlerContext(ctx: ToolExecutionContext): ToolHandlerContext {
     authorizedUserUrls: ctx.authorizedUserUrls,
     webTainted: ctx.isWebTainted?.(),
     analyzeImages: ctx.analyzeImages,
+    completeCode: ctx.completeCode,
+    captureScreenshot: ctx.captureScreenshot,
+    applicationSession: ctx.applicationSession,
+    readInstruction: ctx.readInstruction,
+      revertWorkspace: ctx.revertWorkspace,
   };
 }
 
@@ -28,12 +33,12 @@ export function requiresWorkspaceMutationPolicy(ctx: ToolExecutionContext, toolC
 }
 
 export function getPathArgument(toolCall: ToolCall): string | undefined {
-  if (!FILE_PATH_TOOLS.has(toolCall.function.name) && toolCall.function.name !== "run_terminal_command") {
+  if (!FILE_PATH_TOOLS.has(toolCall.function.name) && !["run_terminal_command", "application_session"].includes(toolCall.function.name)) {
     return undefined;
   }
   try {
     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
-    const value = toolCall.function.name === "run_terminal_command" ? args.cwd : args.path;
+    const value = ["run_terminal_command", "application_session"].includes(toolCall.function.name) ? args.cwd : args.path;
     return typeof value === "string" && value.trim() ? value : undefined;
   } catch {
     return undefined;
@@ -76,4 +81,10 @@ function getDestinationArgument(toolCall: ToolCall): string | undefined {
   } catch {
     return undefined;
   }
+}
+export function requiresExplicitToolConfirmation(ctx: ToolExecutionContext, toolCall: ToolCall): boolean {
+  const rule = ctx.toolExecutor.getMetadata(toolCall.function.name)?.alwaysConfirmWhen;
+  if (!rule) {return false;}
+  try {return rule.values.includes(JSON.parse(toolCall.function.arguments)[rule.argument]);}
+  catch {return false;}
 }

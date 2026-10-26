@@ -3,7 +3,7 @@ import { DEEPSEEK_PRO_MODEL_ID } from "@/contracts/deepseek/Models";
 import type { ToolRegistry } from "@/application/tools/ToolRegistry";
 
 const WEB_TOOL_NAMES = new Set(["search_web", "read_web"]);
-const TERMINAL_TOOL_NAME = "run_terminal_command";
+const TERMINAL_TOOL_NAMES = new Set(["run_terminal_command", "application_session"]);
 const IMAGE_ANALYSIS_TOOL_NAME = "analyze_images";
 
 export interface GenerationToolAvailability {
@@ -11,7 +11,7 @@ export interface GenerationToolAvailability {
   terminal: boolean;
   webSearchEnabled: boolean;
   modelId: string;
-  hasImageAttachments: boolean;
+  betaFeaturesEnabled?: boolean;
 }
 
 export function selectGenerationTools(
@@ -21,16 +21,19 @@ export function selectGenerationTools(
   return registry.getDefinitionsForAPI().filter((tool) => {
     const name = tool.function.name;
     const registered = registry.get(name);
+    if (name === "complete_code" && !availability.betaFeaturesEnabled) {return false;}
+
+    if (name === "capture_screenshot" && !availability.files) {return false;}
 
     if (name === IMAGE_ANALYSIS_TOOL_NAME) {
-      return availability.modelId === DEEPSEEK_PRO_MODEL_ID && availability.hasImageAttachments;
+      return availability.modelId === DEEPSEEK_PRO_MODEL_ID;
     }
 
     if (registered?.metadata.scope !== "global") {
       if (!availability.files) {
         return false;
       }
-      if (name === TERMINAL_TOOL_NAME && !availability.terminal) {
+      if (TERMINAL_TOOL_NAMES.has(name) && !availability.terminal) {
         return false;
       }
     }

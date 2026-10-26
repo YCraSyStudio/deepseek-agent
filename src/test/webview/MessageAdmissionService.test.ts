@@ -7,7 +7,6 @@ import type { SettingsRepository } from "@/application/ports";
 import type { HistoryManager } from "@/vscode/storage";
 import type { ConversationWorkspaceReferences } from "@/vscode/webviews/handlers/chat/session/ConversationWorkspaceReferences";
 import { MessageAdmissionService } from "@/vscode/webviews/handlers/chat/messaging/MessageAdmissionService";
-import type { SlashCommandService } from "@/vscode/webviews/handlers/chat/messaging/SlashCommandService";
 import type { SendMessagePayload } from "@/vscode/webviews/handlers/chat/Types";
 
 suite("message admission service", () => {
@@ -30,7 +29,7 @@ suite("message admission service", () => {
 
     await service.accept(payload({ referencedFiles: [{ ...normalizedFiles[0]!, path: "./main.ts" }] }), true);
 
-    assert.deepStrictEqual(events, ["settings:flush", "slash", "binding", "files", "enqueue"]);
+    assert.deepStrictEqual(events, ["settings:flush", "binding", "files", "enqueue"]);
     assert.strictEqual(admitted[0]?.front, true);
     assert.deepStrictEqual(
       (admitted[0]?.task.payload as SendMessagePayload).referencedFiles,
@@ -52,10 +51,29 @@ suite("message admission service", () => {
 
     await service.accept(payload({ workspaceRevision: "stale" }));
 
-    assert.deepStrictEqual(events, ["settings:flush", "slash", "binding", "context"]);
+    assert.deepStrictEqual(events, ["settings:flush", "binding", "context"]);
     assert.strictEqual(admitted.length, 0);
     assert.strictEqual(posts[0]?.type, "requestRejected");
     assert.match(String(posts[0]?.error), /workspace changed/i);
+  });
+
+  test("admits absolute paths and former slash commands unchanged as model requests", async () => {
+    for (const text of [
+      "/home/lingc/.deepseek-agent",
+      "/home/lingc/.ycrasy-agent",
+      "/status", "/context", "/review", "/goal New goal", "/tools",
+      "/mode full-access", "/auto-context off", "/clear-context", "/summarize",
+    ]) {
+      const events: string[] = [];
+      const admitted: Array<{ task: Record<string, unknown>; front?: boolean }> = [];
+      const service = createService({ binding: emptyWorkspaceBinding(), events, admitted, normalizedFiles: [] });
+
+      await service.accept(payload({ text }));
+
+      assert.equal(admitted.length, 1, text);
+      assert.equal((admitted[0].task.payload as SendMessagePayload).text, text);
+      assert.deepStrictEqual(events, ["settings:flush", "binding", "files", "enqueue"]);
+    }
   });
 });
 
@@ -88,12 +106,6 @@ function createService({
     waitForPendingWrites: async () => events.push("settings:flush"),
     load: () => ({ model: "deepseek-chat" }),
   } as unknown as SettingsRepository;
-  const slashCommands = {
-    handle: async () => {
-      events.push("slash");
-      return false;
-    },
-  } as unknown as SlashCommandService;
   const workspaceReferences = {
     getBinding: async () => {
       events.push("binding");
@@ -121,7 +133,6 @@ function createService({
       state: "empty",
     }),
     settings,
-    slashCommands,
     workspaceReferences,
   });
 }

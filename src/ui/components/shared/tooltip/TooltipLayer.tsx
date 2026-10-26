@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "./Tooltip.css";
+import TooltipContent from "./TooltipContent";
 import {
   parseTooltipAlign,
   parseTooltipSide,
@@ -24,6 +25,7 @@ type ActiveTooltip = {
 
 function findTooltipAnchor(target: EventTarget | null): HTMLElement | null {
   if (!(target instanceof Element)) {return null;}
+  if (document.querySelector("select:open")) {return null;}
   const anchor = target.closest<HTMLElement>("[data-tooltip]");
   return anchor && anchor.dataset.tooltip?.trim() ? anchor : null;
 }
@@ -61,6 +63,7 @@ function TooltipLayer() {
   }, []);
 
   const showTooltip = useCallback((anchor: HTMLElement) => {
+    if (document.querySelector("select:open")) {closeTooltip(); return;}
     window.clearTimeout(showTimerRef.current);
     showTimerRef.current = undefined;
     pendingAnchorRef.current = null;
@@ -83,7 +86,7 @@ function TooltipLayer() {
     anchor.setAttribute("aria-describedby", TOOLTIP_LAYER_ID);
     activeRef.current = next;
     setActive(next);
-  }, []);
+  }, [closeTooltip]);
 
   useEffect(() => {
     const schedule = (anchor: HTMLElement) => {
@@ -117,7 +120,7 @@ function TooltipLayer() {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {closeTooltip();}
+      if (event.key === "Escape" || (event.target instanceof Element && event.target.closest("select"))) {closeTooltip();}
     };
 
     const handleWindowBlur = () => closeTooltip();
@@ -192,7 +195,7 @@ function TooltipLayer() {
 
   return createPortal(
     <div className="tooltipLayer" id={TOOLTIP_LAYER_ID} role="tooltip" ref={tooltipRef}>
-      {active.text}
+      <TooltipContent text={active.text} />
     </div>,
     document.body,
   );

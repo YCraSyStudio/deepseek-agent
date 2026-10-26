@@ -6,6 +6,7 @@ import type {
 } from "./SettingsTypes";
 import type { TranslationKey } from "@webview/i18n/I18n";
 import type { ReactNode } from "react";
+import type { AvailableToolInfo } from "@/contracts";
 
 export type ApiSectionProps = {
   config: Pick<SettingsConfig, "model" | "baseUrl" | "thinkingMode" | "reasoningEffort">;
@@ -21,20 +22,36 @@ export type ApiSectionProps = {
 };
 
 export type AdvancedSectionProps = {
-  config: Pick<SettingsConfig, "temperature" | "topP" | "maxTokens" | "maxConcurrentGenerations" | "baseUrl" | "thinkingMode">;
+  config: Pick<SettingsConfig, "temperature" | "topP" | "maxTokens" | "baseUrl" | "thinkingMode">;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
 };
 
 export type GeneralSectionProps = {
-  config: Pick<SettingsConfig, "interfaceLanguage" | "historyEnabled" | "historyRetentionDays" | "includeHomeAgents" | "usageBreakdown" | "usageCostCurrency">;
+  children?: ReactNode;
+  config: Pick<SettingsConfig, "interfaceLanguage" | "maxConcurrentGenerations" | "historyEnabled" | "historyRetentionDays" | "snapshotStorageLimitMb" | "privacyMinimizeData" | "usageBreakdown" | "usageCostCurrency">;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
 };
 
 export type ToolsSectionProps = {
-  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "searxngUrl" | "searxngEngines" | "searxngEngineCatalog">;
+  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "webSearchRegion" | "browserAccess" | "automaticCaptureEnabled" | "automaticCaptureLimit">;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
   permissionUpdatePending?: boolean;
+  availableTools: AvailableToolInfo[] | null;
+};
+
+export type CustomizationSectionProps = {
+  workspaceRoots: import("@/contracts/Customization").WorkspaceInstructionsRoot[] | null;
+  workspaceRootUri: string;
+  onWorkspaceRootChange: (uri: string) => void;
+  onOpenWorkspaceAgents: () => void;
+  workspacePending: boolean;
+  workspaceError?: string;
+  config: Pick<SettingsConfig, "includeHomeAgents">;
+  updateConfig: UpdateConfigFn;
+  saveOnBlur: SaveOnBlurFn;
+  onOpenGlobalAgents: () => void;
+  pending: boolean;
 };

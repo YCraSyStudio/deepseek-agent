@@ -2,7 +2,6 @@ import * as assert from "node:assert";
 import {
   getToolCallFileChange,
   getToolCallFilePath,
-  hidesSuccessfulFileResult,
   isEditorFileTool,
 } from "@webview/components/chatView/tools/results/FileToolPresentation";
 
@@ -23,13 +22,6 @@ suite("file tool presentation", () => {
       getToolCallFilePath({ toolName: "edit_file", arguments: "invalid" }),
       undefined,
     );
-  });
-
-  test("hides only successful file results from the chat", () => {
-    assert.strictEqual(hidesSuccessfulFileResult({ toolName: "edit_file", status: "completed" }), true);
-    assert.strictEqual(hidesSuccessfulFileResult({ toolName: "apply_patch", status: "completed" }), true);
-    assert.strictEqual(hidesSuccessfulFileResult({ toolName: "edit_file", status: "error" }), false);
-    assert.strictEqual(hidesSuccessfulFileResult({ toolName: "run_terminal_command", status: "completed" }), false);
   });
 
   test("offers an exact saved diff for completed file-writing tools", () => {

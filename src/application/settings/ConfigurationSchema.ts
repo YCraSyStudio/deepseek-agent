@@ -5,7 +5,6 @@ import {
   type AppConfig,
   type InterfaceLanguage,
   type PermissionMode,
-  type SearxngEngineOption,
 } from "@/contracts";
 import { normalizeApiBaseUrlOrDefault } from "@/shared/security/ApiOrigin";
 import { normalizeUsageCurrency } from "@/shared/usage/UsageCurrency";
@@ -17,8 +16,8 @@ export type StoredSettings = Pick<AppConfig, StoredSettingKey>;
 const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
-  "permissionMode", "autoContext", "historyEnabled",
-  "historyRetentionDays", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "webSearchEnabled", "webSearchEngine", "searxngUrl", "searxngEngines", "searxngEngineCatalog",
+  "permissionMode", "historyEnabled",
+  "historyRetentionDays", "snapshotStorageLimitMb", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "automaticCaptureEnabled", "automaticCaptureLimit", "browserAccess", "webSearchEnabled", "webSearchRegion", "privacyMinimizeData", "betaFeaturesEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled",
 ];
 
 const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
@@ -40,17 +39,21 @@ export function normalizeConfig(value: unknown): AppConfig {
     maxTokens: clampInteger(config.maxTokens, 1, MAX_OUTPUT_TOKENS, DEFAULT_CONFIG.maxTokens),
     maxConcurrentGenerations: clampInteger(config.maxConcurrentGenerations, 1, 16, DEFAULT_CONFIG.maxConcurrentGenerations),
     permissionMode: normalizePermissionMode(config.permissionMode),
-    autoContext: normalizeBoolean(config.autoContext, DEFAULT_CONFIG.autoContext),
     historyEnabled: normalizeBoolean(config.historyEnabled, DEFAULT_CONFIG.historyEnabled),
     historyRetentionDays: clampInteger(config.historyRetentionDays, 0, 3650, DEFAULT_CONFIG.historyRetentionDays),
+    snapshotStorageLimitMb: clampInteger(config.snapshotStorageLimitMb, 64, 65536, DEFAULT_CONFIG.snapshotStorageLimitMb),
     includeHomeAgents: normalizeBoolean(config.includeHomeAgents, DEFAULT_CONFIG.includeHomeAgents),
     usageBreakdown: normalizeBoolean(config.usageBreakdown, DEFAULT_CONFIG.usageBreakdown),
     usageCostCurrency: normalizeUsageCurrency(config.usageCostCurrency),
+    automaticCaptureEnabled: normalizeBoolean(config.automaticCaptureEnabled, false),
+    automaticCaptureLimit: clampInteger(config.automaticCaptureLimit, 1, 40, 10),
+    browserAccess: config.browserAccess === "always" || config.browserAccess === "never" ? config.browserAccess : "ask",
     webSearchEnabled: normalizeBoolean(config.webSearchEnabled, DEFAULT_CONFIG.webSearchEnabled),
-    webSearchEngine: "searxng",
-    searxngUrl: normalizeSearxngUrl(config.searxngUrl),
-    searxngEngines: normalizeSearxngEngines(config.searxngEngines),
-    searxngEngineCatalog: normalizeSearxngEngineCatalog(config.searxngEngineCatalog),
+    webSearchRegion: normalizeSearchRegion(config.webSearchRegion),
+    privacyMinimizeData: normalizeBoolean(config.privacyMinimizeData, DEFAULT_CONFIG.privacyMinimizeData),
+    betaFeaturesEnabled: normalizeBoolean(config.betaFeaturesEnabled, DEFAULT_CONFIG.betaFeaturesEnabled),
+    editorSuggestionsEnabled: normalizeBoolean(config.editorSuggestionsEnabled, DEFAULT_CONFIG.editorSuggestionsEnabled),
+    chatSuggestionsEnabled: normalizeBoolean(config.chatSuggestionsEnabled, DEFAULT_CONFIG.chatSuggestionsEnabled),
   };
 }
 
@@ -67,11 +70,15 @@ export function isStoredSettingKey(key: string): key is StoredSettingKey {
 }
 
 export function normalizeSettingValue(key: StoredSettingKey, value: unknown): unknown {
+  if (key === "webSearchRegion") {return normalizeSearchRegion(value);}
+  if (key === "automaticCaptureEnabled") {return normalizeBoolean(value, false);}
+  if (key === "automaticCaptureLimit") {return clampInteger(value, 1, 40, 10);}
+  if (key === "browserAccess") {return value === "always" || value === "never" ? value : "ask";}
   if (key === "interfaceLanguage") {return normalizeInterfaceLanguage(value);}
   if (key === "permissionMode") {return normalizePermissionMode(value);}
   if (key === "reasoningEffort") {return normalizeReasoningEffort(value);}
   if (key === "usageCostCurrency") {return normalizeUsageCurrency(value);}
-  if (["thinkingMode", "autoContext", "historyEnabled", "includeHomeAgents", "usageBreakdown", "webSearchEnabled"].includes(key)) {
+  if (["thinkingMode", "historyEnabled", "includeHomeAgents", "usageBreakdown", "webSearchEnabled", "privacyMinimizeData", "betaFeaturesEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled"].includes(key)) {
     return normalizeBoolean(value, DEFAULT_CONFIG[key] as boolean);
   }
   if (key === "model") {return normalizeNonEmptyString(value, DEFAULT_CONFIG.model);}
@@ -81,11 +88,13 @@ export function normalizeSettingValue(key: StoredSettingKey, value: unknown): un
   if (key === "maxTokens") {return clampInteger(value, 1, MAX_OUTPUT_TOKENS, DEFAULT_CONFIG.maxTokens);}
   if (key === "maxConcurrentGenerations") {return clampInteger(value, 1, 16, DEFAULT_CONFIG.maxConcurrentGenerations);}
   if (key === "historyRetentionDays") {return clampInteger(value, 0, 3650, DEFAULT_CONFIG.historyRetentionDays);}
-  if (key === "webSearchEngine") {return "searxng";}
-  if (key === "searxngUrl") {return normalizeSearxngUrl(value);}
-  if (key === "searxngEngines") {return normalizeSearxngEngines(value);}
-  if (key === "searxngEngineCatalog") {return normalizeSearxngEngineCatalog(value);}
+  if (key === "snapshotStorageLimitMb") {return clampInteger(value, 64, 65536, DEFAULT_CONFIG.snapshotStorageLimitMb);}
   return value;
+}
+
+function normalizeSearchRegion(value: unknown): string {
+  return typeof value === "string" && /^(?:auto|global|[A-Za-z]{2})$/.test(value.trim())
+    ? (/^(auto|global)$/.test(value.trim()) ? value.trim() : value.trim().toUpperCase()) : "global";
 }
 
 function normalizeInterfaceLanguage(value: unknown): InterfaceLanguage {
@@ -99,56 +108,6 @@ function normalizePermissionMode(value: unknown): PermissionMode {
   return value === "default" || value === "full-access" || value === "auto-approve"
     ? value
     : DEFAULT_CONFIG.permissionMode;
-}
-
-function normalizeSearxngUrl(value: unknown): string {
-  if (typeof value !== "string" || value.trim().length === 0) {return DEFAULT_CONFIG.searxngUrl;}
-  try {
-    const url = new URL(value.trim());
-    if (url.username || url.password) {return DEFAULT_CONFIG.searxngUrl;}
-    const hostname = url.hostname.toLowerCase();
-    const loopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-    if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {return DEFAULT_CONFIG.searxngUrl;}
-    url.search = "";
-    url.hash = "";
-    url.pathname = url.pathname.replace(/\/+$/, "");
-    return url.toString().replace(/\/$/, "");
-  } catch {return DEFAULT_CONFIG.searxngUrl;}
-}
-
-function normalizeSearxngEngines(value: unknown): string[] {
-  if (!Array.isArray(value)) {return DEFAULT_CONFIG.searxngEngines;}
-  const seen = new Set<string>();
-  for (const item of value) {
-    if (typeof item !== "string") {continue;}
-    const shortcut = item.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,64}$/.test(shortcut)) {continue;}
-    seen.add(shortcut);
-    if (seen.size >= 512) {break;}
-  }
-  return [...seen];
-}
-
-function normalizeSearxngEngineCatalog(value: unknown): SearxngEngineOption[] {
-  if (!Array.isArray(value)) {return DEFAULT_CONFIG.searxngEngineCatalog;}
-  const seen = new Set<string>();
-  const engines: SearxngEngineOption[] = [];
-  for (const item of value) {
-    if (!isRecord(item) || typeof item.name !== "string" || typeof item.shortcut !== "string") {continue;}
-    const shortcut = item.shortcut.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,64}$/.test(shortcut) || seen.has(shortcut)) {continue;}
-    seen.add(shortcut);
-    engines.push({
-      name: item.name.trim().slice(0, 256) || shortcut,
-      shortcut,
-      categories: Array.isArray(item.categories)
-        ? item.categories.filter((category): category is string => typeof category === "string").map((category) => category.slice(0, 128)).slice(0, 16)
-        : [],
-      enabled: item.enabled === true,
-    });
-    if (engines.length >= 512) {break;}
-  }
-  return engines;
 }
 
 function normalizeBoolean(value: unknown, fallback: boolean): boolean {

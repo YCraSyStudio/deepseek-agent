@@ -8,7 +8,6 @@ import type { HistoryManager } from "@/vscode/storage";
 import { restoreRequestedConversation } from "../session/ConversationRestoration";
 import type { ConversationWorkspaceReferences } from "../session/ConversationWorkspaceReferences";
 import { getErrorMessage, getWorkspaceStatusError } from "../ChatErrors";
-import type { SlashCommandService } from "./SlashCommandService";
 import type { SendMessagePayload } from "../Types";
 
 interface MessageAdmissionServiceDependencies {
@@ -23,7 +22,6 @@ interface MessageAdmissionServiceDependencies {
   onConversationCreated: (conversationId: string) => void;
   post: (message: Record<string, unknown>) => void;
   settings: SettingsRepository;
-  slashCommands: SlashCommandService;
   workspaceReferences: ConversationWorkspaceReferences;
 }
 
@@ -41,22 +39,23 @@ export class MessageAdmissionService {
     }
     await this.dependencies.settings.waitForPendingWrites();
     const config = this.dependencies.settings.load();
-    const webviewView = this.dependencies.getWebview();
-    if (!webviewView) {
-      return;
-    }
-    if (await this.dependencies.slashCommands.handle(payload, config, webviewView)) {
+    if (!this.dependencies.getWebview()) {
       return;
     }
 
     const { conversationState } = this.dependencies;
     if (!conversationState.isIncognito()) {
-      await restoreRequestedConversation(
+      try {
+        await restoreRequestedConversation(
         payload.conversationId,
         conversationState,
         this.dependencies.historyManager,
         this.dependencies.loadConversation,
-      );
+        );
+      } catch (error: unknown) {
+        this.reject(payload, getErrorMessage(error));
+        return;
+      }
     }
     const conversationId = this.ensureConversation(payload, config.model);
     const binding = await this.dependencies.workspaceReferences.getBinding(conversationId);
@@ -97,7 +96,7 @@ export class MessageAdmissionService {
   private ensureConversation(payload: SendMessagePayload, defaultModel: string): string {
     const { conversationState, historyManager, workspaceReferences } = this.dependencies;
     const existingId = !conversationState.isIncognito()
-      ? payload.conversationId ?? conversationState.getActiveConversationId()
+      ? payload.conversationId
       : conversationState.getActiveConversationId();
     if (existingId) {
       return existingId;

@@ -5,17 +5,22 @@ import { redactSensitiveText } from "@/shared/security/Redaction";
 import { DEEPSEEK_FLASH_MODEL_ID, type AppConfig, type WebviewConfig, type WebviewToHandlerMessage } from "@/contracts";
 import { getApiOrigin, normalizeApiBaseUrl } from "@/shared/security/ApiOrigin";
 import { toWebviewConfig } from "@/vscode/webviews/WebviewConfig";
+import { getStorageInfo } from "@/vscode/storage/StorageInfo";
+import { getConfiguredStorageDirectory, saveStorageDirectory } from "@/vscode/storage/StorageLocation";
+import { ensureGlobalInstructionsFile } from "@/infrastructure/persistence/GlobalInstructionsFile";
+import { ensureWorkspaceInstructionsFile } from "@/infrastructure/persistence/WorkspaceInstructionsFile";
 import type { ChatHandler } from "./chat/ChatHandler";
 import { HistoryTransitionController } from "./HistoryTransitionController";
 
-type SettingsMessage = Extract<WebviewToHandlerMessage, { type: "getConfig" | "saveConfig" | "resetConfig" | "resolveHistoryTransition" | "deleteApiKey" | "testConnection" }>;
+type SettingsMessage = Extract<WebviewToHandlerMessage, { type: "getWorkspaceInstructions" | "openWorkspaceInstructions" | "openGlobalAgents" | "getConfig" | "setStorageDirectory" | "selectStorageDirectory" | "reloadStorage" | "saveConfig" | "resetConfig" | "resolveHistoryTransition" | "deleteApiKey" | "testConnection" }>;
 type TestConnectionMessage = Extract<WebviewToHandlerMessage, { type: "testConnection" }>;
 
 export class SettingsHandler {
   private readonly historyTransitions: HistoryTransitionController;
+  private workspaceInstructionsRevision = 0;
 
   constructor(
-    _context: vscode.ExtensionContext,
+    private readonly context: vscode.ExtensionContext,
     private readonly chatHandler: ChatHandler,
     private readonly settings: SettingsRepository,
     private readonly secrets: SecretStore,
@@ -35,6 +40,24 @@ export class SettingsHandler {
 
   handle(message: SettingsMessage, webviewView: vscode.WebviewView): void {
     switch (message.type) {
+      case "getWorkspaceInstructions":
+        void this.postWorkspaceInstructions(webviewView);
+        break;
+      case "openWorkspaceInstructions":
+        void this._openWorkspaceInstructions(message.requestId, message.rootUri, webviewView);
+        break;
+      case "openGlobalAgents":
+        void this._openGlobalAgents(message.requestId, webviewView);
+        break;
+      case "setStorageDirectory":
+        void this._setStorageDirectory(message.directory, webviewView);
+        break;
+      case "selectStorageDirectory":
+        void this._setStorageDirectory(undefined, webviewView);
+        break;
+      case "reloadStorage":
+        void vscode.commands.executeCommand("workbench.action.reloadWindow");
+        break;
       case "getConfig":
         void this.postCurrentConfig(webviewView);
         break;
@@ -58,6 +81,98 @@ export class SettingsHandler {
     }
   }
 
+  watchWorkspaceInstructions(view: vscode.WebviewView): vscode.Disposable {
+    const watcher = vscode.workspace.createFileSystemWatcher("**/AGENTS.md", false, true, false);
+    const refresh = (uri: vscode.Uri) => {
+      if (vscode.workspace.workspaceFolders?.some((folder) => vscode.Uri.joinPath(folder.uri, "AGENTS.md").toString() === uri.toString())) {
+        void this.postWorkspaceInstructions(view);
+      }
+    };
+    return vscode.Disposable.from(watcher, watcher.onDidCreate(refresh), watcher.onDidDelete(refresh),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => {void this.postWorkspaceInstructions(view);}));
+  }
+
+  private async postWorkspaceInstructions(view: vscode.WebviewView): Promise<void> {
+    const revision = ++this.workspaceInstructionsRevision;
+    try {
+      const roots = await Promise.all((vscode.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map(async (folder) => {
+        let exists = false;
+        try {
+          const info = await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder.uri, "AGENTS.md"));
+          exists = (info.type & vscode.FileType.File) !== 0;
+        } catch (error) {
+          if (!(error instanceof vscode.FileSystemError && error.code === "FileNotFound") && (error as NodeJS.ErrnoException).code !== "ENOENT") {throw error;}
+        }
+        return { uri: folder.uri.toString(), name: folder.name, exists };
+      }));
+      if (revision !== this.workspaceInstructionsRevision) {return;}
+      const active = vscode.window.activeTextEditor?.document.uri;
+      await view.webview.postMessage({ type: "workspaceInstructions", roots,
+        preferredRootUri: active ? vscode.workspace.getWorkspaceFolder(active)?.uri.toString() : undefined });
+    } catch (error) {
+      if (revision === this.workspaceInstructionsRevision) {
+        await view.webview.postMessage({ type: "workspaceInstructions", roots: [], error: redactSensitiveText(error) });
+      }
+    }
+  }
+
+  private async _openWorkspaceInstructions(requestId: string, rootUri: string, view: vscode.WebviewView): Promise<void> {
+    try {
+      const folder = vscode.workspace.workspaceFolders?.find((item) => item.uri.scheme === "file" && item.uri.toString() === rootUri);
+      if (!folder) {throw new Error("Select a currently open local workspace folder.");}
+      const language = this.settings.load().interfaceLanguage;
+      const file = await ensureWorkspaceInstructionsFile(folder.uri.fsPath, language === "auto" ? vscode.env.language : language);
+      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+      await vscode.window.showTextDocument(document, { preview: false });
+      await this.postWorkspaceInstructions(view);
+      await view.webview.postMessage({ type: "openWorkspaceInstructionsResult", requestId, success: true });
+    } catch (error) {
+      await view.webview.postMessage({ type: "openWorkspaceInstructionsResult", requestId, success: false, error: redactSensitiveText(error) });
+    }
+  }
+
+  private async _openGlobalAgents(requestId: string, view: vscode.WebviewView): Promise<void> {
+    try {
+      await this.settings.waitForPendingWrites();
+      if (!this.settings.load().includeHomeAgents) {throw new Error("Enable global AGENTS.md instructions before opening the customization file.");}
+      const file = await ensureGlobalInstructionsFile();
+      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+      await vscode.window.showTextDocument(document, { preview: false });
+      await view.webview.postMessage({ type: "openGlobalAgentsResult", requestId, success: true });
+    } catch (error) {
+      await view.webview.postMessage({ type: "openGlobalAgentsResult", requestId, success: false, error: redactSensitiveText(error) });
+    }
+  }
+
+  private async _setStorageDirectory(directory: string | undefined, view: vscode.WebviewView): Promise<void> {
+    try {
+      let selected = directory;
+      if (selected === undefined) {
+        const folders = await vscode.window.showOpenDialog({
+          canSelectFiles: false,
+          canSelectFolders: true,
+          canSelectMany: false,
+          defaultUri: vscode.Uri.file(getConfiguredStorageDirectory(this.context)),
+        });
+        if (folders?.[0]) {
+          if (folders[0].scheme !== "file") {throw new Error("Select a local directory on the extension host.");}
+          selected = folders[0].fsPath;
+        }
+      }
+      if (selected !== undefined) {await saveStorageDirectory(this.context, selected);}
+      await view.webview.postMessage({
+        type: "storageDirectoryResult",
+        storageInfo: getStorageInfo(getConfiguredStorageDirectory(this.context)),
+      });
+    } catch (error) {
+      await view.webview.postMessage({
+        type: "storageDirectoryResult",
+        storageInfo: getStorageInfo(getConfiguredStorageDirectory(this.context)),
+        error: redactSensitiveText(error),
+      });
+    }
+  }
+
   async postCurrentConfig(webviewView: vscode.WebviewView): Promise<void> {
     try {
       const config = await this._getCurrentConfig();
@@ -65,6 +180,7 @@ export class SettingsHandler {
         type: "configLoaded",
         revision: this.settings.getRevision(),
         config,
+        storageInfo: getStorageInfo(getConfiguredStorageDirectory(this.context)),
       });
       await this._postApiKeyStatus(webviewView, config.baseUrl);
     } catch (error: unknown) {
@@ -200,6 +316,7 @@ export class SettingsHandler {
       operation,
       status,
       config,
+      storageInfo: getStorageInfo(getConfiguredStorageDirectory(this.context)),
       error,
       credentialUpdated,
     });

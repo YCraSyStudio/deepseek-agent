@@ -1,5 +1,5 @@
 import type * as vscode from "vscode";
-import type { QueuedGenerationMessage } from "@/contracts";
+import type { GenerationSnapshot, QueuedGenerationMessage } from "@/contracts";
 import type { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
 import type { GenerationCheckpointStore, HistoryManager } from "@/vscode/storage";
 import type { SettingsRepository } from "@/application/ports";
@@ -120,9 +120,25 @@ export function buildGenerationSnapshot(
   recoveredDrafts: ReadonlyMap<string, QueuedGenerationMessage[]>,
   coordinator: GenerationCoordinator<SendMessagePayload>,
 ): Record<string, unknown> {
+  const starting: GenerationSnapshot[] = coordinator.getActiveGenerations()
+    .filter((active) => !runs.has(active.generationId))
+    .map((active) => ({
+      generationId: active.generationId,
+      conversationId: active.task.conversationId,
+      status: active.controller.signal.aborted ? "cancelling" : "starting",
+      userMessage: {
+        id: `starting-${active.generationId}`, role: "user", content: active.task.payload.text,
+        generationId: active.generationId, createdAt: active.task.queuedAt,
+        imageAttachments: structuredClone(active.task.payload.imageAttachments),
+      },
+      content: "", timeline: [], toolCalls: [],
+      queue: coordinator.getQueue(active.task.conversationId).map((task) => ({
+        clientRequestId: task.clientRequestId, text: task.payload.text, queuedAt: task.queuedAt,
+      })),
+    }));
   return {
     type: "generationSnapshot",
-    generations: [...runs.values()].map((record) => ({
+    generations: [...starting, ...[...runs.values()].map((record) => ({
       generationId: record.generationId,
       conversationId: record.conversationId,
       status: record.status,
@@ -135,7 +151,7 @@ export function buildGenerationSnapshot(
         text: task.payload.text,
         queuedAt: task.queuedAt,
       })),
-    })),
+    }))],
     recoveredDrafts: [...recoveredDrafts].map(([conversationId, messages]) => ({ conversationId, messages })),
   };
 }

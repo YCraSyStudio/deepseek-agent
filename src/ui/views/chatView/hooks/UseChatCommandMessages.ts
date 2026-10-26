@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type {
   GenerationSnapshot,
   ImageAttachment,
@@ -11,6 +11,7 @@ import type { ChatMessage } from "../ChatViewTypes";
 type ChatCommandMessage =
   | { type: "addReferencedFiles"; files: ReferencedFile[] }
   | { type: "clearChat" }
+  | { type: "addMessage"; message: { role: string }; generationId: string }
   | { type: "setDraft"; text: string }
   | { type: "generationAccepted"; generationId: string; conversationId: string; clientRequestId: string }
   | { type: "messageQueued"; conversationId: string; clientRequestId: string; position: number }
@@ -54,6 +55,7 @@ interface ChatCommandSetters {
 }
 
 interface UseChatCommandMessagesOptions {
+  resolveImageUpload: (requestId: string, attachments: ImageAttachment[], error?: string) => ImageAttachment[];
   appendReferencedFiles: (files: ReferencedFile[]) => void;
   focusInput: () => void;
   refs: ChatCommandRefs;
@@ -61,11 +63,13 @@ interface UseChatCommandMessagesOptions {
 }
 
 export function useChatCommandMessages({
+  resolveImageUpload,
   appendReferencedFiles,
   focusInput,
   refs,
   setters,
 }: UseChatCommandMessagesOptions): void {
+  const awaitingMessages = useRef(new Map<string, string>());
   useEffect(() => {
     const handleMessage = (event: MessageEvent<ChatCommandMessage>) => {
       const message = event.data;
@@ -76,8 +80,9 @@ export function useChatCommandMessages({
         if (message.error) {
           setters.setRequestError(message.error);
         }
-        if (message.attachments.length > 0) {
-          setters.setImageAttachments((current) => [...current, ...message.attachments].slice(0, 8));
+        const attachments = resolveImageUpload(message.requestId, message.attachments, message.error);
+        if (attachments.length > 0) {
+          setters.setImageAttachments((current) => [...current, ...attachments].slice(0, 8));
           requestAnimationFrame(focusInput);
         }
       }
@@ -89,13 +94,29 @@ export function useChatCommandMessages({
         requestAnimationFrame(focusInput);
       }
       if (message.type === "clearChat") {
+        awaitingMessages.current.clear();
         clearChatState(refs, setters);
       }
       if (message.type === "workspaceContextChanged") {
         applyWorkspaceContext(message, refs, setters);
       }
       if (message.type === "generationAccepted") {
+        awaitingMessages.current.set(message.generationId, message.clientRequestId);
         applyGenerationAccepted(message, refs, setters);
+      }
+      if (message.type === "addMessage" && message.message.role === "user") {
+        const requestId = awaitingMessages.current.get(message.generationId);
+        if (requestId) {
+          clearSubmittedDraft(requestId, refs, setters);
+          awaitingMessages.current.delete(message.generationId);
+        }
+      }
+      if ((message.type === "streamError" || message.type === "streamDone") && message.generationId) {
+        const requestId = awaitingMessages.current.get(message.generationId);
+        if (requestId) {
+          refs.pendingRequests.current.delete(requestId);
+          awaitingMessages.current.delete(message.generationId);
+        }
       }
       if (message.type === "messageQueued") {
         const submitted = refs.pendingRequests.current.get(message.clientRequestId);
@@ -127,7 +148,7 @@ export function useChatCommandMessages({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [appendReferencedFiles, focusInput]);
+  }, [appendReferencedFiles, focusInput, resolveImageUpload]);
 }
 
 function clearChatState(refs: ChatCommandRefs, setters: ChatCommandSetters): void {
@@ -169,7 +190,18 @@ function applyGenerationAccepted(
   setters: ChatCommandSetters,
 ): void {
   const submitted = refs.pendingRequests.current.get(message.clientRequestId);
-  refs.pendingRequests.current.delete(message.clientRequestId);
+  if (submitted || message.conversationId === refs.conversationId.current) {
+    refs.conversationId.current = message.conversationId;
+    refs.activeGenerationId.current = message.generationId;
+    setters.setConversationId(message.conversationId);
+    setters.setActiveGenerationId(message.generationId);
+    setters.setIsProcessing(true);
+  }
+}
+
+function clearSubmittedDraft(requestId: string, refs: ChatCommandRefs, setters: ChatCommandSetters): void {
+  const submitted = refs.pendingRequests.current.get(requestId);
+  refs.pendingRequests.current.delete(requestId);
   if (submitted && refs.draft.current.trim() === submitted.text) {
     refs.draft.current = "";
     setters.setDraft("");
@@ -181,13 +213,6 @@ function applyGenerationAccepted(
   if (submitted && sameImageSet(refs.imageAttachments.current, submitted.imageIds)) {
     refs.imageAttachments.current = [];
     setters.setImageAttachments([]);
-  }
-  if (submitted || message.conversationId === refs.conversationId.current) {
-    refs.conversationId.current = message.conversationId;
-    refs.activeGenerationId.current = message.generationId;
-    setters.setConversationId(message.conversationId);
-    setters.setActiveGenerationId(message.generationId);
-    setters.setIsProcessing(true);
   }
 }
 
@@ -208,6 +233,9 @@ function applyGenerationSnapshot(
       const withoutPriorSnapshot = current.filter(
         (item) => item.generationId !== active.generationId || item.role === "user",
       );
+      if (!withoutPriorSnapshot.some((item) => item.role === "user" && item.generationId === active.generationId)) {
+        withoutPriorSnapshot.push(active.userMessage);
+      }
       if (!active.content && active.timeline.length === 0 && active.toolCalls.length === 0) {
         return withoutPriorSnapshot;
       }
@@ -220,6 +248,11 @@ function applyGenerationSnapshot(
         generationId: active.generationId,
       }];
     });
+  }
+  if (!active) {
+    refs.activeGenerationId.current = undefined;
+    setters.setActiveGenerationId(undefined);
+    setters.setIsProcessing(false);
   }
   const recovered = currentConversationId
     ? message.recoveredDrafts.find((entry) => entry.conversationId === currentConversationId)

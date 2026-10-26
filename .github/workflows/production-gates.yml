@@ -36,10 +36,6 @@ jobs:
       - run: pnpm run lint
       - run: pnpm run audit:dead-code
       - run: pnpm run test:unit
-      - run: pnpm run verify:searxng-runtime-config
-      - name: Verify published SearXNG runtime
-        if: steps.release-mode.outputs.release == 'true'
-        run: pnpm run verify:searxng-runtime
       - name: Validate release tag and changelog
         if: steps.release-mode.outputs.release == 'true'
         env:
@@ -49,6 +45,10 @@ jobs:
         run: pnpm audit --prod --audit-level high
       - name: Audit build chain
         run: pnpm audit --audit-level critical
+      - name: Build and validate Astro documentation
+        env:
+          ASTRO_TELEMETRY_DISABLED: "1"
+        run: pnpm --dir web-doc run build
       - run: pnpm run build
       - run: pnpm run package:vsix
       - run: pnpm run verify:vsix

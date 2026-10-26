@@ -8,7 +8,7 @@ const srcRoot = resolve(uiRoot, '..');
 const productionCsp = [
   "default-src 'none'",
   "connect-src {{CSP_SOURCE}}",
-  "img-src {{CSP_SOURCE}} data:",
+  "img-src {{CSP_SOURCE}} data: blob:",
   "font-src {{CSP_SOURCE}}",
   "style-src {{CSP_SOURCE}} 'nonce-{{NONCE}}' 'unsafe-inline'",
   "script-src {{CSP_SOURCE}} 'nonce-{{NONCE}}'",

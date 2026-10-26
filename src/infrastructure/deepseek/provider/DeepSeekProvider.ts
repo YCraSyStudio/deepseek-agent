@@ -8,6 +8,7 @@ import {
 import type { ModelProvider } from "@/application/ports";
 import { chatCompletion, chatCompletionStream, buildChatBody, type ChatRequest } from "./features/Chat";
 import { listModels } from "./Models";
+import { normalizeBetaToolMessages } from "./features/StrictTools";
 
 export class DeepSeekModelProvider implements ModelProvider {
   public readonly name = "DeepSeek";
@@ -20,7 +21,11 @@ export class DeepSeekModelProvider implements ModelProvider {
     const chatRequest = this._applyDefaults(request);
     const body = buildChatBody(chatRequest, this.config);
     const preparedRequest = { ...chatRequest, ...body } as ChatRequest;
-    return chatCompletion(preparedRequest, this.config.apiKey, this.config.baseUrl, signal);
+    const response = await chatCompletion(preparedRequest, this.config.apiKey, this.config.baseUrl, signal, this.config.betaFeaturesEnabled);
+    return !this.config.betaFeaturesEnabled || !request.tools ? response : {
+      ...response,
+      choices: response.choices.map((choice) => ({ ...choice, message: normalizeBetaToolMessages([choice.message], request.tools!)[0] })),
+    };
   }
 
   async chatCompletionStream(request: ChatCompletionRequest, onChunk: (chunk: StreamChunk) => void, signal?: AbortSignal): Promise<void> {
@@ -63,6 +68,7 @@ export class DeepSeekModelProvider implements ModelProvider {
       baseUrl: this.config.baseUrl,
       onChunk,
       signal,
+      betaFeaturesEnabled: this.config.betaFeaturesEnabled,
     });
   }
 

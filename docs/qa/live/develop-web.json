@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-10-18T15:08:29.712Z",
+  "passed": true,
+  "scope": "Live model selected and executed the actual extension search_web/read_web tool schemas and handlers; UI was tested separately by the installed-VSIX smoke test.",
+  "trace": [
+    {
+      "round": 1,
+      "finishReason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1321,
+        "completion_tokens": 86,
+        "total_tokens": 1407,
+        "prompt_cache_hit_tokens": 1152,
+        "prompt_cache_miss_tokens": 169
+      },
+      "tools": [
+        {
+          "name": "search_web",
+          "arguments": {
+            "query": "DeepSeek API documentation search fetch endpoints",
+            "max_results": 1,
+            "domains": [
+              "api-docs.deepseek.com"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "finishReason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1996,
+        "completion_tokens": 114,
+        "total_tokens": 2110,
+        "prompt_cache_hit_tokens": 1280,
+        "prompt_cache_miss_tokens": 716
+      },
+      "tools": [
+        {
+          "name": "read_web",
+          "arguments": {
+            "search_id": "search_35d76f53a74847f2b0a04de7048f3eb6",
+            "url": "https://api-docs.deepseek.com/guides/search/?utm_source=pixelstech.net",
+            "focus": "Search endpoint Fetch endpoint"
+          }
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 3837,
+        "completion_tokens": 77,
+        "total_tokens": 3914,
+        "prompt_cache_hit_tokens": 2048,
+        "prompt_cache_miss_tokens": 1789
+      },
+      "tools": []
+    }
+  ],
+  "requestCounts": {
+    "/v1/chat/completions": 3,
+    "/v1/tools/search": 1,
+    "/v1/tools/fetch": 1
+  },
+  "answer": "Según la documentación oficial de DeepSeek, Search usa `POST https://api.deepseek.com/v1/tools/search` y Fetch usa `POST https://api.deepseek.com/v1/tools/fetch`, ambas con autenticación bearer. Enlace consultado: https://api-docs.deepseek.com/guides/search/?utm_source=pixelstech.net",
+  "modelCostEstimateCny": 0.0038720000000000004,
+  "webCostEstimateCny": 0.01,
+  "totalCostEstimateCny": 0.013872
+}

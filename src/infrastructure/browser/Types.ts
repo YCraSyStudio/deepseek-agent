@@ -1,4 +1,24 @@
-type WebSearchProviderId = "searxng";
+type WebSearchProviderId = "deepseek";
+
+interface WebSearchItem {
+  url: string;
+  title: string;
+  summary: string;
+  rerank_score?: number;
+  authority?: number;
+  date?: string;
+  site_name?: string;
+}
+
+export interface WebSearchPage extends WebSearchItem {
+  content?: string;
+}
+
+export interface WebSearchOptions {
+  originalQuestion?: string;
+  needContent?: boolean;
+  region?: string;
+}
 
 export interface WebSecurityMetadata {
   source: "live_web";
@@ -10,8 +30,12 @@ export interface WebSecurityMetadata {
 export interface WebSearchResult {
   kind: "web_search_results";
   search_id: string;
+  warning_before: string;
+  warning_after: string;
   provider: WebSearchProviderId;
   urls: string[];
+  results?: WebSearchItem[];
+  preferences?: { region?: string; language: string; purpose: "software_development" };
   trust: "untrusted_web_content";
   security: WebSecurityMetadata;
 }

@@ -123,6 +123,9 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
       if (shouldRememberToolSignature(toolCall, result)) {
         if (invalidatesPriorToolSignatures(toolCall)) {mutationEpoch++;}
         executedSignatures.set(signature, mutationEpoch);
+      } else if (toolCall.function.name === "application_session") {
+        // Process state and its UI evolve between calls, including identical polls.
+        mutationEpoch++;
       }
       cycleOptions.onToolResult?.(toolCall.id, result);
       const toolResult = createToolResultMessage(toolCall.id, toolCall.function.name, fitToolResultForModel(result));
@@ -219,7 +222,7 @@ function createToolSignature(toolCall: { function: { name: string; arguments: st
 function normalizeSignatureLineEndings(value: string): string {return value.replace(/\r\n|\r/g, "\n");}
 
 function shouldRememberToolSignature(toolCall: { function: { name: string } }, result: string): boolean {
-  if (toolCall.function.name === "read_file") {return false;}
+  if (["read_file", "application_session"].includes(toolCall.function.name)) {return false;}
   return !/^\s*(?:Error\b|Skipped:)/i.test(result);
 }
 

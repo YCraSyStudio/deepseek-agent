@@ -14,6 +14,9 @@ suite("Packaged VSIX smoke", () => {
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes("deepseek-agent.openChat"));
     assert.ok(commands.includes("deepseek-agent.showDiagnostics"));
+    assert.ok(commands.includes("deepseek-agent.completeEditor"));
+    assert.ok(commands.includes("deepseek-agent.refactorEditor"));
+    assert.equal(commands.includes("deepseek-agent.reloadView"), false);
     await vscode.commands.executeCommand("deepseek-agent.openChat");
   });
 });

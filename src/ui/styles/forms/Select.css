@@ -33,3 +33,89 @@ select {
     min-width: 0;
   }
 }
+
+/* Keep the native select semantics while styling its top-layer picker. */
+@supports (appearance: base-select) and selector(select::picker(select)) {
+  select:not([multiple]):not([size]),
+  select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+
+  select:not([multiple]):not([size]) {
+    background-image: none;
+    align-items: center;
+    gap: 8px;
+    padding-inline: var(--control-padding-inline);
+    text-overflow: ellipsis;
+
+    &::picker-icon {
+      color: var(--text-secondary);
+      flex: none;
+      margin-inline-start: auto;
+    }
+
+    &:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* The picker replaces the visible field, so no second box sits underneath. */
+    &:open {
+      color: transparent;
+      background-color: transparent;
+      border-color: transparent;
+      box-shadow: none;
+
+      &::picker-icon { visibility: hidden; }
+    }
+
+    &::picker(select) {
+      box-sizing: border-box;
+      inset: auto;
+      top: anchor(top);
+      left: anchor(left);
+      width: max-content;
+      min-width: anchor-size(width);
+      max-width: calc(100vw - 16px);
+      max-height: min(320px, calc(100vh - 16px));
+      position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+      margin: 0;
+      padding: 4px;
+      border: 1px solid var(--input-focus-border);
+      border-radius: var(--control-radius);
+      background: var(--vscode-menu-background, var(--bg-secondary));
+      background: color-mix(in srgb, var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity), transparent);
+      backdrop-filter: var(--floating-surface-filter);
+      box-shadow: 0 5px 14px #0003;
+      color: var(--vscode-menu-foreground, var(--text-primary));
+      font: inherit;
+      overflow-y: auto;
+    }
+
+    option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--vscode-menu-foreground, var(--text-primary));
+      white-space: normal;
+      overflow-wrap: anywhere;
+      cursor: pointer;
+
+      &:checked,
+      &:hover,
+      &:focus-visible {
+        background: var(--vscode-menu-selectionBackground, color-mix(in srgb, var(--accent-color) 24%, transparent));
+        color: var(--vscode-menu-selectionForeground, var(--text-primary));
+        outline: none;
+      }
+
+      &:disabled { opacity: .5; cursor: not-allowed; }
+
+      &::checkmark {
+        order: 1;
+        margin-inline-start: auto;
+      }
+    }
+  }
+}

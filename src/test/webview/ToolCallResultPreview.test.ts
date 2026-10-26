@@ -31,23 +31,16 @@ suite("tool call result presentation", () => {
   });
 
   test("moves successful edit diffs out of the chat and keeps failures visible", () => {
-    const successful = renderToolCallResultPreview({
-      toolCall: {
-        ...createReadCall("completed", "unused"),
-        toolName: "edit_file",
-      },
-      vscode: null,
-    });
-    const failed = renderToolCallResultPreview({
-      toolCall: {
-        ...createReadCall("error", "Error editing file: search text not found"),
-        toolName: "edit_file",
-      },
-      vscode: null,
-    });
-
-    assert.strictEqual(successful, null);
-    assert.ok(React.isValidElement(failed));
+    for (const toolName of ["edit_file", "apply_patch"]) {
+      assert.strictEqual(renderToolCallResultPreview({
+        toolCall: { ...createReadCall("completed", "unused"), toolName },
+        vscode: null,
+      }), null);
+      assert.ok(React.isValidElement(renderToolCallResultPreview({
+        toolCall: { ...createReadCall("error", "Error editing file: search text not found"), toolName },
+        vscode: null,
+      })), toolName);
+    }
   });
 
   test("shows only the affected path for file-tool arguments", () => {

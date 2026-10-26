@@ -1,8 +1,11 @@
+import { detectImageMediaType } from "@/infrastructure/images/ImageFormat";
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import type { ImageAttachment } from "@/contracts";
 import type { SecretStore, SettingsRepository } from "@/application/ports";
 import { deleteDeepSeekFile, uploadDeepSeekImage } from "@/infrastructure/deepseek/files/DeepSeekFiles";
+import { archiveConversationImages } from "@/infrastructure/images/ConversationImageArchive";
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
@@ -94,6 +97,38 @@ export class ImageAttachmentController {
     await deleteDeepSeekFile({ apiKey, baseUrl: attachment.apiBaseUrl, fileId: attachment.fileId });
   }
 
+  async archive(conversationId: string, attachments: readonly ImageAttachment[], webview?: vscode.Webview): Promise<void> {
+    const captures = await archiveConversationImages(conversationId, attachments, async (attachment) =>
+      vscode.workspace.fs.readFile(this.getCacheUri(attachment.cacheFileName)));
+    if (!webview || captures.length === 0) {return;}
+    const directory = new ScreenshotStore(conversationId).directory;
+    this.allowPreviewDirectory(webview, directory);
+    for (let index = 0; index < attachments.length; index++) {
+      attachments[index].previewUri = webview.asWebviewUri(vscode.Uri.joinPath(vscode.Uri.file(directory), captures[index].fileName)).toString();
+    }
+  }
+
+  async restorePreviews(conversationId: string, attachments: readonly ImageAttachment[], webview: vscode.Webview): Promise<void> {
+    if (attachments.length === 0) {return;}
+    const store = new ScreenshotStore(conversationId);
+    this.allowPreviewDirectory(webview, store.directory);
+    for (const attachment of attachments) {
+      const capture = await store.lookup(attachment.imageNumber ? String(attachment.imageNumber) : attachment.id);
+      if (capture) {
+        attachment.imageNumber = Number(capture.metadata.id.slice("screenshot-".length));
+        attachment.previewUri = webview.asWebviewUri(vscode.Uri.file(capture.path)).toString();
+      }
+    }
+  }
+
+  private allowPreviewDirectory(webview: vscode.Webview, directory: string): void {
+    const uri = vscode.Uri.file(directory);
+    const roots = webview.options.localResourceRoots ?? [];
+    if (!roots.some((root) => root.toString() === uri.toString())) {
+      webview.options = { ...webview.options, localResourceRoots: [...roots, uri] };
+    }
+  }
+
   getCacheUri(cacheFileName: string): vscode.Uri {
     if (!/^[A-Za-z0-9._-]+$/.test(cacheFileName)) {throw new Error("Invalid image cache filename.");}
     return vscode.Uri.joinPath(this.cacheRoot, cacheFileName);
@@ -117,6 +152,7 @@ export class ImageAttachmentController {
       baseUrl,
       bytes,
       filename: name,
+      minimizeMetadata: this.settings.load().privacyMinimizeData,
       mediaType,
       expiresAfterSeconds: FILE_EXPIRY_SECONDS,
     });
@@ -142,15 +178,6 @@ export class ImageAttachmentController {
       previewUri: webview.asWebviewUri(cacheUri).toString(),
     };
   }
-}
-
-function detectImageMediaType(bytes: Uint8Array): ImageAttachment["mediaType"] | undefined {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {return "image/jpeg";}
-  if (bytes.length >= 8 && bytes.slice(0, 8).every((value, index) => value === [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a][index])) {return "image/png";}
-  const prefix = Buffer.from(bytes.slice(0, 6)).toString("ascii");
-  if (prefix === "GIF87a" || prefix === "GIF89a") {return "image/gif";}
-  if (bytes.length >= 12 && Buffer.from(bytes.slice(0, 4)).toString("ascii") === "RIFF" && Buffer.from(bytes.slice(8, 12)).toString("ascii") === "WEBP") {return "image/webp";}
-  return undefined;
 }
 
 function extensionFor(mediaType: ImageAttachment["mediaType"]): string {

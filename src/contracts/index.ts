@@ -1,4 +1,4 @@
-export type { AppConfig, InterfaceLanguage, PermissionMode, PermissionSnapshot, ReasoningEffort, SearxngEngineOption } from "./Config";
+export type { AppConfig, InterfaceLanguage, PermissionMode, PermissionSnapshot, ReasoningEffort } from "./Config";
 export {
   DEFAULT_CONFIG,
   DEFAULT_REASONING_EFFORT,

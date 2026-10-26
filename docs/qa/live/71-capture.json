@@ -1,0 +1,20 @@
+{
+  "branch": 71,
+  "passed": true,
+  "actualOwnedX11Pixels": true,
+  "injectedBackendScope": "Contract branch has no shipped OS backend; native implementation is independently tested in #74.",
+  "metadata": {
+    "id": "screenshot-1",
+    "path": ".screenshots/1-window.png",
+    "target": "window:0x00200021",
+    "kind": "window",
+    "windowTitle": "YCRASY LUNA 42 Validation",
+    "pid": 250758,
+    "width": 640,
+    "height": 480,
+    "bytes": 3899
+  },
+  "eventCount": 1,
+  "wholeScreenPromptedWithoutCapture": true,
+  "missingBackendRejected": true
+}

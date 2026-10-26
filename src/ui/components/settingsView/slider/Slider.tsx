@@ -1,4 +1,5 @@
 import "./Slider.css";
+import { SettingsField } from "../form/SettingsForm";
 
 type SliderProps = {
   id?: string;
@@ -19,8 +20,7 @@ function parseSliderValue(value: string): number | undefined {
 
 function Slider({ id, label, value, min, max, step, disabled = false, onChange, onBlur }: SliderProps) {
   return (
-    <div className="slider">
-      {label && <label htmlFor={id}> {label} </label>}
+    <SettingsField className="slider" label={label} htmlFor={id}>
       <div className="sliderWithValue">
         <input
           id={id}
@@ -45,7 +45,7 @@ function Slider({ id, label, value, min, max, step, disabled = false, onChange, 
         />
         {value !== undefined && <span className="sliderValue">{value.toFixed(2)}</span>}
       </div>
-    </div>
+    </SettingsField>
   );
 }
 

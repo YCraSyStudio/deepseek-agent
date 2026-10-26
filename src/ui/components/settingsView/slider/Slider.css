@@ -1,13 +1,15 @@
-.slider {
-  flex-direction: column;
+.sliderWithValue {
   display: flex;
-  .sliderWithValue {
-    align-items: center;
-    display: flex;
-    .sliderValue {
-      text-align: right;
-      width: 40px;
-      color: var(--text-primary);
-    }
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  input[type="range"] { flex: 1; min-width: 0; width: 100%; }
+  .sliderValue {
+    flex-shrink: 0;
+    width: 40px;
+    text-align: right;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
   }
 }

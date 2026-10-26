@@ -57,7 +57,7 @@ export async function reviewProgress(options: ReviewProgressOptions): Promise<Pr
     temperature: 0,
     thinking: { type: "disabled" },
     tool_choice: "none",
-    ...(options.providerConfig.userId ? { user_id: options.providerConfig.userId } : {}),
+    ...(options.providerConfig.privacyMinimizeData === false && options.providerConfig.userId ? { user_id: options.providerConfig.userId } : {}),
   };
 
   let usage: ProviderUsage | undefined;

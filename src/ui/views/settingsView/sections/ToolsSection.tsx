@@ -1,68 +1,62 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { PermissionMode } from "@/contracts";
-import { Toggle } from "@webview/components/settingsView";
+import { NumberInput, SettingsField, SettingsGroup, SettingsSection, Toggle } from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
+import type { TranslationKey } from "@webview/i18n/I18n";
 import type { ToolsSectionProps } from "../model";
 import "./ToolsSection.css";
 
-const PERMISSION_MODE_OPTIONS: Array<{ value: PermissionMode; label: string; description: string }> = [
-  { value: "default", label: t("tools.default"), description: t("tools.defaultDescription") },
-  { value: "auto-approve", label: t("tools.autoApprove"), description: t("tools.autoApproveModeDescription") },
-  { value: "full-access", label: t("tools.fullAccess"), description: t("tools.fullAccessDescription") },
+const PERMISSION_MODE_OPTIONS: Array<{ value: PermissionMode; label: TranslationKey; description: TranslationKey }> = [
+  { value: "default", label: "tools.default", description: "tools.defaultDescription" },
+  { value: "auto-approve", label: "tools.autoApprove", description: "tools.autoApproveModeDescription" },
+  { value: "full-access", label: "tools.fullAccess", description: "tools.fullAccessDescription" },
 ];
 
-function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePending = false }: ToolsSectionProps) {
-  const [engineFilter, setEngineFilter] = useState("");
-  const selectedPermission = PERMISSION_MODE_OPTIONS.find((option) => option.value === config.permissionMode) ?? PERMISSION_MODE_OPTIONS[0];
-  const isAutomaticEngineSelection = config.searxngEngines.length === 0;
-  const defaultEngines = useMemo(
-    () => config.searxngEngineCatalog.filter((engine) => engine.enabled).map((engine) => engine.shortcut),
-    [config.searxngEngineCatalog],
-  );
-  const effectiveSelectedEngines = useMemo(
-    () => new Set(isAutomaticEngineSelection ? defaultEngines : config.searxngEngines),
-    [config.searxngEngines, defaultEngines, isAutomaticEngineSelection],
-  );
-  const visibleEngines = useMemo(() => {
-    const query = engineFilter.trim().toLowerCase();
-    if (!query) {return config.searxngEngineCatalog;}
-    return config.searxngEngineCatalog.filter((engine) =>
-      engine.name.toLowerCase().includes(query) ||
-      engine.shortcut.toLowerCase().includes(query) ||
-      engine.categories.some((category) => category.toLowerCase().includes(query)));
-  }, [config.searxngEngineCatalog, engineFilter]);
-
+function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permissionUpdatePending = false }: ToolsSectionProps) {
+  const tools = useMemo(() => availableTools?.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [], [availableTools]);
+  const permissionTooltip = PERMISSION_MODE_OPTIONS.map((option) => `**${t(option.label)}:** ${t(option.description)}`).join("\n\n");
   const updatePermissionMode = (permissionMode: PermissionMode) => {
     updateConfig("permissionMode", permissionMode);
     saveOnBlur("permissionMode", permissionMode);
   };
 
-  const updateEngines = (engines: string[]) => {
-    updateConfig("searxngEngines", engines);
-    saveOnBlur("searxngEngines", engines);
-  };
-
-  const toggleEngine = (shortcut: string, checked: boolean) => {
-    const next = new Set(isAutomaticEngineSelection ? defaultEngines : config.searxngEngines);
-    if (checked) {next.add(shortcut);} else {next.delete(shortcut);}
-    updateEngines([...next]);
-  };
-
-  const engineSummary = isAutomaticEngineSelection
-    ? t("settings.webSearch.enginesDefault")
-    : `${config.searxngEngines.length} ${t("settings.webSearch.enginesSelected")}`;
-
   return (
-    <section className="settingsSection toolsSection">
-      <h3 className="sectionTitle">{t("settings.tab.tools")}</h3>
+    <SettingsSection title={t("settings.tab.tools")} className="toolsSection">
+      <SettingsGroup title={t("settings.toolCatalog.label")} collapsible defaultOpen={false}
+        variant="panel" count={tools.length} busy={availableTools === null}>
+        {availableTools === null || tools.length === 0 ? (
+          <p className="settingsHint" role="status">
+            {t(availableTools === null ? "settings.toolCatalog.loading" : "settings.toolCatalog.empty")}
+          </p>
+        ) : (
+          <ul className="toolCatalogList">
+            {tools.map((tool) => {
+              const searchDisabled = !config.webSearchEnabled && (tool.name === "search_web" || tool.name === "read_web");
+              const description = tool.description || t("settings.toolCatalog.noDescription");
+              return (
+                <li key={tool.name}>
+                  <span
+                    className={`toolCatalogItem${searchDisabled ? " toolCatalogUnavailable" : ""}`}
+                    tabIndex={0}
+                    data-tooltip={searchDisabled ? `${description}\n\n${t("settings.toolCatalog.searchDisabled")}` : description}
+                    data-tooltip-position="bottom"
+                    data-tooltip-align="start"
+                  >
+                    <code>{tool.name}</code>
+                    <i className="codicon codicon-info" aria-hidden="true" />
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SettingsGroup>
 
-      <div className="permissionModeRow">
-        <label className="permissionModeLabel" htmlFor="permissionMode">{t("tools.permissionMode")}</label>
+      <SettingsField htmlFor="permissionMode" label={t("tools.permissionMode")}
+        tooltip={permissionTooltip}>
         <select
           id="permissionMode"
-          className="permissionModeSelect"
           aria-label={t("tools.permissionMode")}
-          aria-describedby="permissionModeDescription"
           value={config.permissionMode}
           disabled={permissionUpdatePending}
           aria-busy={permissionUpdatePending}
@@ -72,97 +66,63 @@ function ToolsSection({ config, updateConfig, saveOnBlur, permissionUpdatePendin
           }}
         >
           {PERMISSION_MODE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+            <option key={option.value} value={option.value}>{t(option.label)}</option>
           ))}
         </select>
-        <small id="permissionModeDescription" className="permissionModeDescription">{selectedPermission.description}</small>
-      </div>
+      </SettingsField>
 
-      <div className="webSearchSettings">
-        <h4 className="subsectionTitle">{t("settings.webSearch.title")}</h4>
-        <p className="settingsHint">{t("settings.webSearch.description")}</p>
-        <Toggle
-          id="webSearchEnabled"
-          label={t("settings.webSearch.enabled")}
-          checked={config.webSearchEnabled}
-          onToggle={(enabled) => {
-            updateConfig("webSearchEnabled", enabled);
-            saveOnBlur("webSearchEnabled", enabled);
+      <SettingsField htmlFor="browserAccess" label={t("settings.browser.access")}>
+        <select id="browserAccess" value={config.browserAccess} onChange={(event) => {
+          const value = event.currentTarget.value as "ask" | "always" | "never";
+          updateConfig("browserAccess", value); saveOnBlur("browserAccess", value);
+        }}><option value="ask">{t("settings.browser.ask")}</option><option value="always">{t("settings.browser.always")}</option><option value="never">{t("settings.browser.never")}</option></select>
+      </SettingsField>
+      <Toggle id="automaticCaptureEnabled" label={t("settings.browser.automatic")}
+        tooltip={t("settings.browser.automaticHelp")} checked={config.automaticCaptureEnabled} onToggle={(checked) => {
+          updateConfig("automaticCaptureEnabled", checked); saveOnBlur("automaticCaptureEnabled", checked);
+        }} />
+      <SettingsField htmlFor="automaticCaptureLimit" label={t("settings.browser.limit")}>
+        <NumberInput id="automaticCaptureLimit" min={1} max={40} value={config.automaticCaptureLimit} onChange={(event) => updateConfig("automaticCaptureLimit", Number(event.currentTarget.value))} onBlur={(event) => saveOnBlur("automaticCaptureLimit", Number(event.currentTarget.value))} />
+      </SettingsField>
+      <Toggle
+        tooltip={t("settings.webSearch.description")}
+        id="webSearchEnabled"
+        label={t("settings.webSearch.title")}
+        checked={config.webSearchEnabled}
+        onToggle={(enabled) => {
+          updateConfig("webSearchEnabled", enabled);
+          saveOnBlur("webSearchEnabled", enabled);
+        }}
+      />
+        <SettingsField htmlFor="webSearchRegion" label={t("settings.webSearch.region")} tooltip={t("settings.webSearch.regionHint")}>
+        <select
+          id="webSearchRegion"
+          value={["global", "auto"].includes(config.webSearchRegion) ? config.webSearchRegion : "custom"}
+          onChange={(event) => {
+            const value = event.currentTarget.value === "custom" ? "" : event.currentTarget.value;
+            updateConfig("webSearchRegion", value);
+            if (value) {saveOnBlur("webSearchRegion", value);}
           }}
-        />
-
-        <div className="settingRow searxngEndpointRow">
-          <label htmlFor="searxngUrl">{t("settings.webSearch.searxngUrl")}</label>
+        >
+          <option value="global">{t("settings.webSearch.global")}</option>
+          <option value="auto">{t("settings.webSearch.auto")}</option>
+          <option value="custom">{t("settings.webSearch.custom")}</option>
+        </select>
+        {!["global", "auto"].includes(config.webSearchRegion) ? (
           <input
-            id="searxngUrl"
-            type="url"
+            aria-label={t("settings.webSearch.countryCode")}
+            placeholder="ES"
+            data-tooltip={t("settings.webSearch.countryCode")}
+            autoCapitalize="characters"
             spellCheck={false}
-            value={config.searxngUrl}
-            disabled={!config.webSearchEnabled}
-            onChange={(event) => updateConfig("searxngUrl", event.currentTarget.value)}
-            onBlur={(event) => saveOnBlur("searxngUrl", event.currentTarget.value)}
+            value={config.webSearchRegion}
+            maxLength={2}
+            onChange={(event) => updateConfig("webSearchRegion", event.currentTarget.value.toUpperCase())}
+            onBlur={(event) => saveOnBlur("webSearchRegion", event.currentTarget.value.trim() || "global")}
           />
-          <small className="settingsHint">{t("settings.webSearch.searxngManagedHint")}</small>
-        </div>
-
-        <div className="settingRow searxngEnginesRow">
-          <label>{t("settings.webSearch.engines")}</label>
-          <details className="searxngEnginePicker">
-            <summary className="searxngEnginePickerSummary" aria-label={t("settings.webSearch.engines")}>
-              {engineSummary}
-            </summary>
-            <div className="searxngEnginePickerPanel">
-              <div className="searxngEnginePickerToolbar">
-                <input
-                  type="search"
-                  value={engineFilter}
-                  disabled={!config.webSearchEnabled}
-                  placeholder={t("settings.webSearch.filterEngines")}
-                  aria-label={t("settings.webSearch.filterEngines")}
-                  onChange={(event) => setEngineFilter(event.currentTarget.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={!config.webSearchEnabled || isAutomaticEngineSelection}
-                  onClick={() => updateEngines([])}
-                >
-                  {t("settings.webSearch.useDefaults")}
-                </button>
-              </div>
-
-              {visibleEngines.length > 0 ? (
-                <div className="searxngEngineList">
-                  {visibleEngines.map((engine) => {
-                    const toggleId = `searxng-engine-${engine.shortcut}`;
-                    return (
-                      <div className="searxngEngineOption" key={engine.shortcut}>
-                        <label className="searxngEngineOptionText" htmlFor={toggleId}>
-                          <span className="searxngEngineName" title={engine.name}>{engine.name}</span>
-                          <span className="searxngEngineMeta">
-                            !{engine.shortcut}
-                            {engine.enabled ? ` · ${t("settings.webSearch.enabledByDefault")}` : ""}
-                          </span>
-                        </label>
-                        <Toggle
-                          id={toggleId}
-                          checked={effectiveSelectedEngines.has(engine.shortcut)}
-                          disabled={!config.webSearchEnabled}
-                          onToggle={(checked) => toggleEngine(engine.shortcut, checked)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="searxngEngineEmpty">{t("settings.webSearch.noEngines")}</div>
-              )}
-            </div>
-          </details>
-          <small className="settingsHint">{t("settings.webSearch.enginesHint")}</small>
-        </div>
-      </div>
-    </section>
+        ) : null}
+        </SettingsField>
+    </SettingsSection>
   );
 }
 

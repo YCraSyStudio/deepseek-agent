@@ -15,9 +15,11 @@
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--accent-color) 52%, var(--border-color));
   background: color-mix(in srgb, var(--bg-primary) 96%, black 4%);
+  background: color-mix(in srgb, color-mix(in srgb, var(--bg-primary) 96%, black 4%) var(--floating-surface-opacity), transparent);
+  backdrop-filter: var(--floating-surface-filter);
   border-radius: 14px;
   padding: 18px;
-  box-shadow: 0 20px 56px #000a, inset 0 1px #ffffff0a;
+  box-shadow: 0 8px 24px #0004, inset 0 1px #ffffff0a;
   animation: historyTransitionEnter 140ms ease-out;
 }
 

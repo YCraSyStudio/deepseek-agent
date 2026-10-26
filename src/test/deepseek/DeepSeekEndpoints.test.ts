@@ -101,4 +101,39 @@ suite("DeepSeek URLs", () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  test("shows bounded validation details without credentials and does not retry rejected requests", async () => {
+    const originalFetch = globalThis.fetch;
+    const credential = "opaque-credential-reflected-by-server";
+    let calls = 0;
+    try {
+      for (const status of [400, 422]) {
+        globalThis.fetch = async () => {
+          calls++;
+          return Response.json({ error: {
+            code: "invalid_request_error",
+            message: `Invalid schema for function read_file: unsupported type.\nAuthorization: Bearer ${credential}`,
+          } }, { status });
+        };
+        await assert.rejects(deepseekFetch({
+          pathOrUrl: "chat/completions", apiKey: credential,
+          requestInit: { method: "POST", body: "{}" },
+        }), (error: unknown) => {
+          assert.ok(error instanceof Error);
+          assert.match(error.message, /Invalid schema for function read_file: unsupported type/);
+          assert.ok(!error.message.includes(credential));
+          assert.ok(!error.message.includes("\n"));
+          return true;
+        });
+      }
+      assert.strictEqual(calls, 2);
+      for (const body of ["not JSON", JSON.stringify({ error: { message: "x".repeat(2049) } })]) {
+        globalThis.fetch = async () => new Response(body, { status: 400, headers: { "content-type": "application/json" } });
+        await assert.rejects(deepseekFetch({ pathOrUrl: "chat/completions", apiKey: credential }),
+          /^DeepSeekApiError: API request failed with HTTP 400\.$/);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

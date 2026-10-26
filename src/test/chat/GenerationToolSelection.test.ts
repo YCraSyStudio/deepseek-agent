@@ -3,8 +3,17 @@ import { selectGenerationTools } from "@/application/chat/GenerationToolSelectio
 import { ToolRegistry } from "@/application/tools/ToolRegistry";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { DEEPSEEK_FLASH_MODEL_ID, DEEPSEEK_PRO_MODEL_ID } from "@/contracts";
+import { analyzeImagesTool } from "@/infrastructure/tools/builtins/vision/AnalyzeImages";
+import { completeCodeTool } from "@/infrastructure/tools/builtins/code/CompleteCode";
+import { applicationSessionTool } from "@/infrastructure/tools/builtins/terminal/ApplicationSession";
 
 suite("generation tool selection", () => {
+  test("offers beta code generation only when explicitly enabled", () => {
+    const registry = createRegistry();
+    registry.register(completeCodeTool);
+    assert.ok(!names(selectGenerationTools(registry, availability())).includes("complete_code"));
+    assert.ok(names(selectGenerationTools(registry, availability({ betaFeaturesEnabled: true, files: false }))).includes("complete_code"));
+  });
   test("keeps global tools when workspace files are unavailable", () => {
     const registry = createRegistry();
     assert.deepStrictEqual(
@@ -15,10 +24,13 @@ suite("generation tool selection", () => {
 
   test("removes terminal when the captured workspace has no terminal capability", () => {
     const registry = createRegistry();
+    registry.register(applicationSessionTool);
     assert.deepStrictEqual(
       names(selectGenerationTools(registry, availability({ terminal: false }))),
       ["read_file", "create_file", "search_web", "read_web", "analyze_images"],
     );
+    assert.ok(names(selectGenerationTools(registry, availability())).includes("application_session"));
+    assert.ok(!names(selectGenerationTools(registry, availability({ files: false }))).includes("application_session"));
   });
 
   test("removes both web tools when web search is disabled", () => {
@@ -29,14 +41,14 @@ suite("generation tool selection", () => {
     );
   });
 
-  test("exposes image analysis only to Pro generations with image attachments", () => {
-    const registry = createRegistry();
-    const withoutImages = selectGenerationTools(registry, availability({ hasImageAttachments: false }));
-    const visionModel = selectGenerationTools(registry, availability({ modelId: DEEPSEEK_FLASH_MODEL_ID }));
-
-    assert.ok(!names(withoutImages).includes("analyze_images"));
-    assert.ok(!names(visionModel).includes("analyze_images"));
-    assert.ok(names(selectGenerationTools(registry, availability())).includes("analyze_images"));
+  test("excludes delegated analysis from Flash and keeps it for Pro without requiring attachments", () => {
+    const registry = new ToolRegistry();
+    registry.register(analyzeImagesTool);
+    for (const files of [true, false]) {
+      assert.deepStrictEqual(selectGenerationTools(registry, availability({ modelId: DEEPSEEK_FLASH_MODEL_ID, files })), []);
+      assert.deepStrictEqual(selectGenerationTools(registry, availability({ modelId: DEEPSEEK_PRO_MODEL_ID, files })), [analyzeImagesTool.definition]);
+    }
+    assert.strictEqual(registry.get("analyze_images")?.definition, analyzeImagesTool.definition);
   });
 });
 
@@ -74,7 +86,6 @@ function availability(overrides: Partial<Parameters<typeof selectGenerationTools
     terminal: true,
     webSearchEnabled: true,
     modelId: DEEPSEEK_PRO_MODEL_ID,
-    hasImageAttachments: true,
     ...overrides,
   };
 }

@@ -10,29 +10,18 @@
   display: flex;
   overflow-x: hidden;
   overflow-y: auto;
-  .settingsSection {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    border: 1px solid var(--border-color);
-    background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
-    border-radius: 14px;
-    flex-direction: column;
-    gap: 10px;
-    padding: 16px;
-    display: flex;
-    box-shadow: 0 12px 30px #0000001f;
-  }
   .settingsTabs {
     border: 1px solid var(--border-color);
     background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
     border-radius: 10px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
     padding: 4px;
     display: grid;
   }
   .settingsTab {
+    min-width: 0;
+    overflow-wrap: anywhere;
     min-height: 32px;
     color: var(--text-secondary);
     cursor: pointer;
@@ -74,11 +63,6 @@
       color: var(--danger-color);
     }
   }
-  .settingRow {
-    flex-direction: column;
-    gap: 5px;
-    display: flex;
-  }
   .notification {
     min-height: 28px;
     border: 1px solid var(--border-color);
@@ -104,6 +88,10 @@
       flex: none;
     }
   }
+}
+
+@media (max-width: 480px) {
+  .settingsView .settingsTabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {

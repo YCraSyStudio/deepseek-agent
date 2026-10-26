@@ -1,0 +1,12 @@
+{
+  "branch": 73,
+  "passed": true,
+  "vscode": "1.142.0",
+  "checks": {
+    "realImageRendered": true,
+    "missingImageHandled": true,
+    "fullImageOpened": true,
+    "analyzerReference": true
+  },
+  "limitation": "Real component and asset protocol tested in an owned webview; full chat history navigation not driven"
+}

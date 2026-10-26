@@ -1,3 +1,4 @@
+import type { AnalyzeImagesRequest, ToolHandlerContext } from "@/application/tools/Types";
 import type { AppConfig, AssistantTimelineEvent, ChatMessage, PermissionSnapshot, ToolCall, ToolDefinition } from "@/contracts";
 import type { ToolCallCycleResult } from "@/application/chat/toolCall";
 import type { ToolExecutor } from "@/application/tools/ToolExecutor";
@@ -67,7 +68,13 @@ export interface ToolCallRunOptions {
   authorizedUserUrls: readonly string[];
   budgetManager: GenerationBudgetManager;
   onContextCompacted?: (data: { estimatedTokensBefore: number; estimatedTokensAfter: number }) => Promise<void> | void;
-  analyzeImages?: (question: string, imageIds: string[], signal?: AbortSignal) => Promise<string>;
+  captureScreenshot?: ToolHandlerContext["captureScreenshot"];
+  applicationSession?: ToolHandlerContext["applicationSession"];
+  readInstruction?: ToolHandlerContext["readInstruction"];
+  revertWorkspace?: ToolHandlerContext["revertWorkspace"];
+  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
+  completeCode?: ToolHandlerContext["completeCode"];
+  isBetaFeaturesEnabled?: () => boolean;
 }
 
 export interface ToolCallRunResult {
@@ -105,7 +112,12 @@ export interface ToolExecutionContext {
   markWebTainted?: () => void;
   conversationId?: string;
   permissionFingerprint?: string;
-  analyzeImages?: (question: string, imageIds: string[], signal?: AbortSignal) => Promise<string>;
+  captureScreenshot?: ToolHandlerContext["captureScreenshot"];
+  applicationSession?: ToolHandlerContext["applicationSession"];
+  readInstruction?: ToolHandlerContext["readInstruction"];
+  revertWorkspace?: ToolHandlerContext["revertWorkspace"];
+  analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
+  completeCode?: ToolHandlerContext["completeCode"];
 }
 
 export interface HandleExecutionResultOptions {

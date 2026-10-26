@@ -1,9 +1,22 @@
+import type { InstructionTemplateId } from "../Customization";
 import type { AppConfig } from "../Config";
 import type { ImageAttachment, ReferencedFile } from "./WebviewModels";
 
 export type WebviewToHandlerMessage =
+  | import("../ChatDraft").ChatDraftRequest
   | { type: "initializeProtocol"; protocolVersion: 5 }
+  | { type: "getScreenshotPreview" | "openScreenshot"; requestId: string; conversationId: string; screenshotId: string }
   | { type: "getConfig" }
+  | { type: "openGlobalAgents"; requestId: string }
+  | { type: "getReusableInstructions" }
+  | { type: "createReusableInstruction"; requestId: string; scope: "global" | "workspace"; rootUri?: string; name: string; description: string; template?: InstructionTemplateId }
+  | { type: "openReusableInstruction"; requestId: string; id: string }
+  | { type: "getWorkspaceInstructions" }
+  | { type: "openWorkspaceInstructions"; requestId: string; rootUri: string }
+  | { type: "getChatSuggestion"; requestId: string; prefix: string }
+  | { type: "cancelChatSuggestion"; requestId: string }
+  | { type: "selectStorageDirectory" | "reloadStorage" }
+  | { type: "setStorageDirectory"; directory: string }
   | { type: "saveConfig"; requestId: string; config: Partial<AppConfig> }
   | { type: "resetConfig"; requestId: string }
   | { type: "resolveHistoryTransition"; requestId: string; decision: "stop" | "save" | "discard" | "cancel" }
@@ -55,4 +68,5 @@ export type WebviewToHandlerMessage =
   | { type: "uploadClipboardImage"; requestId: string; name: string; mediaType: string; size: number; dataBase64: string }
   | { type: "deleteImageAttachment"; requestId: string; attachment: ImageAttachment }
   | { type: "openFile"; path: string; line?: number; conversationId?: string; workspaceRevision?: string }
-  | { type: "openFileDiff"; path: string; diff?: string; beforeHash?: string; afterHash?: string; preview?: boolean; conversationId?: string; workspaceRevision?: string };
+  | { type: "openFileDiff"; path: string; diff?: string; beforeHash?: string; afterHash?: string; preview?: boolean; conversationId?: string; generationId?: string; workspaceRevision?: string }
+  | { type: "getWorkspaceTurn" | "revertWorkspaceTurn" | "reviewWorkspaceTurn"; requestId: string; conversationId: string; generationId: string };

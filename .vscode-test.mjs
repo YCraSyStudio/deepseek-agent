@@ -36,7 +36,8 @@ const executable = await downloadAndUnzipVSCode({
 export default defineConfig({
 	files: '.tmp/integration-tests/Extension.test.js',
 	mocha: {
-		timeout: 5_000,
+		// Native editor startup and undo can exceed five seconds on shared runners.
+		timeout: 20_000,
 	},
 	env: {
 		NODE_ENV: 'test',

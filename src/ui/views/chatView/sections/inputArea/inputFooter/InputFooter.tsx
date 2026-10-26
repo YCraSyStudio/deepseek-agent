@@ -12,7 +12,10 @@ import type { UsageAggregate, UsageCurrency } from "@/shared/usage/Usage";
 import type { ContextWindowStatus } from "@/contracts";
 import type { ContextCompactionControls } from "@webview/views/chatView/ChatViewTypes";
 
+import type { ChatSuggestionControls } from "../inputCtrl/UseChatSuggestions";
+
 type Props = {
+  suggestions?: ChatSuggestionControls;
   reasoning: string;
   selectedModel: string;
   permissionMode: PermissionMode;
@@ -38,6 +41,7 @@ function parsePermissionMode(value: string): PermissionMode | undefined {
 }
 
 function InputFooter({
+  suggestions,
   reasoning,
   selectedModel,
   permissionMode,
@@ -139,8 +143,18 @@ function InputFooter({
             ) : null}
           </ModelReasoningPicker>
         </div>
-        {!compact ? <div className="inputFooterSecondaryControls">
-          {showUsage ? (
+        <div className="inputFooterSecondaryControls">
+          {suggestions?.visible ? (
+            <button type="button" className="chatSuggestionTrigger"
+              aria-label={t(suggestions.pending ? "chat.cancelSuggestion" : "chat.suggestMessage")}
+              data-tooltip={t(suggestions.pending ? "chat.cancelSuggestion" : "chat.suggestMessage")}
+              aria-busy={suggestions.pending} disabled={suggestions.disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={suggestions.pending ? suggestions.cancel : suggestions.request}>
+              <span className={`codicon ${suggestions.pending ? "codicon-loading codicon-modifier-spin" : "codicon-sparkle"}`} aria-hidden="true" />
+            </button>
+          ) : null}
+          {!compact && showUsage ? (
             <UsagePicker
               usage={usage}
               usageByModel={usageByModel}
@@ -149,7 +163,7 @@ function InputFooter({
               compaction={compaction}
             />
           ) : null}
-          <span className="selectTooltipWrapper" data-tooltip={t("tools.permissionMode")} data-tooltip-align="end">
+          {!compact ? <span className="selectTooltipWrapper" data-tooltip={t("tools.permissionMode")} data-tooltip-align="end">
             <select
               name="PermissionMode"
               id="PermissionMode"
@@ -166,8 +180,8 @@ function InputFooter({
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
-          </span>
-        </div> : null}
+          </span> : null}
+        </div>
       </div>
     </div>
   );

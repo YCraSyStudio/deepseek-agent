@@ -5,8 +5,21 @@ export const changelog: PageContent = {
   title: "Changelog",
   seoTitle: "Release notes and changelog",
   description: "Every published 0.1.x pre-release of YCraSy DeepSeek Agent with the changes that are visible to the user.",
-  lead: "Preview 0.1.15 adds move_path and delete_path with Git-backed approval, brings DeepSeek V4 Pro back with image questions delegated to Flash, and reports the context window with an on-demand compaction.",
+  lead: "Preview 0.1.16 adds recoverable workspace snapshots, storage migration, instruction customization, alongside beta completions and revised web research.",
   sections: [
+    {
+      title: "0.1.16 workspace recovery and customization",
+      items: [
+        "Add per-turn change review and workspace recovery, with bounded snapshots that protect pre-existing and later edits.",
+        "Save independent drafts and image attachments for each chat, restore them after reloads, and fix cross-window history conflicts.",
+        "Add global and workspace instructions, editable starter templates, and instruction references in the chat composer.",
+        "Add optional editor completions, manual chat suggestions, and beta code-generation tools with separate controls and usage reporting.",
+        "Use an installed Chromium browser for local web reads and screenshots; download and update Chrome Headless Shell automatically when none is found. Web search still uses DeepSeek, while page reads no longer call its Fetch API.",
+        "Improve visual testing with managed application sessions, native Wayland window capture, and more accurate screenshot cropping.",
+        "Reuse one terminal per chat, refresh settings and menus, and add privacy controls for automatically generated metadata.",
+        "Migrate legacy storage, consolidate drafts and recovery data, and update dependencies.",
+      ],
+    },
     {
       title: "0.1.15 path tools, Vision, and the context window",
       items: [

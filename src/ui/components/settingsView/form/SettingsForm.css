@@ -1,0 +1,173 @@
+.settingsSection {
+  --settings-field-gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: settings-form;
+  display: flex;
+  flex-direction: column;
+  gap: var(--settings-field-gap);
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+  box-shadow: 0 12px 30px #0000001f;
+}
+
+.settingsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--settings-field-gap);
+  min-width: 0;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.settingsGroupContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--settings-field-gap);
+  min-width: 0;
+}
+
+.settingsGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+
+  > .sectionTitle { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+  > input[type="checkbox"] { flex-shrink: 0; width: 18px; height: 18px; margin: 0; }
+}
+
+.settingsDisclosure {
+  display: block;
+
+  > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+
+    > .codicon { flex-shrink: 0; }
+    > .sectionTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    &::-webkit-details-marker { display: none; }
+    &:focus-visible {
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: 4px;
+      border-radius: 3px;
+    }
+  }
+
+  &:not([open]) > summary > .codicon { transform: rotate(-90deg); }
+  > .settingsGroupContent { padding-top: var(--settings-field-gap); }
+}
+
+.settingsDisclosureCount {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.settingsGroup--panel {
+  margin-top: 0;
+  padding-top: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+
+  > summary {
+    padding: 10px;
+
+    > .sectionTitle { font-size: 13px; }
+    &:focus-visible { outline-offset: -2px; border-radius: 8px; }
+  }
+
+  > .settingsGroupContent {
+    padding: 10px;
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+.settingsField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  > label {
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+}
+
+.settingsFieldControl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+
+  > input:not([type="checkbox"]),
+  > select { width: 100%; min-width: 0; }
+}
+
+.settingsFieldDescription {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.settingsField--toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+
+  > .settingsFieldControl { align-items: flex-end; }
+  > .settingsFieldDescription { grid-column: 1 / -1; }
+}
+
+.settingsInputAction {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+
+  > input:not([type="checkbox"]) { width: 100%; min-width: 0; padding-right: 40px; }
+}
+
+.settingsInputActionButton {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+
+  > button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+  }
+}
+
+@container settings-form (min-width: 420px) {
+  .settingsField--inline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 44%);
+    align-items: center;
+    column-gap: 20px;
+
+    > .settingsFieldDescription { grid-column: 1 / -1; }
+  }
+}

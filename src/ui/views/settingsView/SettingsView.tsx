@@ -3,19 +3,27 @@ import type { KeyboardEvent } from "react";
 import "@vscode/codicons/dist/codicon.css";
 import "./SettingsView.css";
 import { ApiTab } from "./tabs";
-import { GeneralSection, ToolsSection } from "./sections";
+import { CustomizationSection, GeneralSection, ToolsSection } from "./sections";
+import StorageSection from "./sections/StorageSection";
 import { getVsCodeApi } from "../../VsCodeApi";
 import { DEFAULT_CONFIG, MODEL_OPTIONS, REASONING_EFFORT_OPTIONS, type ApiCredentialState, type SaveOnBlurFn, type SettingsConfig } from "./model";
-import type { HandlerToWebviewMessage } from "@/contracts";
+import type { AvailableToolInfo, HandlerToWebviewMessage } from "@/contracts";
+import type { StorageInfo } from "@/contracts/Storage";
 import { setInterfaceLanguage, t } from "@webview/i18n";
 import { shouldApplyConfigRevision } from "@webview/config/ConfigRevision";
 
-type SettingsTab = "general" | "api" | "tools";
+import type { WorkspaceInstructionsRoot } from "@/contracts/Customization";
+
+type SettingsTab = "general" | "api" | "tools" | "customization";
 type Notification = { type: "error" | "success"; message: string };
 
 function SettingsView() {
   const vscode = useMemo(() => getVsCodeApi(), []);
   const [config, setConfig] = useState<SettingsConfig>(DEFAULT_CONFIG);
+  const [storageInfo, setStorageInfo] = useState<StorageInfo>();
+  const [storagePending, setStoragePending] = useState(false);
+  const [storageError, setStorageError] = useState<string>();
+  const [availableTools, setAvailableTools] = useState<AvailableToolInfo[] | null>(null);
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [apiCredential, setApiCredential] = useState<ApiCredentialState | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
@@ -23,10 +31,17 @@ function SettingsView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [permissionUpdatePending, setPermissionUpdatePending] = useState(false);
+  const [customizationPending, setCustomizationPending] = useState(false);
+  const [workspaceRoots, setWorkspaceRoots] = useState<WorkspaceInstructionsRoot[] | null>(null);
+  const [workspaceRootUri, setWorkspaceRootUri] = useState("");
+  const [workspacePending, setWorkspacePending] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState<string>();
+  const workspaceRequestRef = useRef<string | undefined>(undefined);
   const loadedRef = useRef(false);
   const revisionRef = useRef(-1);
   const pendingSecurityRequestsRef = useRef(new Set<string>());
-  const tabRefs = useRef<Record<SettingsTab, HTMLButtonElement | null>>({ general: null, api: null, tools: null });
+  const pendingCustomizationRequestsRef = useRef(new Set<string>());
+  const tabRefs = useRef<Record<SettingsTab, HTMLButtonElement | null>>({ general: null, api: null, tools: null, customization: null });
 
   const applyConfig = useCallback((nextConfig: Partial<SettingsConfig>) => {
     setConfig((current) => ({ ...current, ...nextConfig }));
@@ -43,6 +58,10 @@ function SettingsView() {
   ) => {
       const patch = typeof keyOrPatch === "string" ? { [keyOrPatch]: value } : keyOrPatch;
       const requestId = crypto.randomUUID();
+      if (Object.prototype.hasOwnProperty.call(patch, "includeHomeAgents")) {
+        pendingCustomizationRequestsRef.current.add(requestId);
+        setCustomizationPending(true);
+      }
       if (Object.prototype.hasOwnProperty.call(patch, "permissionMode")) {
         pendingSecurityRequestsRef.current.add(requestId);
         setPermissionUpdatePending(true);
@@ -65,7 +84,7 @@ function SettingsView() {
 
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>) => {
-      const order: SettingsTab[] = ["general", "api", "tools"];
+      const order: SettingsTab[] = ["general", "api", "tools", "customization"];
       const currentIndex = order.indexOf(activeTab);
       let nextTab: SettingsTab | undefined;
       if (event.key === "ArrowRight" || event.key === "ArrowDown") {nextTab = order[(currentIndex + 1) % order.length];}
@@ -93,11 +112,15 @@ function SettingsView() {
           revisionRef.current = message.revision;
           if (message.config.interfaceLanguage) {setInterfaceLanguage(message.config.interfaceLanguage);}
           applyConfig(message.config);
+          if (message.storageInfo) {setStorageInfo(message.storageInfo);}
           loadedRef.current = true;
           setHasLoadedConfig(true);
           setLoadError(null);
           break;
         case "configUpdateResult":
+          if (pendingCustomizationRequestsRef.current.delete(message.requestId)) {
+            setCustomizationPending(pendingCustomizationRequestsRef.current.size > 0);
+          }
           if (pendingSecurityRequestsRef.current.delete(message.requestId)) {
             setPermissionUpdatePending(pendingSecurityRequestsRef.current.size > 0);
           }
@@ -105,6 +128,7 @@ function SettingsView() {
             revisionRef.current = message.revision;
             if (message.config.interfaceLanguage) {setInterfaceLanguage(message.config.interfaceLanguage);}
             applyConfig(message.config);
+            if (message.storageInfo) {setStorageInfo(message.storageInfo);}
           }
           if (message.credentialUpdated) {
             setApiKeyDraft("");
@@ -124,13 +148,40 @@ function SettingsView() {
         case "apiKeyStatusSettings":
           setApiCredential({ status: message.status, keyPreview: message.keyPreview });
           break;
+        case "storageDirectoryResult":
+          setStorageInfo(message.storageInfo);
+          setStoragePending(false);
+          setStorageError(message.error);
+          break;
         case "availableTools":
+          setAvailableTools(message.tools);
+          break;
+        case "workspaceInstructions":
+          setWorkspaceRoots(message.roots);
+          setWorkspaceError(message.error);
+          setWorkspaceRootUri((current) => message.roots.some((root) => root.uri === current) ? current
+            : message.roots.find((root) => root.uri === message.preferredRootUri)?.uri ?? message.roots[0]?.uri ?? "");
+          break;
+        case "openWorkspaceInstructionsResult":
+          if (message.requestId !== workspaceRequestRef.current) {break;}
+          workspaceRequestRef.current = undefined;
+          setWorkspacePending(false);
+          setWorkspaceError(message.success ? undefined : `${t("settings.customization.workspaceOpenError")}${message.error ? ` ${message.error}` : ""}`);
+          break;
+        case "openGlobalAgentsResult":
+          if (!pendingCustomizationRequestsRef.current.delete(message.requestId)) {break;}
+          setCustomizationPending(pendingCustomizationRequestsRef.current.size > 0);
+          if (!message.success) {
+            setNotification({ type: "error", message: `${t("settings.customization.openError")}${message.error ? ` ${message.error}` : ""}` });
+          }
           break;
       }
     };
 
     window.addEventListener("message", handleMessage);
     requestConfig();
+    vscode.postMessage({ type: "getAvailableTools" });
+    vscode.postMessage({ type: "getWorkspaceInstructions" });
     return () => window.removeEventListener("message", handleMessage);
   }, [vscode, applyConfig, requestConfig]);
 
@@ -179,6 +230,20 @@ function SettingsView() {
         >
           {t("settings.tab.tools")}
         </button>
+        <button
+          type="button"
+          className={`settingsTab ${activeTab === "customization" ? "active" : ""}`}
+          role="tab"
+          id="settings-tab-customization"
+          aria-controls="settings-panel-customization"
+          aria-selected={activeTab === "customization"}
+          tabIndex={activeTab === "customization" ? 0 : -1}
+          ref={(element) => { tabRefs.current.customization = element; }}
+          onClick={() => selectTab("customization")}
+          onKeyDown={handleTabKeyDown}
+        >
+          {t("settings.tab.customization")}
+        </button>
       </div>
 
       <div
@@ -196,7 +261,24 @@ function SettingsView() {
           </div>
         ) : null}
         {hasLoadedConfig && activeTab === "general" ? (
-          <GeneralSection config={config} updateConfig={updateConfig} saveOnBlur={saveOnBlur} />
+          <GeneralSection config={config} updateConfig={updateConfig} saveOnBlur={saveOnBlur}>
+            {storageInfo ? <StorageSection
+              info={storageInfo}
+              pending={storagePending}
+              error={storageError}
+              onSave={(directory) => {
+                setStoragePending(true);
+                setStorageError(undefined);
+                vscode?.postMessage({ type: "setStorageDirectory", directory });
+              }}
+              onBrowse={() => {
+                setStoragePending(true);
+                setStorageError(undefined);
+                vscode?.postMessage({ type: "selectStorageDirectory" });
+              }}
+              onReload={() => vscode?.postMessage({ type: "reloadStorage" })}
+            /> : null}
+          </GeneralSection>
         ) : null}
         {hasLoadedConfig && activeTab === "api" ? (
           <ApiTab
@@ -221,9 +303,37 @@ function SettingsView() {
         {hasLoadedConfig && activeTab === "tools" ? (
           <ToolsSection
             config={config}
+            availableTools={availableTools}
             updateConfig={updateConfig}
             saveOnBlur={saveOnBlur}
             permissionUpdatePending={permissionUpdatePending}
+          />
+        ) : null}
+        {hasLoadedConfig && activeTab === "customization" ? (
+          <CustomizationSection
+            config={config}
+            updateConfig={updateConfig}
+            saveOnBlur={saveOnBlur}
+            workspaceRoots={workspaceRoots}
+            workspaceRootUri={workspaceRootUri}
+            onWorkspaceRootChange={setWorkspaceRootUri}
+            workspacePending={workspacePending}
+            workspaceError={workspaceError}
+            onOpenWorkspaceAgents={() => {
+              if (!workspaceRootUri || workspacePending) {return;}
+              const requestId = crypto.randomUUID();
+              workspaceRequestRef.current = requestId;
+              setWorkspacePending(true);
+              setWorkspaceError(undefined);
+              vscode?.postMessage({ type: "openWorkspaceInstructions", requestId, rootUri: workspaceRootUri });
+            }}
+            pending={customizationPending}
+            onOpenGlobalAgents={() => {
+              const requestId = crypto.randomUUID();
+              pendingCustomizationRequestsRef.current.add(requestId);
+              setCustomizationPending(true);
+              vscode?.postMessage({ type: "openGlobalAgents", requestId });
+            }}
           />
         ) : null}
       </div>

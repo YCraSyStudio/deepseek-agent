@@ -18,7 +18,7 @@ Auxiliary work follows the primary model. `AuxiliaryModelPolicy.ts` routes the s
 
 Retired names are not translated. The `normalizeModelId` compatibility map was removed in `0.1.14`, so `deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` are ordinary unknown identifiers: `assertCompatibleModel` rejects them on the official endpoint, the context budget falls back to the conservative 128K/8K profile, and `UsagePricing` publishes no rate for them. A stored setting that still holds one of them has to be re-selected. Model names persisted inside conversations remain opaque data, so history keeps loading without being rewritten.
 
-There is no provider-side transport fallback and no model rewriting: a failed request is surfaced as-is. The hidden Vision-to-Flash retry that masked a retired vision model was removed in `0.1.14` and does not come back; the delegated `analyze_images` tool is the only vision path, and it names `deepseek-flash` directly instead of the retired `deepseek-v4-flash-vision-exp` endpoint.
+There is no provider-side transport fallback and no model rewriting: a failed request is surfaced as-is. The hidden Vision-to-Flash retry that masked a retired vision model was removed in `0.1.14` and does not come back. The Pro-only `analyze_images` tool is the delegated vision path, including stored screenshots without new attachments; it names `deepseek-flash` directly instead of the retired `deepseek-v4-flash-vision-exp` endpoint. Flash reads image parts natively and has neither that tool nor a delegated analyzer. A stored screenshot id alone is not visual input; directly adding new local captures to Flash context remains pending.
 
 DeepSeek exposes FIM completion on a beta endpoint, but the extension implements no FIM request path yet.
 

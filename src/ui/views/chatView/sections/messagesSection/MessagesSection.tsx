@@ -34,6 +34,7 @@ function MessagesSection({
   onContextWindowUpdated,
   onContextCompactionResult,
   onFocusInput,
+  onReferenceImage,
   earlierMessagesLoaded = 0,
   historyCursor,
 }: MessagesSectionProps) {
@@ -191,7 +192,7 @@ function MessagesSection({
   return (
     <>
       <div className="messagesSection">
-        <div className="msgList" ref={listRef} onClick={handleCodeAction} onScroll={handleScroll} aria-busy={isProcessing}>
+        <div className="msgList" tabIndex={0} ref={listRef} onClick={handleCodeAction} onScroll={handleScroll} aria-busy={isProcessing}>
           {emptyStateVisible ? (
             <ChatEmptyState />
           ) : (
@@ -206,10 +207,12 @@ function MessagesSection({
                 </button>
               ) : null}
               <ChatMessages
+                conversationId={conversationId}
                 messages={visibleMessages}
                 isProcessing={isProcessing}
                 activeToolCallGroups={tools.activeTimelineGroups}
                 renderToolCallGroups={renderToolCallGroups}
+                onReferenceImage={onReferenceImage}
               />
             </>
           )}

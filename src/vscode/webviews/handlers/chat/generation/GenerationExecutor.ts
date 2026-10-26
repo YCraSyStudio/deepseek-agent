@@ -1,7 +1,15 @@
+import { readReusableInstruction } from "@/vscode/configuration/ReusableInstructions";
+import { randomUUID } from "node:crypto";
+import { automaticCapture, changedUiPaths, knownCaptureTarget } from "@/infrastructure/capture/AutomaticCapture";
+import { CaptureService } from "@/infrastructure/capture/CaptureService";
+import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
+import { logWarning } from "@/shared/logging/Logger";
+import { ManagedApplicationSessions } from "@/infrastructure/tools/builtins/terminal/ManagedApplicationSessions";
 import * as vscode from "vscode";
 import {
   mapReasoningEffort,
   type AppConfig,
+  type ImageAttachment,
   type PermissionSnapshot,
   type StoredToolCall,
 } from "@/contracts";
@@ -9,6 +17,7 @@ import { ConversationState } from "@/application/chat/ConversationState";
 import { getGenerationStopReason, type GenerationTask } from "@/application/chat/GenerationCoordinator";
 import { selectGenerationTools } from "@/application/chat/GenerationToolSelection";
 import { createDelegatedVisionAnalyzer } from "@/infrastructure/deepseek/provider/DelegatedVisionAnalyzer";
+import { createBetaCodeCompleter } from "@/infrastructure/deepseek/provider/features/CodeCompletion";
 import { createProviderTranscript } from "@/application/chat/ProviderTranscript";
 import { PartialStreamError } from "@/application/errors/PartialStreamError";
 import type { ToolRegistry } from "@/application/tools";
@@ -27,6 +36,7 @@ import type {
 import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
 import { extractHttpsUrls } from "@/infrastructure/browser/NetworkPolicy";
 import { isCancellationError } from "@/shared/utils/Cancellation";
+import { WorkspaceChangeTracker, revertWorkspaceTurn } from "@/vscode/workspace/WorkspaceChangeTracker";
 import {
   captureWorkspaceRunSnapshot,
   type WorkspaceRunSnapshot,
@@ -66,11 +76,13 @@ interface GenerationExecutorDependencies {
   settings: SettingsRepository;
   secrets: SecretStore;
   modelProviderFactory: ModelProviderFactory;
+  archiveImages: (conversationId: string, attachments: readonly ImageAttachment[]) => Promise<void>;
 }
 
 export class GenerationExecutor {
   private readonly resultStore: GenerationResultStore;
   private readonly finalizer: GenerationRunFinalizer;
+  private readonly workspaceChanges = new WorkspaceChangeTracker();
 
   constructor(private readonly dependencies: GenerationExecutorDependencies) {
     this.resultStore = new GenerationResultStore({
@@ -112,6 +124,7 @@ export class GenerationExecutor {
       return;
     }
 
+    const applications = new ManagedApplicationSessions(signal, task.conversationId);
     try {
       const binding = conversation?.workspaceBinding ?? historyManager.getWorkspaceBinding();
       const workspaceSnapshot = captureWorkspaceRunSnapshot(binding);
@@ -119,12 +132,13 @@ export class GenerationExecutor {
         vscode.workspace.isTrusted,
       );
       const workspace = createVsCodeToolWorkspace(workspaceSnapshot, {
+        conversationId: task.conversationId,
         allowOutsideWorkspace: true,
         unrestricted: permissionSnapshot.permissionMode === "full-access",
       });
       await runWithToolWorkspaceHost(
         workspace,
-        () => this.execute(generationId, task, signal, workspaceSnapshot, permissionSnapshot),
+        () => this.execute(generationId, task, signal, workspaceSnapshot, permissionSnapshot, applications),
       );
     } catch (error: unknown) {
       const record = this.dependencies.runs.get(generationId);
@@ -165,7 +179,7 @@ export class GenerationExecutor {
             : { error: getErrorMessage(error) }),
         });
       }
-    }
+    } finally {await applications.dispose();}
   }
 
   private async execute(
@@ -174,6 +188,7 @@ export class GenerationExecutor {
     signal: AbortSignal,
     workspaceSnapshot: WorkspaceRunSnapshot,
     initialPermissionSnapshot: PermissionSnapshot,
+    applications: ManagedApplicationSessions,
   ): Promise<void> {
     const {
       activeConversationState,
@@ -233,42 +248,66 @@ export class GenerationExecutor {
       imageAttachments: payload.imageAttachments,
     });
     record.userMessage = userMessage;
-    let messages = await buildGenerationMessages({
-      payload,
-      config,
-      eventSink,
-      state: runState,
-      workspaceSnapshot,
-      excludedGenerationId: generationId,
-      signal,
-    });
     await runState.saveMessages({ messages: [userMessage], model: providerConfig.model });
+    if (!runState.isIncognito()) {
+      await this.dependencies.archiveImages(task.conversationId, payload.imageAttachments ?? []);
+      if (payload.imageAttachments?.length) {
+        await runState.updateMessageAttachments(userMessage.id, payload.imageAttachments);
+      }
+    }
     this.dependencies.syncSelectedConversation(runState);
-    await this.dependencies.checkpoint(record, true);
-
     await eventSink.publish({
       type: "addMessage",
       message: { role: "user", content: userMessage.content, imageAttachments: userMessage.imageAttachments },
     });
-    stream.showTyping();
-
+    const workspaceTracking = await this.workspaceChanges.begin(task.conversationId, generationId, runState.isIncognito(), workspaceSnapshot, signal, config.snapshotStorageLimitMb);
+    let visionAnalyzer: ReturnType<typeof createDelegatedVisionAnalyzer>;
     try {
-      const imageAttachments = (payload.imageAttachments ?? [])
-        .filter((attachment) => attachment.expiresAt > Date.now());
+      if (workspaceTracking.notice) {
+        await runState.updateMessageContext(userMessage.id, `${workspaceTracking.notice}\n\n---\n\n${payload.text}`);
+      }
+      let messages = await buildGenerationMessages({
+        payload,
+        config,
+        eventSink,
+        state: runState,
+        workspaceSnapshot,
+        excludedGenerationId: generationId,
+        signal,
+        workspaceChangeNotice: workspaceTracking.notice,
+        onUserContext: (context) => runState.updateMessageContext(userMessage.id, context),
+      });
+      this.dependencies.syncSelectedConversation(runState);
+      await this.dependencies.checkpoint(record, true);
+
+      stream.showTyping();
+
+      const imageAttachments = (payload.imageAttachments ?? []).filter((attachment) => attachment.expiresAt > Date.now());
+      visionAnalyzer = createDelegatedVisionAnalyzer({ attachments: imageAttachments, providerConfig,
+        modelProviderFactory: this.dependencies.modelProviderFactory, usageAggregate,
+        screenshots: runState.isIncognito() ? undefined : new ScreenshotStore(task.conversationId),
+      });
       const tools = selectGenerationTools(toolRegistry, {
         files: workspaceSnapshot.binding.capabilities.files,
         terminal: workspaceSnapshot.binding.capabilities.terminal,
         webSearchEnabled: providerConfig.webSearchEnabled,
         modelId: providerConfig.model,
-        hasImageAttachments: imageAttachments.length > 0,
+        betaFeaturesEnabled: providerConfig.betaFeaturesEnabled,
       });
       appendToolAvailabilityContext(
         messages,
         initialPermissionSnapshot.permissionMode,
         tools,
         workspaceSnapshot,
+        providerConfig.privacyMinimizeData,
       );
+      if (visionAnalyzer && config.automaticCaptureEnabled && !runState.isIncognito()) {
+        const latest = await new ScreenshotStore(task.conversationId).lookup().catch(() => undefined);
+        const system = messages.find((message) => message.role === "system");
+        if (latest && system) {system.content = `${system.content ?? ""}\nLocal UI screenshot available: ${JSON.stringify({ id: latest.metadata.id, width: latest.metadata.width, height: latest.metadata.height })}. Use analyze_images to inspect it when relevant.`;}
+      }
       messages = await fitGenerationRequestContext({
+        workspaceChangeNotice: workspaceTracking.notice,
         messages,
         payload,
         config: providerConfig,
@@ -313,12 +352,19 @@ export class GenerationExecutor {
           trustedUserRequest: payload.text,
           authorizedUserUrls: extractHttpsUrls(payload.text),
           budgetManager: record.budgetManager,
-          analyzeImages: createDelegatedVisionAnalyzer({
-            attachments: imageAttachments,
-            providerConfig,
-            modelProviderFactory: this.dependencies.modelProviderFactory,
-            usageAggregate,
-          }),
+          captureScreenshot: runState.isIncognito() ? undefined : (request, captureSignal) => new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal),
+          applicationSession: (request) => applications.execute(request),
+          analyzeImages: visionAnalyzer,
+          completeCode: createBetaCodeCompleter(providerConfig, () => this.dependencies.settings.load().betaFeaturesEnabled,
+            (usage, model) => recordUsage(usageAggregate, "code_completion", usage, model)),
+          isBetaFeaturesEnabled: () => this.dependencies.settings.load().betaFeaturesEnabled,
+          readInstruction: (id, instructionSignal) => readReusableInstruction(id, workspaceSnapshot, instructionSignal),
+          revertWorkspace: async (targetGenerationId) => {
+            if (runState.isIncognito()) {throw new Error("Persistent recovery snapshots are unavailable in incognito mode");}
+            return revertWorkspaceTurn(task.conversationId, workspaceSnapshot, targetGenerationId, () => {
+              if ([...runs.keys()].some((id) => id !== generationId)) {throw new Error("Wait for other active generations to finish before reverting");}
+            });
+          },
           onContextCompacted: ({ estimatedTokensBefore, estimatedTokensAfter }) =>
             recordToolCycleCompaction({
               state: runState,
@@ -330,6 +376,31 @@ export class GenerationExecutor {
             }),
         });
         if (result) {
+          if (!signal.aborted && !result.partial) {
+            const captureStore = new ScreenshotStore(task.conversationId);
+            const paths = changedUiPaths(result.toolCalls as StoredToolCall[] ?? []);
+            const automaticSettings = this.dependencies.settings.load();
+            if (automaticSettings.automaticCaptureEnabled && paths.length) {
+              const latest = runState.isIncognito() ? undefined : await captureStore.lookup().catch(() => undefined);
+              const automatic = await automaticCapture({ enabled: true, paths,
+                count: await captureStore.automaticCount().catch(() => automaticSettings.automaticCaptureLimit), limit: automaticSettings.automaticCaptureLimit,
+                target: knownCaptureTarget(latest?.metadata),
+                unavailable: runState.isIncognito() ? "Automatic capture is unavailable in incognito conversations" : vscode.env.remoteName ? "Automatic capture is unavailable in remote workspaces" : undefined,
+                capture: (request) => new CaptureService(captureStore).capture(request, signal, { limit: automaticSettings.automaticCaptureLimit }),
+              });
+              if (!signal.aborted && (automatic.capture || automatic.note)) {
+                const id = `auto-capture-${randomUUID()}`; const round = 0;
+                const captureResult = automatic.capture ? JSON.stringify(automatic.capture) : automatic.note!;
+                result.toolCalls ??= [];
+                result.toolCalls.push({ toolCallId: id, toolName: "capture_screenshot", arguments: JSON.stringify({ automatic: true }), result: captureResult, status: "completed", round });
+                const event = { id, type: "tool-group" as const, round, toolCallIds: [id] };
+                result.timeline.push(event);
+                await eventSink.publish({ type: "toolCallStarted", toolCalls: [{ id, type: "function", function: { name: "capture_screenshot", arguments: JSON.stringify({ automatic: true }) } }], round });
+                await eventSink.publish({ type: "streamTimelineToolGroup", event });
+                await eventSink.publish({ type: "toolCallResult", toolCallId: id, toolName: "capture_screenshot", result: captureResult, status: "completed" });
+              }
+            }
+          }
           await this.resultStore.save({
             content: result.content,
             timeline: result.timeline,
@@ -404,6 +475,10 @@ export class GenerationExecutor {
         });
       }
     } finally {
+      // Stop previews before taking the final workspace state (they may still write files).
+      await applications.dispose();
+      await visionAnalyzer?.dispose().catch((error: unknown) => logWarning(String(error)));
+      await workspaceTracking.finish();
       await this.finalizer.finalize({
         eventSink,
         model: providerConfig.model,

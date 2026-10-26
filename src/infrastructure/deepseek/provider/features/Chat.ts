@@ -5,6 +5,8 @@ import { parseChatCompletionResponse, parseStreamToolCalls } from "./ChatRespons
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import { isOfficialDeepSeekEndpoint, parseProviderUsage } from "@/shared/usage/Usage";
 import { MAX_CHAT_RESPONSE_BYTES, readBoundedJson } from "@/infrastructure/deepseek/client/BoundedResponseJson";
+import { resolveDeepSeekApiBaseUrl } from "@/infrastructure/deepseek/client/BetaFeatures";
+import { prepareProviderTools } from "./StrictTools";
 
 interface DeepSeekChatRequest extends ChatCompletionRequest {
   user_id?: string;
@@ -52,15 +54,14 @@ export function buildChatBody(request: Partial<ChatRequest>, config: AppConfig):
     body.stop = request.stop;
   }
   if (request.tools) {
-    body.tools = request.tools.map((tool) => {
-      const { strict: _strict, ...providerFunction } = tool.function;
-      return { ...tool, function: providerFunction };
-    });
+    body.tools = prepareProviderTools(request.tools, config.betaFeaturesEnabled === true);
   }
   if (request.tool_choice) {
     body.tool_choice = request.tool_choice;
   }
-  if (request.user_id) {
+  if (config.privacyMinimizeData !== false) {
+    body.user_id = undefined;
+  } else if (request.user_id) {
     body.user_id = request.user_id;
   } else if (config.userId) {
     body.user_id = config.userId;
@@ -69,7 +70,10 @@ export function buildChatBody(request: Partial<ChatRequest>, config: AppConfig):
   return body;
 }
 
-export async function chatCompletion(request: ChatRequest, apiKey: string, baseUrl: string, signal?: AbortSignal): Promise<ChatResponse> {
+export async function chatCompletion(request: ChatRequest, apiKey: string, baseUrl: string, signal?: AbortSignal, betaFeaturesEnabled = false): Promise<ChatResponse> {
+  validatePrefixRequest(request, betaFeaturesEnabled);
+  request = prepareTransportRequest(request, betaFeaturesEnabled);
+  baseUrl = resolveDeepSeekApiBaseUrl(baseUrl, betaFeaturesEnabled);
   const url = buildApiUrl(baseUrl, "chat/completions");
   const response = await deepseekFetch({
     pathOrUrl: url,
@@ -90,10 +94,14 @@ interface ChatCompletionStreamOptions {
   baseUrl: string;
   onChunk: (chunk: ChatStreamChunk) => void;
   signal?: AbortSignal;
+  betaFeaturesEnabled?: boolean;
 }
 
 export async function chatCompletionStream(options: ChatCompletionStreamOptions): Promise<void> {
-  const { request, apiKey, baseUrl, onChunk, signal } = options;
+  const { apiKey, onChunk, signal } = options;
+  const request = prepareTransportRequest(options.request, options.betaFeaturesEnabled === true);
+  validatePrefixRequest(request, options.betaFeaturesEnabled === true);
+  const baseUrl = resolveDeepSeekApiBaseUrl(options.baseUrl, options.betaFeaturesEnabled === true);
   const url = buildApiUrl(baseUrl, "chat/completions");
   let finishReason = "stop";
   let emittedDone = false;
@@ -168,6 +176,26 @@ export async function chatCompletionStream(options: ChatCompletionStreamOptions)
     onDone: emitDone,
     signal,
   });
+}
+
+function validatePrefixRequest(request: ChatRequest, betaEnabled: boolean): void {
+  for (const [index, message] of request.messages.entries()) {
+    if (!message.prefix) {continue;}
+    if (!betaEnabled) {throw new Error("DeepSeek beta features are disabled.");}
+    if (index !== request.messages.length - 1 || message.role !== "assistant" || typeof message.content !== "string") {
+      throw new Error("Chat prefix completion requires a final assistant text message.");
+    }
+    if (message.reasoning_content && request.thinking?.type !== "enabled") {throw new Error("A reasoning prefix requires thinking mode.");}
+  }
+}
+
+function prepareTransportRequest(request: ChatRequest, betaEnabled: boolean): ChatRequest {
+  if (betaEnabled) {return request;}
+  validatePrefixRequest(request, false);
+  return { ...request,
+    messages: request.messages.map(({ prefix: _prefix, ...message }) => message),
+    ...(request.tools ? { tools: prepareProviderTools(request.tools, false) } : {}),
+  };
 }
 
 interface DeepSeekStreamDelta {

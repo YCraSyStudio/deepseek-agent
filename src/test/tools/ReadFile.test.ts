@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as path from "path";
-import { readFileDefinition, readFileHandler } from "@/infrastructure/tools/builtins/fileSystem/ReadFile";
+import { readFileHandler } from "@/infrastructure/tools/builtins/fileSystem/ReadFile";
 import {
   setToolWorkspaceHost,
   type ToolWorkspaceEntryType,
@@ -134,13 +134,6 @@ suite("read file", () => {
     createMemoryWorkspace({ "src/app.ts": SOURCE });
 
     assert.match(await readFileHandler({ path: "src/absent.ts", offset: 1 }), /^Error reading file 'src\/absent\.ts'/);
-  });
-
-  test("sends the model to the precise read before a whole-file read", () => {
-    const description = readFileDefinition.function.description ?? "";
-
-    assert.match(description, /Prefer read_func when the target is a named declaration/);
-    assert.match(description, /Read a whole file only for context that spans declarations/);
   });
 });
 

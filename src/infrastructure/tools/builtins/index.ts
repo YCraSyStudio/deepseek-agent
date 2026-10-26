@@ -1,3 +1,5 @@
+import { captureScreenshotTool } from "./vision/CaptureScreenshot";
+import { completeCodeTool } from "./code/CompleteCode";
 import type { RegisteredTool, ToolEffect } from "@/application/tools/Types";
 import { readFileDefinition, readFileHandler, readFileMetadata } from "./fileSystem/ReadFile";
 import { readFunctionDefinition, readFunctionHandler, readFunctionMetadata } from "./fileSystem/ReadFunction";
@@ -12,8 +14,17 @@ import { deletePathDefinition, deletePathHandler, deletePathMetadata, deletePath
 import { terminalCommandDefinition, terminalCommandHandler, terminalCommandMetadata, terminalCommandHandlerForced } from "./terminal/TerminalCommand";
 import { compactContextDefinition, compactContextHandler, compactContextMetadata } from "./context/CompactContext";
 import { analyzeImagesTool } from "./vision/AnalyzeImages";
+import { revertWorkspaceTool } from "./fileSystem/RevertWorkspace";
+
+import { readInstructionTool } from "./context/ReadInstruction";
+import { applicationSessionTool } from "./terminal/ApplicationSession";
 
 export const BUILT_IN_TOOLS: RegisteredTool[] = [
+  applicationSessionTool,
+  readInstructionTool,
+  completeCodeTool,
+  revertWorkspaceTool,
+  captureScreenshotTool,
   withEffect({ definition: compactContextDefinition, handler: compactContextHandler, metadata: compactContextMetadata }, "read-only"),
   withEffect({ definition: readFileDefinition, handler: readFileHandler, metadata: readFileMetadata }, "read-only"),
   withEffect({ definition: readFunctionDefinition, handler: readFunctionHandler, metadata: readFunctionMetadata }, "read-only"),

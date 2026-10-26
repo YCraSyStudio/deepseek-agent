@@ -1,8 +1,11 @@
 import type { TranslationCatalog } from "../Types";
-
 export const settings = {
   settings: {
+    number: { increase: "Aumentar valor", decrease: "Disminuir valor" },
+    help: "Ayuda: {setting}",
+    snapshots: { storageLimit: "Límite de capturas (MiB)", storageHint: "Límite total para las copias de todos los chats. Si falta espacio, el mensaje continúa con un aviso y no se podrá revertir." },
     tab: {
+      customization: "Personalización",
       api: "API",
       tools: "Herramientas",
       general: "General"
@@ -14,6 +17,15 @@ export const settings = {
       label: "Secciones de ajustes"
     },
     loading: "Cargando ajustes…",
+    storage: {
+      title: "Almacenamiento",
+      directory: "Carpeta de datos",
+      browse: "Seleccionar carpeta",
+      default: "Predeterminada",
+      reload: "Recargar VS Code",
+      reloadHint: "Se aplicará al recargar. Los datos anteriores permanecen en su carpeta.",
+      error: "No se pudo guardar la ruta.",
+    },
     retry: "Reintentar",
     reset: {
       label: "Restablecer valores predeterminados",
@@ -58,21 +70,47 @@ export const settings = {
     advanced: {
       title: "Avanzado"
     },
+    beta: {
+      title: "Funciones beta",
+      enabled: "Activar funciones beta",
+      description: "Activa funciones beta de la API de DeepSeek: Chat Prefix, FIM y herramientas estrictas. Desactivado por defecto. Al apagarlo se bloquean nuevas peticiones beta y se detienen las sugerencias automáticas.",
+      editorSuggestions: "Sugerencias en el editor",
+      chatSuggestions: "Sugerencias en el chat",
+      editorSuggestionsHelp: "Tras una pausa de 800 ms al escribir, envía el código cercano a DeepSeek para completarlo. Consume API. Tab acepta; Escape descarta. Requiere funciones beta y un workspace de confianza.",
+      chatSuggestionsHelp: "Pulsa Sugerir mensaje junto al indicador de contexto para generar un mensaje o continuar el borrador con un resumen breve del proyecto. Escribir no solicita sugerencias. No envía código fuente ni historial. Consume API. Tab acepta; Escape descarta. Requiere funciones beta, una API key configurada y un workspace de confianza.",
+    },
+    privacy: {
+      title: "Privacidad",
+      minimize: "Minimizar metadatos",
+      description: "Omite rutas absolutas del contexto automático, nombres de imágenes e identificadores opcionales. Usa fechas UTC sin el nombre de tu zona horaria.",
+      limits: "Mejor esfuerzo: no modifica mensajes, código, salidas de herramientas, imágenes ni historial. No garantiza anonimato; el proveedor sigue viendo la IP de conexión.",
+    },
+    browser: {
+      access: "Permiso de capturas",
+      ask: "Preguntar por sitio",
+      always: "Siempre",
+      never: "Nunca",
+      automatic: "Capturas automáticas",
+      automaticHelp: "Captura tras cambios en la interfaz usando el último destino capturado explícitamente. Las capturas permanecen locales hasta analizarlas.",
+      limit: "Máximo de capturas por conversación",
+    },
     webSearch: {
       title: "Búsqueda web",
-      description: "La extensión usa SearXNG para buscar en la web pública y combinar varios motores de búsqueda.",
+      description: "Busca con tu API key de DeepSeek y lee páginas localmente con Chromium. Search tiene un coste adicional al de los tokens; la lectura local no usa DeepSeek Fetch.",
       enabled: "Habilitar búsqueda web",
-      engine: "Buscador",
-      searxngUrl: "Endpoint de SearXNG",
-      searxngManagedHint: "El endoint por defecto es http://127.0.0.1:8888, puedes personalizarlo para evitar conflictos de puertos",
-      engines: "Motores de búsqueda",
-      enginesDefault: "Automático (motores habilitados por SearXNG)",
-      enginesSelected: "seleccionados",
-      filterEngines: "Filtrar motores…",
-      useDefaults: "Usar predeterminados",
-      enabledByDefault: "Predeterminado",
-      noEngines: "Todavía no hay motores disponibles. Abre de nuevo Herramientas cuando SearXNG termine de iniciarse.",
-      enginesHint: "Si no seleccionas ninguno, SearXNG usa sus motores habilitados por defecto. Puedes seleccionar varios para combinarlos en la misma búsqueda."
+      region: "Región de búsqueda",
+      global: "Global (por defecto)",
+      auto: "Automática (sistema)",
+      custom: "Elegir un país",
+      countryCode: "Código de país de dos letras, como ES o US",
+      regionHint: "Global no prioriza ningún país. Automática usa el país del sistema local, sin consultar ni añadir tu IP como parámetro. Lo que pidas en el chat tiene prioridad y se mantienen las fuentes técnicas de otros idiomas.",
+    },
+    toolCatalog: {
+      label: "Lista de herramientas",
+      loading: "Cargando herramientas…",
+      empty: "No hay herramientas registradas",
+      noDescription: "No hay descripción disponible.",
+      searchDisabled: "No disponible mientras la búsqueda web esté desactivada.",
     },
     sampling: {
       temperature: "Temperatura",
@@ -99,13 +137,43 @@ export const settings = {
         cancel: "Cancelar"
       },
       store: "Guardar historial del chat",
-      retention: "Días de retención del historial (0 = ilimitado)"
+      retention: "Conservar historial (días)",
+      retentionHelp: "Usa 0 para conservarlo sin límite de tiempo.",
+    },
+    reusable: {
+      title: "Instrucciones",
+      template: "Plantilla",
+      templateHelp: "Blank.md inicia una instrucción vacía; git.md propone un flujo de Git; commit.md incluye convenciones del mensaje y comprobaciones. Elige una, ajusta el nombre y cuándo usarla, y edita su contenido en VS Code.",
+      create: "Crear instrucción",
+      help: "DeepSeek recibe el nombre y la descripción. Lee el archivo completo solo cuando corresponde a la tarea, por ejemplo al preparar un commit. Las instrucciones globales se aplican a todos los proyectos; las del workspace solo a ese proyecto.",
+      scope: "Guardar en",
+      global: "Global",
+      workspace: "Workspace",
+      name: "Nombre del archivo",
+      nameHelp: "Escribe el nombre sin la extensión final, por ejemplo commit. La extensión .md es fija y se añade automáticamente. Otras extensiones forman parte del nombre: commit.txt se guarda como commit.txt.md. Puedes usar letras, números, puntos, guiones y guiones bajos. Los archivos existentes se abren sin sobrescribirlos.",
+      description: "Cuándo utilizarla",
+      descriptionPlaceholder: "Al crear o revisar un commit de Git",
+      createAndEdit: "Crear y editar",
+      cancel: "Cancelar",
+      loading: "Cargando instrucciones…",
+      empty: "Todavía no hay instrucciones.",
+      edit: "Editar",
+    },
+    customization: {
+      workspaceTitle: "Instrucciones del workspace",
+      generateWorkspaceAgents: "Generar AGENTS.md",
+      editWorkspaceAgents: "Editar AGENTS.md",
+      workspaceFolder: "Carpeta del workspace",
+      workspaceLoading: "Cargando instrucciones del workspace…",
+      workspaceUnavailable: "Abre una carpeta local para crear sus instrucciones.",
+      workspaceOpenError: "No se pudo abrir el AGENTS.md del workspace.",
+
+      openGlobalAgents: "Editar AGENTS.md global",
+      globalAgentsHelp: "Aplica tus instrucciones personales a todos los workspaces. Guarda el archivo en VS Code; los cambios guardados se cargan antes de cada mensaje.",
+      openError: "No se pudo abrir el AGENTS.md global.",
     },
     instructions: {
       globalAgents: "Usar las instrucciones globales de AGENTS.md"
-    },
-    beta: {
-      enable: "Activar funciones beta"
     },
     language: {
       label: "Idioma de la interfaz",
@@ -123,7 +191,7 @@ export const settings = {
     },
     limits: {
       maxTokens: "Tokens máximos de salida",
-      maxTokensDescription: "Reserva de salida por petición. DeepSeek V4 tiene 1M tokens de contexto total y admite hasta 384K de salida; el valor conservador predeterminado de 8.192 ayuda a limitar consumo y coste de la API.",
+      maxTokensDescription: "Límite de salida por petición. El valor predeterminado (8.192 tokens) ayuda a controlar el consumo y el coste de la API.",
       maxConcurrentGenerations: "Generaciones simultáneas"
     }
   }

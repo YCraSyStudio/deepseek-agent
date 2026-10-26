@@ -1,9 +1,51 @@
 import * as assert from "assert";
-import type { AssistantTimelineEvent, Conversation } from "@/contracts";
+import type { AssistantTimelineEvent, Conversation, ImageAttachment } from "@/contracts";
 import { ConversationState } from "@/application/chat/ConversationState";
-import { createProviderTranscript } from "@/application/chat/ProviderTranscript";
+import { createProviderTranscript, toPresentationConversation, type StoredConversation } from "@/application/chat/ProviderTranscript";
 
 suite("ConversationState", () => {
+  test("retains workspace change reminders in replay and compaction context without changing the displayed prompt", async () => {
+    let saved: StoredConversation | undefined;
+    let lastUpdatedAt = 0;
+    const state = new ConversationState({ save: async (conversation) => {
+      assert.ok(conversation.updatedAt > lastUpdatedAt, "Every changed save must advance the revision timestamp");
+      lastUpdatedAt = conversation.updatedAt;
+      saved = structuredClone(conversation);
+    } });
+    const user = state.createMessage("user", "Continue the task");
+    await state.saveMessages({ messages: [user], model: "test-model" });
+    const notice = 'Workspace changes: Modified: "project/auth.ts". Read the file again.';
+    await state.updateMessageContext(user.id, `${notice}\n\nContinue the task`);
+    assert.ok(saved);
+    const restored = new ConversationState({ save: async () => undefined });
+    restored.load(saved);
+    assert.match(String(restored.getApiMessages()[0].content), /Read the file again/);
+    assert.match(restored.getApiContextUnits()[0].visibleText, /Read the file again/);
+    const presented = toPresentationConversation(saved).messages[0];
+    assert.strictEqual(presented.content, "Continue the task");
+    assert.ok(!("contextContent" in presented));
+  });
+  test("persists archive-assigned image numbers without duplicating the user message", async () => {
+    const saves: Conversation[] = [];
+    const state = new ConversationState({ save: async (conversation) => {saves.push(structuredClone(conversation));} });
+    const attachment: ImageAttachment = {
+      id: "attachment", fileId: "file-api-test", name: "image.png", mediaType: "image/png", size: 1,
+      source: "clipboard", uploadedAt: 1, expiresAt: Date.now() + 60_000,
+      apiBaseUrl: "https://api.deepseek.com", cacheFileName: "image.png",
+    };
+    const message = state.createMessage("user", "Compare images 1 and 3", { imageAttachments: [attachment] });
+    await state.saveMessages({ messages: [message], model: "test-model" });
+    attachment.imageNumber = 4;
+    await state.updateMessageAttachments(message.id, [attachment]);
+    assert.strictEqual(saves[0].messages[0].imageAttachments?.[0].imageNumber, undefined);
+    assert.strictEqual(saves[1].messages.length, 1);
+    assert.ok(saves[1].updatedAt > saves[0].updatedAt);
+    const restored = new ConversationState({ save: async () => undefined });
+    restored.load(saves[1]);
+    assert.strictEqual(restored.getConversation()?.messages[0].imageAttachments?.[0].imageNumber, 4);
+    attachment.imageNumber = 99;
+    assert.strictEqual(state.getConversation()?.messages[0].imageAttachments?.[0].imageNumber, 4);
+  });
   test("keeps incognito turns in memory until an explicit promotion", async () => {
     const saves: Conversation[] = [];
     const state = new ConversationState(

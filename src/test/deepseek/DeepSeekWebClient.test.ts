@@ -1,0 +1,142 @@
+import * as assert from "node:assert";
+import { DeepSeekWebClient } from "@/infrastructure/deepseek/web/DeepSeekWebClient";
+import { DeepSeekApiError } from "@/infrastructure/deepseek/errors/DeepSeekApiError";
+
+suite("DeepSeek Search API", () => {
+  const originalFetch = globalThis.fetch;
+  teardown(() => {globalThis.fetch = originalFetch;});
+
+  test("uses the documented Search endpoint, Bearer auth and JSON schema", async () => {
+    globalThis.fetch = async (input, init) => {
+      assert.strictEqual(String(input), "https://api.deepseek.com/v1/tools/search");
+      assert.strictEqual(init?.method, "POST");
+      const headers = new Headers(init?.headers);
+      assert.strictEqual(headers.get("authorization"), "Bearer test-key");
+      assert.strictEqual(headers.get("content-type"), "application/json");
+      assert.deepStrictEqual(JSON.parse(String(init?.body)), { query: "DeepSeek lang:es", count: 2, need_content: true, ori_question: "DeepSeek lang:es" });
+      return json({ results: [
+        { title: "Release", url: "https://example.com/release", snippet: "Short", summary: "Detailed summary", content: "# Release", rerank_score: 2.5, authority: 4, date: "2026-10-21T00:00:00Z", site_name: "Upstream" },
+        { title: "Duplicate", url: "https://example.com/release" },
+        { title: "Private", url: "https://127.0.0.1/private" },
+        { title: "Insecure", url: "http://example.com/" },
+        { title: "Second", url: "https://example.org/", snippet: "Snippet only" },
+        { title: "Third", url: "https://example.net/" },
+      ] });
+    };
+    const result = await client().search("DeepSeek lang:es", 2);
+    assert.deepStrictEqual(result.urls, ["https://example.com/release", "https://example.org/"]);
+    assert.strictEqual(result.results[0].summary, "Detailed summary");
+    assert.strictEqual(result.results[0].content, "# Release");
+    assert.strictEqual(result.results[0].rerank_score, 2.5);
+    assert.strictEqual(result.results[0].authority, 4);
+    assert.strictEqual(result.results[0].date, "2026-10-21T00:00:00Z");
+    assert.strictEqual(result.results[1].summary, "Snippet only");
+    assert.match(result.contentHash, /^[a-f0-9]{64}$/);
+  });
+
+  test("resolves root, /v1, /beta and proxy base URLs without duplicate version prefixes", async () => {
+    for (const [base, expected] of [
+      ["https://api.deepseek.com/v1", "https://api.deepseek.com/v1/tools/search"],
+      ["https://api.deepseek.com/beta", "https://api.deepseek.com/v1/tools/search"],
+      ["https://proxy.example.com/deepseek/v1/", "https://proxy.example.com/deepseek/v1/tools/search"],
+    ]) {
+      globalThis.fetch = async (input) => {assert.strictEqual(String(input), expected); return json({ results: [] });};
+      assert.deepStrictEqual((await client(base).search("query", 1)).urls, []);
+    }
+  });
+
+  test("validates Unicode query length, counts and credentials before network access", async () => {
+    let calls = 0;
+    globalThis.fetch = async () => {calls++; return json({ results: [] });};
+    const api = client();
+    await api.search("😀".repeat(128), 1);
+    assert.strictEqual(calls, 1);
+    await assert.rejects(() => api.search("😀".repeat(129), 1), /128/);
+    await assert.rejects(() => api.search(" ", 1), /query/);
+    await assert.rejects(() => api.search("query", 51), /max_results/);
+    const missing = new DeepSeekWebClient(async () => ({ baseUrl: "https://api.deepseek.com", apiKey: "" }));
+    await assert.rejects(() => missing.search("query", 1), /No API key/);
+    assert.strictEqual(calls, 1);
+  });
+
+  test("sends a bounded regional preference without IP discovery or a localization address", async () => {
+    let calls = 0;
+    globalThis.fetch = async (input, init) => {
+      calls++;
+      assert.strictEqual(String(input), "https://api.deepseek.com/v1/tools/search");
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.strictEqual(body.query, "TypeScript release notes");
+      assert.strictEqual(body.need_content, false);
+      assert.strictEqual(body.count, 50);
+      assert.ok(!Object.hasOwn(body, "localization"));
+      assert.ok(Array.from(String(body.ori_question)).length <= 128);
+      assert.ok(String(body.ori_question).startsWith("Prefer sources relevant to ES. "));
+      return json({ results: [] });
+    };
+    await client().search("TypeScript release notes", 50, undefined, {
+      originalQuestion: "😀".repeat(150), region: "ES", needContent: false,
+    });
+    assert.strictEqual(calls, 1);
+  });
+
+  test("reports HTTP failures without reflecting provider error bodies or retrying billed POSTs", async () => {
+    for (const status of [401, 402, 403, 429, 500, 504]) {
+      let calls = 0;
+      globalThis.fetch = async () => {calls++; return json({ error: { message: "credential=test-key", code: "provider_error" } }, status);};
+      await assert.rejects(() => client().search("query", 1), (error: unknown) => {
+        assert.ok(error instanceof DeepSeekApiError);
+        assert.strictEqual(error.status, status);
+        assert.ok(!error.message.includes("test-key"));
+        if (status === 402) {assert.match(error.message, /balance/);}
+        return true;
+      });
+      assert.strictEqual(calls, 1);
+    }
+  });
+
+  test("refuses cross-origin credential redirects", async () => {
+    let calls = 0;
+    globalThis.fetch = async () => {calls++; return new Response(null, { status: 307, headers: { location: "https://other.example.com/search" } });};
+    await assert.rejects(() => client().search("query", 1), /different origin/);
+    assert.strictEqual(calls, 1);
+  });
+
+  test("rejects malformed, non-JSON and oversized responses", async () => {
+    globalThis.fetch = async () => json({ unexpected: [] });
+    await assert.rejects(() => client().search("query", 1), /invalid search/);
+    globalThis.fetch = async () => new Response("<html>Error</html>", { headers: { "content-type": "text/html" } });
+    await assert.rejects(() => client().search("query", 1), /JSON/);
+    globalThis.fetch = async () => new Response("not-json: test-key", { headers: { "content-type": "application/json" } });
+    await assert.rejects(() => client().search("query", 1), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.strictEqual(error.message, "DeepSeek web API returned invalid JSON.");
+      return true;
+    });
+    globalThis.fetch = async () => new Response("{}", { headers: { "content-type": "application/json", "content-length": "3000000" } });
+    await assert.rejects(() => client().search("query", 1), /exceeded/);
+  });
+
+  test("cancels in-flight body reads and does not fetch for an already cancelled request", async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    globalThis.fetch = async (_input, init) => {
+      calls++;
+      const signal = init?.signal;
+      return new Response(new ReadableStream({ start(stream) {
+        signal?.addEventListener("abort", () => stream.error(signal.reason), { once: true });
+        controller.abort(new DOMException("Cancelled", "AbortError"));
+      } }), { headers: { "content-type": "application/json" } });
+    };
+    await assert.rejects(() => client().search("query", 1, controller.signal), /Cancelled/);
+    await assert.rejects(() => client().search("query", 1, controller.signal), /Cancelled/);
+    assert.strictEqual(calls, 1);
+  });
+});
+
+function client(baseUrl = "https://api.deepseek.com"): DeepSeekWebClient {
+  return new DeepSeekWebClient(async () => ({ baseUrl, apiKey: "test-key" }));
+}
+
+function json(value: unknown, status = 200): Response {
+  return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
+}

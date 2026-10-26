@@ -116,7 +116,7 @@ export class HistoryManager {
     const entries = await readdir(getHistoryDirectory(), { withFileTypes: true });
     const records = await Promise.all(
       entries
-        .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+        .filter((entry) => entry.name !== "new-chat-draft" && entry.isDirectory() && !entry.name.startsWith("."))
         .map((entry) => readStoredConversationRecord(path.join(getHistoryDirectory(), entry.name))),
     );
     return records.filter((record): record is StoredConversationRecord => record !== undefined);

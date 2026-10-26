@@ -152,6 +152,8 @@
   }
 }
 .compactComposerUsage .usagePopover {
+  background: transparent;
+  backdrop-filter: none;
   position: static;
   width: 100%;
   max-height: none;
@@ -197,6 +199,8 @@
   z-index: 30;
   border: 1px solid var(--vscode-menu-border, var(--border-color));
   background: var(--vscode-menu-background, var(--bg-secondary));
+  background: color-mix(in srgb, var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity), transparent);
+  backdrop-filter: var(--floating-surface-filter);
   color: var(--vscode-menu-foreground, var(--text-primary));
   border-radius: 12px;
   width: max-content;
@@ -208,7 +212,7 @@
   bottom: calc(100% + 8px);
   left: 0;
   overflow-y: auto;
-  box-shadow: 0 12px 32px #0008;
+  box-shadow: 0 6px 18px #0003;
 }
 .usagePicker {
   flex: none;
@@ -404,6 +408,8 @@
   z-index: 30;
   border: 1px solid var(--vscode-menu-border, var(--border-color));
   background: var(--vscode-menu-background, var(--bg-secondary));
+  background: color-mix(in srgb, var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity), transparent);
+  backdrop-filter: var(--floating-surface-filter);
   color: var(--vscode-menu-foreground, var(--text-primary));
   border-radius: 12px;
   width: min(310px, calc(100vw - 20px));
@@ -413,7 +419,7 @@
   right: 0;
   bottom: calc(100% + 8px);
   overflow-y: auto;
-  box-shadow: 0 12px 32px #0008;
+  box-shadow: 0 6px 18px #0003;
   user-select: text;
 }
 .usagePopoverHeader {
@@ -591,9 +597,13 @@
 .selectTooltipWrapper {
   min-width: 0;
   display: inline-flex;
+  flex: none;
   select {
     text-overflow: ellipsis;
-    min-width: 0;
+    width: max-content;
+    min-width: 16ch;
+    max-width: 200px;
+    white-space: nowrap;
   }
 }
 .attachmentPickerTrigger {
@@ -612,4 +622,17 @@
   &:hover {
     background: var(--control-hover-bg);
   }
+}
+
+.chatSuggestionTrigger {
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  padding: 5px;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: var(--control-radius);
+  cursor: pointer;
+  &:hover:not(:disabled) { background: var(--control-hover-bg); color: var(--text-primary); }
+  &:disabled { opacity: .4; cursor: not-allowed; }
 }
