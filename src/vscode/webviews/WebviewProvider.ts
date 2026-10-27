@@ -388,7 +388,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       if (message.type === "revertWorkspaceTurn") {await this.revertTurn(message.conversationId, message.generationId);}
       const review = await store.review(roots, message.generationId);
       if (message.type === "reviewWorkspaceTurn") {
-        const file = await vscode.window.showQuickPick(review.paths, { placeHolder: "Review files changed during this turn" });
+        const file = message.path ?? await vscode.window.showQuickPick(review.paths, { placeHolder: "Review files changed during this turn" });
+        if (file && !review.paths.includes(file)) {throw new Error("This file is not part of the selected turn");}
         if (file) {
           await this.changeDiffViewer.openSaved(file, await store.diff(roots, message.generationId, file), {
             conversationId: message.conversationId, generationId: message.generationId,

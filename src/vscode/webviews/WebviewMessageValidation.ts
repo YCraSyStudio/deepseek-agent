@@ -191,7 +191,8 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
     case "getWorkspaceTurn":
     case "revertWorkspaceTurn":
     case "reviewWorkspaceTurn":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "generationId"]) &&
+      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "generationId", ...(value.type === "reviewWorkspaceTurn" ? ["path"] : [])]) &&
+        (value.path === undefined || isNonEmptyBoundedString(value.path, 32_768)) &&
         isNonEmptyBoundedString(value.requestId, 512) &&
         typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
         typeof value.generationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.generationId);

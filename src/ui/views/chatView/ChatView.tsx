@@ -193,6 +193,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, []);
 
   const removeImageAttachment = useCallback((attachment: ImageAttachment) => {
+    imageAttachmentsRef.current = imageAttachmentsRef.current.filter(item => item.id !== attachment.id);
     setImageAttachments((items) => items.filter((item) => item.id !== attachment.id));
     getVsCodeApi()?.postMessage({
       type: "deleteImageAttachment",
@@ -219,6 +220,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const resolveImageUpload = useCallback((requestId: string, attachments: ImageAttachment[], error?: string) => {
     const result = clipboardUploads.current.complete(requestId, attachments, error);
     setPendingImages(clipboardUploads.current.previews());
+    imageAttachmentsRef.current = [...imageAttachmentsRef.current, ...result.accepted].slice(0, 8);
     for (const attachment of result.discarded) {
       getVsCodeApi()?.postMessage({ type: "deleteImageAttachment", requestId: crypto.randomUUID(), attachment });
     }

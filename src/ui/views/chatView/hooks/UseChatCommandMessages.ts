@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type {
   GenerationSnapshot,
   ImageAttachment,
@@ -69,7 +69,6 @@ export function useChatCommandMessages({
   refs,
   setters,
 }: UseChatCommandMessagesOptions): void {
-  const awaitingMessages = useRef(new Map<string, string>());
   useEffect(() => {
     const handleMessage = (event: MessageEvent<ChatCommandMessage>) => {
       const message = event.data;
@@ -94,35 +93,21 @@ export function useChatCommandMessages({
         requestAnimationFrame(focusInput);
       }
       if (message.type === "clearChat") {
-        awaitingMessages.current.clear();
         clearChatState(refs, setters);
       }
       if (message.type === "workspaceContextChanged") {
         applyWorkspaceContext(message, refs, setters);
       }
       if (message.type === "generationAccepted") {
-        awaitingMessages.current.set(message.generationId, message.clientRequestId);
         applyGenerationAccepted(message, refs, setters);
-      }
-      if (message.type === "addMessage" && message.message.role === "user") {
-        const requestId = awaitingMessages.current.get(message.generationId);
-        if (requestId) {
-          clearSubmittedDraft(requestId, refs, setters);
-          awaitingMessages.current.delete(message.generationId);
-        }
-      }
-      if ((message.type === "streamError" || message.type === "streamDone") && message.generationId) {
-        const requestId = awaitingMessages.current.get(message.generationId);
-        if (requestId) {
-          refs.pendingRequests.current.delete(requestId);
-          awaitingMessages.current.delete(message.generationId);
-        }
+        clearSubmittedDraft(message.clientRequestId, refs, setters);
       }
       if (message.type === "messageQueued") {
         const submitted = refs.pendingRequests.current.get(message.clientRequestId);
         if (submitted && (!refs.conversationId.current || refs.conversationId.current === message.conversationId)) {
           refs.conversationId.current = message.conversationId;
           setters.setConversationId(message.conversationId);
+          clearSubmittedDraft(message.clientRequestId, refs, setters);
         }
       }
       if (message.type === "requestRejected") {
@@ -199,20 +184,20 @@ function applyGenerationAccepted(
   }
 }
 
-function clearSubmittedDraft(requestId: string, refs: ChatCommandRefs, setters: ChatCommandSetters): void {
+export function clearSubmittedDraft(requestId: string, refs: ChatCommandRefs, setters: ChatCommandSetters): void {
   const submitted = refs.pendingRequests.current.get(requestId);
   refs.pendingRequests.current.delete(requestId);
   if (submitted && refs.draft.current.trim() === submitted.text) {
     refs.draft.current = "";
-    setters.setDraft("");
   }
-  if (submitted && sameReferenceSet(refs.referencedFiles.current, submitted.referenceIds)) {
-    refs.referencedFiles.current = [];
-    setters.setReferencedFiles([]);
-  }
-  if (submitted && sameImageSet(refs.imageAttachments.current, submitted.imageIds)) {
-    refs.imageAttachments.current = [];
-    setters.setImageAttachments([]);
+  if (submitted) {
+    setters.setDraft(current => current.trim() === submitted.text ? "" : current);
+    const references = new Set(submitted.referenceIds);
+    refs.referencedFiles.current = refs.referencedFiles.current.filter(file => !references.has(referenceIdentity(file)));
+    setters.setReferencedFiles(current => current.filter(file => !references.has(referenceIdentity(file))));
+    const images = new Set(submitted.imageIds);
+    refs.imageAttachments.current = refs.imageAttachments.current.filter(image => !images.has(image.id));
+    setters.setImageAttachments(current => current.filter(image => !images.has(image.id)));
   }
 }
 
@@ -260,14 +245,6 @@ function applyGenerationSnapshot(
   if (recovered?.messages.length) {
     setters.setRecoveredDrafts(recovered.messages);
   }
-}
-
-function sameReferenceSet(files: ReferencedFile[], expected: string[]): boolean {
-  return files.length === expected.length && files.every((file, index) => referenceIdentity(file) === expected[index]);
-}
-
-function sameImageSet(images: ImageAttachment[], expected: string[]): boolean {
-  return images.length === expected.length && images.every((image, index) => image.id === expected[index]);
 }
 
 function referenceIdentity(file: ReferencedFile): string {

@@ -7,6 +7,7 @@ import {
 } from "@/contracts";
 import type { ModelProvider } from "@/application/ports";
 import { chatCompletion, chatCompletionStream, buildChatBody, type ChatRequest } from "./features/Chat";
+import { recoverMissingHistoricalFiles } from "./features/MissingHistoricalFiles";
 import { listModels } from "./Models";
 import { normalizeBetaToolMessages } from "./features/StrictTools";
 
@@ -21,7 +22,12 @@ export class DeepSeekModelProvider implements ModelProvider {
     const chatRequest = this._applyDefaults(request);
     const body = buildChatBody(chatRequest, this.config);
     const preparedRequest = { ...chatRequest, ...body } as ChatRequest;
-    const response = await chatCompletion(preparedRequest, this.config.apiKey, this.config.baseUrl, signal, this.config.betaFeaturesEnabled);
+    const send = (candidate: ChatRequest) => chatCompletion(candidate, this.config.apiKey, this.config.baseUrl, signal, this.config.betaFeaturesEnabled);
+    const response = await send(preparedRequest).catch(error => {
+      const recovered = recoverMissingHistoricalFiles(preparedRequest, error);
+      if (!recovered || signal?.aborted) {throw error;}
+      return send(recovered);
+    });
     return !this.config.betaFeaturesEnabled || !request.tools ? response : {
       ...response,
       choices: response.choices.map((choice) => ({ ...choice, message: normalizeBetaToolMessages([choice.message], request.tools!)[0] })),
@@ -34,7 +40,15 @@ export class DeepSeekModelProvider implements ModelProvider {
     const body = buildChatBody(chatRequest, this.config);
 
     const preparedRequest = { ...chatRequest, ...body } as ChatRequest;
-    await this._stream(preparedRequest, onChunk, signal);
+    let emitted = false;
+    const receive = (chunk: StreamChunk) => {emitted = true;onChunk(chunk);};
+    try {
+      await this._stream(preparedRequest, receive, signal);
+    } catch (error) {
+      const recovered = !emitted && recoverMissingHistoricalFiles(preparedRequest, error);
+      if (!recovered || signal?.aborted) {throw error;}
+      await this._stream(recovered, onChunk, signal);
+    }
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string }> {

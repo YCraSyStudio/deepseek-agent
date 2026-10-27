@@ -44,10 +44,17 @@ function EditedFilesSummary({ toolCallGroups, conversationId, generationId }: Ed
     (acc, file) => ({ additions: acc.additions + file.additions, deletions: acc.deletions + file.deletions }),
     { additions: 0, deletions: 0 },
   );
-  const visibleFiles = showAll ? files : files.slice(0, COLLAPSED_FILE_LIMIT);
-  const hiddenCount = files.length - visibleFiles.length;
+  const displayedFiles: TurnFileEdit[] = review?.paths.length
+    ? review.paths.map(path => files.find(file => file.path === path) ?? { path, additions: 0, deletions: 0 })
+    : files;
+  const visibleFiles = showAll ? displayedFiles : displayedFiles.slice(0, COLLAPSED_FILE_LIMIT);
+  const hiddenCount = displayedFiles.length - visibleFiles.length;
 
   const openChange = (file: TurnFileEdit) => {
+    if (review?.paths.includes(file.path) && conversationId && generationId) {
+      vscode.postMessage({ type: "reviewWorkspaceTurn", requestId: crypto.randomUUID(), conversationId, generationId, path: file.path });
+      return;
+    }
     vscode.postMessage({
       type: "openFileDiff",
       path: file.path,
@@ -59,7 +66,7 @@ function EditedFilesSummary({ toolCallGroups, conversationId, generationId }: Ed
       generationId,
     });
   };
-  const action = (type: "reviewWorkspaceTurn" | "revertWorkspaceTurn") => {
+  const action = (type: "revertWorkspaceTurn") => {
     if (!conversationId || !generationId) {return;}
     setPending(true);
     setError("");
@@ -78,8 +85,13 @@ function EditedFilesSummary({ toolCallGroups, conversationId, generationId }: Ed
           <span className="editedFilesAdditions">+{totals.additions}</span>
           <span className="editedFilesDeletions">-{totals.deletions}</span>
         </span> : null}
+        {review?.paths.length ? (
+          <button type="button" className="editedFilesRevert" disabled={pending || review.reverted} onClick={() => action("revertWorkspaceTurn")}>
+            <span className="codicon codicon-discard" aria-hidden="true" /> {t(review.reverted ? "tools.turnReverted" : "tools.revertTurn")}
+          </button>
+        ) : null}
       </div>
-      {files.length > 0 ? <ul className="editedFilesList">
+      {displayedFiles.length > 0 ? <ul className="editedFilesList">
         {visibleFiles.map((file) => (
           <li key={file.path}>
             <button
@@ -89,27 +101,19 @@ function EditedFilesSummary({ toolCallGroups, conversationId, generationId }: Ed
               onClick={() => openChange(file)}
             >
               <span className="editedFilePath">{file.path}</span>
-              <span className="editedFileStats">
+              {files.some(edit => edit.path === file.path) ? <span className="editedFileStats">
                 <span className="editedFilesAdditions">+{file.additions}</span>
                 <span className="editedFilesDeletions">-{file.deletions}</span>
-              </span>
+              </span> : null}
             </button>
           </li>
         ))}
       </ul> : null}
-      {files.length > COLLAPSED_FILE_LIMIT ? (
+      {displayedFiles.length > COLLAPSED_FILE_LIMIT ? (
         <button type="button" className="editedFilesToggle" onClick={() => setShowAll((value) => !value)}>
           <span className={`codicon codicon-chevron-${showAll ? "up" : "down"}`} aria-hidden="true" />
           {showAll ? t("tools.hideExtraFiles") : t("tools.showMoreFiles", { count: hiddenCount })}
         </button>
-      ) : null}
-      {review?.paths.length ? (
-        <div className="editedFilesActions">
-          <button type="button" disabled={pending} onClick={() => action("reviewWorkspaceTurn")}>{t("tools.reviewTurn")}</button>
-          <button type="button" disabled={pending || review.reverted} onClick={() => action("revertWorkspaceTurn")}>
-            <span className="codicon codicon-discard" aria-hidden="true" /> {t(review.reverted ? "tools.turnReverted" : "tools.revertTurn")}
-          </button>
-        </div>
       ) : null}
       {error ? <p className="editedFilesError" role="alert">{error}</p> : null}
     </div>

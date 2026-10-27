@@ -78,6 +78,7 @@ suite("webview message validation", () => {
       { type: "getAvailableTools" },
       { type: "getWorkspaceTurn", requestId: "turn-query", conversationId: "chat-1", generationId: "turn-1" },
       { type: "reviewWorkspaceTurn", requestId: "turn-review", conversationId: "chat-1", generationId: "turn-1" },
+      { type: "reviewWorkspaceTurn", requestId: "turn-file", conversationId: "chat-1", generationId: "turn-1", path: "src/index.ts" },
       { type: "revertWorkspaceTurn", requestId: "turn-revert", conversationId: "chat-1", generationId: "turn-1" },
       { type: "saveConfig", requestId: "snapshot-quota", config: { snapshotStorageLimitMb: 1024 } },
       { type: "openFile", path: "src/index.ts", line: 1 },
@@ -93,6 +94,9 @@ suite("webview message validation", () => {
   test("rejects malformed, oversized and unexpected payloads", () => {
     const messages = [
       null,
+      { type: "reviewWorkspaceTurn", requestId: "file", conversationId: "chat-1", generationId: "turn-1", path: "" },
+      { type: "reviewWorkspaceTurn", requestId: "file", conversationId: "chat-1", generationId: "turn-1", path: 42 },
+      { type: "revertWorkspaceTurn", requestId: "file", conversationId: "chat-1", generationId: "turn-1", path: "src/index.ts" },
       { type: "initializeProtocol", protocolVersion: 0 },
       { type: "initializeProtocol", protocolVersion: 5, injected: true },
       { type: "getConfig", injected: true },
