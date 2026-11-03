@@ -18,6 +18,7 @@ export interface SaveAssistantResultOptions {
   stopReason?: "user_cancelled" | "steered" | "workspace_changed" | "shutdown" | "deleted" | "history_transition";
   providerTranscript?: ProviderTranscript;
   usage?: UsageAggregate;
+  error?: string;
 }
 
 interface GenerationResultStoreDependencies {
@@ -39,25 +40,29 @@ export class GenerationResultStore {
     stopReason,
     providerTranscript,
     usage,
+    error,
   }: SaveAssistantResultOptions): Promise<void> {
     await state.saveMessages({
       messages: [
-        state.createMessage("assistant", content, {
+        ...(content || timeline.length || toolCalls?.length || !error ? [state.createMessage("assistant", content, {
           timeline,
           toolCalls,
           generationId,
           generationStatus: status,
           generationStopReason: stopReason,
           contextContent: status === "completed" ? content : buildInterruptedContextContent(content, toolCalls),
-          providerTranscript: status === "completed" ? undefined : providerTranscript,
+          providerTranscript,
           ...(usage !== undefined ? { usage } : {}),
-        }),
+        })] : []),
+        ...(error ? [state.createMessage("error", error, { generationId, generationStatus: "error" })] : []),
       ],
       model,
     });
 
     const record = this.dependencies.runs.get(generationId);
     if (record) {
+      record.errorPersisted = error !== undefined;
+      record.error = error;
       record.content = content;
       record.timeline = timeline;
       record.toolCalls = toolCalls ?? [];

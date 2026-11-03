@@ -75,6 +75,8 @@ def method_call(_connection, sender, path, interface, method, params, invocation
             metadata = {} if MODE == "missing-scope" else {"source_type": GLib.Variant("u", 1 if MODE == "wrong-scope" else 2)}
             streams = [(42, metadata)] * (2 if MODE == "multiple" else 1)
             result["streams"] = GLib.Variant("a(ua{sv})", streams)
+            if MODE == "restore":
+                result["restore_token"] = GLib.Variant("s", "rotated-token")
     # Intentionally signal before returning the method reply to exercise the race.
     connection.emit_signal(sender, handle, "org.freedesktop.portal.Request", "Response",
         GLib.Variant("(ua{sv})", (code, result)))

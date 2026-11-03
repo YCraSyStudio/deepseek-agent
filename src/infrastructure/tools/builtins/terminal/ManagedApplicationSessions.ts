@@ -170,8 +170,7 @@ async function drainOutput(application: Application): Promise<void> {
 
 export async function resolveApplicationEnvironment(cwd?: string): Promise<CommandEnvironment> {
   const environment = await resolveCommandEnvironment(cwd);
-  // The VS Code host describes its integrated terminal here; this owned child
-  // needs an executable shell, and does not allocate another terminal tab.
+  // Application previews use an executable system shell and never allocate terminal tabs.
   return { ...environment, shell: process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : process.env.SHELL ?? "/bin/sh" };
 }
 

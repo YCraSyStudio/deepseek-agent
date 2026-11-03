@@ -2,6 +2,7 @@ import type * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { GenerationCheckpointStore, HistoryManager } from "@/vscode/storage";
 import { logWarning } from "@/shared/logging/Logger";
+import { getErrorMessage } from "@/shared/utils/Errors";
 import type { ContextWindowStatus, ImageAttachment, QueuedGenerationMessage, ReferencedFile, WebviewToHandlerMessage, WorkspaceContextStatus } from "@/contracts";
 import type { ToolRegistry } from "@/application/tools";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/vscode/workspace";
 import { ConversationState } from "@/application/chat/ConversationState";
 import { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
+import { isTerminalGenerationState } from "@/domain/generation/GenerationState";
 import { ResourceGovernor } from "@/application/chat/ResourceGovernor";
 import type { StoredConversation } from "@/application/chat/ProviderTranscript";
 import type { SendMessagePayload } from "./Types";
@@ -36,7 +38,8 @@ import type { HeadlessWebRuntime } from "@/infrastructure/browser/HeadlessWebRun
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
 import { estimatedContextWindow } from "./context/ContextWindow";
 import { ManualCompaction } from "./context/ManualCompaction";
-import { closeConversationTerminals } from "@/vscode/tools/VsCodeTerminalExecution";
+import { shutdownConversationCommands } from "@/infrastructure/tools/builtins/terminal/ShellExecution";
+import { closeConversationKeepAliveTerminals, onKeepAliveTerminalsChanged, stopKeepAliveTerminal } from "@/infrastructure/tools/builtins/terminal/KeepAliveTerminals";
 import { closeConversationApplications } from "@/infrastructure/tools/builtins/terminal/ManagedApplicationSessions";
 
 export class ChatHandler {
@@ -57,6 +60,7 @@ export class ChatHandler {
   private selectedConversationId?: string;
   private webviewView?: vscode.WebviewView;
   private shuttingDown = false;
+  private readonly stopListeningForKeepAliveChanges: () => void;
   private readonly lastReplayedGeneration = new WeakMap<object, string>();
 
   constructor(
@@ -215,6 +219,12 @@ export class ChatHandler {
       secrets: this.secrets,
       settings: this.settings,
     });
+
+    this.stopListeningForKeepAliveChanges = onKeepAliveTerminalsChanged((conversationId) => {
+      if (this.selectedConversationId === undefined || this.selectedConversationId === conversationId) {
+        this.broadcaster.postRunningTasks(this.selectedConversationId);
+      }
+    });
   }
 
   handle(message: WebviewToHandlerMessage, webviewView: vscode.WebviewView): void {
@@ -310,6 +320,20 @@ export class ChatHandler {
       case "openConversationWorkspace":
         void this.workspaceCoordinator.open(message.conversationId);
         break;
+      case "getRunningTasks":
+        this.broadcaster.postRunningTasks(message.conversationId);
+        break;
+      case "stopRunningTask":
+        void stopKeepAliveTerminal(message.sessionId, message.conversationId).then(
+          () => this.broadcaster.postRunningTasks(message.conversationId),
+          (error: unknown) => this.broadcaster.post({
+            type: "requestRejected",
+            requestId: message.requestId,
+            action: "stopRunningTask",
+            error: getErrorMessage(error),
+          }),
+        );
+        break;
       default:
         logWarning(`[ChatHandler] Unknown message: ${message.type}`);
     }
@@ -349,7 +373,8 @@ export class ChatHandler {
   }
 
   forgetConversation(id: string): boolean {
-    closeConversationTerminals(id);
+    void shutdownConversationCommands(id);
+    void closeConversationKeepAliveTerminals(id);
     void closeConversationApplications(id);
     const active = this.coordinator.getActiveForConversation(id);
     if (active) {
@@ -427,11 +452,14 @@ export class ChatHandler {
 
   async shutdown(): Promise<void> {
     this.shuttingDown = true;
+    this.stopListeningForKeepAliveChanges();
     this.manualCompaction.dispose();
     await Promise.allSettled([...this.runs.values()].map((record) => this.checkpoints.checkpoint(record, true)));
     for (const record of this.runs.values()) {
-      transitionGenerationRun(record, "interrupted");
       record.session.cancel();
+      if (!isTerminalGenerationState(record.status)) {
+        transitionGenerationRun(record, "interrupted");
+      }
     }
     await this.coordinator.shutdown();
     await this.headlessWebRuntime.dispose();

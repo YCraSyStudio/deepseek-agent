@@ -1,3 +1,4 @@
+import { HistoricalFileRecovery } from "./MissingHistoricalFiles";
 import { buildApiUrl, deepseekFetch } from "@/infrastructure/deepseek/client/DeepSeekFetch";
 import { readSSEStream } from "@/infrastructure/deepseek/streaming/ReadSSEStream";
 import { DEFAULT_CONFIG, type AppConfig, type ChatCompletionRequest, type ChatCompletionResponse, type StreamChunk } from "@/contracts";
@@ -54,7 +55,7 @@ export function buildChatBody(request: Partial<ChatRequest>, config: AppConfig):
     body.stop = request.stop;
   }
   if (request.tools) {
-    body.tools = prepareProviderTools(request.tools, config.betaFeaturesEnabled === true);
+    body.tools = prepareProviderTools(request.tools, config.strictToolCallsEnabled === true);
   }
   if (request.tool_choice) {
     body.tool_choice = request.tool_choice;
@@ -70,21 +71,11 @@ export function buildChatBody(request: Partial<ChatRequest>, config: AppConfig):
   return body;
 }
 
-export async function chatCompletion(request: ChatRequest, apiKey: string, baseUrl: string, signal?: AbortSignal, betaFeaturesEnabled = false): Promise<ChatResponse> {
+export async function chatCompletion(request: ChatRequest, apiKey: string, baseUrl: string, signal?: AbortSignal, betaFeaturesEnabled = false, historicalFiles?: HistoricalFileRecovery): Promise<ChatResponse> {
   validatePrefixRequest(request, betaFeaturesEnabled);
   request = prepareTransportRequest(request, betaFeaturesEnabled);
   baseUrl = resolveDeepSeekApiBaseUrl(baseUrl, betaFeaturesEnabled);
-  const url = buildApiUrl(baseUrl, "chat/completions");
-  const response = await deepseekFetch({
-    pathOrUrl: url,
-    apiKey,
-    baseUrl,
-    requestInit: {
-      method: "POST",
-      body: JSON.stringify({ ...request, stream: false }),
-      signal,
-    },
-  });
+  const response = await fetchChatResponse({ ...request, stream: false }, apiKey, baseUrl, signal, historicalFiles);
   return parseChatCompletionResponse(await readBoundedJson(response, MAX_CHAT_RESPONSE_BYTES));
 }
 
@@ -95,6 +86,7 @@ interface ChatCompletionStreamOptions {
   onChunk: (chunk: ChatStreamChunk) => void;
   signal?: AbortSignal;
   betaFeaturesEnabled?: boolean;
+  historicalFiles?: HistoricalFileRecovery;
 }
 
 export async function chatCompletionStream(options: ChatCompletionStreamOptions): Promise<void> {
@@ -102,7 +94,6 @@ export async function chatCompletionStream(options: ChatCompletionStreamOptions)
   const request = prepareTransportRequest(options.request, options.betaFeaturesEnabled === true);
   validatePrefixRequest(request, options.betaFeaturesEnabled === true);
   const baseUrl = resolveDeepSeekApiBaseUrl(options.baseUrl, options.betaFeaturesEnabled === true);
-  const url = buildApiUrl(baseUrl, "chat/completions");
   let finishReason = "stop";
   let emittedDone = false;
   let contentBytes = 0;
@@ -116,20 +107,9 @@ export async function chatCompletionStream(options: ChatCompletionStreamOptions)
     onChunk({ type: "done", finish_reason: finishReason });
   };
 
-  const response = await deepseekFetch({
-    pathOrUrl: url,
-    apiKey,
-    baseUrl,
-    requestInit: {
-      method: "POST",
-      body: JSON.stringify({
-        ...request,
-        stream: true,
-        ...(isOfficialDeepSeekEndpoint(baseUrl) ? { stream_options: { include_usage: true } } : {}),
-      }),
-      signal,
-    },
-  });
+  const response = await fetchChatResponse({ ...request, stream: true,
+    ...(isOfficialDeepSeekEndpoint(baseUrl) ? { stream_options: { include_usage: true } } : {}),
+  }, apiKey, baseUrl, signal, options.historicalFiles);
 
   const reader = response.body?.getReader();
   if (!reader) {
@@ -178,6 +158,19 @@ export async function chatCompletionStream(options: ChatCompletionStreamOptions)
   });
 }
 
+/** Retry only an HTTP rejection before any stream data or tool execution, at most once. */
+async function fetchChatResponse(request: ChatRequest, apiKey: string, baseUrl: string, signal?: AbortSignal, recovery = new HistoricalFileRecovery(request.messages)): Promise<Response> {
+  const prepared = recovery.prepare(request);
+  const send = (candidate: ChatRequest) => deepseekFetch({ pathOrUrl: buildApiUrl(baseUrl, "chat/completions"), apiKey, baseUrl,
+    requestInit: { method: "POST", body: JSON.stringify(candidate), signal } });
+  try {return await send(prepared);}
+  catch (error) {
+    const recovered = !signal?.aborted && recovery.recover(prepared, error);
+    if (!recovered) {throw error;}
+    return send(recovered);
+  }
+}
+
 function validatePrefixRequest(request: ChatRequest, betaEnabled: boolean): void {
   for (const [index, message] of request.messages.entries()) {
     if (!message.prefix) {continue;}
@@ -190,12 +183,31 @@ function validatePrefixRequest(request: ChatRequest, betaEnabled: boolean): void
 }
 
 function prepareTransportRequest(request: ChatRequest, betaEnabled: boolean): ChatRequest {
-  if (betaEnabled) {return request;}
-  validatePrefixRequest(request, false);
-  return { ...request,
-    messages: request.messages.map(({ prefix: _prefix, ...message }) => message),
-    ...(request.tools ? { tools: prepareProviderTools(request.tools, false) } : {}),
+  const normalized = normalizeThinkingToolCallMessages(request);
+  if (betaEnabled) {return normalized;}
+  validatePrefixRequest(normalized, false);
+  return { ...normalized,
+    messages: normalized.messages.map(({ prefix: _prefix, ...message }) => message),
+    ...(normalized.tools ? { tools: prepareProviderTools(normalized.tools, false) } : {}),
   };
+}
+
+/**
+ * Thinking requests with tools require reasoning_content on ALL assistant turns,
+ * including final answers and host observations. Preserve provider reasoning verbatim;
+ * use an empty string only for legacy/synthetic messages that have none.
+ */
+function normalizeThinkingToolCallMessages(request: ChatRequest): ChatRequest {
+  if (request.thinking?.type !== "enabled") {return request;}
+  let changed = false;
+  const messages = request.messages.map((message) => {
+    if (message.role !== "assistant" || typeof message.reasoning_content === "string") {
+      return message;
+    }
+    changed = true;
+    return { ...message, reasoning_content: "" };
+  });
+  return changed ? { ...request, messages } : request;
 }
 
 interface DeepSeekStreamDelta {

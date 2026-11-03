@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { getGenerationCheckpointPath, getHistoryDirectory, getLegacyGenerationCheckpointDirectory } from "./UserDataPaths";
-import { link, copyFile, mkdir, readFile, lstat, readdir, realpath, rename, rm, rmdir, unlink } from "node:fs/promises";
+import { link, copyFile, mkdir, readFile, lstat, readdir, realpath, rm, rmdir, unlink } from "node:fs/promises";
 import * as path from "node:path";
 import { withFileLock } from "./JsonFileStorage";
+import { mergeLegacyData } from "./MergeUserData";
 
 /** Remove the obsolete runtime directories left by older extension versions. */
 export async function removeLegacyRuntimes(directory: string): Promise<void> {
@@ -73,7 +74,7 @@ export async function migrateGenerationCheckpoints(): Promise<void> {
   });
 }
 
-/** Run on upgrade only while the legacy root exists; never overwrite destination data. */
+/** Merge legacy data on upgrade, preserving differing originals before removing the old root. */
 export async function migrateUserDataDirectory(legacyDirectory: string, directory: string): Promise<void> {
   const legacy = path.resolve(legacyDirectory);
   const destination = path.resolve(directory);
@@ -102,19 +103,29 @@ export async function migrateUserDataDirectory(legacyDirectory: string, director
 
     await withFileLock(path.join(legacy, "settings.json"), () =>
       withFileLock(path.join(destination, "settings.json"), async () => {
-        const entries = (await readdir(legacy)).filter((name) => name !== "settings.json.lock");
-        for (const name of entries) {
-          if (await entryExists(path.join(destination, name))) {
-            throw new Error(`Agent data migration conflict: ${name} already exists at the destination; both copies were preserved`);
-          }
-        }
-        for (const name of entries) {
-          await rename(path.join(legacy, name), path.join(destination, name));
-        }
+        await mergeLegacyData(legacy, destination);
       }),
     );
     await rmdir(legacy);
   });
+}
+
+/** Delete temporary originals only after the extension has loaded the migrated storage. */
+export async function completeUserDataMigration(legacyDirectory: string, directory: string): Promise<void> {
+  const backup = path.join(directory, "migration-backups");
+  if (!await entryExists(backup)) {return;}
+  await withFileLock(path.join(directory, ".legacy-migration"), () =>
+    withFileLock(path.join(directory, "settings.json"), async () => {
+      if (await entryExists(legacyDirectory) || await entryExists(path.join(directory, "generation-checkpoints")) ||
+        await entryExists(path.join(directory, "settings.json.transaction.json"))) {return;}
+      const root = await lstat(directory);
+      const originals = await lstat(backup);
+      if (!root.isDirectory() || root.isSymbolicLink() || !originals.isDirectory() || originals.isSymbolicLink()) {
+        throw new Error("Refusing redirected migration cleanup");
+      }
+      await rm(backup, { recursive: true, force: true });
+    }),
+  );
 }
 
 async function entryExists(file: string): Promise<boolean> {

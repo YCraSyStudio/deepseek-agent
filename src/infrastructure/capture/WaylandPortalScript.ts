@@ -16,6 +16,13 @@ try:
 except (ImportError, ValueError):
     sys.exit("Wayland capture requires system Python 3 with PyGObject, Gio and GStreamer introspection (python3-gi, gir1.2-gstreamer-1.0), plus the GStreamer PipeWire and PNG plugins.")
 
+try:
+    gi.require_version("GLibUnix", "2.0")
+    from gi.repository import GLibUnix
+    add_unix_signal = GLibUnix.signal_add
+except (ImportError, ValueError):
+    add_unix_signal = GLib.unix_signal_add
+
 DEST = "org.freedesktop.portal.Desktop"
 ROOT = "/org/freedesktop/portal/desktop"
 IFACE = "org.freedesktop.portal.ScreenCast"
@@ -68,7 +75,8 @@ def attach_frame_crop(source, crop, source_type, on_error):
     source.get_static_pad("src").add_probe(Gst.PadProbeType.BUFFER, prepare_frame)
 
 class PortalCapture:
-    def __init__(self, destination, source_type):
+    def __init__(self, destination, source_type, options):
+        self.options = options
         self.destination = destination
         self.source_type = source_type
         self.connection = None
@@ -153,9 +161,16 @@ class PortalCapture:
         if props.get("AvailableCursorModes", 0) & 1:
             options["cursor_mode"] = GLib.Variant("u", 1)
         if props["version"] >= 4:
-            options["persist_mode"] = GLib.Variant("u", 0)
+            options["persist_mode"] = GLib.Variant("u", 2 if self.options.get("persistent") else 0)
+            restore = self.options.get("restore_token")
+            if self.options.get("persistent") and isinstance(restore, str) and 0 < len(restore) <= 4096:
+                options["restore_token"] = GLib.Variant("s", restore)
         self.request("SelectSources", "(oa{sv})", (self.session,), options)
         started = self.request("Start", "(osa{sv})", (self.session, ""), {})
+        restore = started.get("restore_token")
+        if self.options.get("persistent") and isinstance(restore, str) and 0 < len(restore) <= 4096:
+            # Rotate the single-use authorization even if frame capture later fails.
+            print(json.dumps({"restore_token": restore}), flush=True)
         streams = started.get("streams", [])
         if len(streams) != 1 or streams[0][1].get("source_type") != self.source_type:
             raise RuntimeError("Desktop portal returned an unexpected capture source; no image was read")
@@ -237,10 +252,10 @@ class PortalCapture:
             self.connection.flush_sync(None)
 
 def main():
-    capture = PortalCapture(sys.argv[1], int(sys.argv[2]))
-    sources = [GLib.unix_signal_add(GLib.PRIORITY_HIGH, sig, capture.stop,
+    capture = PortalCapture(sys.argv[1], int(sys.argv[2]), json.loads(sys.stdin.read() or "{}"))
+    sources = [add_unix_signal(GLib.PRIORITY_HIGH, sig, capture.stop,
         "Wayland capture cancelled") for sig in (signal.SIGTERM, signal.SIGINT)]
-    deadline = GLib.timeout_add_seconds(105, capture.stop, "Desktop portal capture timed out")
+    deadline = GLib.timeout_add_seconds(105, capture.stop, "Desktop portal capture timed out. Select a window in the system sharing dialog and retry; the application cannot select it automatically.")
     try:
         capture.capture()
         print(json.dumps({"source_type": capture.source_type}))

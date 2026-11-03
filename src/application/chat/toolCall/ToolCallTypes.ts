@@ -13,6 +13,7 @@ export interface ToolCallCycleOptions {
   getToolsForRound?: (phase: "reasoning" | "tools", round: number) => Promise<ToolDefinition[]> | ToolDefinition[];
   onRoundStart?: (round: number, toolCalls: ToolCall[]) => Promise<void> | void;
   onToolResult?: (toolCallId: string, result: string) => void;
+  afterToolRound?: (round: number) => Promise<ChatMessage[] | undefined>;
   onTranscriptUpdate?: (messages: ChatMessage[], status: "complete" | "incomplete") => void;
   onUsage?: (usage?: ProviderUsage) => void;
   prepareRequestContext?: (
@@ -32,6 +33,8 @@ export interface ToolCallCycleOptions {
   userId?: string;
   privacyMinimizeData?: boolean;
   betaFeaturesEnabled?: boolean;
+  strictToolCallsEnabled?: boolean;
+  isStrictToolCallsEnabled?: () => boolean;
   isBetaFeaturesEnabled?: () => boolean;
   budgetManager?: GenerationBudgetManager;
   onRecoveryStarted?: () => Promise<void> | void;

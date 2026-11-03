@@ -7,23 +7,23 @@
 Run:
 
 ```bash
-pnpm run compile
-pnpm run lint
-pnpm run build
-pnpm run test:unit
-pnpm run test:integration
+npm run compile
+npm run lint
+npm run build
+npm run test:unit
+npm run test:integration
 git diff --check
 ```
 
 ## Dependency updates
 
-Use Node 24 and the pnpm version pinned in package.json (currently 12.15.0). CI uses pnpm install --frozen-lockfile for the complete workspace, including web-doc. npm ci is also supported for the extension through package-lock.json; install the documentation with pnpm. Keep both lockfiles synchronized when updating root dependencies and audit the full pnpm workspace, not only npm's root graph.
+Use Node 26 LTS locally. npm 12.2.1 is pinned in package.json and installed explicitly in CI; the workflow currently uses Node 24. Run `npm ci` at the repository root to install both the extension and the `web-doc` workspace from the single package-lock.json. Update this lockfile with `npm install` when changing dependencies. Run `npm audit` from the root to audit the complete workspace.
 
-Keep security overrides consistent in package.json and pnpm-workspace.yaml: diff 9, serialize-javascript 7.1.4, glob 13 under Mocha, and MSAL Node 7.1.1 under Azure Identity. These patch the legacy Mocha used by @vscode/test-cli and the Entra authentication dependency of VSCE; remove overrides when their upstream ranges include safe versions. Do not force Mocha 12 into test-cli, whose programmatic runner still requires Mocha 11. The extension's unit runner uses Mocha 12 and the integration runner is verified separately in VS Code.
+Keep security overrides in the root package.json: diff 9, serialize-javascript 7.1.4, glob 13 under Mocha, MSAL Node 7.1.1 under Azure Identity, and basic-ftp 6.2.3 under get-uri. These patch the legacy Mocha used by @vscode/test-cli and the Entra authentication dependency of VSCE; remove overrides when their upstream ranges include safe versions. Do not force Mocha 12 into test-cli, whose programmatic runner still requires Mocha 11. The extension's unit runner uses Mocha 12 and the integration runner is verified separately in VS Code.
 
 TypeScript stays on 6 because typescript-eslint and Astro do not yet accept 7, and the architecture checks use its JavaScript compiler API. Node types stay on 24; VS Code types are pinned below the extension's minimum supported editor version. Raising either type baseline requires reviewing runtime/editor compatibility.
 
-Only esbuild and @vscode/vsce-sign need npm lifecycle-script approvals here. npm approvals are version-pinned in allowScripts; pnpm uses the allowBuilds list. Review newly requested scripts individually rather than enabling all scripts. VSCE 4 removes the old keytar/prebuild-install chain.
+Only esbuild and @vscode/vsce-sign need npm lifecycle-script approvals here. npm approvals are version-pinned in allowScripts. Review newly requested scripts individually rather than enabling all scripts. VSCE 4 removes the old keytar/prebuild-install chain.
 
 ## Maintaining the test suite
 
@@ -33,12 +33,23 @@ Avoid assertions that copy exact prompt wording, descriptions or helper return o
 
 When a rendering or execution test already covers a helper branch, prefer that behavioral test over a duplicate helper-only assertion. Group validation inputs with the same setup in a labeled case table, retaining every error case. Test count is not a coverage target; do not delete unique regressions or merge unrelated scenarios just to lower it.
 
+## Choosing unit or end-to-end
+
+The suite is a pyramid, not a replacement exercise:
+
+- **End-to-end flows** (`src/test/integration`) verify wiring between layers that a mock would hide: message admission, streaming, tool confirmation, workspace mutation, diff review, turn revert, history promotion and cancellation. If several unit tests only assert the order in which collaborators are called, one flow belongs here instead.
+- **Unit tests** (`src/test` outside `integration`) keep what a flow cannot reach cheaply or deterministically: every branch of validation and error mapping, cancellation at each phase, concurrency races, persistence migrations and corruption, security decisions, and any behavior that needs a private D-Bus portal, native desktop capture or GStreamer. Keep those even when a flow covers the happy path.
+
+A new behaviour needs one primary test at the lowest level that can still fail for a real defect, plus a flow assertion only when the wiring itself is the risk. Move a mock-heavy test into a flow when every assertion can be observed through the public entry point; do not duplicate the same scenario at both levels.
+
+The user-data directory is recreated per integration run and the editor is launched with `--disable-workspace-trust`, so flows can mutate real files. Flows create their own fixtures and delete them in `teardown`.
+
 ## Web documentation
 
 Run in `web-doc`:
 
 ```bash
-pnpm run build
+npm run build
 ```
 
 ## Manual validation
@@ -91,10 +102,20 @@ In Extension Development Host:
 
 ## Test layout
 
-Unit tests are grouped under `src/test/chat`, `deepseek`, `tools`, `security`,
-`storage`, `webview`, and `architecture`. The unit runner discovers tests
-recursively and explicitly excludes `src/test/integration`; VS Code integration
-tests use their own build and runner.
+Unit tests live under `src/test` and follow the feature area they verify:
+`chat/{context,conversation,generation,toolCall}`, `deepseek/{client,completions,files,prompt,provider,streaming,web}`,
+`tools/{browser,builtins,capture,execution}`, `storage/{conversation,generation,images,instructions,migration,persistence,settings,workspace}`,
+`webview/{host,ui}`, `security/{approval,commands,credentials,network,redaction}`,
+and the top-level `architecture`, `domain`, `extension`, `release`, and `usage` suites.
+Shared harnesses stay next to the suite that owns them (for example
+`chat/toolCall/execution/executionHarness.ts`); external fixtures remain in
+`src/test/fixtures`. The unit runner discovers `.test.ts` files recursively and
+explicitly excludes `src/test/integration`; VS Code integration tests use their
+own build and runner. The `integration` suite drives real flows through
+production entry points with a scripted provider transport
+(`integration/support/ChatE2e.ts`): chat streaming, queueing, cancellation,
+tool confirmation, edit review, turn revert, provider failure and incognito
+history promotion. Add a flow there when the risk is the wiring, not a branch.
 
 ## API validation
 

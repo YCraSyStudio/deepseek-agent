@@ -39,6 +39,8 @@ function App() {
   }, []);
 
   const handleCancelWorkspaceMismatch = useCallback(() => {
+    beginNavigationRequest();
+    selectNewChatDraft();
     setLoadedConversation(null);
     setConversationUsage(undefined);
     setContextWindow(undefined);

@@ -17,6 +17,7 @@ export function changedUiPaths(calls: readonly StoredToolCall[]): string[] {
 }
 export function knownCaptureTarget(latest?: ScreenshotMetadata): CaptureScreenshotRequest | undefined {
   if (!latest || latest.kind === "screen") {return undefined;}
+  if (latest.captureRequest && latest.captureRequest.target !== "screen") {return { ...latest.captureRequest };}
   if (latest.kind === "web") {
     try {const url = new URL(latest.target); if (["http:", "https:"].includes(url.protocol) && !url.username && !url.password) {return { target: "web", url: latest.target, width: latest.width, height: latest.height };}} catch {return undefined;}
   }

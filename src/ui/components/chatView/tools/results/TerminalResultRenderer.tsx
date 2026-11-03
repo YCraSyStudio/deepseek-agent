@@ -1,17 +1,21 @@
+import type { ApplicationSessionResult } from "@/contracts/ApplicationSession";
 import type { TerminalCommandResult } from "@webview/views/chatView/utils/FilePreviewTypes";
 import { t } from "@webview/i18n";
 import { useState } from "react";
 
-export function renderTerminalResult(result: TerminalCommandResult) {
-  const duration =
-    result.durationMs < 1000
-      ? `${Math.round(result.durationMs)} ms`
-      : `${(result.durationMs / 1000).toFixed(1)} s`;
-  const outcome = result.cancelled
-    ? t("results.cancelled")
-    : result.timedOut
-      ? t("results.timedOut")
-      : t("results.exitCode", { code: result.exitCode ?? t("results.unknown") });
+export function renderTerminalResult(result: TerminalCommandResult | ApplicationSessionResult) {
+  const session = result.kind === "application_session" ? result : undefined;
+  const duration = result.kind === "command_result"
+    ? result.durationMs < 1000 ? `${Math.round(result.durationMs)} ms` : `${(result.durationMs / 1000).toFixed(1)} s`
+    : undefined;
+  const outcome = result.timedOut ? t("results.timedOut")
+    : session?.status === "running" ? t("results.processRunning")
+    : session?.status === "stopped" ? t("results.processStopped")
+    : result.kind === "command_result" && result.cancelled ? t("results.cancelled")
+    : t("results.exitCode", { code: result.exitCode ?? t("results.unknown") });
+  const outcomeClass = session?.status === "running" ? "running"
+    : !result.timedOut && (result.exitCode === 0 || (session?.status === "stopped" && session.terminationConfirmed))
+      && !(result.kind === "command_result" && result.cancelled) ? "success" : "failure";
   const stdoutPreviewTruncated = result.stdout.length > 16_000;
   const stderrPreviewTruncated = result.stderr.length > 16_000;
 
@@ -19,17 +23,15 @@ export function renderTerminalResult(result: TerminalCommandResult) {
     <div className="terminalResult">
       <div className="terminalMetadata" aria-label={t("results.terminalCommandMetadata")}>
         <span
-          className={`terminalOutcome ${
-            result.exitCode === 0 && !result.timedOut && !result.cancelled
-              ? "success"
-              : "failure"
-          }`}
+          className={`terminalOutcome ${outcomeClass}`}
         >
           {outcome}
         </span>
-        <span>{duration}</span>
+        {duration ? <span>{duration}</span> : null}
         <span title={result.cwd}>{t("results.cwdCwd", { cwd: result.cwd })}</span>
-        <span title={result.shell}>{t("results.shellShell", { shell: result.shell })}</span>
+        {result.kind === "command_result" ? <span title={result.shell}>{t("results.shellShell", { shell: result.shell })}</span> : null}
+        {session?.pid ? <span>PID {session.pid}</span> : null}
+        {session ? <span title={session.sessionId}>{t("results.sessionId", { id: session.sessionId })}</span> : null}
         {result.signal ? (
           <span>{t("results.signalSignal", { signal: result.signal })}</span>
         ) : null}
@@ -37,6 +39,7 @@ export function renderTerminalResult(result: TerminalCommandResult) {
           <span>{t("results.outputTruncated")}</span>
         ) : null}
       </div>
+      <pre className="terminalCommand">{result.command}</pre>
       {result.stdout ? (
         <details className="terminalStream" open>
           <summary>
@@ -63,7 +66,7 @@ export function renderTerminalResult(result: TerminalCommandResult) {
       ) : null}
       {!result.stdout && !result.stderr ? (
         <div className="filePreviewNotice">
-          {t("results.commandCompletedWithoutOutput")}
+          {session?.status === "running" ? t("results.waitingForOutput") : t("results.commandCompletedWithoutOutput")}
         </div>
       ) : null}
     </div>

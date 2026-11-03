@@ -62,6 +62,8 @@ export type WebviewToHandlerMessage =
   | { type: "getWorkspaceContext"; requestId: string; conversationId?: string }
   | { type: "rebindConversationWorkspace"; conversationId: string; workspaceRevision?: string }
   | { type: "openConversationWorkspace"; conversationId: string }
+  | { type: "getRunningTasks"; conversationId?: string }
+  | { type: "stopRunningTask"; requestId: string; conversationId?: string; sessionId: string }
   | { type: "selectAttachments"; requestId: string; conversationId?: string }
   | { type: "getPathCompletions"; requestId: number; query: string; conversationId?: string; workspaceRevision?: string }
   | { type: "getAvailableTools" }
@@ -69,4 +71,5 @@ export type WebviewToHandlerMessage =
   | { type: "deleteImageAttachment"; requestId: string; attachment: ImageAttachment }
   | { type: "openFile"; path: string; line?: number; conversationId?: string; workspaceRevision?: string }
   | { type: "openFileDiff"; path: string; diff?: string; beforeHash?: string; afterHash?: string; preview?: boolean; conversationId?: string; generationId?: string; workspaceRevision?: string }
-  | { type: "getWorkspaceTurn" | "revertWorkspaceTurn" | "reviewWorkspaceTurn"; requestId: string; conversationId: string; generationId: string };
+  | { type: "reviewWorkspaceTurn"; requestId: string; conversationId: string; generationId: string; path?: string }
+  | { type: "getWorkspaceTurn" | "revertWorkspaceTurn"; requestId: string; conversationId: string; generationId: string };

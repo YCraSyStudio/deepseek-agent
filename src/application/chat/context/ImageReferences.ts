@@ -11,7 +11,7 @@ export function buildImageReferenceContext(
   const blocks: string[] = [];
   if (images.length) {
     const routing = readsImagesNatively
-      ? "Image numbers identify conversation images; they do not require a tool call. Read images present as visual file parts directly. A stored image number or screenshot id alone does not provide visual content. If the requested image is not present visually, report that it is unavailable in your visual context; never infer its contents from metadata."
+      ? "Read images present as visual file parts directly without a tool call. A stored image number or screenshot id alone does not provide visual content. If a requested image is not present visually, call view_image with its screenshot_ids to reopen the stored original before declaring it unavailable. If retrieval fails, explain that the saved visual content is unavailable and request a new attachment only if needed. Never infer its contents from metadata or claim provider expiration merely because you cannot see an image."
       : "Use analyze_images with screenshot_ids when the user refers to image numbers; the current model does not read images natively.";
     blocks.push(`Conversation image references (stable numbers within this conversation):\n${images
       .map((image) => `- image ${image.id.slice("screenshot-".length)}: screenshot_id=${image.id}${minimizeMetadata ? "" : `; name=${JSON.stringify(image.fileName)}`}`)

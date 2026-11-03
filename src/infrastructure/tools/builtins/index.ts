@@ -1,3 +1,4 @@
+import { viewImageTool } from "./vision/ViewImage";
 import { captureScreenshotTool } from "./vision/CaptureScreenshot";
 import { completeCodeTool } from "./code/CompleteCode";
 import type { RegisteredTool, ToolEffect } from "@/application/tools/Types";
@@ -37,6 +38,7 @@ export const BUILT_IN_TOOLS: RegisteredTool[] = [
   withEffect({ definition: movePathDefinition, handler: movePathHandler, forcedHandler: movePathHandlerForced, metadata: movePathMetadata }, "workspace-mutation"),
   withEffect({ definition: deletePathDefinition, handler: deletePathHandler, forcedHandler: deletePathHandlerForced, metadata: deletePathMetadata }, "workspace-mutation"),
   withEffect(analyzeImagesTool, "external-effect"),
+  withEffect(viewImageTool, "external-effect"),
   withEffect({ definition: terminalCommandDefinition, handler: terminalCommandHandler, forcedHandler: terminalCommandHandlerForced, metadata: terminalCommandMetadata }, "workspace-mutation"),
 ];
 

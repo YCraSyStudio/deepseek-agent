@@ -6,7 +6,7 @@ import type {
   StoredConversation,
   StoredConversationMessage,
 } from "./ProviderTranscript";
-import { getFinalAssistantContent } from "./ProviderTranscript";
+import { compactCompletedProviderTranscript, getFinalAssistantContent } from "./ProviderTranscript";
 
 export interface ApiContextUnit {
   generationId: string;
@@ -259,7 +259,12 @@ function toApiMessages(messages: StoredConversationMessage[]): ChatMessage[] {
     }
 
     const content = message.contextContent ?? message.content;
-    return content.trim() ? [{ role: "assistant" as const, content }] : [];
+    const finalMessage = message.providerTranscript?.status === "complete"
+      ? message.providerTranscript.messages.slice().reverse().find((entry) => entry.role === "assistant" && !entry.tool_calls?.length)
+      : undefined;
+    return content.trim() ? [{ role: "assistant" as const, content,
+      ...(typeof finalMessage?.reasoning_content === "string" ? { reasoning_content: finalMessage.reasoning_content } : {}),
+    }] : [];
   });
 }
 
@@ -280,6 +285,9 @@ function compactCompletedMessage(message: StoredConversationMessage): StoredConv
   } = message;
   return {
     ...structuredClone(rest),
+    // Drop tool payloads from completed turns, but retain the final answer's
+    // reasoning: thinking requests with tools require it on subsequent turns.
+    providerTranscript: compactCompletedProviderTranscript(providerTranscript),
     contextContent: message.contextContent ?? getFinalAssistantContent(providerTranscript) ?? message.content,
   };
 }

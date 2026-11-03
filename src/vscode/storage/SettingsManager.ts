@@ -12,7 +12,7 @@ import {
 } from "@/application/settings/ConfigurationSchema";
 import { withFileLock } from "@/infrastructure/persistence/JsonFileStorage";
 import { getDefaultUserDataDirectory, getSettingsFilePath, getUserDataDirectory } from "@/infrastructure/persistence/UserDataPaths";
-import { migrateUserDataDirectory, migrateGenerationCheckpoints, removeLegacyRuntimes } from "@/infrastructure/persistence/UserDataMigration";
+import { completeUserDataMigration, migrateUserDataDirectory, migrateGenerationCheckpoints, removeLegacyRuntimes } from "@/infrastructure/persistence/UserDataMigration";
 import { logWarning } from "@/shared/logging/Logger";
 
 type SettingsChangeListener = (config: AppConfig) => void;
@@ -59,7 +59,7 @@ export class SettingsManager {
         SettingsManager.currentConfig = initialConfig;
       }));
     } catch (error: unknown) {
-      SettingsManager.currentConfig = { ...normalizeConfig(initialSettings), historyEnabled: false };
+      SettingsManager.currentConfig = { ...normalizeConfig({}), historyEnabled: false };
       SettingsManager.persistenceError = error instanceof Error ? error.message : String(error);
     }
     SettingsManager.initialized = true;
@@ -74,9 +74,19 @@ export class SettingsManager {
     return SettingsManager.persistenceError;
   }
 
+  static async completeMigration(): Promise<string | undefined> {
+    if (!SettingsManager.initialized || SettingsManager.persistenceError) {return;}
+    try {
+      await completeUserDataMigration(path.join(os.homedir(), ".deepseek-agent"), getUserDataDirectory());
+    } catch (error: unknown) {
+      logWarning("[Storage] Could not remove temporary migration backups; will retry next startup", error);
+      return error instanceof Error ? error.message : String(error);
+    }
+  }
+
   static enterDegradedMode(error: unknown): void {
     SettingsManager.persistenceError = error instanceof Error ? error.message : String(error);
-    SettingsManager.currentConfig = { ...SettingsManager.currentConfig, historyEnabled: false };
+    SettingsManager.currentConfig = { ...normalizeConfig({}), historyEnabled: false };
     SettingsManager.revision += 1;
     SettingsManager.emitChange();
   }

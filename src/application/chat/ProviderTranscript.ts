@@ -66,6 +66,20 @@ export function getFinalAssistantContent(transcript: ProviderTranscript | undefi
   return undefined;
 }
 
+/** Retain final-answer reasoning without replaying completed tool payloads. */
+export function compactCompletedProviderTranscript(transcript: ProviderTranscript | undefined): ProviderTranscript | undefined {
+  if (transcript?.status !== "complete") {return transcript;}
+  for (let index = transcript.messages.length - 1; index >= 0; index--) {
+    const message = transcript.messages[index];
+    if (message.role === "assistant" && !message.tool_calls?.length) {
+      return typeof message.reasoning_content === "string"
+        ? { ...structuredClone(transcript), messages: [structuredClone(message)] }
+        : undefined;
+    }
+  }
+  return undefined;
+}
+
 export function createProviderTranscript(
   messages: ChatMessage[],
   status: ProviderTranscript["status"],

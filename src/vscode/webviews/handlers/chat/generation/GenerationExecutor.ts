@@ -1,6 +1,6 @@
+import { createNativeCaptureImages } from "@/infrastructure/deepseek/provider/NativeCaptureImages";
 import { readReusableInstruction } from "@/vscode/configuration/ReusableInstructions";
-import { randomUUID } from "node:crypto";
-import { automaticCapture, changedUiPaths, knownCaptureTarget } from "@/infrastructure/capture/AutomaticCapture";
+import { createAutomaticCaptureSession } from "@/infrastructure/capture/AutomaticCaptureSession";
 import { CaptureService } from "@/infrastructure/capture/CaptureService";
 import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 import { logWarning } from "@/shared/logging/Logger";
@@ -262,6 +262,7 @@ export class GenerationExecutor {
     });
     const workspaceTracking = await this.workspaceChanges.begin(task.conversationId, generationId, runState.isIncognito(), workspaceSnapshot, signal, config.snapshotStorageLimitMb);
     let visionAnalyzer: ReturnType<typeof createDelegatedVisionAnalyzer>;
+    let nativeCaptureImages: ReturnType<typeof createNativeCaptureImages>;
     try {
       if (workspaceTracking.notice) {
         await runState.updateMessageContext(userMessage.id, `${workspaceTracking.notice}\n\n---\n\n${payload.text}`);
@@ -287,6 +288,11 @@ export class GenerationExecutor {
         modelProviderFactory: this.dependencies.modelProviderFactory, usageAggregate,
         screenshots: runState.isIncognito() ? undefined : new ScreenshotStore(task.conversationId),
       });
+      if (!runState.isIncognito()) {
+        const screenshots = new ScreenshotStore(task.conversationId);
+        nativeCaptureImages = createNativeCaptureImages({ config: providerConfig, screenshots });
+
+      }
       const tools = selectGenerationTools(toolRegistry, {
         files: workspaceSnapshot.binding.capabilities.files,
         terminal: workspaceSnapshot.binding.capabilities.terminal,
@@ -301,7 +307,7 @@ export class GenerationExecutor {
         workspaceSnapshot,
         providerConfig.privacyMinimizeData,
       );
-      if (visionAnalyzer && config.automaticCaptureEnabled && !runState.isIncognito()) {
+      if (visionAnalyzer && !runState.isIncognito()) {
         const latest = await new ScreenshotStore(task.conversationId).lookup().catch(() => undefined);
         const system = messages.find((message) => message.role === "system");
         if (latest && system) {system.content = `${system.content ?? ""}\nLocal UI screenshot available: ${JSON.stringify({ id: latest.metadata.id, width: latest.metadata.width, height: latest.metadata.height })}. Use analyze_images to inspect it when relevant.`;}
@@ -326,6 +332,16 @@ export class GenerationExecutor {
       });
 
       if (tools.length > 0) {
+        const captureStore = new ScreenshotStore(task.conversationId);
+        const prepareAutomaticCapture = createAutomaticCaptureSession({
+          screenshots: captureStore,
+          unavailable: runState.isIncognito() ? "Automatic capture is unavailable in incognito conversations" : vscode.env.remoteName ? "Automatic capture is unavailable in remote workspaces" : undefined,
+          capture: request => new CaptureService(captureStore).capture(request, signal, { limit: 10 }),
+          inspect: async capture => {
+            if (nativeCaptureImages) {await nativeCaptureImages.add(capture.id, signal);}
+            return visionAnalyzer?.({ question: "Inspect this automatically captured UI after the completed edits. Describe the visible result and any rendering problems. Do not infer missing details.", screenshotIds: [capture.id] }, signal);
+          },
+        });
         const result = await session.run({
           messages,
           tools,
@@ -352,12 +368,25 @@ export class GenerationExecutor {
           trustedUserRequest: payload.text,
           authorizedUserUrls: extractHttpsUrls(payload.text),
           budgetManager: record.budgetManager,
-          captureScreenshot: runState.isIncognito() ? undefined : (request, captureSignal) => new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal),
+          prepareNativeImages: nativeCaptureImages?.prepare,
+          prepareAutomaticCapture,
+          captureScreenshot: runState.isIncognito() ? undefined : async (request, captureSignal) => {
+            const capture = await new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal);
+            try {await nativeCaptureImages?.add(capture.id, captureSignal);}
+            catch (error) {throw new Error(`Screenshot ${capture.id} was saved, but its native visual upload failed: ${getErrorMessage(error)}`);}
+            return capture;
+          },
           applicationSession: (request) => applications.execute(request),
-          analyzeImages: visionAnalyzer,
+          analyzeImages: nativeCaptureImages ? async (request, imageSignal) => {
+            const ids = request.screenshotIds ?? [];
+            if (!ids.length) {throw new Error("Specify the saved conversation image numbers to reopen.");}
+            for (const id of ids) {await nativeCaptureImages!.add(id, imageSignal);}
+            return JSON.stringify({ images: ids, status: "loaded", message: "Inspect the native visual file parts supplied in the next round. These are the original stored images, not new captures." });
+          } : visionAnalyzer,
           completeCode: createBetaCodeCompleter(providerConfig, () => this.dependencies.settings.load().betaFeaturesEnabled,
             (usage, model) => recordUsage(usageAggregate, "code_completion", usage, model)),
           isBetaFeaturesEnabled: () => this.dependencies.settings.load().betaFeaturesEnabled,
+          isStrictToolCallsEnabled: () => this.dependencies.settings.load().strictToolCallsEnabled,
           readInstruction: (id, instructionSignal) => readReusableInstruction(id, workspaceSnapshot, instructionSignal),
           revertWorkspace: async (targetGenerationId) => {
             if (runState.isIncognito()) {throw new Error("Persistent recovery snapshots are unavailable in incognito mode");}
@@ -376,31 +405,6 @@ export class GenerationExecutor {
             }),
         });
         if (result) {
-          if (!signal.aborted && !result.partial) {
-            const captureStore = new ScreenshotStore(task.conversationId);
-            const paths = changedUiPaths(result.toolCalls as StoredToolCall[] ?? []);
-            const automaticSettings = this.dependencies.settings.load();
-            if (automaticSettings.automaticCaptureEnabled && paths.length) {
-              const latest = runState.isIncognito() ? undefined : await captureStore.lookup().catch(() => undefined);
-              const automatic = await automaticCapture({ enabled: true, paths,
-                count: await captureStore.automaticCount().catch(() => automaticSettings.automaticCaptureLimit), limit: automaticSettings.automaticCaptureLimit,
-                target: knownCaptureTarget(latest?.metadata),
-                unavailable: runState.isIncognito() ? "Automatic capture is unavailable in incognito conversations" : vscode.env.remoteName ? "Automatic capture is unavailable in remote workspaces" : undefined,
-                capture: (request) => new CaptureService(captureStore).capture(request, signal, { limit: automaticSettings.automaticCaptureLimit }),
-              });
-              if (!signal.aborted && (automatic.capture || automatic.note)) {
-                const id = `auto-capture-${randomUUID()}`; const round = 0;
-                const captureResult = automatic.capture ? JSON.stringify(automatic.capture) : automatic.note!;
-                result.toolCalls ??= [];
-                result.toolCalls.push({ toolCallId: id, toolName: "capture_screenshot", arguments: JSON.stringify({ automatic: true }), result: captureResult, status: "completed", round });
-                const event = { id, type: "tool-group" as const, round, toolCallIds: [id] };
-                result.timeline.push(event);
-                await eventSink.publish({ type: "toolCallStarted", toolCalls: [{ id, type: "function", function: { name: "capture_screenshot", arguments: JSON.stringify({ automatic: true }) } }], round });
-                await eventSink.publish({ type: "streamTimelineToolGroup", event });
-                await eventSink.publish({ type: "toolCallResult", toolCallId: id, toolName: "capture_screenshot", result: captureResult, status: "completed" });
-              }
-            }
-          }
           await this.resultStore.save({
             content: result.content,
             timeline: result.timeline,
@@ -408,7 +412,10 @@ export class GenerationExecutor {
             toolCalls: result.toolCalls as StoredToolCall[] | undefined,
             state: runState,
             generationId,
-            status: signal.aborted || result.partial ? "interrupted" : "completed",
+            status: signal.aborted
+              ? (getGenerationStopReason(signal) === "user_cancelled" ? "cancelled" : "interrupted")
+              : result.error ? "error" : result.partial ? "interrupted" : "completed",
+            error: signal.aborted ? undefined : result.error,
             providerTranscript: result.providerTranscript,
             usage: usageAggregate,
           });
@@ -435,14 +442,17 @@ export class GenerationExecutor {
           providerTranscript: createProviderTranscript([{
             role: "assistant",
             content: result.content,
+            reasoning_content: result.reasoning,
           }], "complete"),
         });
       }
     } catch (error: unknown) {
       if (error instanceof PartialStreamError) {
         const stopReason = getGenerationStopReason(signal);
-        const status = stopReason === "user_cancelled" ? "cancelled" : "interrupted";
+        const failed = error.reason === "failed" && !signal.aborted;
+        const status = failed ? "error" : stopReason === "user_cancelled" ? "cancelled" : "interrupted";
         await this.resultStore.save({
+          error: failed ? error.message : undefined,
           content: error.partial.content,
           timeline: error.partial.timeline,
           model: providerConfig.model,
@@ -452,11 +462,8 @@ export class GenerationExecutor {
           stopReason,
           usage: usageAggregate,
         });
-        if (error.reason === "cancelled") {
-          stream.done({ status, generationStopReason: stopReason });
-        } else {
-          stream.error(error.message);
-        }
+        if (status === "error") {stream.error(error.message);}
+        else {stream.done({ status, generationStopReason: stopReason });}
         return;
       }
 
@@ -473,10 +480,12 @@ export class GenerationExecutor {
           ],
           model: providerConfig.model,
         });
+        record.errorPersisted = true;
       }
     } finally {
       // Stop previews before taking the final workspace state (they may still write files).
       await applications.dispose();
+      await nativeCaptureImages?.dispose().catch((error: unknown) => logWarning(String(error)));
       await visionAnalyzer?.dispose().catch((error: unknown) => logWarning(String(error)));
       await workspaceTracking.finish();
       await this.finalizer.finalize({

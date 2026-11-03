@@ -1,12 +1,12 @@
-import { stat, writeFile } from "node:fs/promises";
+import { createFileIfMissing } from "./CreateFileIfMissing";
+import { stat } from "node:fs/promises";
 import * as path from "node:path";
 
 /** A human-editable template, without model requests or guessed project commands. */
 export async function ensureWorkspaceInstructionsFile(directory: string, locale = "en"): Promise<string> {
   if (!(await stat(directory)).isDirectory()) {throw new Error("Open an existing workspace directory first.");}
   const file = path.join(directory, "AGENTS.md");
-  try {await writeFile(file, template(locale), { encoding: "utf8", flag: "wx", mode: 0o644 });}
-  catch (error) {if ((error as NodeJS.ErrnoException).code !== "EEXIST") {throw error;}}
+  await createFileIfMissing(file, template(locale), 0o644);
   if (!(await stat(file)).isFile()) {throw new Error("Workspace AGENTS.md must be a file.");}
   return file;
 }

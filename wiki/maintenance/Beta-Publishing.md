@@ -44,16 +44,6 @@ Do not use SemVer suffixes such as `-beta.1` or `-preview.1` for Marketplace pac
 
 Pre-release updates may change conversation and storage formats, making chats or state saved by earlier versions unavailable. Copy or export important conversations before updating. Backward compatibility for saved chats becomes a release commitment with the first stable line (`0.2.x`).
 
-## Target release
-
-For the current branch, `0.1.15` is the current preview target. Keep `package.json` and the root lockfile aligned to that release until it is cut.
-
-After `0.1.15`:
-
-- each subsequent `0.1.x` release keeps `preview: true` and the normal Marketplace channel;
-- remaining bugs are tracked across `0.1.16`, `0.1.17`, ... until `0.1.x` stabilizes;
-- the line is promoted to `0.2.x` with `preview: false` only once daily-use testing reports no remaining errors.
-
 ## Marketplace metadata
 
 - Publisher: `yarcrasy`
@@ -68,17 +58,17 @@ After `0.1.15`:
 Run from the repository root:
 
 ```bash
-pnpm run compile
-pnpm run lint
-pnpm run build
-pnpm test
+npm run compile
+npm run lint
+npm run build
+npm test
 ```
 
 Run the human documentation build:
 
 ```bash
 cd web-doc
-pnpm run build
+npm run build
 ```
 
 The Astro build output is the repository root `docs/` folder. Configure GitHub Pages to serve from the main branch `/docs` folder.
@@ -86,7 +76,8 @@ The Astro build output is the repository root `docs/` folder. Configure GitHub P
 Package the VSIX:
 
 ```bash
-pnpm dlx @vscode/vsce package --no-dependencies
+npm run package:vsix
+npm run verify:vsix
 ```
 
 Do not use the deprecated `vsce` package. Older versions still require explicit `activationEvents`; modern VS Code generates activation events from contribution declarations.

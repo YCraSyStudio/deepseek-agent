@@ -2,6 +2,7 @@ import type { Conversation, ConversationSummary } from "@/contracts";
 import { createConversationTitle } from "@/application/chat/ConversationTitle";
 import {
   getFinalAssistantContent,
+  compactCompletedProviderTranscript,
   sanitizeStoredTranscript,
   type StoredConversation,
 } from "@/application/chat/ProviderTranscript";
@@ -18,7 +19,7 @@ export function normalizeConversation(conversation: StoredConversation): StoredC
       toolCalls: message.toolCalls?.map(normalizeToolCall),
       timeline: message.timeline ?? undefined,
       contextContent: completedContext,
-      providerTranscript: providerTranscript?.status === "complete" ? undefined : providerTranscript,
+      providerTranscript: compactCompletedProviderTranscript(providerTranscript),
     };
   });
   return {

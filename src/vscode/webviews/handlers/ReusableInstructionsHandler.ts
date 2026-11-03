@@ -1,3 +1,4 @@
+import { openCustomizationFile, watchCustomizationFiles } from "@/vscode/configuration/CustomizationFiles";
 import * as vscode from "vscode";
 import type { WebviewToHandlerMessage } from "@/contracts";
 import { createReusableInstruction, listReusableInstructions, openReusableInstruction } from "@/infrastructure/persistence/ReusableInstructions";
@@ -24,26 +25,22 @@ export class ReusableInstructionsHandler {
       } else {
         file = (await openReusableInstruction(roots, message.id)).file;
       }
-      await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(vscode.Uri.file(file)), { preview: false });
+      await openCustomizationFile(file);
       await this.postCatalog(view);
       await view.webview.postMessage({ type: "reusableInstructionResult", requestId: message.requestId, success: true });
     } catch (error) {
+      await this.postCatalog(view);
       await view.webview.postMessage({ type: "reusableInstructionResult", requestId: message.requestId, success: false, error: redactSensitiveText(error) });
     }
   }
 
   watch(view: vscode.WebviewView): vscode.Disposable {
     const refresh = () => {void this.postCatalog(view);};
-    const saved = vscode.workspace.onDidSaveTextDocument((document) => {
-      if (document.uri.path.includes("/instructions/") && document.uri.path.endsWith(".md")) {refresh();}
-    });
-    const watcher = vscode.workspace.createFileSystemWatcher("**/instructions/*.md");
-    const global = reusableInstructionRoots()[0]!;
-    const globalWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(global.boundary), "instructions/*.md"));
-    return vscode.Disposable.from(saved, watcher, globalWatcher,
-      watcher.onDidCreate(refresh), watcher.onDidChange(refresh), watcher.onDidDelete(refresh),
-      globalWatcher.onDidCreate(refresh), globalWatcher.onDidChange(refresh), globalWatcher.onDidDelete(refresh),
-      vscode.workspace.onDidChangeWorkspaceFolders(refresh));
+    return watchCustomizationFiles(view, () => reusableInstructionRoots().map((root) => {
+      const boundary = vscode.Uri.file(root.boundary);
+      return { directory: vscode.Uri.joinPath(boundary, root.relativeDirectory), pattern: "*.md",
+        parent: { directory: boundary, name: root.relativeDirectory } };
+    }), refresh);
   }
 
   private async postCatalog(view: vscode.WebviewView): Promise<void> {

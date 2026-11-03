@@ -2,17 +2,18 @@ import { useChatClipboard } from "./hooks/UseChatClipboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./ChatView.css";
 import "@vscode/codicons/dist/codicon.css";
-import { InputCtrls, InputFooter, MessagesSection } from "./sections";
+import { InputCtrls, InputFooter, MessagesSection, RunningTasks } from "./sections";
 import { useChatConfig } from "./hooks";
 import WorkspaceMismatchModal from "@webview/components/shared/workspaceMismatchModal/WorkspaceMismatchModal";
 import type { ApiKeyStatus, ChatMessage, ContextCompactionResult } from "./ChatViewTypes";
 import { getVsCodeApi } from "@webview/VsCodeApi";
-import type { ContextWindowStatus, Conversation, HandlerToWebviewMessage, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, WorkspaceContextStatus } from "@/contracts";
+import type { ContextWindowStatus, Conversation, HandlerToWebviewMessage, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, RunningTaskInfo, WorkspaceContextStatus } from "@/contracts";
 import { t } from "@webview/i18n";
 import { beginNavigationRequest, isLatestNavigationRequest } from "@webview/NavigationRequests";
 import { ClipboardUploads, type PendingImagePreview } from "./model/ClipboardUploads";
 import { summarizeConversationUsage, type ConversationUsageSnapshot, type UsageCurrency } from "@/shared/usage/Usage";
-import { useChatCommandMessages, type PendingChatRequest } from "./hooks/UseChatCommandMessages";
+import { submitChatDraft, useChatCommandMessages, type PendingChatRequest } from "./hooks/UseChatCommandMessages";
+import { insertImageReference } from "./utils/ImageReference";
 import {
   getSavedChatState,
   getChatDraft,
@@ -62,6 +63,8 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const [recoveredDrafts, setRecoveredDrafts] = useState<QueuedGenerationMessage[]>([]);
   const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContextStatus>();
   const [workspaceMismatch, setWorkspaceMismatch] = useState<WorkspaceMismatch | null>(null);
+  const [runningTasks, setRunningTasks] = useState<RunningTaskInfo[]>([]);
+  const [stoppingTasks, setStoppingTasks] = useState<ReadonlySet<string>>(new Set());
   const conversationIdRef = useRef(conversationId);
   const activeGenerationIdRef = useRef(activeGenerationId);
   const pendingRequestsRef = useRef(new Map<string, PendingChatRequest>());
@@ -179,12 +182,33 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     textareaRef.current?.focus();
   }, []);
 
+  const handleReferenceImage = useCallback((number: number) => {
+    const input = textareaRef.current;
+    const start = input?.selectionStart ?? draftRef.current.length;
+    const end = input?.selectionEnd ?? start;
+    const { text, caret } = insertImageReference(draftRef.current, start, end, t("chat.imageReference", { number }));
+    setDraft(text);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(caret, caret);
+    });
+  }, []);
+
   const handleSend = (text: string, clientRequestId: string, submittedImages?: ImageAttachment[]) => {
     pendingRequestsRef.current.set(clientRequestId, {
       text,
+      references: [...referencedFilesRef.current],
+      images: [...(submittedImages ?? imageAttachmentsRef.current)],
       referenceIds: referencedFilesRef.current.map(referenceIdentity),
       imageIds: (submittedImages ?? imageAttachmentsRef.current).map((attachment) => attachment.id),
     });
+    submitChatDraft(clientRequestId, {
+      activeGenerationId: activeGenerationIdRef, conversationId: conversationIdRef,
+      draft: draftRef, imageAttachments: imageAttachmentsRef, referencedFiles: referencedFilesRef,
+      pendingRequests: pendingRequestsRef, workspaceRequestId: workspaceRequestIdRef,
+    }, { setActiveGenerationId, setConversationId, setDraft, setImageAttachments, setIsProcessing,
+      setMessages, setRecoveredDrafts, setReferencedFiles, setRequestError, setWorkspaceContext });
+    persistSubmittedDraft();
     setRequestError(undefined);
   };
 
@@ -193,6 +217,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, []);
 
   const removeImageAttachment = useCallback((attachment: ImageAttachment) => {
+    imageAttachmentsRef.current = imageAttachmentsRef.current.filter(item => item.id !== attachment.id);
     setImageAttachments((items) => items.filter((item) => item.id !== attachment.id));
     getVsCodeApi()?.postMessage({
       type: "deleteImageAttachment",
@@ -219,6 +244,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const resolveImageUpload = useCallback((requestId: string, attachments: ImageAttachment[], error?: string) => {
     const result = clipboardUploads.current.complete(requestId, attachments, error);
     setPendingImages(clipboardUploads.current.previews());
+    imageAttachmentsRef.current = [...imageAttachmentsRef.current, ...result.accepted].slice(0, 8);
     for (const attachment of result.discarded) {
       getVsCodeApi()?.postMessage({ type: "deleteImageAttachment", requestId: crypto.randomUUID(), attachment });
     }
@@ -273,10 +299,10 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const canSend = useMemo(() => {
     const trimmedDraft = draft.trim();
     const workspaceReady = workspaceContext?.state === "connected" || workspaceContext?.state === "empty";
-    return !isUploadingImages && !navigationPending && !isPermissionUpdatePending &&
+    return stateHydrated && (historyEnabled === false || attachmentsHydrated) && !isUploadingImages && !navigationPending && !isPermissionUpdatePending &&
       (trimmedDraft.length > 0 || imageAttachments.length > 0 || pendingImages.length > 0) &&
       apiKeyStatus === "configured" && workspaceReady;
-  }, [draft, imageAttachments, pendingImages.length, isUploadingImages, apiKeyStatus, isPermissionUpdatePending, navigationPending, workspaceContext]);
+  }, [draft, imageAttachments, pendingImages.length, isUploadingImages, apiKeyStatus, isPermissionUpdatePending, navigationPending, workspaceContext, stateHydrated, historyEnabled, attachmentsHydrated]);
 
   useEffect(() => {
     focusInput();
@@ -286,6 +312,35 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     const requestId = crypto.randomUUID();
     workspaceRequestIdRef.current = requestId;
     getVsCodeApi()?.postMessage({ type: "getWorkspaceContext", requestId, conversationId });
+  }, [conversationId]);
+
+  const handleStopRunningTask = useCallback((task: RunningTaskInfo) => {
+    setStoppingTasks((current) => new Set(current).add(task.id));
+    getVsCodeApi()?.postMessage({
+      type: "stopRunningTask",
+      requestId: crypto.randomUUID(),
+      conversationId,
+      sessionId: task.id,
+    });
+  }, [conversationId]);
+
+  useEffect(() => {
+    setRunningTasks([]);
+    setStoppingTasks(new Set());
+    getVsCodeApi()?.postMessage({ type: "getRunningTasks", conversationId });
+    const handleRunningTasks = (event: MessageEvent<HandlerToWebviewMessage>) => {
+      const message = event.data;
+      if (message.type === "requestRejected") {
+        if (message.action === "stopRunningTask") {setStoppingTasks(new Set());}
+        return;
+      }
+      if (message.type !== "runningTasks") {return;}
+      if (conversationId !== undefined && message.conversationId !== conversationId) {return;}
+      setRunningTasks(message.tasks);
+      setStoppingTasks(new Set());
+    };
+    window.addEventListener("message", handleRunningTasks);
+    return () => window.removeEventListener("message", handleRunningTasks);
   }, [conversationId]);
 
   useEffect(() => {
@@ -335,7 +390,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
         if (historyEnabled) {
           const requestedId = loadedConversation?.id ?? getSavedChatState()?.conversationId;
           let restoredFromStorage = true;
-          try {await hydrateDraftAttachments(requestedId);}
+          try {await hydrateDraftAttachments(requestedId, () => !cancelled);}
           catch {restoredFromStorage = false;if (!cancelled) {setRequestError(t("chat.draftAttachmentsSaveFailed"));}}
           if (cancelled) {return;}
           const savedState = getChatDraft(requestedId);
@@ -431,8 +486,21 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     onCancelWorkspaceMismatch?.();
   }, [onCancelWorkspaceMismatch]);
 
+  const persistSubmittedDraft = useCallback(() => {
+    if (!historyEnabled) {return;}
+    // Commit the cleared draft before a navigation/remount can restore the sent one.
+    const id = conversationIdRef.current;
+    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: id, draft: draftRef.current,
+      referencedFiles: referencedFilesRef.current, imageAttachments: imageAttachmentsRef.current },
+    { conversationId: savedDraftIdRef.current });
+    savedDraftIdRef.current = id;
+    savePendingDraftImages(id, clipboardUploads.current.previews());
+    void persistDraftAttachments(id).catch(() => setRequestError(t("chat.draftAttachmentsSaveFailed")));
+  }, [historyEnabled]);
+
   useChatCommandMessages({
     resolveImageUpload,
+    onDraftSubmitted: persistSubmittedDraft,
     appendReferencedFiles,
     focusInput,
     refs: {
@@ -486,20 +554,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
         onContextWindowUpdated={handleContextWindowUpdated}
         onContextCompactionResult={handleContextCompactionResult}
         onFocusInput={focusInput}
-        onReferenceImage={(number) => {
-          const input = textareaRef.current;
-          const start = input?.selectionStart ?? draft.length;
-          const end = input?.selectionEnd ?? start;
-          const reference = t("chat.imageReference", { number });
-          const before = draft.slice(0, start);
-          const after = draft.slice(end);
-          const inserted = `${before && !/\s$/.test(before) ? " " : ""}${reference}${after && !/^\s/.test(after) ? " " : ""}`;
-          setDraft(before + inserted + after);
-          requestAnimationFrame(() => {
-            textareaRef.current?.focus();
-            textareaRef.current?.setSelectionRange(start + inserted.length, start + inserted.length);
-          });
-        }}
+        onReferenceImage={handleReferenceImage}
       />
       {apiKeyStatus === "missing" ? <div className="statusMessage warning">{t("chat.apiKeyMissing")}</div> : null}
       {isPermissionUpdatePending ? <div className="statusMessage" role="status" aria-live="polite">{t("chat.applyingPermissions")}</div> : null}
@@ -508,6 +563,7 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
       {historyEnabled === false ? <div className="statusMessage incognito" role="status">{t("chat.incognitoActive")}</div> : null}
 
       <div className="inputArea">
+        <RunningTasks tasks={runningTasks} stopping={stoppingTasks} onStop={handleStopRunningTask} />
         {recoveredDrafts.length > 0 ? (
           <div className="statusMessage">
             {t("chat.recoveredDrafts")}
@@ -516,7 +572,11 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
                 key={`${index}-${item.text.slice(0, 24)}`}
                 type="button"
                 onClick={() => {
+                  draftRef.current = item.text;
                   setDraft(item.text);
+                  if (item.imageAttachments?.length) {
+                    setImageAttachments(current => [...current, ...item.imageAttachments!.filter(image => !current.some(existing => existing.id === image.id))].slice(0, 8));
+                  }
                   if (item.referencedFiles?.length) {
                     setReferencedFiles((current) => mergeReferencedFiles(current, item.referencedFiles!));
                   }
@@ -538,9 +598,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
         <InputCtrls
           ref={textareaRef}
           input={draft}
-          setInput={(value) => {draftEditedRef.current = true;setDraft(value);}}
+          setInput={(value) => {draftEditedRef.current = true;draftRef.current = value;setDraft(value);}}
           isProcessing={isProcessing}
-          canSend={canSend && stateHydrated && (historyEnabled === false || attachmentsHydrated)}
+          canSend={canSend}
           selectedModelRef={selectedModelRef}
           reasoningRef={reasoningRef}
           placeholder={apiKeyStatus === "configured" ? t("chat.askAnythingAboutYourCode") : t("chat.configureApiKey")}

@@ -12,7 +12,7 @@ const MIN_OUTPUT_BYTES = 4 * 1024;
 const MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 const OUTPUT_DRAIN_GRACE_MS = 500;
 const TERMINATION_GRACE_MS = 1_500;
-const activeChildren = new Set<ChildProcess>();
+const activeChildren = new Map<ChildProcess, string | undefined>();
 
 export interface WorkspaceCommandOptions {
   cwd?: string;
@@ -45,8 +45,7 @@ export interface CommandEnvironment {
 
 export async function resolveCommandEnvironment(cwd?: string): Promise<CommandEnvironment> {
   const workspace = getToolWorkspaceHost();
-  const shell = workspace.getCommandShell?.()
-    ?? (process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : (process.env.SHELL ?? "/bin/sh"));
+  const shell = workspace.getCommandShell?.() ?? getSystemCommandShell();
   if (workspace.resolveLocalPath) {
     const resolved = await workspace.resolveLocalPath(cwd);
     if (!resolved.workspaceRoot) {
@@ -105,6 +104,18 @@ export async function executeWorkspaceCommand(command: string, options: Workspac
     };
   }
 
+  return executeShellCommand(command, environment, { ...options, timeoutMs, maxOutputBytes });
+}
+
+export function getSystemCommandShell(): string {
+  return process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : process.env.SHELL ?? "/bin/sh";
+}
+
+/** Execute on the extension host with pipes, never a VS Code terminal or shell integration. */
+export async function executeShellCommand(command: string, environment: CommandEnvironment, options: WorkspaceCommandOptions = {}, conversationId?: string): Promise<WorkspaceCommandResult> {
+  if (options.signal?.aborted) {throw createAbortError();}
+  const timeoutMs = clampInteger(options.timeoutMs, MIN_COMMAND_TIMEOUT_MS, MAX_COMMAND_TIMEOUT_MS, DEFAULT_COMMAND_TIMEOUT_MS);
+  const maxOutputBytes = clampInteger(options.maxOutputBytes, MIN_OUTPUT_BYTES, MAX_OUTPUT_BYTES, DEFAULT_MAX_OUTPUT_BYTES);
   const startedAt = performance.now();
 
   return new Promise<WorkspaceCommandResult>((resolve, reject) => {
@@ -114,8 +125,10 @@ export async function executeWorkspaceCommand(command: string, options: Workspac
       windowsHide: true,
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, GIT_PAGER: "cat", PAGER: "cat", DOTNET_CLI_USE_MSBUILD_SERVER: "0",
+        MSBUILDDISABLENODEREUSE: "1", UseSharedCompilation: "false" },
     });
-    activeChildren.add(child);
+    activeChildren.set(child, conversationId);
     const stdout = new BoundedOutput(maxOutputBytes);
     const stderr = new BoundedOutput(maxOutputBytes);
     let settled = false;
@@ -284,7 +297,11 @@ function clampInteger(value: number | undefined, min: number, max: number, fallb
 }
 
 export async function shutdownOwnedProcesses(): Promise<void> {
-  await Promise.allSettled([...activeChildren].map((child) => terminateProcessTree(child)));
+  await Promise.allSettled([...activeChildren.keys()].map((child) => terminateProcessTree(child)));
+}
+
+export async function shutdownConversationCommands(conversationId: string): Promise<void> {
+  await Promise.allSettled([...activeChildren].filter(([, owner]) => owner === conversationId).map(([child]) => terminateProcessTree(child)));
 }
 
 async function terminateProcessTree(child: ChildProcess): Promise<boolean> {

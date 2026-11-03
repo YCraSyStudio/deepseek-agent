@@ -1,0 +1,31 @@
+{
+  "all": true,
+  "src": [
+    "src"
+  ],
+  "extension": [
+    ".ts",
+    ".tsx",
+    ".mjs"
+  ],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".tmp/unit-tests/**/*.mjs"
+  ],
+  "exclude": [
+    "src/test/**",
+    "src/**/*.d.ts",
+    "src/ui/vite.config.mts"
+  ],
+  "exclude-after-remap": true,
+  "reporter": [
+    "text-summary",
+    "html",
+    "lcov",
+    "json-summary",
+    "json"
+  ],
+  "reports-dir": "coverage",
+  "temp-directory": ".tmp/coverage"
+}

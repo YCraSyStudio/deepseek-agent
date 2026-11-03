@@ -4,7 +4,7 @@ export function getAvailableToolMetadata(definitions: ToolDefinition[]): Availab
   return definitions.map((definition) => {
     const name = definition.function.name;
     const params = definition.function.parameters;
-    const properties = getRecord(params.properties);
+    const properties = getRecord(params?.properties);
     const required = (params?.required as string[]) ?? [];
 
     return {

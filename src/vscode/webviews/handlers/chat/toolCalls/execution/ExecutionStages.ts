@@ -83,6 +83,7 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
         const confirmation = context.confirmation;
         if (context.resultText || !context.executionResult || !confirmation) {return { kind: "continue", context };}
         if (!isAutomaticExecution(context.ctx)) {return { kind: "continue", context };}
+        if (confirmation.keepAlive === true) {return { kind: "continue", context };}
         const evaluation = await evaluateDeterministicSafety({
           toolCall: context.toolCall,
           confirmation,

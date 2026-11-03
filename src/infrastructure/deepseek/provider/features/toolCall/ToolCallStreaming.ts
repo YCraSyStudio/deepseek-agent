@@ -1,3 +1,4 @@
+import type { HistoricalFileRecovery } from "../MissingHistoricalFiles";
 import type { ChatMessage, StreamChunk, ToolCall, ToolDefinition } from "@/contracts";
 import { chatCompletionStream, type ChatResponse } from "../Chat";
 import type { ProviderUsage } from "@/shared/usage/Usage";
@@ -14,6 +15,7 @@ interface StreamToolCallRoundOptions {
   baseUrl: string;
   cycleOptions: ToolCallCycleOptions;
   emitStreamEvents?: boolean;
+  historicalFiles?: HistoricalFileRecovery;
 }
 
 const MAX_TOOL_ARGUMENT_BYTES = 2 * 1024 * 1024;
@@ -24,7 +26,7 @@ export async function streamToolCallRound(options: StreamToolCallRoundOptions): 
 
 async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, conciseRecovery: boolean): Promise<ChatResponse> {
   const { messages, tools, model, apiKey, baseUrl, cycleOptions, emitStreamEvents = true } = options;
-  const betaEnabled = cycleOptions.betaFeaturesEnabled === true && (cycleOptions.isBetaFeaturesEnabled?.() ?? true);
+  const strictEnabled = tools.length > 0 && cycleOptions.strictToolCallsEnabled === true && (cycleOptions.isStrictToolCallsEnabled?.() ?? true);
   const effectiveMessages = conciseRecovery ? withConciseRecoveryInstruction(messages) : messages;
   const effectiveCycleOptions = conciseRecovery
     ? { ...cycleOptions, thinkingMode: false, reasoningEffort: undefined }
@@ -77,7 +79,8 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
         }
       },
       signal: combinedSignal,
-      betaFeaturesEnabled: betaEnabled,
+      betaFeaturesEnabled: strictEnabled,
+      historicalFiles: options.historicalFiles,
     });
   } catch (error) {
     if (stoppedForExcessiveReasoning && !cycleOptions.signal?.aborted && cycleOptions.budgetManager) {
@@ -110,7 +113,7 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
     choices: [
       {
         index: 0,
-        message: betaEnabled ? normalizeBetaToolMessages([message], tools)[0] : message,
+        message: strictEnabled ? normalizeBetaToolMessages([message], tools)[0] : message,
         finish_reason: finishReason as "stop" | "length" | "tool_calls" | "content_filter" | "insufficient_system_resource" | null,
       },
     ],

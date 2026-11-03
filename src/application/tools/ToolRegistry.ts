@@ -30,7 +30,7 @@ export class ToolRegistry {
 
     try {
       const args: unknown = JSON.parse(toolCall.function.arguments);
-      const schemaValidation = validateAgainstToolSchema(args, toolDef.definition.function.parameters);
+      const schemaValidation = validateAgainstToolSchema(args, toolDef.definition.function.parameters ?? { type: "object", properties: {}, additionalProperties: false });
       if (!schemaValidation.valid) {
         return { valid: false, error: `Invalid arguments for ${toolCall.function.name}: ${schemaValidation.error}` };
       }

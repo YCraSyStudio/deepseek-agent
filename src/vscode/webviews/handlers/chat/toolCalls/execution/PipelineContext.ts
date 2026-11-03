@@ -10,6 +10,7 @@ export function handlerContext(ctx: ToolExecutionContext): ToolHandlerContext {
   return {
     signal: ctx.signal,
     generationId: ctx.generationId,
+    conversationId: ctx.conversationId,
     trustedUserRequest: ctx.trustedUserRequest,
     availableToolNames: ctx.availableToolNames,
     authorizedUserUrls: ctx.authorizedUserUrls,

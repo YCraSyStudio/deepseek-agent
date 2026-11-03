@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { PermissionMode } from "@/contracts";
-import { NumberInput, SettingsField, SettingsGroup, SettingsSection, Toggle } from "@webview/components/settingsView";
+import { SettingsField, SettingsGroup, SettingsSection, Toggle } from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
 import type { TranslationKey } from "@webview/i18n/I18n";
 import type { ToolsSectionProps } from "../model";
@@ -71,18 +71,15 @@ function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permis
         </select>
       </SettingsField>
 
-      <SettingsField htmlFor="browserAccess" label={t("settings.browser.access")}>
-        <select id="browserAccess" value={config.browserAccess} onChange={(event) => {
-          const value = event.currentTarget.value as "ask" | "always" | "never";
-          updateConfig("browserAccess", value); saveOnBlur("browserAccess", value);
-        }}><option value="ask">{t("settings.browser.ask")}</option><option value="always">{t("settings.browser.always")}</option><option value="never">{t("settings.browser.never")}</option></select>
-      </SettingsField>
-      <Toggle id="automaticCaptureEnabled" label={t("settings.browser.automatic")}
-        tooltip={t("settings.browser.automaticHelp")} checked={config.automaticCaptureEnabled} onToggle={(checked) => {
-          updateConfig("automaticCaptureEnabled", checked); saveOnBlur("automaticCaptureEnabled", checked);
-        }} />
-      <SettingsField htmlFor="automaticCaptureLimit" label={t("settings.browser.limit")}>
-        <NumberInput id="automaticCaptureLimit" min={1} max={40} value={config.automaticCaptureLimit} onChange={(event) => updateConfig("automaticCaptureLimit", Number(event.currentTarget.value))} onBlur={(event) => saveOnBlur("automaticCaptureLimit", Number(event.currentTarget.value))} />
+      <SettingsField htmlFor="capturePermission" label={t("settings.browser.access")} tooltip={t("settings.browser.help")}>
+        <select id="capturePermission" value={config.capturePermission} onChange={(event) => {
+          const value = event.currentTarget.value as "ask" | "first-use" | "always";
+          updateConfig("capturePermission", value); saveOnBlur("capturePermission", value);
+        }}>
+          <option value="ask">{t("settings.browser.ask")}</option>
+          <option value="first-use">{t("settings.browser.firstUse")}</option>
+          <option value="always">{t("settings.browser.always")}</option>
+        </select>
       </SettingsField>
       <Toggle
         tooltip={t("settings.webSearch.description")}

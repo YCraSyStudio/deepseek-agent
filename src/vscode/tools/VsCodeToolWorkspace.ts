@@ -1,3 +1,4 @@
+import type { ToolHostCommandOptions, ToolHostCommandResult } from "@/application/ports";
 import * as path from "node:path";
 import { open, realpath } from "node:fs/promises";
 import * as vscode from "vscode";
@@ -19,7 +20,7 @@ import {
 } from "@/vscode/workspace";
 import { createInlineDiffPreview } from "./InlineDiffPreview";
 import { fileChangeRegistry } from "@/vscode/editor/diff/FileChangeRegistry";
-import { executeInVsCodeTerminal, VSCODE_TERMINAL_SHELL_DESCRIPTION } from "./VsCodeTerminalExecution";
+import { executeShellCommand, getSystemCommandShell } from "@/infrastructure/tools/builtins/terminal/ShellExecution";
 import {
   createAbortError,
   findFilesInRoot,
@@ -62,10 +63,10 @@ export function createVsCodeToolWorkspace(
     },
 
     getCommandShell(): string {
-      return VSCODE_TERMINAL_SHELL_DESCRIPTION;
+      return getSystemCommandShell();
     },
 
-    executeCommand: (command, commandOptions) => executeInVsCodeTerminal(command, commandOptions, options.conversationId),
+    executeCommand: (command: string, commandOptions: ToolHostCommandOptions): Promise<ToolHostCommandResult> => executeShellCommand(command, { cwd: commandOptions.cwd, workspaceRoot: commandOptions.workspaceRoot, shell: getSystemCommandShell() }, commandOptions, options.conversationId),
 
     async isPathInsideWorkspace(rawPath: string): Promise<boolean> {
       if (path.isAbsolute(rawPath) || path.win32.isAbsolute(rawPath)) {
@@ -203,9 +204,21 @@ export function createVsCodeToolWorkspace(
         : await readExistingBytes(uri);
       if (openDocument) {
         const replacement = decodeTextEdit(content, relativePath);
-        const edit = new vscode.WorkspaceEdit();
-        edit.replace(uri, new vscode.Range(openDocument.positionAt(0), openDocument.positionAt(openDocument.getText().length)), replacement);
-        if (!await vscode.workspace.applyEdit(edit)) {
+        const range = new vscode.Range(openDocument.positionAt(0), openDocument.positionAt(openDocument.getText().length));
+        const visibleEditor = vscode.window.visibleTextEditors.find((editor) => editor.document === openDocument);
+        let applied: boolean;
+        if (visibleEditor) {
+          // Give each tool write its own undo step, preserving earlier user edits.
+          applied = await visibleEditor.edit((edit) => edit.replace(range, replacement), {
+            undoStopBefore: true,
+            undoStopAfter: true,
+          });
+        } else {
+          const edit = new vscode.WorkspaceEdit();
+          edit.replace(uri, range, replacement);
+          applied = await vscode.workspace.applyEdit(edit);
+        }
+        if (!applied) {
           throw new Error(`VS Code rejected the edit for open document "${relativePath}". No content was changed.`);
         }
       } else {

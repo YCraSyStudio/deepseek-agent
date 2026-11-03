@@ -5,10 +5,10 @@ const UNSUPPORTED = new Set(["minLength", "maxLength", "minItems", "maxItems"]);
 
 export function prepareProviderTools(tools: ToolDefinition[], betaEnabled: boolean): ToolDefinition[] {
   return tools.map((tool) => {
-    const { strict: _strict, ...fn } = tool.function;
-    return { ...tool, function: betaEnabled
-      ? { ...fn, strict: true, parameters: strictSchema(fn.parameters) }
-      : fn };
+    const { strict: _strict, parameters, ...fn } = tool.function;
+    if (!betaEnabled) {return { ...tool, function: { ...fn, ...(parameters ? { parameters } : {}) } };}
+    const noArguments = !parameters || (parameters.type === "object" && isRecord(parameters.properties) && Object.keys(parameters.properties).length === 0);
+    return { ...tool, function: { ...fn, strict: true, ...(!noArguments ? { parameters: strictSchema(parameters!) } : {}) } };
   });
 }
 
@@ -24,8 +24,8 @@ function strictSchema(schema: Record<string, unknown>): Record<string, unknown> 
       if (!isRecord(value)) {throw new Error("Invalid tool parameter schema");}
       const property = strictSchema(value);
       return [key, required.has(key) ? property : {
-        anyOf: [property, { enum: [null] }],
-        description: `${typeof value.description === "string" ? value.description : key} Use null to omit this optional parameter.`,
+        anyOf: [property, { type: "object", properties: { __omit: { type: "boolean", enum: [true] } }, required: ["__omit"], additionalProperties: false }],
+        description: `${typeof value.description === "string" ? value.description : key} Use {"__omit":true} to omit this optional parameter.`,
       }];
     }));
     result.required = Object.keys(schema.properties);
@@ -42,18 +42,24 @@ export function normalizeBetaToolMessages(messages: ChatMessage[], tools: ToolDe
       if (!tool) {return call;}
       try {
         const args = JSON.parse(call.function.arguments) as unknown;
-        return { ...call, function: { ...call.function, arguments: JSON.stringify(omitOptionalNulls(args, tool.function.parameters)) } };
+        return { ...call, function: { ...call.function, arguments: JSON.stringify(omitOptionalArguments(args, tool.function.parameters ?? { type: "object", properties: {}, additionalProperties: false })) } };
       } catch {return call;}
     }),
   });
 }
 
-function omitOptionalNulls(value: unknown, schema: Record<string, unknown>): unknown {
-  if (Array.isArray(value) && isRecord(schema.items)) {return value.map((item) => omitOptionalNulls(item, schema.items as Record<string, unknown>));}
+function omitOptionalArguments(value: unknown, schema: Record<string, unknown>): unknown {
+  if (Array.isArray(value) && isRecord(schema.items)) {return value.map((item) => omitOptionalArguments(item, schema.items as Record<string, unknown>));}
   if (!isRecord(value) || !isRecord(schema.properties)) {return value;}
   const required = new Set(Array.isArray(schema.required) ? schema.required : []);
   const properties = schema.properties;
   return Object.fromEntries(Object.entries(value)
-    .filter(([key, item]) => item !== null || required.has(key) || !Object.hasOwn(properties, key))
-    .map(([key, item]) => [key, isRecord(properties[key]) ? omitOptionalNulls(item, properties[key]) : item]));
+    .filter(([key, item]) => {
+      if (required.has(key) || !isRecord(properties[key])) {return true;}
+      if (isRecord(item) && item.__omit === true && Object.keys(item).length === 1) {return false;}
+      // Keep accepting null from older in-flight beta responses. Object-valued
+      // host parameters retain their own empty objects rather than becoming omissions.
+      return item !== null && !(isRecord(item) && Object.keys(item).length === 0 && properties[key].type !== "object");
+    })
+    .map(([key, item]) => [key, isRecord(properties[key]) ? omitOptionalArguments(item, properties[key]) : item]));
 }

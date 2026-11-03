@@ -1,6 +1,7 @@
 import type * as vscode from "vscode";
 import type { QueuedGenerationMessage } from "@/contracts";
 import type { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
+import { listKeepAliveTasks } from "@/infrastructure/tools/builtins/terminal/KeepAliveTerminals";
 import type { SendMessagePayload, HistoryTransitionState } from "../Types";
 import type { GenerationRunRecord } from "../generation/GenerationRun";
 import {
@@ -73,6 +74,10 @@ export class ChatActivityBroadcaster {
         this.postGenerationActivity(conversationId, undefined, "queued");
       }
     }
+  }
+
+  postRunningTasks(conversationId?: string): void {
+    this.post({ type: "runningTasks", conversationId, tasks: listKeepAliveTasks(conversationId) });
   }
 
   postHistoryTransitionActivity(): void {

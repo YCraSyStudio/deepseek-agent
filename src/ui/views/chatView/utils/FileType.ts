@@ -1,3 +1,4 @@
+import type { ApplicationSessionResult } from "@/contracts/ApplicationSession";
 import type { StructuredToolResult, TerminalCommandResult } from "./FilePreviewTypes";
 
 export function parseStructuredToolResult(content: string): StructuredToolResult | null {
@@ -9,7 +10,7 @@ export function parseStructuredToolResult(content: string): StructuredToolResult
   }
 }
 
-export function parseTerminalCommandResult(content: string): TerminalCommandResult | null {
+function parseTerminalCommandResult(content: string): TerminalCommandResult | null {
   try {
     const parsed = JSON.parse(content) as Partial<TerminalCommandResult>;
     return parsed.kind === "command_result"
@@ -28,6 +29,23 @@ export function parseTerminalCommandResult(content: string): TerminalCommandResu
   } catch {
     return null;
   }
+}
+
+export function parseTerminalResult(content: string): TerminalCommandResult | ApplicationSessionResult | null {
+  const command = parseTerminalCommandResult(content);
+  if (command) {return command;}
+  try {
+    const value = JSON.parse(content) as Partial<ApplicationSessionResult> | null;
+    return value?.kind === "application_session"
+      && typeof value.sessionId === "string"
+      && ["running", "exited", "stopped"].includes(value.status ?? "")
+      && typeof value.command === "string" && typeof value.cwd === "string"
+      && typeof value.stdout === "string" && typeof value.stderr === "string"
+      && (typeof value.exitCode === "number" || value.exitCode === null)
+      && typeof value.timedOut === "boolean"
+      && typeof value.truncated?.stdout === "boolean" && typeof value.truncated?.stderr === "boolean"
+      ? value as ApplicationSessionResult : null;
+  } catch {return null;}
 }
 
 export function detectLanguage(filename: string): string | undefined {

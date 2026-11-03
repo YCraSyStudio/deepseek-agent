@@ -1,5 +1,6 @@
 import type { CaptureScreenshotResult } from "../Capture";
 import type { StorageInfo } from "../Storage";
+import type { RunningTaskInfo } from "../RunningTasks";
 import type { ToolCall } from "../deepseek/Chat";
 import type { ConversationUsageSnapshot, UsageAggregate } from "@/shared/usage/Usage";
 import type {
@@ -152,4 +153,5 @@ export type HandlerToWebviewMessage =
   | { type: "imageAttachmentsSelected"; requestId: string; attachments: ImageAttachment[]; error?: string }
   | { type: "imageAttachmentDeleted"; requestId: string; fileId: string; success: boolean; error?: string }
   | { type: "assistantUsageUpdated"; generationId: string; conversationId: string; usage: UsageAggregate }
-  | { type: "conversationUsageUpdated"; conversationId: string; usage: ConversationUsageSnapshot };
+  | { type: "conversationUsageUpdated"; conversationId: string; usage: ConversationUsageSnapshot }
+  | { type: "runningTasks"; conversationId?: string; tasks: RunningTaskInfo[] };

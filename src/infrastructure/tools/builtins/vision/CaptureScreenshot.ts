@@ -24,7 +24,7 @@ async function capture(args: Record<string, unknown>, context?: ToolHandlerConte
 }
 export const captureScreenshotTool: RegisteredTool = {
   definition: { type: "function", function: { name: "capture_screenshot", strict: true,
-    description: "Capture local UI output after changing layout, CSS, scenes or prefabs, before judging the visual result. Returns a screenshot id and metadata, not visual content. Inspect the actual image using available visual capabilities before judging UI; never infer image contents from metadata alone. The returned path is relative to this conversation's history storage, NOT the workspace: do not search workspace files for it. Use web with a running page URL; web captures run headlessly. For window/debug, first launch the application and identify its exact window or PID; a successful build alone does not start it. On Wayland, the desktop portal asks the user to select a window for each capture. Title/PID cannot be selected or verified programmatically there; the result identifies a user-selected window without asserting its identity. Never retry a failed window capture through whole-screen capture. Whole-screen capture requires user confirmation every time.",
+    description: "Capture local UI output after changing layout, CSS, scenes or prefabs, before judging the visual result. Returns a screenshot id and metadata. Flash receives successful captures as native visual file parts in the next tool round; inspect those images directly. Pro must call analyze_images with screenshot_ids to inspect them. Inspect the actual image before judging UI; never infer image contents from metadata alone. The returned path is relative to this conversation's history storage, NOT the workspace: do not search workspace files for it. Use web with a running page URL; web captures run headlessly. For window/debug, first launch the application and identify its exact window or PID; a successful build alone does not start it. On Wayland, the desktop portal may require an initial window selection; remembered authorization is reused when supported. Title/PID cannot be selected or verified programmatically there; the result identifies a user-selected window without asserting its identity. Never retry a failed window capture through whole-screen capture. Screenshot permissions follow the user’s capture policy for every target.",
     parameters: { type: "object", properties: {
       target: { type: "string", enum: ["web", "window", "debug", "screen"] },
       url: { type: "string" }, window: { type: "string" }, process: { type: "string" }, label: { type: "string" },
@@ -32,12 +32,7 @@ export const captureScreenshotTool: RegisteredTool = {
       wait_ms: { type: "integer", minimum: 0, maximum: 10000, description: "Optional web rendering wait, at most 10000 ms. For native startup use application_session status/wait_ms while keeping the application alive." },
     }, required: ["target"], additionalProperties: false },
   } },
-  metadata: { dangerLevel: "safe", requiresConfirmation: false, scope: "global", effect: "read-only",
-    alwaysConfirmWhen: { argument: "target", values: ["screen"] } },
-  handler: async (args, context) => {
-    validateCaptureRequest(args);
-    if (args.target === "screen") {return JSON.stringify({ requiresConfirmation: true, dangerLevel: "dangerous", warningMessage: "Capture the whole display? This can include unrelated private activity.", reasonCode: "always-confirm-screen-capture" });}
-    return capture(args, context);
-  },
+  metadata: { dangerLevel: "safe", requiresConfirmation: false, scope: "global", effect: "read-only" },
+  handler: capture,
   forcedHandler: capture,
 };

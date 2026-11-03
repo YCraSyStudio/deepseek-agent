@@ -55,7 +55,7 @@ export interface ToolDefinition {
   function: {
     name: string;
     description?: string;
-    parameters: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
     strict?: boolean;
   };
 }

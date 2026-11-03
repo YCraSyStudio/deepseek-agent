@@ -7,14 +7,13 @@
   font-size: 11px;
 }
 
-.editedFilesActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 10px;
-  border-top: 1px solid var(--border-color);
-}
-.editedFilesActions button {
+.editedFilesRevert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
   font: inherit;
   padding: 4px 8px;
   border: 1px solid var(--border-color);
@@ -23,7 +22,7 @@
   color: var(--text-primary);
   cursor: pointer;
 }
-.editedFilesActions button:disabled { opacity: 0.6; cursor: default; }
+.editedFilesRevert:disabled { opacity: 0.6; cursor: default; }
 .editedFilesError { color: var(--error-color, #f48771); padding: 0 10px; overflow-wrap: anywhere; }
 
 .editedFilesHeader {

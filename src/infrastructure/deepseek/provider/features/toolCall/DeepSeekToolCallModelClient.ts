@@ -1,3 +1,5 @@
+import type { ChatMessage } from "@/contracts";
+import { HistoricalFileRecovery } from "../MissingHistoricalFiles";
 import type { ToolCallModelClient } from "@/application/chat/toolCall/ToolCallTypes";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import { chatCompletion } from "../Chat";
@@ -8,11 +10,13 @@ import { normalizeBetaToolMessages } from "../StrictTools";
 export function createDeepSeekToolCallModelClient(
   apiKey: string,
   baseUrl: string,
+  initialMessages?: ChatMessage[],
 ): ToolCallModelClient {
+  const historicalFiles = new HistoricalFileRecovery(initialMessages);
   return {
     async completeRound(options) {
       let usage: ProviderUsage | undefined;
-      const betaEnabled = options.cycleOptions.betaFeaturesEnabled === true && (options.cycleOptions.isBetaFeaturesEnabled?.() ?? true);
+      const strictEnabled = options.tools.length > 0 && options.cycleOptions.strictToolCallsEnabled === true && (options.cycleOptions.isStrictToolCallsEnabled?.() ?? true);
       try {
         const response = await chatCompletion(
           buildToolCallRequest({
@@ -25,10 +29,11 @@ export function createDeepSeekToolCallModelClient(
           apiKey,
           baseUrl,
           options.cycleOptions.signal,
-          betaEnabled,
+          strictEnabled,
+          historicalFiles,
         );
         usage = response.usage;
-        return !betaEnabled ? response : {
+        return !strictEnabled ? response : {
           ...response,
           choices: response.choices.map((choice) => ({ ...choice, message: normalizeBetaToolMessages([choice.message], options.tools)[0] })),
         };
@@ -43,6 +48,7 @@ export function createDeepSeekToolCallModelClient(
         ...options,
         apiKey,
         baseUrl,
+        historicalFiles,
       });
     },
   };

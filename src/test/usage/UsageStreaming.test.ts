@@ -1,5 +1,5 @@
 import * as assert from "node:assert";
-import type { StreamChunk } from "@/contracts";
+import type { ChatMessage, ChatCompletionRequest, StreamChunk } from "@/contracts";
 import { DEFAULT_CONFIG } from "@/contracts/Config";
 import type { ModelProvider } from "@/application/ports";
 import { chatCompletionStream } from "@/infrastructure/deepseek/provider/features/Chat";
@@ -57,6 +57,65 @@ suite("usage streaming", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  for (const [finishReason, diagnostic] of [
+    ["length", /output limit/], ["content_filter", /filtered/],
+    ["insufficient_system_resource", /resources were insufficient/],
+    [undefined, /without a terminal finish reason/], [null, /without a terminal finish reason/],
+    ["unsupported", /unsupported finish reason/],
+  ] as const) {
+    for (const partial of [false, true]) {
+      test(`rejects incomplete finish ${String(finishReason)} and retains partial content=${partial}`, async () => {
+        await assert.rejects(sendMessageStreaming({ messages: [], payload: payload(), config: DEFAULT_CONFIG,
+          provider: fakeProvider(async (_request, onChunk) => {
+            if (partial) { onChunk({ type: "content", content: "Incomplete answer" }); }
+            // Exercise a malformed nullable terminal marker at the provider boundary too.
+            onChunk({ type: "done", finish_reason: finishReason as string | undefined });
+          }), eventSink: fakeEventSink(), signal: new AbortController().signal,
+        }), (error: unknown) => {
+          assert.ok(error instanceof Error); assert.match(error.message, diagnostic);
+          assert.strictEqual(error instanceof PartialStreamError, partial);
+          if (error instanceof PartialStreamError) {
+            assert.strictEqual(error.partial.content, "Incomplete answer"); assert.strictEqual(error.reason, "failed");
+          }
+          return true;
+        });
+      });
+    }
+  }
+
+  for (const systemContent of [undefined, null, "Project instructions"] as const) {
+    test(`recovers once from excessive reasoning with system=${String(systemContent)}`, async () => {
+      const requests: ChatCompletionRequest[] = []; const events: Array<Record<string, unknown>> = [];
+      const messages: ChatMessage[] = [
+        ...(systemContent === undefined ? [] : [{ role: "system" as const, content: systemContent }]),
+        { role: "user", content: "Answer concisely" },
+      ];
+      const original = structuredClone(messages);
+      const result = await sendMessageStreaming({ messages, payload: payload(), config: { ...DEFAULT_CONFIG, maxTokens: 128 },
+        provider: fakeProvider(async (request, onChunk, signal) => {
+          requests.push(request);
+          onChunk({ type: "reasoning", reasoning_content: "r".repeat(310) });
+          if (requests.length === 1) { signal!.throwIfAborted(); throw new Error("Reasoning guard failed to abort"); }
+          assert.strictEqual(signal!.aborted, false);
+          onChunk({ type: "content", content: "Concise answer" }); onChunk({ type: "done", finish_reason: "stop" });
+        }), eventSink: { publish: event => { events.push(event); } }, signal: new AbortController().signal,
+      });
+      assert.strictEqual(requests.length, 2); assert.strictEqual(result.content, "Concise answer");
+      assert.strictEqual(requests[0].thinking?.type, "enabled"); assert.strictEqual(requests[1].thinking?.type, "disabled");
+      assert.strictEqual(requests[1].reasoning_effort, undefined);
+      if (systemContent !== undefined) { assert.match(String(requests[1].messages[0].content), /<concise_recovery>/); }
+      assert.strictEqual(events.filter(event => event.type === "generationRecoveryStarted").length, 1);
+      assert.deepStrictEqual(messages, original);
+    });
+  }
+
+  test("propagates a provider failure before any output without disguising it as partial content", async () => {
+    const failure = new Error("provider unavailable");
+    await assert.rejects(sendMessageStreaming({ messages: [], payload: payload(), config: DEFAULT_CONFIG,
+      provider: fakeProvider(async () => { throw failure; }), eventSink: fakeEventSink(), signal: new AbortController().signal,
+    }), error => error === failure);
   });
 
   test("reports one provider request after duplicate usage chunks", async () => {

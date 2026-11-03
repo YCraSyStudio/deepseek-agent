@@ -22,6 +22,7 @@ interface GenerationCheckpoint {
   status: "queued" | "starting" | "compacting" | "streaming" | "awaiting_confirmation" | "running_tool" | "cancelling" | "cancelled" | "interrupted" | "completed" | "error";
   userMessage?: ConversationMessage;
   content: string;
+  error?: string;
   timeline: AssistantTimelineEvent[];
   toolCalls: StoredToolCall[];
   queue: QueuedGenerationMessage[];
@@ -165,6 +166,7 @@ function isGenerationCheckpoint(value: unknown): value is GenerationCheckpoint {
     typeof record.conversationId === "string" &&
     typeof record.status === "string" &&
     typeof record.content === "string" &&
+    (record.error === undefined || (typeof record.error === "string" && record.error.length <= 512 * 1024)) &&
     Array.isArray(record.timeline) &&
     Array.isArray(record.toolCalls) &&
     Array.isArray(record.queue) &&

@@ -28,10 +28,11 @@ export function SettingsGroup({ title, children, className = "", collapsible = f
   if (collapsible) {
     return (
       <details className={`${classes} settingsDisclosure`} open={defaultOpen} aria-busy={busy}>
-        <summary>
+        <summary data-tooltip={tooltip} data-tooltip-position="bottom" data-tooltip-align="start">
           <i className="codicon codicon-chevron-down" aria-hidden="true" />
           <h3 className="sectionTitle">{title}</h3>
           {count !== undefined && <span className="settingsDisclosureCount">{count}</span>}
+          {headerAction}
         </summary>
         <div className="settingsGroupContent">{children}</div>
       </details>

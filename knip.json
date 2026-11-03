@@ -4,11 +4,15 @@
       "entry": [
         "src/test/**/*.test.ts",
         "src/test/integration/PackagedRunner.ts",
-        "scripts/*.mjs"
+        "scripts/*.{mjs,cjs}",
+        "src/test/support/VsCodeMock.ts",
+        "src/test/support/MarkdownAdapterMock.ts",
+        "src/test/support/StorageFsFaults.ts",
+        "src/test/support/PuppeteerDistributionMock.ts"
       ],
       "project": [
         "src/**/*.{ts,tsx}",
-        "scripts/*.mjs"
+        "scripts/*.{mjs,cjs}"
       ]
     },
     "web-doc": {

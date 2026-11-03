@@ -47,13 +47,12 @@ export interface AppConfig {
   includeHomeAgents: boolean;
   usageBreakdown: boolean;
   usageCostCurrency: UsageCurrency;
-  automaticCaptureEnabled: boolean;
-  automaticCaptureLimit: number;
-  browserAccess: "ask" | "always" | "never";
+  capturePermission: "ask" | "first-use" | "always";
   webSearchEnabled: boolean;
   webSearchRegion: string;
   privacyMinimizeData: boolean;
   betaFeaturesEnabled: boolean;
+  strictToolCallsEnabled: boolean;
   editorSuggestionsEnabled: boolean;
   chatSuggestionsEnabled: boolean;
 
@@ -85,13 +84,12 @@ export const DEFAULT_CONFIG: AppConfig = {
   includeHomeAgents: false,
   usageBreakdown: false,
   usageCostCurrency: DEFAULT_USAGE_CURRENCY,
-  automaticCaptureEnabled: false,
-  automaticCaptureLimit: 10,
-  browserAccess: "ask",
+  capturePermission: "ask",
   webSearchEnabled: true,
   webSearchRegion: "global",
   privacyMinimizeData: true,
   betaFeaturesEnabled: false,
+  strictToolCallsEnabled: false,
   editorSuggestionsEnabled: true,
   chatSuggestionsEnabled: true,
 };

@@ -1,3 +1,4 @@
+import type { CaptureScreenshotRequest } from "@/contracts/Capture";
 import { lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 import * as path from "node:path";
@@ -11,10 +12,11 @@ export interface ScreenshotMetadata {
   target: string; windowTitle?: string; pid?: number;
   width: number; height: number; bytes: number; sha256: string;
   automatic?: boolean;
+  captureRequest?: CaptureScreenshotRequest;
   createdAt: number; accessedAt: number;
 }
 interface ScreenshotIndex { automaticTotal?: number; next: number; items: ScreenshotMetadata[] }
-export type CaptureDescription = Pick<ScreenshotMetadata, "kind" | "target" | "windowTitle" | "pid"> & { label?: string; automatic?: boolean; automaticLimit?: number };
+export type CaptureDescription = Pick<ScreenshotMetadata, "kind" | "target" | "windowTitle" | "pid"> & { label?: string; automatic?: boolean; automaticLimit?: number; captureRequest?: CaptureScreenshotRequest };
 
 export class ScreenshotStore {
   readonly directory: string;
@@ -41,6 +43,7 @@ export class ScreenshotStore {
         (description.kind === "attachment" || item.target === target));
       if (duplicate && await this.validFile(duplicate)) {
         duplicate.accessedAt = Date.now();
+        if (description.captureRequest) {duplicate.captureRequest = description.captureRequest;}
         await this.writeIndex(index);
         return duplicate;
       }
@@ -57,6 +60,7 @@ export class ScreenshotStore {
         target, windowTitle: description.windowTitle?.slice(0, 512), pid: description.pid,
         width: dimensions.width, height: dimensions.height, bytes: bytes.length, sha256,
         automatic: description.automatic || undefined,
+        captureRequest: description.captureRequest,
         createdAt: Date.now(), accessedAt: Date.now(),
       };
       let committed = false;

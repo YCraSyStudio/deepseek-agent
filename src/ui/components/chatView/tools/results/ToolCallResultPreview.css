@@ -141,3 +141,13 @@
 .screenshotPreview button { display: block; padding: 0; max-width: 100%; background: transparent; }
 .screenshotPreview img { display: block; max-width: 100%; max-height: 240px; object-fit: contain; }
 .screenshotPreview figcaption { font-size: 12px; overflow-wrap: anywhere; margin-top: 4px; }
+
+.terminalOutcome.running { color: var(--text-primary); }
+.terminalCommand {
+  margin: 0;
+  padding: 8px 9px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

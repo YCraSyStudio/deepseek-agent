@@ -45,3 +45,4 @@ export {
 } from "./deepseek/Models";
 export { WEBVIEW_PROTOCOL_VERSION, WEBVIEW_INPUT_LIMITS } from "./messages/WebviewProtocol";
 export type { ContextWindowStatus, ReferencedFilePayload } from "./messages/WebviewModels";
+export type { RunningTaskInfo } from "./RunningTasks";

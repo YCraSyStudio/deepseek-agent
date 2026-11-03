@@ -85,12 +85,17 @@ export async function recoverGenerationCheckpoints(
         );
         messages.push(state.createMessage("assistant", checkpoint.content, {
           generationId: checkpoint.generationId,
-          generationStatus: completed ? "completed" : "interrupted",
+          generationStatus: checkpoint.status === "error" ? "error" : completed ? "completed" : "interrupted",
           timeline: checkpoint.timeline,
           contextContent: completed ? checkpoint.content : buildInterruptedContextContent(checkpoint.content, recoveredToolCalls),
-          providerTranscript: completed ? undefined : checkpoint.providerTranscript,
+          providerTranscript: checkpoint.providerTranscript,
           toolCalls: recoveredToolCalls,
         }));
+      }
+      if (checkpoint.status === "error" && checkpoint.error && !existingMessages.some(
+        message => message.role === "error" && message.generationId === checkpoint.generationId,
+      )) {
+        messages.push(state.createMessage("error", checkpoint.error, { generationId: checkpoint.generationId, generationStatus: "error" }));
       }
       if (messages.length > 0) {
         await state.saveMessages({

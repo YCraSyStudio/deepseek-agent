@@ -17,7 +17,7 @@ const SETTING_KEYS: readonly StoredSettingKey[] = [
   "interfaceLanguage", "baseUrl", "model", "thinkingMode", "reasoningEffort",
   "temperature", "topP", "maxTokens", "maxConcurrentGenerations",
   "permissionMode", "historyEnabled",
-  "historyRetentionDays", "snapshotStorageLimitMb", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "automaticCaptureEnabled", "automaticCaptureLimit", "browserAccess", "webSearchEnabled", "webSearchRegion", "privacyMinimizeData", "betaFeaturesEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled",
+  "historyRetentionDays", "snapshotStorageLimitMb", "includeHomeAgents", "usageBreakdown", "usageCostCurrency", "capturePermission", "webSearchEnabled", "webSearchRegion", "privacyMinimizeData", "betaFeaturesEnabled", "strictToolCallsEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled",
 ];
 
 const STORED_SETTING_KEYS: ReadonlySet<StoredSettingKey> = new Set(SETTING_KEYS);
@@ -45,13 +45,12 @@ export function normalizeConfig(value: unknown): AppConfig {
     includeHomeAgents: normalizeBoolean(config.includeHomeAgents, DEFAULT_CONFIG.includeHomeAgents),
     usageBreakdown: normalizeBoolean(config.usageBreakdown, DEFAULT_CONFIG.usageBreakdown),
     usageCostCurrency: normalizeUsageCurrency(config.usageCostCurrency),
-    automaticCaptureEnabled: normalizeBoolean(config.automaticCaptureEnabled, false),
-    automaticCaptureLimit: clampInteger(config.automaticCaptureLimit, 1, 40, 10),
-    browserAccess: config.browserAccess === "always" || config.browserAccess === "never" ? config.browserAccess : "ask",
+    capturePermission: config.capturePermission === "first-use" || config.capturePermission === "always" ? config.capturePermission : "ask",
     webSearchEnabled: normalizeBoolean(config.webSearchEnabled, DEFAULT_CONFIG.webSearchEnabled),
     webSearchRegion: normalizeSearchRegion(config.webSearchRegion),
     privacyMinimizeData: normalizeBoolean(config.privacyMinimizeData, DEFAULT_CONFIG.privacyMinimizeData),
     betaFeaturesEnabled: normalizeBoolean(config.betaFeaturesEnabled, DEFAULT_CONFIG.betaFeaturesEnabled),
+    strictToolCallsEnabled: normalizeBoolean(config.strictToolCallsEnabled, DEFAULT_CONFIG.strictToolCallsEnabled),
     editorSuggestionsEnabled: normalizeBoolean(config.editorSuggestionsEnabled, DEFAULT_CONFIG.editorSuggestionsEnabled),
     chatSuggestionsEnabled: normalizeBoolean(config.chatSuggestionsEnabled, DEFAULT_CONFIG.chatSuggestionsEnabled),
   };
@@ -71,14 +70,12 @@ export function isStoredSettingKey(key: string): key is StoredSettingKey {
 
 export function normalizeSettingValue(key: StoredSettingKey, value: unknown): unknown {
   if (key === "webSearchRegion") {return normalizeSearchRegion(value);}
-  if (key === "automaticCaptureEnabled") {return normalizeBoolean(value, false);}
-  if (key === "automaticCaptureLimit") {return clampInteger(value, 1, 40, 10);}
-  if (key === "browserAccess") {return value === "always" || value === "never" ? value : "ask";}
+  if (key === "capturePermission") {return value === "first-use" || value === "always" ? value : "ask";}
   if (key === "interfaceLanguage") {return normalizeInterfaceLanguage(value);}
   if (key === "permissionMode") {return normalizePermissionMode(value);}
   if (key === "reasoningEffort") {return normalizeReasoningEffort(value);}
   if (key === "usageCostCurrency") {return normalizeUsageCurrency(value);}
-  if (["thinkingMode", "historyEnabled", "includeHomeAgents", "usageBreakdown", "webSearchEnabled", "privacyMinimizeData", "betaFeaturesEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled"].includes(key)) {
+  if (["thinkingMode", "historyEnabled", "includeHomeAgents", "usageBreakdown", "webSearchEnabled", "privacyMinimizeData", "betaFeaturesEnabled", "strictToolCallsEnabled", "editorSuggestionsEnabled", "chatSuggestionsEnabled"].includes(key)) {
     return normalizeBoolean(value, DEFAULT_CONFIG[key] as boolean);
   }
   if (key === "model") {return normalizeNonEmptyString(value, DEFAULT_CONFIG.model);}

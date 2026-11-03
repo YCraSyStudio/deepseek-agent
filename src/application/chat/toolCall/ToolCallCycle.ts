@@ -134,6 +134,13 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
       cycleOptions.onTranscriptUpdate?.(structuredClone(transcript), "incomplete");
     }
 
+    const additionalMessages = await cycleOptions.afterToolRound?.(round + 1);
+    if (additionalMessages?.length) {
+      messages.push(...additionalMessages);
+      transcript.push(...structuredClone(additionalMessages));
+      cycleOptions.onTranscriptUpdate?.(structuredClone(transcript), "incomplete");
+    }
+
     const completedRounds = round + 1;
     const progressReviewInterval = normalizeProgressReviewInterval(cycleOptions.progressReviewInterval);
     if (

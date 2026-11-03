@@ -41,6 +41,8 @@ export interface GenerationRunRecord {
   permissionSnapshot?: PermissionSnapshot;
   providerTranscript?: ProviderTranscript;
   budgetManager: GenerationBudgetManager;
+  error?: string;
+  errorPersisted?: boolean;
   pendingTerminalEvent?: Record<string, unknown>;
   terminalEventSent?: boolean;
   cancellationEffectsLogged?: boolean;
@@ -103,6 +105,10 @@ function handleGenerationEvent(
   const type = typeof message.type === "string" ? message.type : "";
   if (type === "streamDone" || type === "streamError") {
     captureGenerationTerminal(record, message);
+    if (type === "streamError" && record.status !== "cancelling" && record.status !== "cancelled") {
+      record.error = appendBoundedUtf8("", String(message.error ?? "Generation failed"), 512 * 1024);
+      callbacks.checkpointImmediately(record);
+    }
     return;
   }
   if (type === "streamTimelineDelta" && typeof message.content === "string" && typeof message.eventId === "string") {

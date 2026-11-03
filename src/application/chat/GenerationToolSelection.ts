@@ -1,5 +1,5 @@
 import type { ToolDefinition } from "@/contracts";
-import { DEEPSEEK_PRO_MODEL_ID } from "@/contracts/deepseek/Models";
+import { modelSupportsVision, DEEPSEEK_PRO_MODEL_ID } from "@/contracts/deepseek/Models";
 import type { ToolRegistry } from "@/application/tools/ToolRegistry";
 
 const WEB_TOOL_NAMES = new Set(["search_web", "read_web"]);
@@ -24,6 +24,8 @@ export function selectGenerationTools(
     if (name === "complete_code" && !availability.betaFeaturesEnabled) {return false;}
 
     if (name === "capture_screenshot" && !availability.files) {return false;}
+
+    if (name === "view_image") {return modelSupportsVision(availability.modelId);}
 
     if (name === IMAGE_ANALYSIS_TOOL_NAME) {
       return availability.modelId === DEEPSEEK_PRO_MODEL_ID;

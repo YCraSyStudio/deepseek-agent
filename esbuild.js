@@ -4,6 +4,7 @@ const fs = require("fs");
 
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
+const coverage = process.env.DEEPSEEK_AGENT_TEST_COVERAGE === "1";
 
 const projectRoot = __dirname;
 
@@ -50,8 +51,9 @@ async function main() {
     entryPoints: ["src/Extension.ts"],
     bundle: true,
     format: "cjs",
-    minify: production,
-    sourcemap: !production,
+    // v8-to-istanbul misattributes ranges when different sources share a minified line.
+    minify: production && !coverage,
+    sourcemap: !production || coverage,
     sourcesContent: false,
     platform: "node",
     outfile: "dist/extension.js",

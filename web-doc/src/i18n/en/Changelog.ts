@@ -8,7 +8,7 @@ export const changelog: PageContent = {
   lead: "Preview 0.1.16 adds recoverable workspace snapshots, storage migration, instruction customization, alongside beta completions and revised web research.",
   sections: [
     {
-      title: "0.1.16 workspace recovery and customization",
+      title: "0.1.16 workspace recovery and customization (2026-11-03)",
       items: [
         "Add per-turn change review and workspace recovery, with bounded snapshots that protect pre-existing and later edits.",
         "Save independent drafts and image attachments for each chat, restore them after reloads, and fix cross-window history conflicts.",
@@ -16,7 +16,7 @@ export const changelog: PageContent = {
         "Add optional editor completions, manual chat suggestions, and beta code-generation tools with separate controls and usage reporting.",
         "Use an installed Chromium browser for local web reads and screenshots; download and update Chrome Headless Shell automatically when none is found. Web search still uses DeepSeek, while page reads no longer call its Fetch API.",
         "Improve visual testing with managed application sessions, native Wayland window capture, and more accurate screenshot cropping.",
-        "Reuse one terminal per chat, refresh settings and menus, and add privacy controls for automatically generated metadata.",
+        "Run commands as internal processes with output in chat, without opening or focusing a VS Code terminal. Preserve timeouts, cancellation and per-chat process ownership. Refresh settings and menus, and add privacy controls for automatically generated metadata.",
         "Migrate legacy storage, consolidate drafts and recovery data, and update dependencies.",
       ],
     },

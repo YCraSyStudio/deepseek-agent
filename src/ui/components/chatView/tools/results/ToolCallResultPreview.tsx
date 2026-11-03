@@ -2,7 +2,7 @@ import type { VsCodeApi } from "@webview/VsCodeApi";
 import type { ToolCallState } from "@webview/views/chatView/ChatViewTypes";
 import { hidesSuccessfulFileResult } from "./FileToolPresentation";
 import { detectDiff } from "@webview/views/chatView/utils/Format";
-import { parseStructuredToolResult, parseTerminalCommandResult } from "@webview/views/chatView/utils/FileType";
+import { parseStructuredToolResult, parseTerminalResult } from "@webview/views/chatView/utils/FileType";
 import {
   renderDiffPreview,
   renderPlainResult,
@@ -33,8 +33,8 @@ export function renderToolCallResultPreview({ toolCall, vscode }: ResultPreviewO
     return renderPlainResult(result, toolCall.status);
   }
 
-  if (toolCall.toolName === "run_terminal_command") {
-    const terminalResult = parseTerminalCommandResult(result);
+  if (toolCall.toolName === "run_terminal_command" || toolCall.toolName === "application_session") {
+    const terminalResult = parseTerminalResult(result);
     if (terminalResult) {
       return renderTerminalResult(terminalResult);
     }

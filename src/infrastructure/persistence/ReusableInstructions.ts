@@ -1,7 +1,8 @@
+import { createFileIfMissing } from "./CreateFileIfMissing";
 import { isInstructionName } from "@/shared/instructions/InstructionNames";
 import { instructionTemplate } from "@/shared/instructions/InstructionTemplates";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, readdir, realpath, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, realpath } from "node:fs/promises";
 import * as path from "node:path";
 import { INSTRUCTION_TEMPLATE_IDS, type InstructionTemplateId, type ReusableInstruction } from "@/contracts/Customization";
 import { throwIfAborted } from "@/shared/utils/Cancellation";
@@ -28,7 +29,10 @@ export async function listReusableInstructions(roots: readonly InstructionRoot[]
     throwIfAborted(signal);
     const directory = await instructionDirectory(root, false);
     if (!directory) {continue;}
-    const files = await readdir(directory, { withFileTypes: true });
+    const files = await readdir(directory, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") {return [];}
+      throw error;
+    });
     for (const file of files.sort((a, b) => a.name.localeCompare(b.name))) {
       if (entries.length >= MAX_ENTRIES) {return entries;}
       throwIfAborted(signal);
@@ -53,8 +57,7 @@ export async function createReusableInstruction(root: InstructionRoot, nameValue
   const directory = await instructionDirectory(root, true);
   const file = path.join(directory!, `${name}.md`);
   const content = `---\ndescription: ${JSON.stringify(summary)}\n---\n\n# ${name}\n\n${instructionTemplate(template, locale).body}`;
-  try {await writeFile(file, content, { encoding: "utf8", flag: "wx", mode: 0o600 });}
-  catch (error) {if ((error as NodeJS.ErrnoException).code !== "EEXIST") {throw error;}}
+  await createFileIfMissing(file, content, 0o600);
   await readInstruction(file, MAX_BYTES, true);
   return file;
 }

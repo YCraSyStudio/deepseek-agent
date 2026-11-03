@@ -3,7 +3,8 @@ import { SystemBrowserCapture } from "@/infrastructure/capture/SystemBrowserCapt
 import { NativeCaptureBackend } from "@/infrastructure/capture/NativeCaptureBackend";
 import { NativeDebugAnchor } from "@/vscode/tools/capture/NativeDebugAnchor";
 import { registerCaptureBackend } from "@/infrastructure/capture/CaptureService";
-import { WebCaptureBackend } from "@/vscode/tools/capture/WebCaptureBackend";
+import { CapturePermissions } from "@/infrastructure/capture/CapturePermissions";
+import { usesWaylandPortal } from "@/infrastructure/capture/WaylandPortalCapture";
 import * as vscode from "vscode";
 import { ToolRegistry } from "@/application/tools";
 import { createHeadlessWebTools } from "@/infrastructure/browser/BrowserTools";
@@ -56,15 +57,23 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
     const browsers = new ChromiumProvider(vscode.Uri.joinPath(context.globalStorageUri, "chromium").fsPath,
       async (task) => vscode.window.withProgress({ location: vscode.ProgressLocation.Notification,
         title: "Preparing Chromium for web reads and screenshots (first download may take several minutes)" }, task));
-    registerCaptureBackend("web", new WebCaptureBackend(this.settings, new SystemBrowserCapture(browsers)));
     const debugAnchor = new NativeDebugAnchor();
     context.subscriptions.push(debugAnchor);
-    const nativeCapture = new NativeCaptureBackend(() => debugAnchor.pid());
+    const capturePermissions = new CapturePermissions({
+      mode: () => this.settings.load().capturePermission,
+      read: () => context.globalState.get("capturePermissions"),
+      save: state => context.globalState.update("capturePermissions", state),
+      confirm: async view => await vscode.window.showInformationMessage(`Allow YCraSy Agent to capture ${view}?`, { modal: true }, "Allow") === "Allow",
+      systemChooser: request => request.target !== "web" && usesWaylandPortal(),
+      debugPid: () => debugAnchor.pid(),
+    });
+    registerCaptureBackend("web", capturePermissions.wrap(new SystemBrowserCapture(browsers)));
+    const nativeCapture = new NativeCaptureBackend(() => debugAnchor.pid(), undefined, undefined, undefined, request => capturePermissions.portalOptions(request));
     const desktopCapture = { timeoutMs: nativeCapture.timeoutMs, capture: (request: Parameters<NativeCaptureBackend["capture"]>[0], signal: AbortSignal) => {
       if (vscode.env.remoteName || vscode.env.uiKind !== vscode.UIKind.Desktop) {throw new Error("Native capture requires a local desktop extension host; remote workspaces cannot capture the UI machine");}
       return nativeCapture.capture(request, signal);
     }};
-    for (const target of ["window", "debug", "screen"] as const) {registerCaptureBackend(target, desktopCapture);}
+    for (const target of ["window", "debug", "screen"] as const) {registerCaptureBackend(target, capturePermissions.wrap(desktopCapture));}
     const webClient = new DeepSeekWebClient(async () => {
       const config = this.settings.load();
       if (!config.webSearchEnabled) {throw new Error("Web search is disabled in settings.");}
@@ -73,7 +82,7 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
     context.subscriptions.push({ dispose: () => webClient.dispose() });
     this.webRuntime = new HeadlessWebRuntime(browsers, () => {
       const config = this.settings.load();
-      if (!config.webSearchEnabled || config.browserAccess === "never") {throw new Error("Web reading is disabled in settings");}
+      if (!config.webSearchEnabled) {throw new Error("Web reading is disabled in settings");}
     });
     configureWebRuntimeDiagnostics(this.webRuntime);
 

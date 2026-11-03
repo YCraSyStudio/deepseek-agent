@@ -4,15 +4,15 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "pnpm: build",
+			"label": "npm: build",
 			"type": "shell",
-			"command": "corepack pnpm run build",
+			"command": "npm run build",
 			"problemMatcher": "$tsc"
 		},
 		{
-			"label": "pnpm: watch",
+			"label": "npm: watch",
 			"type": "shell",
-			"command": "corepack pnpm run watch",
+			"command": "npm run watch",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"presentation": {

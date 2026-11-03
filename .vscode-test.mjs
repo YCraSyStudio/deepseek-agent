@@ -1,11 +1,16 @@
 import { defineConfig } from '@vscode/test-cli';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const workspaceFolder = dirname(fileURLToPath(import.meta.url));
 const vscodeCache = join(workspaceFolder, '.tmp', 'vscode');
+// Snapshot/revert tests must never capture or restore the development checkout.
+const integrationWorkspace = mkdtempSync(join(tmpdir(), 'deepseek-integration-workspace-'));
+writeFileSync(join(integrationWorkspace, 'package.json'), JSON.stringify({ name: 'integration-workspace', private: true }), 'utf8');
+process.once('exit', () => rmSync(integrationWorkspace, { recursive: true, force: true, maxRetries: 3 }));
 const testDataDirectory = join(workspaceFolder, '.tmp', 'integration-user-data');
 const historyDirectory = join(testDataDirectory, 'history');
 const invalidConversationPath = join(historyDirectory, 'unversioned-integration.json');
@@ -38,14 +43,24 @@ export default defineConfig({
 	mocha: {
 		// Native editor startup and undo can exceed five seconds on shared runners.
 		timeout: 20_000,
+		require: process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY
+			? [join(workspaceFolder, 'scripts', 'integration-coverage.cjs')]
+			: [],
 	},
 	env: {
 		NODE_ENV: 'test',
+		...(process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY
+			? { DEEPSEEK_AGENT_COVERAGE_DIRECTORY: process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY }
+			: {}),
 		DEEPSEEK_AGENT_USER_DATA_DIR: testDataDirectory,
+		DEEPSEEK_AGENT_INTEGRATION_WORKSPACE: integrationWorkspace,
 	},
 	useInstallation: { fromPath: executable },
 	launchArgs: [
-		workspaceFolder,
+		integrationWorkspace,
+		// End-to-end flows mutate the workspace; the editor must trust it so tool
+		// execution reaches the real file system instead of failing closed.
+		'--disable-workspace-trust',
 		`--user-data-dir=${join(vscodeCache, 'user-data')}`,
 		`--extensions-dir=${join(vscodeCache, 'extensions')}`,
 	],

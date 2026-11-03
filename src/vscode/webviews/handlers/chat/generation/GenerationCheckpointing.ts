@@ -48,7 +48,8 @@ export async function checkpointGeneration(
   await dependencies.checkpointStore.save({
     conversationId: record.conversationId,
     generationId: record.generationId,
-    status: record.status,
+    status: record.error && record.status !== "cancelling" && record.status !== "cancelled" ? "error" : record.status,
+    error: record.error,
     userMessage: record.userMessage,
     content: record.content,
     timeline: structuredClone(record.timeline),
@@ -141,7 +142,8 @@ export function buildGenerationSnapshot(
     generations: [...starting, ...[...runs.values()].map((record) => ({
       generationId: record.generationId,
       conversationId: record.conversationId,
-      status: record.status,
+      status: record.error && record.status !== "cancelling" && record.status !== "cancelled" ? "error" : record.status,
+      error: record.error,
       userMessage: record.userMessage ?? record.state.createMessage("user", ""),
       content: record.content,
       timeline: structuredClone(record.timeline),

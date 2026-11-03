@@ -72,12 +72,16 @@ export const settings = {
     },
     beta: {
       title: "Funciones beta",
-      enabled: "Activar funciones beta",
-      description: "Activa funciones beta de la API de DeepSeek: Chat Prefix, FIM y herramientas estrictas. Desactivado por defecto. Al apagarlo se bloquean nuevas peticiones beta y se detienen las sugerencias automáticas.",
+      description: "Activa el completado y las sugerencias beta. Al desactivarlo también se desactivan las llamadas estrictas a herramientas. Desactivado por defecto.",
       editorSuggestions: "Sugerencias en el editor",
       chatSuggestions: "Sugerencias en el chat",
       editorSuggestionsHelp: "Tras una pausa de 800 ms al escribir, envía el código cercano a DeepSeek para completarlo. Consume API. Tab acepta; Escape descarta. Requiere funciones beta y un workspace de confianza.",
       chatSuggestionsHelp: "Pulsa Sugerir mensaje junto al indicador de contexto para generar un mensaje o continuar el borrador con un resumen breve del proyecto. Escribir no solicita sugerencias. No envía código fuente ni historial. Consume API. Tab acepta; Escape descarta. Requiere funciones beta, una API key configurada y un workspace de confianza.",
+    },
+    strictTools: {
+      title: "Validación de herramientas",
+      enabled: "Llamadas estrictas a herramientas",
+      description: "Experimental y desactivado por defecto. Usa el endpoint beta de DeepSeek para validar los argumentos con esquemas estrictos. Requiere funciones beta.",
     },
     privacy: {
       title: "Privacidad",
@@ -86,13 +90,11 @@ export const settings = {
       limits: "Mejor esfuerzo: no modifica mensajes, código, salidas de herramientas, imágenes ni historial. No garantiza anonimato; el proveedor sigue viendo la IP de conexión.",
     },
     browser: {
-      access: "Permiso de capturas",
-      ask: "Preguntar por sitio",
-      always: "Siempre",
-      never: "Nunca",
-      automatic: "Capturas automáticas",
-      automaticHelp: "Captura tras cambios en la interfaz usando el último destino capturado explícitamente. Las capturas permanecen locales hasta analizarlas.",
-      limit: "Máximo de capturas por conversación",
+      access: "Capturas de pantalla",
+      ask: "Preguntar siempre (por defecto)",
+      firstUse: "Preguntar la primera vez por vista",
+      always: "Permitir capturar siempre",
+      help: "Captura automáticamente tras cambios de interfaz usando la última vista capturada. Recuerda el permiso por cada URL web o app. Wayland puede exigir una selección inicial del sistema; se reutiliza la autorización cuando el escritorio lo permite.",
     },
     webSearch: {
       title: "Búsqueda web",

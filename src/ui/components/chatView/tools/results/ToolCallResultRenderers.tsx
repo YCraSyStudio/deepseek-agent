@@ -33,6 +33,12 @@ export function renderToolCallArgumentsPreview(toolName: string, argumentsJson: 
     return renderCodePreview({ filename: "arguments.txt", language: "text", size: argumentsJson.length, content: truncate(argumentsJson, 4000) });
   }
 
+  if (toolName === "run_terminal_command" || toolName === "application_session") {
+    const command = typeof parsed.command === "string" ? parsed.command
+      : `${String(parsed.action ?? "")} ${String(parsed.session_id ?? "")}`.trim();
+    return <pre className="terminalCommand">{command}</pre>;
+  }
+
   const path = typeof parsed.path === "string" ? parsed.path : undefined;
   const filename = path ? formatRelativePath(path) : `${toolName}.json`;
   const content = getPreviewContent(toolName, parsed);

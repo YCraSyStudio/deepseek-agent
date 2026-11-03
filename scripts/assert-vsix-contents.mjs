@@ -34,9 +34,6 @@ const allowedExact = new Set([
   "extension/LICENSE.txt",
   "extension/changelog.md",
   "extension/package.json",
-  "extension/package.nls.json",
-  "extension/package.nls.es.json",
-  "extension/package.nls.zh-cn.json",
   "extension/readme.md",
 ]);
 const unexpected = [...entries].filter((file) =>

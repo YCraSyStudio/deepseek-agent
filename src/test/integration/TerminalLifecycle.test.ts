@@ -2,65 +2,76 @@ import * as assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
 import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
-import { closeConversationTerminals } from "@/vscode/tools/VsCodeTerminalExecution";
+import { shutdownConversationCommands } from "@/infrastructure/tools/builtins/terminal/ShellExecution";
 import { ChatHandler } from "@/vscode/webviews/handlers/chat/ChatHandler";
 
-suite("Conversation terminal lifecycle", () => {
-  test("reuses terminals within a chat and closes a deleted background chat without affecting others", async function () {
-    this.timeout(30000);
+suite("Internal command execution", () => {
+  test("runs commands in their requested directory without opening or activating VS Code terminals", async function () {
+    this.timeout(15000);
     const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     assert.ok(cwd);
-    const first = randomUUID(); const second = randomUUID();
-    const firstHost = createVsCodeToolWorkspace(undefined, { conversationId: first });
-    const secondHost = createVsCodeToolWorkspace(undefined, { conversationId: second });
+    const id = randomUUID();
+    const host = createVsCodeToolWorkspace(undefined, { conversationId: id });
     const options = { cwd, workspaceRoot: cwd, timeoutMs: 5000, maxOutputBytes: 4096 };
-    const owned = (id: string) => vscode.window.terminals.filter((terminal) =>
-      (terminal.creationOptions as vscode.TerminalOptions).env?.YCRASY_AGENT_CONVERSATION_ID === id);
-    const manual = vscode.window.createTerminal({ name: "Terminal lifecycle: user terminal", cwd, isTransient: true });
-    const directory = vscode.Uri.joinPath(vscode.Uri.file(cwd), `terminal-lifecycle-${first} ' $(echo unexpected)`);
+    const manual = vscode.window.createTerminal({ name: "User terminal: focus regression", cwd, isTransient: true });
+    manual.show();
+    const deadline = Date.now() + 5000;
+    while (vscode.window.activeTerminal !== manual) {
+      assert.ok(Date.now() < deadline, "User terminal did not become active");
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    const directory = vscode.Uri.joinPath(vscode.Uri.file(cwd), `.tmp/commands-${id} ' $(echo unexpected)`);
+    let opened = 0; let changed = 0;
+    const subscriptions = [vscode.window.onDidOpenTerminal(terminal => {if (terminal !== manual) {opened++;}}), vscode.window.onDidChangeActiveTerminal(terminal => {if (terminal !== manual) {changed++;}})];
     try {
       await vscode.workspace.fs.createDirectory(directory);
-      assert.equal((await firstHost.executeCommand!("echo first-chat", options)).exitCode, 0);
-      const firstTerminal = owned(first)[0]; assert.ok(firstTerminal);
-      assert.equal((await firstHost.executeCommand!("echo first-chat-again", options)).exitCode, 0);
-      assert.deepEqual(owned(first), [firstTerminal]);
-      const paginated = await firstHost.executeCommand!("git --paginate help -a", options);
-      assert.equal(paginated.exitCode, 0);
-      assert.equal(paginated.timedOut, false);
-      assert.equal((await secondHost.executeCommand!("echo second-chat", options)).exitCode, 0);
-      const secondTerminal = owned(second)[0]; assert.ok(secondTerminal);
-      assert.notEqual(firstTerminal, secondTerminal);
-      assert.equal((firstTerminal.creationOptions as vscode.TerminalOptions).isTransient, true);
-      assert.equal((await firstHost.executeCommand!("echo another-directory", { ...options, cwd: directory.fsPath })).exitCode, 0);
-      assert.deepEqual(owned(first), [firstTerminal]);
-      assert.equal(firstTerminal.shellIntegration?.cwd?.fsPath, directory.fsPath);
-      assert.equal((await firstHost.executeCommand!("echo back-at-root", options)).exitCode, 0);
-      assert.deepEqual(owned(first), [firstTerminal]);
-      assert.equal(firstTerminal.shellIntegration?.cwd?.fsPath, cwd);
-      assert.equal((firstTerminal.creationOptions as vscode.TerminalOptions).env?.GIT_PAGER, "cat");
-
-      const remaining = new Set(owned(first));
-      const closed = new Promise<void>((resolve) => {
-        const timer = setTimeout(() => {subscription.dispose(); resolve();}, 5000);
-        const subscription = vscode.window.onDidCloseTerminal((terminal) => {
-          remaining.delete(terminal);
-          if (remaining.size === 0) {clearTimeout(timer); subscription.dispose(); resolve();}
-        });
-      });
-      // A deletion must clean up even when the chat was not currently selected.
-      const handler = {
-        coordinator: { getActiveForConversation: () => undefined },
-        conversationState: { forget: () => false },
-      } as unknown as ChatHandler;
-      assert.equal(ChatHandler.prototype.forgetConversation.call(handler, first), false);
-      await closed;
-      assert.deepEqual(owned(first), []);
-      assert.deepEqual(owned(second), [secondTerminal]);
-      assert.ok(vscode.window.terminals.includes(manual));
-      assert.equal((await secondHost.executeCommand!("echo still-open", options)).exitCode, 0);
+      const terminals = [...vscode.window.terminals];
+      const active = vscode.window.activeTerminal;
+      assert.equal((await host.executeCommand!("echo first-command", options)).exitCode, 0);
+      const paginated = await host.executeCommand!("git --paginate help -a", options);
+      assert.equal(paginated.exitCode, 0); assert.equal(paginated.timedOut, false);
+      const shell = host.getCommandShell!();
+      const pwd = /(?:^|[\\/])cmd(?:\.exe)?$/i.test(shell) ? "cd" : "pwd";
+      const moved = await host.executeCommand!(pwd, { ...options, cwd: directory.fsPath });
+      assert.equal(moved.exitCode, 0); assert.ok(moved.stdout.includes(directory.fsPath));
+      const root = await host.executeCommand!(pwd, options);
+      assert.equal(root.exitCode, 0); assert.ok(root.stdout.includes(cwd));
+      assert.equal(opened, 0); assert.equal(changed, 0);
+      assert.deepEqual([...vscode.window.terminals], terminals);
+      assert.equal(vscode.window.activeTerminal, active);
     } finally {
-      closeConversationTerminals(first); closeConversationTerminals(second); manual.dispose();
+      subscriptions.forEach(subscription => subscription.dispose());
+      await shutdownConversationCommands(id); manual.dispose();
       await vscode.workspace.fs.delete(directory, { recursive: true });
+    }
+  });
+
+  test("deleting a background chat stops only its command processes", async function () {
+    this.timeout(15000);
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath; assert.ok(cwd);
+    const first = randomUUID(); const second = randomUUID();
+    const hosts = [first, second].map(conversationId => createVsCodeToolWorkspace(undefined, { conversationId }));
+    const options = { cwd, workspaceRoot: cwd, timeoutMs: 10000, maxOutputBytes: 4096 };
+    const markers = [first, second].map(id => vscode.Uri.joinPath(vscode.Uri.file(cwd), `.tmp/command-ready-${id}`));
+    const commands = markers.map(marker => `node -e "require('node:fs').writeFileSync('${marker.fsPath.replace(/\\/g, '\\\\')}', 'ready');setInterval(()=>{},1000)"`);
+    const executions = hosts.map((host, index) => host.executeCommand!(commands[index], options));
+    let secondFinished = false; void executions[1].then(() => {secondFinished = true;});
+    try {
+      for (const marker of markers) {
+        const deadline = Date.now() + 5000;
+        while (!await vscode.workspace.fs.stat(marker).then(() => true, () => false)) {
+          assert.ok(Date.now() < deadline, "Command did not start"); await new Promise(resolve => setTimeout(resolve, 20));
+        }
+      }
+      const handler = { coordinator: { getActiveForConversation: () => undefined }, conversationState: { forget: () => false } } as unknown as ChatHandler;
+      assert.equal(ChatHandler.prototype.forgetConversation.call(handler, first), false);
+      const stopped = await executions[0]; assert.notEqual(stopped.exitCode, 0);
+      assert.equal(secondFinished, false);
+      await shutdownConversationCommands(second); await executions[1];
+    } finally {
+      await Promise.all([shutdownConversationCommands(first), shutdownConversationCommands(second)]);
+      await Promise.allSettled(executions);
+      await Promise.all(markers.map(uri => vscode.workspace.fs.delete(uri).then(() => undefined, () => undefined)));
     }
   });
 });

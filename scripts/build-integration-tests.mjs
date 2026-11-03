@@ -7,6 +7,7 @@ await build({
     "src/test/integration/PackagedRunner.ts",
   ],
   bundle: true,
+  sourcemap: process.env.DEEPSEEK_AGENT_TEST_COVERAGE === "1",
   platform: "node",
   format: "cjs",
   external: ["vscode", "mocha"],

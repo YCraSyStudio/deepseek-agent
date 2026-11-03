@@ -53,6 +53,7 @@
     cursor: pointer;
     list-style: none;
 
+    > input[type="checkbox"] { flex-shrink: 0; width: 18px; height: 18px; margin: 0; }
     > .codicon { flex-shrink: 0; }
     > .sectionTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
     &::-webkit-details-marker { display: none; }

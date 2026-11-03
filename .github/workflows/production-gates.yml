@@ -25,39 +25,45 @@ jobs:
         env:
           HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: node scripts/detect-release-mode.mjs
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: npm
+      - run: npm install --global npm@12.2.1
+      - run: npm ci
       - run: node scripts/prepare-test-results.mjs
-      - run: pnpm run compile
-      - run: pnpm run lint
-      - run: pnpm run audit:dead-code
-      - run: pnpm run test:unit
+      - run: npm run compile
+      - run: npm run lint
+      - run: npm run audit:dead-code
+      - run: npm run test:coverage
       - name: Validate release tag and changelog
         if: steps.release-mode.outputs.release == 'true'
         env:
           TAG: ${{ steps.release-mode.outputs.tag }}
         run: node scripts/extract-release-notes.mjs CHANGELOG.md package.json "$TAG" release-notes.md
       - name: Audit runtime dependencies
-        run: pnpm audit --prod --audit-level high
+        run: npm audit --omit=dev --audit-level high
       - name: Audit build chain
-        run: pnpm audit --audit-level critical
+        run: npm audit --audit-level critical
       - name: Build and validate Astro documentation
         env:
           ASTRO_TELEMETRY_DISABLED: "1"
-        run: pnpm --dir web-doc run build
-      - run: pnpm run build
-      - run: pnpm run package:vsix
-      - run: pnpm run verify:vsix
+        run: npm run build --workspace web-doc
+      - run: npm run build
+      - run: npm run package:vsix
+      - run: npm run verify:vsix
       - run: node scripts/write-artifact-checksum.mjs artifacts/*.vsix artifacts/sha256.txt
       - uses: actions/upload-artifact@v7
         with:
           name: production-vsix
           path: artifacts/
           if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: unit-coverage
+          path: coverage/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -75,19 +81,25 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: npm
+      - run: npm install --global npm@12.2.1
+      - run: npm ci
       - run: node scripts/prepare-test-results.mjs
       - name: Run extension-host integration tests
         if: runner.os != 'Linux'
-        run: pnpm run test:integration -- --code-version stable --reporter xunit --reporter-option output=.tmp/test-results/integration.xml
+        run: npm run test:coverage:full -- --code-version stable --reporter xunit --reporter-option output=.tmp/test-results/integration.xml
       - name: Run extension-host integration tests (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a pnpm run test:integration -- --code-version stable --reporter xunit --reporter-option output=.tmp/test-results/integration.xml
+        run: xvfb-run -a npm run test:coverage:full -- --code-version stable --reporter xunit --reporter-option output=.tmp/test-results/integration.xml
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: extension-coverage-${{ matrix.os }}
+          path: coverage/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -102,17 +114,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: npm
+      - run: npm install --global npm@12.2.1
+      - run: npm ci
       - uses: actions/download-artifact@v8
         with:
           name: production-vsix
           path: artifacts
-      - run: pnpm run prepare:integration
+      - run: npm run prepare:integration
       - run: xvfb-run -a node scripts/test-packaged-vsix.mjs artifacts/*.vsix stable
 
   github-release:

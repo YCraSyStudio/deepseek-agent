@@ -72,12 +72,16 @@ export const settings = {
     },
     beta: {
       title: "Beta 功能",
-      enabled: "启用 Beta 功能",
-      description: "启用 DeepSeek API 的 Beta 功能：Chat Prefix、FIM 和严格工具调用。默认关闭。关闭后阻止新的 Beta 请求并停止自动建议。",
+      description: "启用 Beta 补全和建议。关闭时也会关闭严格工具调用。默认关闭。",
       editorSuggestions: "编辑器建议",
       chatSuggestions: "聊天建议",
       editorSuggestionsHelp: "输入停顿 800 毫秒后，将附近代码发送至 DeepSeek 进行补全，产生 API 费用。Tab 接受，Escape 关闭。需要启用 Beta 功能并信任工作区。",
       chatSuggestionsHelp: "点击上下文指示器旁的建议消息按钮，使用简短项目摘要生成消息或续写草稿。输入时不会自动请求建议。不发送源代码或聊天历史。产生 API 费用。Tab 接受，Escape 关闭。需要启用 Beta 功能、配置 API 密钥并信任工作区。",
+    },
+    strictTools: {
+      title: "工具模式验证",
+      enabled: "严格工具调用",
+      description: "实验功能，默认关闭。使用 DeepSeek Beta 端点验证严格工具参数模式。需要启用 Beta 功能。",
     },
     privacy: {
       title: "隐私",
@@ -86,13 +90,11 @@ export const settings = {
       limits: "尽力而为：不修改消息、代码、工具输出、图像或历史。不保证匿名性；提供商仍能看到连接 IP。",
     },
     browser: {
-      access: "截图权限",
-      ask: "按网站询问",
-      always: "始终允许",
-      never: "从不允许",
-      automatic: "自动截图",
-      automaticHelp: "界面变化后对上次明确截图的目标进行截图。截图在分析之前仅保存在本地。",
-      limit: "每个对话的截图上限",
+      access: "屏幕截图",
+      ask: "始终询问（默认）",
+      firstUse: "每个视图首次截图时询问",
+      always: "始终允许截图",
+      help: "界面修改后自动截取上次的视图。按完整网页 URL 或应用记住权限。Wayland 可能仍要求首次系统选择；桌面支持时会复用授权。",
     },
     webSearch: {
       title: "Web 搜索",

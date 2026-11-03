@@ -71,6 +71,7 @@ export interface ImageAttachment {
 }
 
 export interface QueuedGenerationMessage {
+  imageAttachments?: ImageAttachment[];
   clientRequestId: string;
   text: string;
   queuedAt: number;
@@ -116,6 +117,7 @@ interface WorkspaceRebinding {
 }
 
 export interface GenerationSnapshot {
+  error?: string;
   generationId: string;
   conversationId: string;
   status: "starting" | "compacting" | "streaming" | "awaiting_confirmation" | "running_tool" | "cancelling" | "cancelled" | "interrupted" | "completed" | "error";

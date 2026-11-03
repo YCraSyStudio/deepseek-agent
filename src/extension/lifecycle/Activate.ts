@@ -1,16 +1,16 @@
 import * as vscode from "vscode";
-import { configureUserDataDirectory } from "@/infrastructure/persistence/UserDataPaths";
+import { configureUserDataDirectory, getUserDataDirectory } from "@/infrastructure/persistence/UserDataPaths";
 import { getConfiguredStorageDirectory } from "@/vscode/storage/StorageLocation";
 import type { AppConfig } from "@/contracts";
 import { CONFIG_SECTION, INCLUDE_HOME_AGENTS_KEY } from "@/shared/constants";
 import { registerExtensionApi } from "@/vscode/activation/RegisterExtensionApi";
 import { SettingsManager, SecretsManager } from "@/vscode/storage";
 import { setActiveProvider } from "./ExtensionRuntime";
-import { initializeLogger, logInfo } from "@/shared/logging/Logger";
+import { initializeLogger, logInfo, logError, showDiagnostics } from "@/shared/logging/Logger";
 import { getWebRuntimeDiagnostics } from "@/vscode/tools/browser";
 import { ExtensionCompositionRoot } from "../CompositionRoot";
 
-type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled" | "browserAccess" | "automaticCaptureEnabled" | "automaticCaptureLimit"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes" | "autoContext";
+type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled" | "capturePermission"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes" | "autoContext";
 
 const LEGACY_SETTING_KEYS: ReadonlyArray<LegacySettingKey> = [
   "baseUrl",
@@ -37,11 +37,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.globalState.setKeysForSync([]);
   configureUserDataDirectory(getConfiguredStorageDirectory(context));
   await initializeUserSettings();
-  if (SettingsManager.getPersistenceError()) {
-    await vscode.window.showWarningMessage(
-      "YCraSy DeepSeek Agent settings storage is unavailable. Chat remains available with temporary settings and incognito history; check access to the extension data directory and reload VS Code.",
-    );
-  }
   await SecretsManager.migrateLegacyApiKey(context, SettingsManager.load().baseUrl);
   const root = new ExtensionCompositionRoot(context);
   logInfo("[HeadlessWeb] Runtime snapshot", getWebRuntimeDiagnostics());
@@ -49,6 +44,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   setActiveProvider(root.webviewProvider);
   await root.initialize();
   registerExtensionApi(context, root.webviewProvider, root.settings);
+  const cleanupError = await SettingsManager.completeMigration();
+  const persistenceError = SettingsManager.getPersistenceError();
+  if (persistenceError || cleanupError) {
+    logError("[Storage] Storage startup or migration cleanup failed", { directory: getUserDataDirectory(), error: persistenceError ?? cleanupError });
+    void vscode.window.showWarningMessage(
+      persistenceError ? "YCraSy DeepSeek Agent could not load or migrate your stored data. You can continue with fresh temporary settings and empty incognito history; changes will not be saved between sessions. Your existing files are preserved. Open diagnostics, fix the reported storage problem, then reload VS Code."
+        : "YCraSy DeepSeek Agent loaded your data, but could not clean up temporary migration backups. You can continue normally. Open diagnostics, fix the reported storage problem, then reload VS Code.",
+      "Show diagnostics",
+      "Reload window",
+    ).then((action) => {
+      if (action === "Show diagnostics") {showDiagnostics();}
+      if (action === "Reload window") {return vscode.commands.executeCommand("workbench.action.reloadWindow");}
+    });
+  }
 }
 
 async function initializeUserSettings(): Promise<void> {
@@ -57,6 +66,7 @@ async function initializeUserSettings(): Promise<void> {
   const initialSettings: Record<string, unknown> = Object.fromEntries(LEGACY_SETTING_KEYS.map((key) => [key, legacyConfig.get(key)]));
   initialSettings.includeHomeAgents = legacyConfig.get(INCLUDE_HOME_AGENTS_KEY);
   await SettingsManager.initialize(initialSettings);
+  if (SettingsManager.getPersistenceError()) {return;}
 
   const removals: Thenable<void>[] = [];
   for (const key of [...LEGACY_SETTING_KEYS, INCLUDE_HOME_AGENTS_KEY]) {

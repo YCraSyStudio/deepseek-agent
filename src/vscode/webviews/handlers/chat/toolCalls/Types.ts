@@ -1,3 +1,4 @@
+import type { AutomaticCaptureObservation } from "@/infrastructure/capture/AutomaticCaptureSession";
 import type { AnalyzeImagesRequest, ToolHandlerContext } from "@/application/tools/Types";
 import type { AppConfig, AssistantTimelineEvent, ChatMessage, PermissionSnapshot, ToolCall, ToolDefinition } from "@/contracts";
 import type { ToolCallCycleResult } from "@/application/chat/toolCall";
@@ -67,6 +68,8 @@ export interface ToolCallRunOptions {
   trustedUserRequest: string;
   authorizedUserUrls: readonly string[];
   budgetManager: GenerationBudgetManager;
+  prepareNativeImages?: (messages: ChatMessage[]) => ChatMessage[];
+  prepareAutomaticCapture?: (calls: readonly StoredExecution[]) => (() => Promise<AutomaticCaptureObservation>) | undefined;
   onContextCompacted?: (data: { estimatedTokensBefore: number; estimatedTokensAfter: number }) => Promise<void> | void;
   captureScreenshot?: ToolHandlerContext["captureScreenshot"];
   applicationSession?: ToolHandlerContext["applicationSession"];
@@ -75,6 +78,7 @@ export interface ToolCallRunOptions {
   analyzeImages?: (request: AnalyzeImagesRequest, signal?: AbortSignal) => Promise<string>;
   completeCode?: ToolHandlerContext["completeCode"];
   isBetaFeaturesEnabled?: () => boolean;
+  isStrictToolCallsEnabled?: () => boolean;
 }
 
 export interface ToolCallRunResult {
@@ -82,6 +86,7 @@ export interface ToolCallRunResult {
   timeline: AssistantTimelineEvent[];
   toolCalls?: StoredExecution[];
   partial?: boolean;
+  error?: string;
   providerTranscript?: ProviderTranscript;
 }
 

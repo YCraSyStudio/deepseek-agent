@@ -51,6 +51,7 @@ export class ToolExecutor {
           dangerLevel: parsedResult.dangerLevel,
           warningMessage: parsedResult.warningMessage,
           command: parsedResult.command,
+          keepAlive: parsedResult.keepAlive,
           filePath: parsedResult.filePath,
           cwd: parsedResult.cwd,
           workspaceRoot: parsedResult.workspaceRoot,

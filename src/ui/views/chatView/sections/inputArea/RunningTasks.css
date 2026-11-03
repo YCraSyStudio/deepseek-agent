@@ -1,0 +1,65 @@
+.runningTasks {
+  border: 1px solid var(--vscode-editorWidget-border, #ddd);
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, transparent);
+  flex-direction: column;
+  min-width: 0;
+  padding: 2px;
+  display: flex;
+}
+.runningTask {
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 1px 2px 1px 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  display: flex;
+}
+.runningTaskLabel {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  display: inline-flex;
+  overflow: hidden;
+}
+.runningTaskName {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.runningTaskPid {
+  opacity: .65;
+  flex: none;
+  margin-left: 4px;
+}
+.runningTaskStop {
+  width: 20px;
+  height: 20px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  margin-left: auto;
+  padding: 0;
+  display: inline-flex;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31));
+  }
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder, #007fd4);
+    outline-offset: 1px;
+  }
+  &:disabled {
+    cursor: default;
+    opacity: .7;
+  }
+  .codicon {
+    font-size: 12px;
+  }
+}

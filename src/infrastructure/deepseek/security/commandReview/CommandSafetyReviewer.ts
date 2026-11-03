@@ -29,7 +29,16 @@ export interface CommandSafetyReview {
   risk: CommandSafetyRisk;
   confidence: CommandSafetyConfidence;
   reason: string;
+  userRequestedPersistence?: boolean;
 }
+
+const REVIEW_SCHEMA_KEYS = ["decision", "risk", "confidence", "reason"] as const;
+const PERSISTENCE_KEY = "userRequestedPersistence";
+
+const KEEP_ALIVE_INTENT_PROMPT = `
+This action starts a keep-alive terminal that outlives the turn.
+Judge in natural language whether the user's own request asks for this process, or the tool it serves, to remain alive after the turn. Meaning and sincerity decide, not keywords: accept paraphrases, plurals, indirect phrasing, and agreement carried from earlier requests, and reject requests that were withdrawn, limited, or never included.
+Add "userRequestedPersistence":true|false to the JSON. Use true only when the user does ask for it; use false when the user did not ask, only wants a check or capture during this turn, or expects the process to end with the turn.`;
 
 export interface CommandSafetyReviewOptions {
   toolCall: ToolCall;
@@ -53,6 +62,7 @@ Classify risk by actual effects:
 - critical: an action that could make the computer unusable or cause broad irreversible loss, including disk or boot corruption, recursive deletion of broad system/user/workspace roots, destructive partition operations, or disabling essential recovery/security infrastructure.
 
 application_session starts an owned foreground application/preview that remains alive across sequential capture calls. It is bounded to ten minutes and automatically stopped at turn end, cancellation, chat deletion or extension shutdown. Review its command with the same standards as run_terminal_command; it is not an unmanaged detached process.
+run_terminal_command with keepAlive=true starts an isolated terminal owned by the chat that survives the turn until keepAliveAction=stop, chat deletion, extension shutdown, or four hours. Review the launch command with the same standards and treat the persistent lifetime as intended scope, not as an unmanaged detached process.
 Approve only when the full finite operation is understood and directly serves the request. Choose revise when a clear safer route can continue the task; describe the constraint, not a dangerous replacement command. Choose manual_confirmation for genuine ambiguity or a required user decision. Mechanical scope facts are context, not a safety verdict.`;
 
 export async function reviewCommandSafety(options: CommandSafetyReviewOptions): Promise<CommandSafetyReview> {
@@ -65,6 +75,7 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
     return manualReview("The action may contain credentials or other sensitive values and was not sent for remote review.", "elevated");
   }
 
+  const judgePersistenceIntent = actionContext.keepAlive === true;
   const timeoutSignal = AbortSignal.timeout(REVIEW_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
   try {
@@ -74,7 +85,7 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
     const request: ChatCompletionRequest = {
       model: resolveAuxiliaryModel(options.providerConfig),
       messages: [
-        { role: "system", content: REVIEW_SYSTEM_PROMPT },
+        { role: "system", content: buildSystemPrompt(judgePersistenceIntent) },
         {
           role: "user",
           content: JSON.stringify({
@@ -100,7 +111,12 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
         ? await options.complete(signal, request)
         : await chatCompletion(request, options.providerConfig.apiKey, options.providerConfig.baseUrl, signal);
       usage = response.usage;
-      return parseCommandSafetyReview(getTextContent(response.choices[0]?.message.content));
+      return applyPersistenceIntent(
+        parseCommandSafetyReview(getTextContent(response.choices[0]?.message.content), {
+          requirePersistenceIntent: judgePersistenceIntent,
+        }),
+        judgePersistenceIntent,
+      );
     } finally {
       options.onUsage?.(usage, request.model);
     }
@@ -150,11 +166,17 @@ function getScopeFacts(
   };
 }
 
-export function parseCommandSafetyReview(content: string | null | undefined): CommandSafetyReview {
+export function parseCommandSafetyReview(
+  content: string | null | undefined,
+  options: { requirePersistenceIntent?: boolean } = {},
+): CommandSafetyReview {
   if (!content) {return manualReview("DeepSeek returned an empty safety review.");}
   try {
     const value = JSON.parse(content) as unknown;
-    if (!isRecord(value) || !hasOnlyKeys(value, ["decision", "risk", "confidence", "reason"])) {
+    const allowedKeys = options.requirePersistenceIntent
+      ? [...REVIEW_SCHEMA_KEYS, PERSISTENCE_KEY]
+      : REVIEW_SCHEMA_KEYS;
+    if (!isRecord(value) || !hasOnlyKeys(value, allowedKeys)) {
       return manualReview("DeepSeek returned a malformed safety review.");
     }
     if (
@@ -167,10 +189,36 @@ export function parseCommandSafetyReview(content: string | null | undefined): Co
     ) {
       return manualReview("DeepSeek returned a malformed safety review.");
     }
-    return { decision: value.decision, risk: value.risk, confidence: value.confidence, reason: value.reason.trim() };
+    if (options.requirePersistenceIntent && typeof value[PERSISTENCE_KEY] !== "boolean") {
+      return manualReview("DeepSeek did not state whether the user asked to keep this process running.");
+    }
+    return {
+      decision: value.decision,
+      risk: value.risk,
+      confidence: value.confidence,
+      reason: value.reason.trim(),
+      ...(options.requirePersistenceIntent ? { userRequestedPersistence: value[PERSISTENCE_KEY] as boolean } : {}),
+    };
   } catch {
     return manualReview("DeepSeek returned a non-JSON safety review.");
   }
+}
+
+function buildSystemPrompt(judgePersistenceIntent: boolean): string {
+  if (!judgePersistenceIntent) {return REVIEW_SYSTEM_PROMPT;}
+  return REVIEW_SYSTEM_PROMPT.replace(
+    '{"decision":"approve"|"revise"|"manual_confirmation","risk":"routine"|"elevated"|"critical","confidence":"very_high"|"high"|"medium_high"|"medium"|"medium_low"|"low"|"very_low","reason":"short explanation or replanning guidance"}',
+    '{"decision":"approve"|"revise"|"manual_confirmation","risk":"routine"|"elevated"|"critical","confidence":"very_high"|"high"|"medium_high"|"medium"|"medium_low"|"low"|"very_low","reason":"short explanation or replanning guidance","userRequestedPersistence":true|false}',
+  ).concat(KEEP_ALIVE_INTENT_PROMPT);
+}
+
+function applyPersistenceIntent(review: CommandSafetyReview, judgePersistenceIntent: boolean): CommandSafetyReview {
+  if (!judgePersistenceIntent || review.userRequestedPersistence !== false) {return review;}
+  return {
+    ...review,
+    decision: "manual_confirmation",
+    reason: `The user's request does not clearly ask to keep this process running after the turn. ${review.reason}`,
+  };
 }
 
 function getCommand(toolCall: ToolCall): string | undefined {

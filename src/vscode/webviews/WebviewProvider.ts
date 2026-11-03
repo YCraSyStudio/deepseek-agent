@@ -175,14 +175,16 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   }
 
   public async initialize(): Promise<void> {
-    try {
-      await this.historyManager.initialize();
-    } catch (error: unknown) {
-      this.settings.enterDegradedMode(error);
-      await vscode.window.showWarningMessage(
-        "YCraSy DeepSeek Agent could not initialize persistent storage. Chat remains available in incognito mode; check access to the extension data directory and reload VS Code.",
-      );
+    if (!this.settings.getPersistenceError()) {
+      try {
+        await this.historyManager.initialize();
+        await this.chatHandler.initialize();
+        return;
+      } catch (error: unknown) {
+        this.settings.enterDegradedMode(error);
+      }
     }
+    // Recovery in temporary mode skips disk access and starts with an empty chat.
     await this.chatHandler.initialize();
   }
 
@@ -292,6 +294,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       "sendMessage", "steerGeneration", "cancelGeneration", "getGenerationSnapshot",
       "consumeRecoveredDraft", "getAvailableTools", "executeToolCall",
       "newConversation", "getWorkspaceContext", "rebindConversationWorkspace", "openConversationWorkspace",
+      "getRunningTasks", "stopRunningTask",
     ] as const, (message, view) => this.chatHandler.handle(message, view));
     this.commandDispatcher.registerMany([
       "getWorkspaceInstructions", "openWorkspaceInstructions", "openGlobalAgents", "selectStorageDirectory", "setStorageDirectory", "reloadStorage", "getConfig", "saveConfig", "resetConfig", "resolveHistoryTransition", "deleteApiKey", "testConnection",
@@ -388,7 +391,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       if (message.type === "revertWorkspaceTurn") {await this.revertTurn(message.conversationId, message.generationId);}
       const review = await store.review(roots, message.generationId);
       if (message.type === "reviewWorkspaceTurn") {
-        const file = await vscode.window.showQuickPick(review.paths, { placeHolder: "Review files changed during this turn" });
+        const file = message.path ?? await vscode.window.showQuickPick(review.paths, { placeHolder: "Review files changed during this turn" });
+        if (file && !review.paths.includes(file)) {throw new Error("This file is not part of the selected turn");}
         if (file) {
           await this.changeDiffViewer.openSaved(file, await store.diff(roots, message.generationId, file), {
             conversationId: message.conversationId, generationId: message.generationId,

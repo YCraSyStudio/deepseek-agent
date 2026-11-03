@@ -1,4 +1,14 @@
-# Issue #76: optional automatic UI capture
+# Issue #76: automatic UI capture
+
+## Current policy (0.1.16)
+
+One Screenshots field controls explicit and automatic web/native captures: Always ask (default), Ask the first time for each view, Always allow capture. First-use permission persists per exact URL or app; changing routes asks again. Automatic capture attempts run during the tool cycle after UI edits, before the next model response and before stopping a preview. Flash receives the pixels in its next request; Pro receives delegated visual analysis. Attempts reuse the last running UI request, excluding newer attachments, with an internal limit of ten new automatic images per conversation and no guessed or whole-screen target. On supported Wayland ScreenCast v4+ desktops, persistent authorization and rotating restore tokens reuse a source; initial selection or revoked/unsupported authorization still uses the system chooser. No second extension prompt is stacked on Wayland. Incognito and remote native capture remain unavailable.
+
+Acceptance: exercise all three policies with repeated and new URLs/apps, reload, deny/cancel, switch policy during a turn, and verify automatic capture reuses the selected native request. Test restoration/revocation on the actual compositor.
+
+## Historical implementation and acceptance
+
+The notes below describe the earlier opt-in implementation, superseded by the current policy.
 
 User decision: implement an opt-in setting, disabled by default. `automaticCaptureEnabled=false`, `automaticCaptureLimit=10` (1–40).
 

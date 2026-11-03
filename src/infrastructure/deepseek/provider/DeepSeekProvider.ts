@@ -21,8 +21,8 @@ export class DeepSeekModelProvider implements ModelProvider {
     const chatRequest = this._applyDefaults(request);
     const body = buildChatBody(chatRequest, this.config);
     const preparedRequest = { ...chatRequest, ...body } as ChatRequest;
-    const response = await chatCompletion(preparedRequest, this.config.apiKey, this.config.baseUrl, signal, this.config.betaFeaturesEnabled);
-    return !this.config.betaFeaturesEnabled || !request.tools ? response : {
+    const response = await chatCompletion(preparedRequest, this.config.apiKey, this.config.baseUrl, signal, this.usesBetaEndpoint(preparedRequest));
+    return !this.config.strictToolCallsEnabled || !request.tools ? response : {
       ...response,
       choices: response.choices.map((choice) => ({ ...choice, message: normalizeBetaToolMessages([choice.message], request.tools!)[0] })),
     };
@@ -68,8 +68,13 @@ export class DeepSeekModelProvider implements ModelProvider {
       baseUrl: this.config.baseUrl,
       onChunk,
       signal,
-      betaFeaturesEnabled: this.config.betaFeaturesEnabled,
+      betaFeaturesEnabled: this.usesBetaEndpoint(request),
     });
+  }
+
+  private usesBetaEndpoint(request: ChatCompletionRequest): boolean {
+    if (request.messages.some(message => message.prefix === true)) {return this.config.betaFeaturesEnabled;}
+    return this.config.strictToolCallsEnabled && Boolean(request.tools?.length);
   }
 
   private _applyDefaults(req: ChatCompletionRequest): Partial<ChatRequest> {

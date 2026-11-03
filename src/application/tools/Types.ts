@@ -33,6 +33,7 @@ export interface AnalyzeImagesRequest {
 export interface ToolHandlerContext {
   signal?: AbortSignal;
   generationId?: string;
+  conversationId?: string;
   trustedUserRequest?: string;
   availableToolNames?: readonly string[];
   authorizedUserUrls?: readonly string[];
@@ -62,6 +63,7 @@ export interface ConfirmationRequiredResult {
   dangerLevel: DangerLevel;
   warningMessage: string;
   command?: string;
+  keepAlive?: boolean;
   filePath?: string;
   cwd?: string;
   workspaceRoot?: string;

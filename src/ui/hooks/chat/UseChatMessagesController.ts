@@ -175,11 +175,17 @@ export function useChatMessagesController({
         }
         activeGenerationIdRef.current = undefined;
         setProcessing(false);
+        flushTimelineDeltas();
         resetStreaming();
-        setMessages((current) => [...current, { id: nextMessageId(), role: "error", content: error }]);
+        setMessages((current) => {
+          const messages = current.map(message => message.role === "assistant" && generationId && message.generationId === generationId
+            ? { ...message, generationStatus: "error" as const } : message);
+          if (messages.some(message => message.role === "error" && message.generationId === generationId && message.content === error)) {return messages;}
+          return [...messages, { id: nextMessageId(), role: "error", content: error, generationId, generationStatus: "error" }];
+        });
         focusInput();
       },
-      [focusInput, setProcessing, resetStreaming, nextMessageId, setMessages],
+      [focusInput, setProcessing, flushTimelineDeltas, resetStreaming, nextMessageId, setMessages],
     ),
 
     onClearChat: useCallback(() => {

@@ -188,10 +188,19 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
         (value.generationId === undefined || isNonEmptyBoundedString(value.generationId, 200)) &&
         isOptionalBoundedString(value.workspaceRevision, 256)
       );
+    case "getRunningTasks":
+      return hasOnlyKeys(value, ["type", "conversationId"]) &&
+        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512));
+    case "stopRunningTask":
+      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "sessionId"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512)) &&
+        isNonEmptyBoundedString(value.sessionId, 512);
     case "getWorkspaceTurn":
     case "revertWorkspaceTurn":
     case "reviewWorkspaceTurn":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "generationId"]) &&
+      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "generationId", ...(value.type === "reviewWorkspaceTurn" ? ["path"] : [])]) &&
+        (value.path === undefined || isNonEmptyBoundedString(value.path, 32_768)) &&
         isNonEmptyBoundedString(value.requestId, 512) &&
         typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
         typeof value.generationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.generationId);
@@ -314,9 +323,7 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
     isOptionalBoolean(value.includeHomeAgents) &&
     isOptionalBoolean(value.usageBreakdown) &&
     (value.usageCostCurrency === undefined || isEnumOf(value.usageCostCurrency, USAGE_CURRENCIES)) &&
-    isOptionalBoolean(value.automaticCaptureEnabled) &&
-    (value.automaticCaptureLimit === undefined || (Number.isSafeInteger(value.automaticCaptureLimit) && (value.automaticCaptureLimit as number) >= 1 && (value.automaticCaptureLimit as number) <= 40)) &&
-    (value.browserAccess === undefined || isEnumOf(value.browserAccess, ["ask", "always", "never"])) &&
+    (value.capturePermission === undefined || isEnumOf(value.capturePermission, ["ask", "first-use", "always"])) &&
     isOptionalBoolean(value.webSearchEnabled) &&
     isOptionalBoolean(value.privacyMinimizeData) &&
     isOptionalBoolean(value.betaFeaturesEnabled) &&

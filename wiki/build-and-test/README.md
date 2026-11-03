@@ -15,3 +15,5 @@ The complete build should generate:
 The human documentation in `web-doc` uses Astro and is validated separately.
 
 [Back](INDEX.md)
+
+[Pre-refactor regression coverage and commands](REGRESSION_COVERAGE.md)

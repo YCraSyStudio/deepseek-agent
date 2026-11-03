@@ -1,3 +1,4 @@
+import { openCustomizationFile, watchCustomizationFiles } from "@/vscode/configuration/CustomizationFiles";
 import * as vscode from "vscode";
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
 import { logWarning } from "@/shared/logging/Logger";
@@ -82,14 +83,10 @@ export class SettingsHandler {
   }
 
   watchWorkspaceInstructions(view: vscode.WebviewView): vscode.Disposable {
-    const watcher = vscode.workspace.createFileSystemWatcher("**/AGENTS.md", false, true, false);
-    const refresh = (uri: vscode.Uri) => {
-      if (vscode.workspace.workspaceFolders?.some((folder) => vscode.Uri.joinPath(folder.uri, "AGENTS.md").toString() === uri.toString())) {
-        void this.postWorkspaceInstructions(view);
-      }
-    };
-    return vscode.Disposable.from(watcher, watcher.onDidCreate(refresh), watcher.onDidDelete(refresh),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => {void this.postWorkspaceInstructions(view);}));
+    return watchCustomizationFiles(view, () => (vscode.workspace.workspaceFolders ?? [])
+      .filter((folder) => folder.uri.scheme === "file")
+      .map((folder) => ({ directory: folder.uri, pattern: "AGENTS.md" })),
+    () => {void this.postWorkspaceInstructions(view);});
   }
 
   private async postWorkspaceInstructions(view: vscode.WebviewView): Promise<void> {
@@ -122,8 +119,7 @@ export class SettingsHandler {
       if (!folder) {throw new Error("Select a currently open local workspace folder.");}
       const language = this.settings.load().interfaceLanguage;
       const file = await ensureWorkspaceInstructionsFile(folder.uri.fsPath, language === "auto" ? vscode.env.language : language);
-      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
-      await vscode.window.showTextDocument(document, { preview: false });
+      await openCustomizationFile(file);
       await this.postWorkspaceInstructions(view);
       await view.webview.postMessage({ type: "openWorkspaceInstructionsResult", requestId, success: true });
     } catch (error) {
@@ -136,8 +132,7 @@ export class SettingsHandler {
       await this.settings.waitForPendingWrites();
       if (!this.settings.load().includeHomeAgents) {throw new Error("Enable global AGENTS.md instructions before opening the customization file.");}
       const file = await ensureGlobalInstructionsFile();
-      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
-      await vscode.window.showTextDocument(document, { preview: false });
+      await openCustomizationFile(file);
       await view.webview.postMessage({ type: "openGlobalAgentsResult", requestId, success: true });
     } catch (error) {
       await view.webview.postMessage({ type: "openGlobalAgentsResult", requestId, success: false, error: redactSensitiveText(error) });

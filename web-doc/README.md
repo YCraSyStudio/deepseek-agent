@@ -16,6 +16,8 @@ Shared i18n types, route helpers, and composition live in `src/i18n/index.ts`.
 
 ## Scripts
 
+Install dependencies with `npm ci` at the repository root. Run the commands below from `web-doc`, or use `npm run <script> --workspace web-doc` from the root.
+
 - `npm run dev`: local Astro server.
 - `npm run build`: validation and static build into the repository root `docs/` folder.
 - `npm run preview`: build preview using Astro's configured base path.

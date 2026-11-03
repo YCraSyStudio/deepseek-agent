@@ -26,14 +26,11 @@ export function createInlineDiffPreview(): InlineDiffPreview {
 
   async function show(uri: vscode.Uri, before: string, after: string): Promise<void> {
     clear();
-    const document = await vscode.workspace.openTextDocument(uri);
-    const focused = vscode.window.activeTextEditor;
-    const editor = findVisibleEditor(document) ?? await vscode.window.showTextDocument(document, {
-      preview: true,
-      preserveFocus: true,
-      viewColumn: findTabColumn(document) ?? vscode.ViewColumn.Active,
-    });
-    await restoreFocus(focused);
+    const editor = findVisibleEditorFor(uri);
+    if (!editor) {
+      return;
+    }
+    const document = editor.document;
     const preview = computeInlinePreview(before, after, document);
     if (!preview) {
       return;
@@ -119,28 +116,9 @@ function clampLine(line: number, document: vscode.TextDocument): number {
   return Math.max(0, Math.min(line, document.lineCount - 1));
 }
 
-function findVisibleEditor(document: vscode.TextDocument): vscode.TextEditor | undefined {
-  const target = document.uri.toString(true);
+function findVisibleEditorFor(uri: vscode.Uri): vscode.TextEditor | undefined {
+  const target = uri.toString(true);
   return vscode.window.visibleTextEditors.find((editor) => editor.document.uri.toString(true) === target);
-}
-
-function findTabColumn(document: vscode.TextDocument): vscode.ViewColumn | undefined {
-  const target = document.uri.toString(true);
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      if (tab.input instanceof vscode.TabInputText && tab.input.uri.toString(true) === target) {
-        return group.viewColumn;
-      }
-    }
-  }
-  return undefined;
-}
-
-async function restoreFocus(previous: vscode.TextEditor | undefined): Promise<void> {
-  if (!previous || vscode.window.activeTextEditor === previous) {
-    return;
-  }
-  await previous.show(previous.viewColumn);
 }
 
 function formatAdditionLabel(lines: string[]): string {

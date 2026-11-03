@@ -7,15 +7,24 @@ export function instructionReference(entry: ReusableInstruction): string {
   return `./@instructions/${scope}/${encodeURIComponent(entry.name)}.md`;
 }
 
+function shortInstructionReference(entry: ReusableInstruction): string {
+  return `./instructions/${encodeURIComponent(entry.name)}.md`;
+}
+
+function selectableReference(entry: ReusableInstruction, entries: readonly ReusableInstruction[]): string {
+  return entries.filter((candidate) => candidate.name === entry.name).length === 1
+    ? shortInstructionReference(entry) : instructionReference(entry);
+}
+
 export function instructionCompletionItems(query: string, entries: readonly ReusableInstruction[]): PathCompletionItem[] {
   const normalized = query.replace(/\\/g, "/").toLowerCase();
   if (!normalized.startsWith("./") || normalized.includes("\0") || normalized.split("/").includes("..")) {return [];}
   const prefix = normalized.slice(2);
   return entries.filter((entry) => {
     const reference = instructionReference(entry).toLowerCase();
-    return reference.startsWith(normalized) || (!prefix.includes("/") && `${entry.name}.md`.toLowerCase().startsWith(prefix));
+    return reference.startsWith(normalized) || selectableReference(entry, entries).toLowerCase().startsWith(normalized) || (!prefix.includes("/") && `${entry.name}.md`.toLowerCase().startsWith(prefix));
   }).sort((a, b) => a.scope === b.scope ? a.name.localeCompare(b.name) || a.id.localeCompare(b.id) : a.scope === "workspace" ? -1 : 1)
-    .map((entry) => ({ label: `${entry.name}.md`, path: instructionReference(entry), type: "instruction" as const,
+    .map((entry) => ({ label: `${entry.name}.md`, path: selectableReference(entry, entries), type: "instruction" as const,
       instructionId: entry.id, instructionScope: entry.scope, description: entry.description,
       workspaceName: entry.scope === "workspace" ? entry.id.split(":")[1] : undefined }));
 }
@@ -27,8 +36,12 @@ export async function resolveSelectedInstructions(
   signal?: AbortSignal,
 ): Promise<string> {
   const byReference = new Map(entries.map((entry) => [instructionReference(entry), entry]));
+  for (const entry of entries) {
+    const reference = selectableReference(entry, entries);
+    byReference.set(reference, entry);
+  }
   const selected = new Map<string, ReusableInstruction>();
-  for (const match of text.matchAll(/(?:^|[\s("'`])(\.\/@instructions\/[^\s"'`<>()[\]{},;!?]+)/g)) {
+  for (const match of text.matchAll(/(?:^|[\s("'`])(\.\/(?:@instructions|instructions)\/[^\s"'`<>()[\]{},;!?]+)/g)) {
     const reference = match[1].replace(/[.:]+$/, "");
     const entry = byReference.get(reference);
     if (!entry) {throw new Error(`Instruction reference is no longer available. Select it again: ${reference}`);}

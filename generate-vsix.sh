@@ -35,7 +35,7 @@ for argument in "$@"; do
 done
 
 if [ ! -d node_modules ]; then
-  echo "node_modules is missing; run 'pnpm install' first." >&2
+  echo "node_modules is missing; run 'npm ci' first." >&2
   exit 1
 fi
 
@@ -45,24 +45,24 @@ vsix_path="artifacts/deepseek-agent-${version}.vsix"
 # vsce builds the VSIX from dist/, so the bundles must be regenerated first.
 if [ "$run_checks" -eq 1 ]; then
   echo "==> Type-check"
-  pnpm run compile
+  npm run compile
   echo "==> Lint"
-  pnpm run lint
+  npm run lint
 fi
 
 if [ "$run_tests" -eq 1 ]; then
   echo "==> Tests"
-  pnpm test
+  npm test
 fi
 
 echo "==> Build extension and webview bundles"
-pnpm run build
+npm run build
 
 # package:vsix clears stale VSIX files from artifacts/ before packaging this version.
 echo "==> Package ${vsix_path}"
-pnpm run package:vsix
+npm run package:vsix
 
 echo "==> Verify VSIX contents"
-pnpm run verify:vsix
+npm run verify:vsix
 
 echo "Generated ${vsix_path} ($(du -h "$vsix_path" | cut -f1))"

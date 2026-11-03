@@ -150,7 +150,10 @@ export class GenerationRunFinalizer {
     if (interrupted) {
       this.dependencies.resultStore.transitionToTerminal(record, "interrupted");
     }
-    if ((record.status as string) === "completed" || interrupted) {
+    const persistedError = record.state.getConversation()?.messages.some(
+      message => message.role === "error" && message.generationId === record.generationId,
+    );
+    if ((record.status as string) === "completed" || interrupted || (record.status === "error" && record.errorPersisted && persistedError)) {
       await this.dependencies.checkpointStore.delete(record.conversationId);
     } else {
       await this.dependencies.checkpoint(record, true);

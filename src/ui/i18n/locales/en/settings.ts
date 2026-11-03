@@ -72,12 +72,16 @@ export const settings = {
     },
     beta: {
       title: "Beta features",
-      enabled: "Enable beta features",
-      description: "Enables DeepSeek API beta features: Chat Prefix, FIM and strict tools. Off by default. Disabling blocks new beta requests and stops automatic suggestions.",
+      description: "Enables beta completions and suggestions. Turning this off also disables strict tool calling. Off by default.",
       editorSuggestions: "Editor suggestions",
       chatSuggestions: "Chat suggestions",
       editorSuggestionsHelp: "After an 800 ms typing pause, sends nearby code to DeepSeek for completion. API charges apply. Tab accepts; Escape dismisses. Requires beta features and a trusted workspace.",
       chatSuggestionsHelp: "Click Suggest message beside the context indicator to generate a prompt or continue your draft using a brief project summary. Typing never requests suggestions. No source contents or chat history are sent. API charges apply. Tab accepts; Escape dismisses. Requires beta features, a configured API key and a trusted workspace.",
+    },
+    strictTools: {
+      title: "Tool schema validation",
+      enabled: "Strict tool calling",
+      description: "Experimental and off by default. Uses the DeepSeek beta endpoint to validate tool arguments against strict schemas. Requires beta features.",
     },
     privacy: {
       title: "Privacy",
@@ -86,13 +90,11 @@ export const settings = {
       limits: "Best effort: messages, code, tool output, images and history are unchanged. Anonymity is not guaranteed; the provider still sees the connection IP.",
     },
     browser: {
-      access: "Capture permission",
-      ask: "Ask per site",
-      always: "Always",
-      never: "Never",
-      automatic: "Automatic captures",
-      automaticHelp: "Captures after UI changes using the last explicitly captured target. Captures stay local until analyzed.",
-      limit: "Max captures per conversation",
+      access: "Screenshots",
+      ask: "Always ask (default)",
+      firstUse: "Ask the first time for each view",
+      always: "Always allow capture",
+      help: "Captures run automatically after UI changes using the last captured view. Remembered permission applies to each exact web URL or app. Wayland may still require an initial system selection; supported desktops reuse that authorization.",
     },
     webSearch: {
       title: "Web search",

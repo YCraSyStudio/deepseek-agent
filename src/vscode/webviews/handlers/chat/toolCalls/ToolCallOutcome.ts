@@ -100,15 +100,15 @@ export function handleToolCallRunError({
       },
     });
   }
-  stream.error(`Error en tool calls: ${redactSensitiveText(err)}`);
-  return partialToolCalls.length > 0 || timeline.length > 0
-    ? {
-        content: streamedContent,
-        timeline,
-        toolCalls: partialToolCalls.length > 0 ? partialToolCalls : undefined,
-        partial: true,
-      }
-    : undefined;
+  const error = `Error en tool calls: ${redactSensitiveText(err)}`;
+  stream.error(error);
+  return {
+    content: streamedContent,
+    timeline,
+    toolCalls: partialToolCalls.length > 0 ? partialToolCalls : undefined,
+    partial: true,
+    error,
+  };
 }
 
 function markUnfinishedExecutions(

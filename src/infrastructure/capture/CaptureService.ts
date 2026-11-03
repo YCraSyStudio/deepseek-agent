@@ -30,7 +30,7 @@ export class CaptureService {
       const frame = await Promise.race([backend.capture(request, controller.signal), abortPromise]);
       controller.signal.throwIfAborted();
       const metadata = await this.store.save(frame.bytes, { kind: request.target, target: frame.target,
-        windowTitle: frame.windowTitle, pid: frame.pid, label: request.label, automatic: !!automatic, automaticLimit: automatic?.limit });
+        windowTitle: frame.windowTitle, pid: frame.pid, label: request.label, automatic: !!automatic, automaticLimit: automatic?.limit, captureRequest: request });
       const result: CaptureScreenshotResult = {
         id: metadata.id, path: `.screenshots/${metadata.fileName}`, target: metadata.target, kind: request.target,
         windowTitle: metadata.windowTitle, pid: metadata.pid, width: metadata.width, height: metadata.height, bytes: metadata.bytes,

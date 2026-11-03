@@ -28,6 +28,11 @@ function reportStorageError(error: unknown): void {
 function deleteStoredAttachments(conversationId?: string): void {
   void draftAttachmentsOperation(conversationId, "delete").catch(reportStorageError);
 }
+const draftRevisions = new Map<string, number>();
+function markDraftChanged(conversationId?: string): void {
+  const key = draftKey(conversationId);
+  draftRevisions.set(key, (draftRevisions.get(key) ?? 0) + 1);
+}
 const sessionReferences = new Map<string, ReferencedFile[]>();
 const pendingDraftImages = new Map<string, Array<{ name: string; file: File }>>();
 const draftKey = (conversationId?: string) => conversationId ? `chat:${conversationId}` : "new";
@@ -59,8 +64,10 @@ function allDrafts(state: DraftState | undefined): Record<string, ChatDraft> {
 }
 
 export function saveChatDraft(state: PersistentChatViewState, previous?: { conversationId?: string }, persist = true): void {
+  markDraftChanged(state.conversationId);
   const drafts = allDrafts(readState());
   if (previous && previous.conversationId !== state.conversationId) {
+    markDraftChanged(previous.conversationId);
     deleteStoredAttachments(previous.conversationId);
     delete drafts[draftKey(previous.conversationId)];
     pendingDraftImages.delete(draftKey(previous.conversationId));
@@ -82,6 +89,9 @@ export function selectNewChatDraft(): void {
 }
 
 export function clearSavedChatState(conversationId?: string): void {
+  if (conversationId === undefined) {
+    for (const key of draftRevisions.keys()) {draftRevisions.set(key, draftRevisions.get(key)! + 1);}
+  } else {markDraftChanged(conversationId);}
   if (conversationId === undefined) {
     for (const draft of Object.values(allDrafts(readState()))) {deleteStoredAttachments(draft.conversationId);}
     pendingDraftImages.clear(); sessionReferences.clear();
@@ -117,6 +127,7 @@ function restoreSessionReferences(state: PersistentChatViewState): PersistentCha
 
 // Restore fresh blob URLs; each previous view revokes its own previews.
 export function savePendingDraftImages(conversationId: string | undefined, previews: PendingImagePreview[]): void {
+  markDraftChanged(conversationId);
   const files = previews.flatMap(({ name, file }) => file ? [{ name, file }] : []);
   if (files.length) {pendingDraftImages.set(draftKey(conversationId), files);}
   else {pendingDraftImages.delete(draftKey(conversationId));}
@@ -134,14 +145,19 @@ export async function persistDraftAttachments(conversationId?: string): Promise<
   await draftAttachmentsOperation(conversationId, "write", { images, references });
 }
 
-export async function hydrateDraftAttachments(conversationId?: string): Promise<void> {
+export async function hydrateDraftAttachments(conversationId?: string, isActive: () => boolean = () => true): Promise<void> {
+  const revision = draftRevisions.get(draftKey(conversationId)) ?? 0;
+  draftRevisions.set(draftKey(conversationId), revision);
+  const isCurrent = () => isActive() && (draftRevisions.get(draftKey(conversationId)) ?? 0) === revision;
   const result = await readChatDraft(conversationId);
+  if (!isCurrent()) {return;}
   let stored = result.attachments;
   if (!result.draft && !stored) {
     const previous = getChatDraft(conversationId);
     if (previous) {
       // Upgrade drafts from the previous webview-only storage after a successful read.
       try {stored = await legacyDraftAttachmentsOperation(storageKey(conversationId), "read");} catch { /* Legacy storage may be absent. */ }
+      if (!isCurrent()) {return;}
       await writeChatDraftMetadata(conversationId, previous);
       if (stored) {
         await draftAttachmentsOperation(conversationId, "write", stored);
@@ -149,6 +165,7 @@ export async function hydrateDraftAttachments(conversationId?: string): Promise<
       }
     }
   }
+  if (!isCurrent()) {return;}
   if (result.draft) {
     saveChatDraft({ schemaVersion: 5, mode: "persistent", ...result.draft, conversationId }, undefined, false);
   }

@@ -6,7 +6,7 @@ import type { CaptureBackend, CaptureFrame } from "./CaptureService";
 import { listNativeWindows, resolveNativeWindow, type NativeWindow } from "./NativeWindowCatalog";
 import { runCaptureHelper } from "./HelperProcess";
 import { isUniformNativeCapture } from "./NativePixelValidation";
-import { captureWaylandPortal } from "./WaylandPortalCapture";
+import { captureWaylandPortal, usesWaylandPortal, type WaylandPortalOptions } from "./WaylandPortalCapture";
 
 export function windowsCaptureScript(window: NativeWindow | undefined, destination: string): string {
   const id = window?.id ?? "0";
@@ -55,10 +55,11 @@ export class NativeCaptureBackend implements CaptureBackend {
   readonly timeoutMs = 120_000;
   constructor(private readonly debugPid: () => number | undefined = () => undefined,
     private readonly catalog = listNativeWindows, private readonly helper = runCaptureHelper,
-    private readonly portal = captureWaylandPortal) {}
+    private readonly portal = captureWaylandPortal,
+    private readonly portalOptions?: (request: CaptureScreenshotRequest) => Promise<WaylandPortalOptions>) {}
   async capture(request: CaptureScreenshotRequest, signal: AbortSignal): Promise<CaptureFrame> {
     signal.throwIfAborted();
-    const wayland = process.platform === "linux" && !!(process.env.XDG_SESSION_TYPE === "wayland" || process.env.WAYLAND_DISPLAY);
+    const wayland = usesWaylandPortal();
     if (wayland && request.process !== undefined && (!/^\d+$/.test(request.process) || !Number.isSafeInteger(Number(request.process)) || Number(request.process) <= 0)) {throw new Error("process must be an exact numeric PID; use a window title otherwise");}
     if (wayland && request.target === "debug" && !request.window && !request.process && !this.debugPid()) {throw new Error("No process is anchored to the active debug session; supply a PID or title for the desktop selector");}
     const window = wayland || request.target === "screen" ? undefined : resolveNativeWindow(await this.catalog(signal), request, request.target === "debug" ? this.debugPid() : undefined);
@@ -66,7 +67,7 @@ export class NativeCaptureBackend implements CaptureBackend {
     const temporary = await mkdtemp(path.join(tmpdir(), "ycrasy-native-capture-"));
     try {
       const destination = path.join(temporary, "capture.png");
-      if (wayland) {await this.portal(destination, request.target === "screen", signal);}
+      if (wayland) {await this.portal(destination, request.target === "screen", signal, await this.portalOptions?.(request));}
       else if (process.platform === "linux") {
         if (!process.env.DISPLAY) {throw new Error("Native capture requires an X11 desktop");}
         await this.helper("import", ["-window", window?.id ?? "root", `PNG24:${destination}`], signal);
