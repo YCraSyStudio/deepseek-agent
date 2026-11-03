@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { realpath, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
@@ -10,7 +10,7 @@ import { hostState, resetVsCodeMock, Position, SymbolInformation, Uri, window, w
 
 suite("VS Code tool workspace real filesystem behavior", () => {
   let root: string; let project: string;
-  setup(async () => { resetVsCodeMock(); root = await mkdtemp(path.join(tmpdir(), "tool-workspace-")); project = path.join(root, "project"); await mkdir(project); workspace.workspaceFolders = [{ uri: Uri.file(project), name: "project" }]; });
+  setup(async () => { resetVsCodeMock(); root = await realpath(await mkdtemp(path.join(tmpdir(), "tool-workspace-"))); project = path.join(root, "project"); await mkdir(project); workspace.workspaceFolders = [{ uri: Uri.file(project), name: "project" }]; });
   teardown(async () => { resetVsCodeMock(); await rm(root, { recursive: true, force: true }); });
   function host(options: Parameters<typeof createVsCodeToolWorkspace>[1] = {}) { return createVsCodeToolWorkspace(captureWorkspaceRunSnapshot(captureCurrentWorkspaceBinding()), options); }
   test("reports root, stable identity and the configured system shell", () => {

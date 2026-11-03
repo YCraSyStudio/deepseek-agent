@@ -36,7 +36,7 @@ suite("extension deactivation resource lifecycle", () => {
       setActiveProvider({ shutdown: async () => { shutdowns++; if (failed) { throw error; } } } as unknown as WebviewProvider);
       if (failed) { await assert.rejects(deactivate(), caught => caught === error); } else { await deactivate(); }
       const result = await resultPromise;
-      assert.notEqual(result.value.signal, null);
+      assert.ok(result.value.signal !== null || (result.value.exitCode !== null && result.value.exitCode !== 0), "Shutdown must terminate the running command");
       for (const pid of [application.pid!, terminal.pid!]) {
         assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
       }

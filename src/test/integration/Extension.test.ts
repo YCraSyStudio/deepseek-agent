@@ -42,7 +42,7 @@ if (process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY) {
 suite("Extension integration", () => {
   test("runs snapshot and editor operations in an isolated temporary workspace", () => {
     const folder = vscode.workspace.workspaceFolders?.[0]; assert.ok(folder);
-    assert.equal(folder.uri.fsPath, process.env.DEEPSEEK_AGENT_INTEGRATION_WORKSPACE);
+    assert.equal(folder.uri.fsPath, vscode.Uri.file(process.env.DEEPSEEK_AGENT_INTEGRATION_WORKSPACE!).fsPath);
     const extension = vscode.extensions.getExtension("yarcrasy.deepseek-agent"); assert.ok(extension);
     const relative = path.relative(extension.extensionPath, folder.uri.fsPath);
     assert.ok(relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative), "Integration workspace must be outside the extension checkout");

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { realpath, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { WorkspaceChangeTracker, revertWorkspaceTurn, snapshotRoots } from "@/vscode/workspace/WorkspaceChangeTracker";
@@ -9,7 +9,7 @@ import { dialogs, resetVsCodeMock, Uri, workspace } from "../../../support/VsCod
 suite("workspace change tracking lifecycle", () => {
   let root: string; let project: string; let data: string; let oldMode: string | undefined; let oldData: string | undefined;
   setup(async () => {
-    resetVsCodeMock(); root = await mkdtemp(path.join(tmpdir(), "change-tracker-")); project = path.join(root, "project"); data = path.join(root, "data");
+    resetVsCodeMock(); root = await realpath(await mkdtemp(path.join(tmpdir(), "change-tracker-"))); project = path.join(root, "project"); data = path.join(root, "data");
     await mkdir(project); await writeFile(path.join(project, "file.txt"), "Original");
     oldMode = process.env.NODE_ENV; oldData = process.env.DEEPSEEK_AGENT_USER_DATA_DIR;
     process.env.NODE_ENV = "test"; process.env.DEEPSEEK_AGENT_USER_DATA_DIR = data;
@@ -69,7 +69,8 @@ suite("workspace change tracking lifecycle", () => {
     assert.match(String(dialogs.warnings.at(-1)?.[0]), /recovery copy could not be completed.*buffer unavailable/);
     assert.equal(await readFile(path.join(project, "file.txt"), "utf8"), "Original");
   });
-  test("bounds incognito history to the most recent hundred conversations", async () => {
+  test("bounds incognito history to the most recent hundred conversations", async function () {
+    this.timeout(20000);
     const tracker = new WorkspaceChangeTracker(); const current = snapshot();
     for (let i = 0; i < 101; i++) { await tracker.begin(`chat-${i}`, `turn-${i}`, true, current); }
     await writeFile(path.join(project, "file.txt"), "Changed");

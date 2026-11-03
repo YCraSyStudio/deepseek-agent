@@ -74,6 +74,7 @@ const mocks: Record<string, string> = {
 };
 
 const child = String.raw`
+import * as path from "node:path";
 import assert from "node:assert/strict";
 import { ExtensionCompositionRoot } from "./src/extension/CompositionRoot";
 import { createEditorCompletionProvider, registerEditorFeatures } from "./src/vscode/completions/EditorFeatures";
@@ -128,7 +129,7 @@ assert.equal(state.statusBar.hidden, 1);
 state.folderListeners[0]();
 assert.equal(globalThis.__invalidated, 3);
 
-assert.equal(globalThis.__chromiumPath, "/tmp/deepseek-storage/chromium");
+assert.equal(globalThis.__chromiumPath, path.join("/tmp/deepseek-storage", "chromium"));
 assert.equal(await globalThis.__chromiumProgress(async () => "prepared"), "prepared");
 assert.equal(state.progress[0].location, vscode.ProgressLocation.Notification);
 assert.match(state.progress[0].title, /Preparing Chromium/);

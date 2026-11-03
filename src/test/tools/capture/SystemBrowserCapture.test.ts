@@ -1,3 +1,4 @@
+import { nodeExecutableFixture } from "../../support/NodeExecutableFixture";
 import assert from "node:assert/strict";
 import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -6,8 +7,9 @@ import { SystemBrowserCapture } from "@/infrastructure/capture/SystemBrowserCapt
 
 suite("system browser capture lifecycle", () => {
   let root: string;
-  setup(async () => { root = await mkdtemp(path.join(tmpdir(), "system-browser-test-")); });
-  teardown(async () => { await rm(root, { recursive: true, force: true }); });
+  let restoreLauncher: () => void;
+  setup(async () => { root = await mkdtemp(path.join(tmpdir(), "system-browser-test-")); restoreLauncher = nodeExecutableFixture(path.join(root, "browser")); });
+  teardown(async () => { restoreLauncher(); await rm(root, { recursive: true, force: true }); });
 
   async function binary(mode: "success" | "navigation-error" | "oversize") {
     const log = path.join(root, "requests.jsonl"); const executable = path.join(root, "browser");

@@ -1,6 +1,6 @@
 import type { ReusableInstruction } from "@/contracts/Customization";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { realpath, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import type * as vscode from "vscode";
@@ -14,7 +14,7 @@ suite("reusable instructions host workflow", () => {
   let handler: ReusableInstructionsHandler; let view: vscode.WebviewView;
   let posts: Array<Record<string, unknown>>; let language: string;
   setup(async () => {
-    resetVsCodeMock(); root = await mkdtemp(path.join(tmpdir(), "instruction-handler-"));
+    resetVsCodeMock(); root = await realpath(await mkdtemp(path.join(tmpdir(), "instruction-handler-")));
     oldMode = process.env.NODE_ENV; oldData = process.env.DEEPSEEK_AGENT_USER_DATA_DIR;
     process.env.NODE_ENV = "test"; process.env.DEEPSEEK_AGENT_USER_DATA_DIR = path.join(root, "data");
     posts = []; language = "auto";

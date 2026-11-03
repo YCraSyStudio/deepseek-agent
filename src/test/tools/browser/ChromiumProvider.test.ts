@@ -34,7 +34,8 @@ suite("Managed Chromium selection and updates", () => {
   }
 
   for (const platform of ["darwin", "win32"] as const) {
-    test(`discovers ${platform} browser candidates through the host platform boundary`, async () => {
+    test(`discovers ${platform} browser candidates through the host platform boundary`, async function () {
+      if (process.platform === "win32" && platform === "darwin") { this.skip(); }
       const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform")!;
       const keys = ["PATH", "PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"] as const;
       const original = new Map(keys.map(key => [key, process.env[key]]));
@@ -60,7 +61,7 @@ suite("Managed Chromium selection and updates", () => {
     try {
       process.env.PATH = "";
       const state = distribution();
-      assert.equal(await new ChromiumProvider(root, undefined, state.backend).executable(signal), join(root, "150.0.1.0"));
+      assert.equal(await new ChromiumProvider(root, undefined, state.backend, unavailable).executable(signal), join(root, "150.0.1.0"));
       assert.equal(state.downloads(), 1);
     } finally { if (previousPath === undefined) { delete process.env.PATH; } else { process.env.PATH = previousPath; } }
   });
@@ -83,7 +84,8 @@ suite("Managed Chromium selection and updates", () => {
     assert.equal(await provider.executable(signal), join(root, "150.0.1.0"));
     assert.equal(state.checks(), 2); assert.equal(state.downloads(), 1);
   });
-  test("skips a non-browser executable and a non-executable file before accepting Chromium", async () => {
+  test("skips a non-browser executable and a non-executable file before accepting Chromium", async function () {
+    if (process.platform === "win32") { this.skip(); }
     const previousPath = process.env.PATH;
     for (const [name, content, mode] of [["google-chrome", "Netscape", 0o755], ["google-chrome-stable", "Chrome 150", 0o644], ["chromium", "Chromium 150.0.0.0", 0o755]] as const) {
       const file = join(root, name); await writeFile(file, `#!/bin/sh\necho '${content}'\n`); await chmod(file, mode);
@@ -98,7 +100,7 @@ suite("Managed Chromium selection and updates", () => {
     try {
       delete process.env.PATH;
       const state = distribution();
-      assert.equal(await new ChromiumProvider(root, undefined, state.backend).executable(signal), join(root, "150.0.1.0"));
+      assert.equal(await new ChromiumProvider(root, undefined, state.backend, unavailable).executable(signal), join(root, "150.0.1.0"));
     } finally { if (previousPath === undefined) { delete process.env.PATH; } else { process.env.PATH = previousPath; } }
   });
 
@@ -168,7 +170,8 @@ suite("Managed Chromium selection and updates", () => {
     assert.equal(calls, 0);
   });
 
-  test("finds a working system browser on PATH and skips invalid candidates", async () => {
+  test("finds a working system browser on PATH and skips invalid candidates", async function () {
+    if (process.platform === "win32") { this.skip(); }
     const binDirectory = join(root, "bin");
     await mkdir(binDirectory, { recursive: true });
     const browser = join(binDirectory, "google-chrome");

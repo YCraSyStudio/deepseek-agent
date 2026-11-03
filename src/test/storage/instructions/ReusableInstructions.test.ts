@@ -1,6 +1,6 @@
 import { instructionReference, resolveSelectedInstructions } from "@/application/chat/context/InstructionReferences";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { realpath, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { createReusableInstruction, formatReusableInstructionCatalog, instructionName, listReusableInstructions, openReusableInstruction, type InstructionRoot } from "@/infrastructure/persistence/ReusableInstructions";
@@ -10,7 +10,7 @@ suite("reusable task instructions", () => {
   let global: InstructionRoot;
   let workspace: InstructionRoot;
   setup(async () => {
-    directory = await mkdtemp(path.join(os.tmpdir(), "deepseek-instructions-"));
+    directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "deepseek-instructions-")));
     global = { id: "global", scope: "global", boundary: path.join(directory, "data"), relativeDirectory: "instructions" };
     workspace = { id: "workspace:project", scope: "workspace", rootUri: "file:///project", boundary: path.join(directory, "project"), relativeDirectory: "instructions" };
     await mkdir(workspace.boundary);

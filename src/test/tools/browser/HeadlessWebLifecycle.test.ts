@@ -1,3 +1,4 @@
+import { nodeExecutableFixture } from "../../support/NodeExecutableFixture";
 import assert from "node:assert/strict";
 import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -7,8 +8,9 @@ import { WebAccessPolicy } from "@/infrastructure/browser/NetworkPolicy";
 
 suite("headless web document lifecycle", () => {
   let root: string;
-  setup(async () => { root = await mkdtemp(path.join(tmpdir(), "web-runtime-")); });
-  teardown(async () => { await rm(root, { recursive: true, force: true }); });
+  let restoreLauncher: () => void;
+  setup(async () => { root = await mkdtemp(path.join(tmpdir(), "web-runtime-")); restoreLauncher = nodeExecutableFixture(path.join(root, "browser")); });
+  teardown(async () => { restoreLauncher(); await rm(root, { recursive: true, force: true }); });
   async function fixture(mode: string) {
     const executable = path.join(root, "browser"); const log = path.join(root, "requests.jsonl");
     await writeFile(executable, `#!${process.execPath}

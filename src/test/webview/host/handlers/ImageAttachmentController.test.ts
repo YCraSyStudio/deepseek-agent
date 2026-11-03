@@ -112,7 +112,8 @@ suite("image attachment controller public workflows", () => {
         await writeFile(controller.cacheRoot.fsPath, "cache directory replaced by a file");
         return response;
       };
-      await assert.rejects(paste(), /ENOTDIR/);
+      await assert.rejects(paste(), (error: NodeJS.ErrnoException) =>
+        error.code === "ENOTDIR" || (process.platform === "win32" && error.code === "ENOENT"));
       assert.equal(await readFile(controller.cacheRoot.fsPath, "utf8"), "cache directory replaced by a file");
       if (!remoteCleanupFails) { assert.equal(deleted.length, 1); }
     });

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { existsSync, realpathSync } from "node:fs";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { probeGitRecovery } from "@/infrastructure/tools/safety/GitRecovery";
@@ -36,6 +36,16 @@ suite("Git recovery with real repositories", () => {
     for (const [target, options] of [[path.join(root, "tracked.txt"), {}], ["nested/space name.txt", { workspaceRoot: root }]] as const) {
       assert.deepEqual(await probeGitRecovery(target, options), { insideRepository: true, recoverable: true, reason: "recoverable" });
     }
+  });
+  test("recognizes tracked and deleted files through a directory alias", async () => {
+    await repository();
+    const alias = path.join(root, "alias");
+    await symlink(root, alias, process.platform === "win32" ? "junction" : "dir");
+    assert.deepEqual(await probeGitRecovery(path.join(alias, "tracked.txt")),
+      { insideRepository: true, recoverable: true, reason: "recoverable" });
+    await rm(path.join(root, "tracked.txt"));
+    assert.deepEqual(await probeGitRecovery(path.join(alias, "tracked.txt")),
+      { insideRepository: true, recoverable: false, reason: "uncommitted-changes" });
   });
   test("untracked and ignored files report different recovery reasons", async () => {
     await repository();

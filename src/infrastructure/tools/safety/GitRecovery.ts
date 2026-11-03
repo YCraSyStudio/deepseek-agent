@@ -1,3 +1,4 @@
+import { realpath } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import * as path from "node:path";
 import { promisify } from "node:util";
@@ -93,7 +94,8 @@ async function locateRepository(absolutePath: string, signal?: AbortSignal): Pro
   }
 
   const root = path.resolve(topLevel.stdout.trim());
-  const relative = path.relative(root, absolutePath).replace(/\\/g, "/");
+  const canonicalParent = await realpath(cwd).catch(() => cwd);
+  const relative = path.relative(root, path.join(canonicalParent, path.basename(absolutePath))).replace(/\\/g, "/");
   if (relative.startsWith("../") || relative === ".." || path.isAbsolute(relative)) {
     return "not-a-repository";
   }
