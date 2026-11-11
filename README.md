@@ -34,7 +34,7 @@ A DeepSeek-powered coding assistant for VS Code. Ask questions, explore your pro
 - [User guide](https://ycrasystudio.github.io/deepseek-agent/en/user-manual/)
 - [Documentación en español](https://ycrasystudio.github.io/deepseek-agent/es/user-manual/)
 - [中文文档](https://ycrasystudio.github.io/deepseek-agent/zh/user-manual/)
-- [Technical wiki](wiki/INDEX.md)
+- [Technical wiki](wiki/2.INDEX.MD)
 - [Release notes](CHANGELOG.md)
 - [Report a bug or request a feature](https://github.com/YCraSyStudio/deepseek-agent/issues)
 

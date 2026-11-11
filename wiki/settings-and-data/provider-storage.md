@@ -1,0 +1,53 @@
+[Back](2.INDEX.MD)
+
+# Provider storage boundary
+
+Provider convention: `~/.ycrasy-agent/<provider>/`, with a validated lowercase namespace. DeepSeek owns `settings.json` containing `baseUrl`, `model`, `thinkingMode`, `reasoningEffort`, `temperature`, `topP` and `maxTokens`. The application still sees one normalized AppConfig through SettingsRepository; the UI and shared history do not resolve provider paths. ProviderDataPaths and SettingsStorage define the persistence boundary for future adapters.
+
+| Data | Owner | Destination / behavior |
+| --- | --- | --- |
+| Endpoint/model/generation tuning | DeepSeek | `~/.ycrasy-agent/deepseek/settings.json` |
+| Credentials | DeepSeek credential adapter | Existing VS Code SecretStorage; never exported |
+| General settings, permission mode, history policy, language, usage display | Shared core | `~/.ycrasy-agent/settings.json` |
+| Conversations, screenshots, checkpoints | Shared core | `~/.ycrasy-agent/history/` (including per-chat `checkpoint.json`) |
+| Legacy runtime/config/cache | Shared core | Corresponding directories under `~/.ycrasy-agent/` |
+| Instructions discovery | Shared core | Existing project/home discovery |
+| Image attachment preview bytes | Shared attachment capability | Existing extension globalStorage/image-attachments cache; provider remote IDs remain attachment metadata |
+| Remote DeepSeek files, usage and model service responses | DeepSeek adapter | Remote API/session memory; no additional filesystem file to relocate |
+
+## Migration and recovery
+
+The startup flow distinguishes a storage initialization failure from a backup cleanup failure after successful initialization.
+
+```mermaid
+flowchart TD
+    Activate["Activate extension"] --> Init["Initialize settings and migrate legacy data if present"]
+    Init --> Recover["Initialize history and recover checkpoints"]
+    Recover --> Ready{"Storage initialized successfully?"}
+    Ready -->|No| Temporary["Use temporary settings and incognito history"]
+    Temporary --> Preserve["Preserve existing files and offer diagnostics"]
+    Ready -->|Yes| Cleanup["Attempt migration backup cleanup when ready"]
+    Cleanup -->|Success or nothing to clean| Normal["Continue with persisted data"]
+    Cleanup -->|Cleanup fails| Retry["Keep backups and report cleanup failure"]
+    Retry --> Normal
+```
+
+The shared data root is `~/.ycrasy-agent/`. Activation migrates `~/.deepseek-agent/` into it, merges existing directories, and removes the old root only after its contents have been transferred or backed up. No compatibility link remains. Subsequent starts skip migration when the old directory is absent. A pre-existing compatibility link pointing to the new root is removed without deleting its target. Settings locks and a destination migration lock serialize the transfer; interrupted transfers can resume.
+
+Compatible JSON objects are merged recursively, filling missing or empty fields. Primitive arrays are combined without duplicates, and object arrays with stable string IDs are merged by identity. Completeness is a heuristic based on populated values and string content: contradictory values prefer the more complete original, with the current original preferred on a tie. Incompatible identities or schema versions are kept as one original rather than combined. Other differing files retain the larger version. Invalid JSON prevents a merge; valid JSON is preferred when available.
+
+Differing originals are kept temporarily under `migration-backups/legacy/` and `migration-backups/current/`, named by relative path and SHA-256. After settings persist and the extension finishes loading, activation automatically removes those temporary backups and any review reports left by earlier preview builds. No migration notifications, confirmation steps or manual cleanup are needed. If initialization fails or migration/checkpoint/settings-transaction work remains pending, backups stay in place and cleanup is retried on a later successful activation. An interrupted legacy settings journal is backed up temporarily rather than replayed over established current settings.
+
+If settings, history initialization or checkpoint recovery fails, activation starts a fresh empty chat with default in-memory settings and incognito history. Session settings remain editable, but nothing is saved to the failing data store. Existing files and migration backups remain intact. A single non-blocking warning offers diagnostics (including the data directory and original error) and Reload window so the user can fix the problem. Backup cleanup failures also show an actionable warning while retaining the working session. Notifications never wait for dismissal before registering the chat. Legacy VS Code settings are cleared only after storage initialization succeeds. Migration tests use temporary home directories and never migrate real user data.
+
+Before root migration, activation removes the obsolete `runtimes/` and `runtime-state/` directories in full from the legacy home directory, default data root and selected data root. Settings, history, snapshots and instructions are preserved. Runtime symlinks themselves are removed without following their external targets. It creates no standalone script or completion marker: missing directories are skipped on later starts, and failures are logged and retried on a subsequent activation without independently disabling chat. Tests use temporary directories, never real home runtime folders.
+
+Migration overlays existing destination provider fields on legacy fields, retaining legacy fields absent at destination. It normalizes the combined config, writes an atomic transaction journal beside shared settings, writes provider settings, then shared settings without provider keys, and finally removes the journal. An interrupted write is replayed under the existing shared settings lock. Both expected old and intended new hashes are accepted so replay is idempotent; an externally changed file causes a visible degraded-storage error and is never overwritten. Preserve the journal and both files if resolving such a conflict manually. Invalid JSON fails visibly rather than silently discarding settings. Missing files are fresh-install defaults. Atomic writers retain restricted modes and recoverable replacement behavior.
+
+Settings → General → Extension includes a data folder field that provides an editable root path and the native folder picker. Leaving the path field or pressing Enter automatically saves a machine-local selection in VS Code globalState, outside the chosen root; reload activates it for all storage clients. Default restores `.ycrasy-agent` in the extension host user’s home directory (`$HOME` on Linux/macOS, `%USERPROFILE%` on Windows). Existing data remains in its original directory; selecting a directory uses the data already stored there. New directories are created and checked for read/write access before saving. Credentials and attachment preview cache remain in VS Code storage.
+
+Multiple future extensions must use the same shared settings lock and transaction protocol, plus the existing history mutation lock for history/captures. They must not independently migrate, rewrite complete settings from stale snapshots or silently bypass lock failures. Concurrent old extensions unaware of this protocol are unsupported; a detected interrupted-transaction conflict fails closed. Splitting into additional extensions is outside this issue.
+
+Tests override provider storage with `YCRASY_AGENT_PROVIDER_DATA_DIR`; without it, test provider paths are inside `DEEPSEEK_AGENT_USER_DATA_DIR/providers`, never the real home provider directory. Production ignores these overrides. Fresh install, destination precedence, repeated migration, interrupted recovery, external conflict and credential exclusion have automated coverage; existing history/checkpoint tests continue to pass.
+
+[Back](2.INDEX.MD)
