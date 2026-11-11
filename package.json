@@ -194,7 +194,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --max-warnings 0",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "node scripts/test-memory-safety.test.mjs && node scripts/run-unit-tests.mjs",
+    "test:unit": "node scripts/test-memory-safety.test.mjs && node --test scripts/unit-test-selection.test.mjs && node scripts/run-unit-tests.mjs",
     "prepare:integration": "npm run build && node scripts/build-integration-tests.mjs",
     "test:integration": "npm run prepare:integration && vscode-test",
     "package:vsix": "node scripts/prepare-artifacts.mjs && vsce package --no-dependencies --out artifacts",

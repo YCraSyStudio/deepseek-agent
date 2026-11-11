@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 import Mocha from "mocha";
 import { createMemoryGuard, formatSnapshot, memorySnapshot } from "./test-memory-guard.mjs";
+import { selectUnitTests } from "./unit-test-selection.mjs";
 
 // A failing assertion that inspects an unbounded object graph is a synchronous
 // allocation, so a timer-based watchdog cannot interrupt it. The V8 heap cap turns
@@ -30,8 +31,15 @@ if (!heapCapConfigured && process.env.DEEPSEEK_AGENT_TEST_HEAP_GUARD !== "1") {
 const outDir = resolve(".tmp/unit-tests");
 const testDir = resolve("src/test");
 const integrationDir = resolve(testDir, "integration");
-const entryPoints = collectTests(testDir)
+const unitTests = collectTests(testDir)
   .filter((fileName) => !fileName.startsWith(`${integrationDir}\\`) && !fileName.startsWith(`${integrationDir}/`));
+let entryPoints;
+try {
+  entryPoints = selectUnitTests(unitTests, testDir, process.argv.slice(2));
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 
 rmSync(outDir, { recursive: true, force: true });
 
