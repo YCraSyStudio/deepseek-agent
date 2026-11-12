@@ -5,6 +5,7 @@ const fs = require("fs");
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
 const coverage = process.env.DEEPSEEK_AGENT_TEST_COVERAGE === "1";
+const metafile = process.env.DEEPSEEK_AGENT_METAFILE === "1";
 
 const projectRoot = __dirname;
 
@@ -26,6 +27,11 @@ const aliasPlugin = {
   setup(build) {
     build.onResolve({ filter: /^@\// }, (args) => {
       return { path: resolveWithExtensions(path.resolve(projectRoot, "src", args.path.slice(2))) };
+    });
+    build.onResolve({ filter: /^pac-proxy-agent$/ }, () => {
+      return {
+        path: path.resolve(projectRoot, "src", "infrastructure", "browser", "PacProxyAgentStub.ts"),
+      };
     });
     build.onResolve({ filter: /^@webview\// }, (args) => {
       return {
@@ -64,13 +70,20 @@ async function main() {
     platform: "node",
     outfile: "dist/extension.js",
     external: ["vscode"],
+    metafile,
     logLevel: "silent",
     plugins: [aliasPlugin, esbuildProblemMatcherPlugin],
   });
   if (watch) {
     await ctx.watch();
   } else {
-    await ctx.rebuild();
+    const result = await ctx.rebuild();
+    if (metafile && result.metafile) {
+      fs.writeFileSync(
+        path.join(projectRoot, "dist", "extension.meta.json"),
+        JSON.stringify(result.metafile),
+      );
+    }
     await ctx.dispose();
   }
 }

@@ -12,6 +12,10 @@ instructions/**
 .tmp/**
 coverage/**
 .c8rc.json
+.editorconfig
+.prettierignore
+eslint-suppressions.json
+prettier.config.mjs
 artifacts/**
 .gitignore
 knip.json
@@ -26,5 +30,6 @@ temp-checklist.md
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map
+dist/extension.meta.json
 **/*.ts
 **/.vscode-test.*

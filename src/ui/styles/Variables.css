@@ -37,8 +37,8 @@
 
 @supports (backdrop-filter: blur(1px)) {
   :root {
-    --floating-surface-opacity: 55%;
-    --floating-surface-filter: blur(6px) saturate(120%);
+    --floating-surface-opacity: 75%;
+    --floating-surface-filter: blur(4px) saturate(112%);
   }
 }
 
