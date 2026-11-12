@@ -4,8 +4,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { renderToolCallResultPreview } from "@webview/components/chatView/tools/results/ToolCallResultPreview";
 import { renderToolCallArgumentsPreview } from "@webview/components/chatView/tools/results/ToolCallResultRenderers";
 import type { ToolCallState } from "@webview/views/chatView/ChatViewTypes";
+import { setInterfaceLanguage } from "@webview/i18n";
 
 suite("tool call result presentation", () => {
+  setup(() => {
+    setInterfaceLanguage("en");
+  });
+
   const diff = "--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old\n+new";
   const markup = (
     result: unknown,
