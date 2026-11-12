@@ -29,7 +29,9 @@ export function parseProviderUsage(value: unknown): ProviderUsage | undefined {
   copyOptionalCount(value, usage, "prompt_cache_hit_tokens");
   copyOptionalCount(value, usage, "prompt_cache_miss_tokens");
 
-  const details = isRecord(value.completion_tokens_details) ? value.completion_tokens_details : undefined;
+  const details = isRecord(value.completion_tokens_details)
+    ? value.completion_tokens_details
+    : undefined;
   if (details && isNonNegativeCount(details.reasoning_tokens)) {
     usage.reasoning_tokens = details.reasoning_tokens;
   }
@@ -107,25 +109,46 @@ export function normalizeUsageAggregate(value: unknown): UsageAggregate | undefi
     return undefined;
   }
   if (value.byModel !== undefined) {
-    if (!Array.isArray(value.byModel) || value.byModel.length < 2 || value.byModel.length > 100) {return undefined;}
+    if (!Array.isArray(value.byModel) || value.byModel.length < 2 || value.byModel.length > 100) {
+      return undefined;
+    }
     const children: UsageAggregate[] = [];
     for (const entry of value.byModel) {
-      if (!isRecord(entry) || entry.byModel !== undefined) {return undefined;}
+      if (!isRecord(entry) || entry.byModel !== undefined) {
+        return undefined;
+      }
       const child = normalizeUsageAggregate(entry);
-      if (!child || child.count === 0 || children.some((other) => other.model === child.model)) {return undefined;}
+      if (!child || child.count === 0 || children.some((other) => other.model === child.model)) {
+        return undefined;
+      }
       children.push(child);
     }
-    if (normalized.model !== undefined) {return undefined;}
-    if (normalized.officialEndpoint !== children.every((child) => child.officialEndpoint)) {return undefined;}
+    if (normalized.model !== undefined) {
+      return undefined;
+    }
+    if (normalized.officialEndpoint !== children.every((child) => child.officialEndpoint)) {
+      return undefined;
+    }
     const sum = createEmptyPhaseUsage();
-    for (const child of children) {mergePhaseUsage(sum, child);}
-    if (JSON.stringify(sum) !== JSON.stringify(totals)) {return undefined;}
+    for (const child of children) {
+      mergePhaseUsage(sum, child);
+    }
+    if (JSON.stringify(sum) !== JSON.stringify(totals)) {
+      return undefined;
+    }
     for (const phase of USAGE_PHASES) {
       const phaseSum = createEmptyPhaseUsage();
       for (const child of children) {
-        if (child.byPhase[phase]) {mergePhaseUsage(phaseSum, child.byPhase[phase]!);}
+        if (child.byPhase[phase]) {
+          mergePhaseUsage(phaseSum, child.byPhase[phase]!);
+        }
       }
-      if (JSON.stringify(phaseSum) !== JSON.stringify(normalized.byPhase[phase] ?? createEmptyPhaseUsage())) {return undefined;}
+      if (
+        JSON.stringify(phaseSum) !==
+        JSON.stringify(normalized.byPhase[phase] ?? createEmptyPhaseUsage())
+      ) {
+        return undefined;
+      }
     }
     normalized.byModel = children;
   }
@@ -140,7 +163,13 @@ function normalizePhaseUsage(value: unknown): PhaseUsage | undefined {
   if (!isRecord(value)) {
     return undefined;
   }
-  for (const key of ["requests", "reported", "reasoningReported", "cacheHitReported", "cacheMissReported"] as const) {
+  for (const key of [
+    "requests",
+    "reported",
+    "reasoningReported",
+    "cacheHitReported",
+    "cacheMissReported",
+  ] as const) {
     if (!isNonNegativeCount(value[key])) {
       return undefined;
     }
@@ -160,7 +189,14 @@ function normalizePhaseUsage(value: unknown): PhaseUsage | undefined {
   ) {
     return undefined;
   }
-  for (const key of ["inputTokens", "outputTokens", "reasoningTokens", "cacheHitTokens", "cacheMissTokens", "totalTokens"] as const) {
+  for (const key of [
+    "inputTokens",
+    "outputTokens",
+    "reasoningTokens",
+    "cacheHitTokens",
+    "cacheMissTokens",
+    "totalTokens",
+  ] as const) {
     if (value[key] !== undefined) {
       if (!isNonNegativeCount(value[key])) {
         return undefined;
@@ -208,14 +244,25 @@ function mergePhaseUsage(target: PhaseUsage, source: PhaseUsage): void {
   target.reasoningReported = safeCountAdd(target.reasoningReported, source.reasoningReported);
   target.cacheHitReported = safeCountAdd(target.cacheHitReported, source.cacheHitReported);
   target.cacheMissReported = safeCountAdd(target.cacheMissReported, source.cacheMissReported);
-  for (const key of ["inputTokens", "outputTokens", "reasoningTokens", "cacheHitTokens", "cacheMissTokens", "totalTokens"] as const) {
+  for (const key of [
+    "inputTokens",
+    "outputTokens",
+    "reasoningTokens",
+    "cacheHitTokens",
+    "cacheMissTokens",
+    "totalTokens",
+  ] as const) {
     if (source[key] !== undefined) {
       target[key] = safeCountAdd(target[key] ?? 0, source[key]);
     }
   }
 }
 
-function copyOptionalCount(source: Record<string, unknown>, target: ProviderUsage, key: "prompt_cache_hit_tokens" | "prompt_cache_miss_tokens"): void {
+function copyOptionalCount(
+  source: Record<string, unknown>,
+  target: ProviderUsage,
+  key: "prompt_cache_hit_tokens" | "prompt_cache_miss_tokens",
+): void {
   if (isNonNegativeCount(source[key])) {
     target[key] = source[key];
   }
@@ -239,7 +286,12 @@ function isUtcInstant(value: unknown): value is string {
 }
 
 function isNonNegativeCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER;
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
 }
 
 function isUsagePhase(value: unknown): value is UsagePhase {

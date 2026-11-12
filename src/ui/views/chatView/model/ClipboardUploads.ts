@@ -11,7 +11,10 @@ export interface PendingImagePreview {
 export class ClipboardUploads {
   private readonly requests = new Map<string, PendingImagePreview & { removed: boolean }>();
   private readonly activeUploads = new Set<string>();
-  private readonly waiters = new Map<string, { resolve: (attachments: ImageAttachment[]) => void; reject: (error: Error) => void }>();
+  private readonly waiters = new Map<
+    string,
+    { resolve: (attachments: ImageAttachment[]) => void; reject: (error: Error) => void }
+  >();
   constructor(private readonly revoke: (uri: string) => void) {}
 
   add(preview: PendingImagePreview): void {
@@ -31,9 +34,18 @@ export class ClipboardUploads {
     }
   }
 
-  complete(requestId: string, attachments: ImageAttachment[], error?: string): { accepted: ImageAttachment[]; discarded: ImageAttachment[] } {
+  complete(
+    requestId: string,
+    attachments: ImageAttachment[],
+    error?: string,
+  ): { accepted: ImageAttachment[]; discarded: ImageAttachment[] } {
     const pending = this.requests.get(requestId);
-    if (!pending) {return { accepted: attachments.filter((attachment) => attachment.source !== "clipboard"), discarded: [] };}
+    if (!pending) {
+      return {
+        accepted: attachments.filter((attachment) => attachment.source !== "clipboard"),
+        discarded: [],
+      };
+    }
     this.activeUploads.delete(requestId);
     const waiter = this.waiters.get(requestId);
     this.waiters.delete(requestId);
@@ -42,12 +54,19 @@ export class ClipboardUploads {
       return { accepted: [], discarded: attachments };
     }
     this.requests.delete(requestId);
-    if (!pending.removed) {this.revoke(pending.previewUri);}
+    if (!pending.removed) {
+      this.revoke(pending.previewUri);
+    }
     waiter?.resolve(pending.removed ? [] : attachments);
-    return { accepted: pending.removed ? [] : attachments, discarded: pending.removed ? attachments : [] };
+    return {
+      accepted: pending.removed ? [] : attachments,
+      discarded: pending.removed ? attachments : [],
+    };
   }
 
-  async uploadSelected(upload: (preview: PendingImagePreview) => Promise<void>): Promise<ImageAttachment[]> {
+  async uploadSelected(
+    upload: (preview: PendingImagePreview) => Promise<void>,
+  ): Promise<ImageAttachment[]> {
     const selected = this.previews();
     const results = selected.map((preview) => {
       const pending = this.requests.get(preview.requestId)!;
@@ -56,14 +75,20 @@ export class ClipboardUploads {
         this.waiters.set(preview.requestId, { resolve, reject });
       });
       void upload(pending).catch((error: unknown) => {
-        this.complete(preview.requestId, [], error instanceof Error ? error.message : String(error));
+        this.complete(
+          preview.requestId,
+          [],
+          error instanceof Error ? error.message : String(error),
+        );
       });
       return result;
     });
     const settled = await Promise.allSettled(results);
     const failed = settled.find((result) => result.status === "rejected");
-    if (failed?.status === "rejected") {throw failed.reason;}
-    return settled.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+    if (failed?.status === "rejected") {
+      throw failed.reason;
+    }
+    return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
   }
 
   previews(): PendingImagePreview[] {
@@ -71,8 +96,12 @@ export class ClipboardUploads {
   }
 
   dispose(): void {
-    for (const id of this.requests.keys()) {this.remove(id);}
+    for (const id of this.requests.keys()) {
+      this.remove(id);
+    }
   }
 
-  get outstanding(): number {return this.requests.size;}
+  get outstanding(): number {
+    return this.requests.size;
+  }
 }

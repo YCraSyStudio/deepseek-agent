@@ -7,21 +7,42 @@ import {
   handlerContext,
   requiresWorkspaceMutationPolicy,
 } from "@/vscode/webviews/handlers/chat/toolCalls/execution/PipelineContext";
-import { createExecutionContext, createToolExecutorStub, createWorkspaceHost, toolCall } from "./executionHarness";
+import {
+  createExecutionContext,
+  createToolExecutorStub,
+  createWorkspaceHost,
+  toolCall,
+} from "./executionHarness";
 
 const metadata: Record<string, ToolMetadata> = {
   read_file: { dangerLevel: "safe", requiresConfirmation: false, effect: "read-only" },
-  search_web: { dangerLevel: "safe", requiresConfirmation: false, scope: "global", effect: "external-effect" },
+  search_web: {
+    dangerLevel: "safe",
+    requiresConfirmation: false,
+    scope: "global",
+    effect: "external-effect",
+  },
   edit_file: { dangerLevel: "caution", requiresConfirmation: true, effect: "workspace-mutation" },
 };
 
 suite("tool execution pipeline context", () => {
   test("derives the workspace mutation policy from tool metadata", () => {
-    const { context } = createExecutionContext({ executor: createToolExecutorStub({ metadata }).executor });
+    const { context } = createExecutionContext({
+      executor: createToolExecutorStub({ metadata }).executor,
+    });
 
-    assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("read_file", { path: "README.md" })), false);
-    assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("search_web", { query: "web search" })), false);
-    assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("edit_file", { path: "src/app.ts" })), true);
+    assert.strictEqual(
+      requiresWorkspaceMutationPolicy(context, toolCall("read_file", { path: "README.md" })),
+      false,
+    );
+    assert.strictEqual(
+      requiresWorkspaceMutationPolicy(context, toolCall("search_web", { query: "web search" })),
+      false,
+    );
+    assert.strictEqual(
+      requiresWorkspaceMutationPolicy(context, toolCall("edit_file", { path: "src/app.ts" })),
+      true,
+    );
     assert.strictEqual(requiresWorkspaceMutationPolicy(context, toolCall("unknown_tool")), true);
   });
 
@@ -32,22 +53,40 @@ suite("tool execution pipeline context", () => {
     context.markWebTainted?.();
     assert.strictEqual(handlerContext(context).webTainted, true);
     assert.strictEqual(handlerContext(context).trustedUserRequest, undefined);
-    context.applicationSession = async () => assert.fail("projection must not execute the callback");
+    context.applicationSession = async () =>
+      assert.fail("projection must not execute the callback");
     assert.strictEqual(handlerContext(context).applicationSession, context.applicationSession);
   });
 
   test("reads the path argument of file and terminal calls", () => {
-    assert.strictEqual(getPathArgument(toolCall("edit_file", { path: "src/app.ts" })), "src/app.ts");
-    assert.strictEqual(getPathArgument(toolCall("run_terminal_command", { command: "npm test" })), undefined);
-    assert.strictEqual(getPathArgument(toolCall("run_terminal_command", { command: "npm test", cwd: "/workspace" })), "/workspace");
-    assert.strictEqual(getPathArgument(toolCall("application_session", { action: "start", command: "app", cwd: "project" })), "project");
+    assert.strictEqual(
+      getPathArgument(toolCall("edit_file", { path: "src/app.ts" })),
+      "src/app.ts",
+    );
+    assert.strictEqual(
+      getPathArgument(toolCall("run_terminal_command", { command: "npm test" })),
+      undefined,
+    );
+    assert.strictEqual(
+      getPathArgument(toolCall("run_terminal_command", { command: "npm test", cwd: "/workspace" })),
+      "/workspace",
+    );
+    assert.strictEqual(
+      getPathArgument(
+        toolCall("application_session", { action: "start", command: "app", cwd: "project" }),
+      ),
+      "project",
+    );
     assert.strictEqual(getPathArgument(toolCall("search_web", { query: "web search" })), undefined);
     assert.strictEqual(getPathArgument(toolCall("read_file", { path: "   " })), undefined);
-    assert.strictEqual(getPathArgument({
-      id: "call:broken",
-      type: "function",
-      function: { name: "read_file", arguments: "not-json" },
-    }), undefined);
+    assert.strictEqual(
+      getPathArgument({
+        id: "call:broken",
+        type: "function",
+        function: { name: "read_file", arguments: "not-json" },
+      }),
+      undefined,
+    );
   });
 
   test("adds workspace provenance only to file mutations", async () => {
@@ -58,23 +97,24 @@ suite("tool execution pipeline context", () => {
     };
     const call = toolCall("edit_file", { path: "src/app.ts" });
 
-    const outside = await runWithToolWorkspaceHost(
-      createWorkspaceHost({ contained: false }),
-      () => addProvenFileScope(call, confirmation),
+    const outside = await runWithToolWorkspaceHost(createWorkspaceHost({ contained: false }), () =>
+      addProvenFileScope(call, confirmation),
     );
     assert.strictEqual(outside.filePath, "src/app.ts");
     assert.strictEqual(outside.workspaceRoot, "/workspace");
     assert.strictEqual(outside.workspaceContained, false);
     assert.strictEqual(outside.reasonCode, "outside-workspace");
 
-    const inside = await runWithToolWorkspaceHost(
-      createWorkspaceHost({ contained: true }),
-      () => addProvenFileScope(call, confirmation),
+    const inside = await runWithToolWorkspaceHost(createWorkspaceHost({ contained: true }), () =>
+      addProvenFileScope(call, confirmation),
     );
     assert.strictEqual(inside.workspaceContained, true);
     assert.strictEqual(inside.reasonCode, undefined);
 
-    const untouched = await addProvenFileScope(toolCall("read_file", { path: "src/app.ts" }), confirmation);
+    const untouched = await addProvenFileScope(
+      toolCall("read_file", { path: "src/app.ts" }),
+      confirmation,
+    );
     assert.strictEqual(untouched, confirmation);
   });
 });

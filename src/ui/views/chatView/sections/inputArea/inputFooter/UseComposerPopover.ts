@@ -23,7 +23,9 @@ export function useComposerPopover() {
 
     const measure = () => {
       const top = triggerRef.current?.getBoundingClientRect().top;
-      if (top === undefined) {return;}
+      if (top === undefined) {
+        return;
+      }
       const available = Math.floor(top) - POPOVER_GAP - VIEWPORT_EDGE;
       setMaxHeight(Math.min(MAX_POPOVER_HEIGHT, Math.max(MIN_POPOVER_HEIGHT, available)));
     };
@@ -41,7 +43,9 @@ export function useComposerPopover() {
   }, []);
 
   useEffect(() => {
-    if (!open) {return;}
+    if (!open) {
+      return;
+    }
 
     const handlePointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {

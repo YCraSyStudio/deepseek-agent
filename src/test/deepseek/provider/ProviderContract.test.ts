@@ -1,8 +1,15 @@
 import * as assert from "assert";
 import type { ChatMessage, ToolDefinition } from "@/contracts";
 import { DEFAULT_CONFIG } from "@/contracts/Config";
-import { DeepSeekModelProvider, assertCompatibleModel } from "@/infrastructure/deepseek/provider/DeepSeekProvider";
-import { buildChatBody, chatCompletion, chatCompletionStream } from "@/infrastructure/deepseek/provider/features/Chat";
+import {
+  DeepSeekModelProvider,
+  assertCompatibleModel,
+} from "@/infrastructure/deepseek/provider/DeepSeekProvider";
+import {
+  buildChatBody,
+  chatCompletion,
+  chatCompletionStream,
+} from "@/infrastructure/deepseek/provider/features/Chat";
 import { buildToolCallRequest } from "@/infrastructure/deepseek/provider/features/toolCall/ToolCallRequest";
 
 suite("DeepSeek provider contract", () => {
@@ -12,20 +19,49 @@ suite("DeepSeek provider contract", () => {
     try {
       for (const privacyMinimizeData of [true, false]) {
         globalThis.fetch = async (_input, init) => {
-          const body = JSON.parse(String(init?.body)) as { user_id?: string; messages: Array<{ content: string }> };
+          const body = JSON.parse(String(init?.body)) as {
+            user_id?: string;
+            messages: Array<{ content: string }>;
+          };
           assert.strictEqual(body.user_id, privacyMinimizeData ? undefined : "optional-user-id");
           assert.strictEqual(body.messages[0].content, bodyText);
-          return Response.json({ id: "privacy", object: "chat.completion", created: 1, model: "deepseek-flash",
-            choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }] });
+          return Response.json({
+            id: "privacy",
+            object: "chat.completion",
+            created: 1,
+            model: "deepseek-flash",
+            choices: [
+              { index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" },
+            ],
+          });
         };
-        const provider = new DeepSeekModelProvider({ ...DEFAULT_CONFIG, apiKey: "test-key", userId: "config-user-id", privacyMinimizeData });
-        await provider.chatCompletion({ model: "deepseek-flash", messages: [{ role: "user", content: bodyText }], user_id: "optional-user-id" } as Parameters<typeof provider.chatCompletion>[0]);
-        const request = buildToolCallRequest({ model: "deepseek-flash", messages: [], tools: [], stream: false,
-          cycleOptions: { userId: "optional-user-id", privacyMinimizeData } });
+        const provider = new DeepSeekModelProvider({
+          ...DEFAULT_CONFIG,
+          apiKey: "test-key",
+          userId: "config-user-id",
+          privacyMinimizeData,
+        });
+        await provider.chatCompletion({
+          model: "deepseek-flash",
+          messages: [{ role: "user", content: bodyText }],
+          user_id: "optional-user-id",
+        } as Parameters<typeof provider.chatCompletion>[0]);
+        const request = buildToolCallRequest({
+          model: "deepseek-flash",
+          messages: [],
+          tools: [],
+          stream: false,
+          cycleOptions: { userId: "optional-user-id", privacyMinimizeData },
+        });
         const serialized = JSON.parse(JSON.stringify(request)) as { user_id?: string };
-        assert.strictEqual(serialized.user_id, privacyMinimizeData ? undefined : "optional-user-id");
+        assert.strictEqual(
+          serialized.user_id,
+          privacyMinimizeData ? undefined : "optional-user-id",
+        );
       }
-    } finally {globalThis.fetch = originalFetch;}
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
   const tool: ToolDefinition = {
     type: "function",
@@ -44,7 +80,10 @@ suite("DeepSeek provider contract", () => {
 
   test("keeps tools in thinking and non-thinking requests", () => {
     const thinking = buildChatBody({ tools: [tool] }, { ...DEFAULT_CONFIG, thinkingMode: true });
-    const nonThinking = buildChatBody({ tools: [tool] }, { ...DEFAULT_CONFIG, thinkingMode: false });
+    const nonThinking = buildChatBody(
+      { tools: [tool] },
+      { ...DEFAULT_CONFIG, thinkingMode: false },
+    );
 
     assert.strictEqual(thinking.tools?.length, 1);
     assert.strictEqual(nonThinking.tools?.length, 1);
@@ -68,8 +107,13 @@ suite("DeepSeek provider contract", () => {
 
   test("replays reasoning_content on every assistant turn in thinking mode", async () => {
     const originalFetch = globalThis.fetch;
-    const bodies: Array<{ thinking?: { type: string }; messages: Array<Record<string, unknown>> }> = [];
-    const call = (id: string) => ({ id, type: "function" as const, function: { name: "read_file", arguments: "{}" } });
+    const bodies: Array<{ thinking?: { type: string }; messages: Array<Record<string, unknown>> }> =
+      [];
+    const call = (id: string) => ({
+      id,
+      type: "function" as const,
+      function: { name: "read_file", arguments: "{}" },
+    });
     const messages: ChatMessage[] = [
       { role: "user", content: "inspect" },
       { role: "assistant", content: null, tool_calls: [call("call-1")] },
@@ -83,16 +127,35 @@ suite("DeepSeek provider contract", () => {
     try {
       globalThis.fetch = async (_input, init) => {
         bodies.push(JSON.parse(String(init?.body)) as (typeof bodies)[number]);
-        return Response.json({ id: "reasoning", object: "chat.completion", created: 1, model: "deepseek-flash",
-          choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }] });
+        return Response.json({
+          id: "reasoning",
+          object: "chat.completion",
+          created: 1,
+          model: "deepseek-flash",
+          choices: [
+            { index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" },
+          ],
+        });
       };
       await chatCompletion(
-        buildToolCallRequest({ model: "deepseek-flash", messages, tools: [tool], stream: false, cycleOptions: { thinkingMode: true } }),
+        buildToolCallRequest({
+          model: "deepseek-flash",
+          messages,
+          tools: [tool],
+          stream: false,
+          cycleOptions: { thinkingMode: true },
+        }),
         "[REDACTED]",
         "https://api.deepseek.com",
       );
       await chatCompletion(
-        buildToolCallRequest({ model: "deepseek-flash", messages, tools: [], stream: false, cycleOptions: { thinkingMode: false } }),
+        buildToolCallRequest({
+          model: "deepseek-flash",
+          messages,
+          tools: [],
+          stream: false,
+          cycleOptions: { thinkingMode: false },
+        }),
         "[REDACTED]",
         "https://api.deepseek.com",
       );
@@ -108,7 +171,9 @@ suite("DeepSeek provider contract", () => {
       const nonThinking = bodies[1].messages;
       assert.strictEqual(bodies[1].thinking?.type, "disabled");
       assert.strictEqual("reasoning_content" in nonThinking[1], false);
-    } finally {globalThis.fetch = originalFetch;}
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("replays final answers and synthetic observations through streaming and beta transports", async () => {
@@ -124,28 +189,64 @@ suite("DeepSeek provider contract", () => {
     let requests = 0;
     try {
       globalThis.fetch = async (_input, init) => {
-        const body = JSON.parse(String(init?.body)) as { stream: boolean; tools: unknown[]; messages: ChatMessage[] };
+        const body = JSON.parse(String(init?.body)) as {
+          stream: boolean;
+          tools: unknown[];
+          messages: ChatMessage[];
+        };
         assert.strictEqual(body.tools.length, 1);
-        for (const message of body.messages.filter(message => message.role === "assistant")) {
-          assert.strictEqual(typeof message.reasoning_content, "string", "Thinking tool requests require reasoning on all assistant turns");
+        for (const message of body.messages.filter((message) => message.role === "assistant")) {
+          assert.strictEqual(
+            typeof message.reasoning_content,
+            "string",
+            "Thinking tool requests require reasoning on all assistant turns",
+          );
         }
         assert.strictEqual(body.messages[1].reasoning_content, reasoning);
         assert.strictEqual(body.messages[3].reasoning_content, "");
         assert.strictEqual(body.messages[4].reasoning_content, "");
         requests++;
         return body.stream
-          ? new Response('data: [DONE]\n\n', { headers: { "content-type": "text/event-stream" } })
-          : Response.json({ id: "next", object: "chat.completion", created: 1, model: "deepseek-flash", choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }] });
+          ? new Response("data: [DONE]\n\n", { headers: { "content-type": "text/event-stream" } })
+          : Response.json({
+              id: "next",
+              object: "chat.completion",
+              created: 1,
+              model: "deepseek-flash",
+              choices: [
+                { index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" },
+              ],
+            });
       };
       for (const betaFeaturesEnabled of [false, true]) {
-        const request = buildToolCallRequest({ model: "deepseek-flash", messages, tools: [tool], stream: false, cycleOptions: { thinkingMode: true } });
-        await chatCompletion(request, "test-key", "https://api.deepseek.com", undefined, betaFeaturesEnabled);
-        await chatCompletionStream({ request, apiKey: "test-key", baseUrl: "https://api.deepseek.com", betaFeaturesEnabled, onChunk: () => undefined });
+        const request = buildToolCallRequest({
+          model: "deepseek-flash",
+          messages,
+          tools: [tool],
+          stream: false,
+          cycleOptions: { thinkingMode: true },
+        });
+        await chatCompletion(
+          request,
+          "test-key",
+          "https://api.deepseek.com",
+          undefined,
+          betaFeaturesEnabled,
+        );
+        await chatCompletionStream({
+          request,
+          apiKey: "test-key",
+          baseUrl: "https://api.deepseek.com",
+          betaFeaturesEnabled,
+          onChunk: () => undefined,
+        });
       }
       assert.strictEqual(requests, 4);
       assert.strictEqual(messages[3].reasoning_content, undefined);
       assert.strictEqual(messages[4].reasoning_content, null);
-    } finally { globalThis.fetch = originalFetch; }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("does not send beta-only strict fields through the stable endpoint", () => {
@@ -156,15 +257,29 @@ suite("DeepSeek provider contract", () => {
 
   test("restricts official DeepSeek model IDs but permits compatible custom providers", () => {
     assert.doesNotThrow(() => assertCompatibleModel("deepseek-flash", "https://api.deepseek.com"));
-    assert.throws(() => assertCompatibleModel("deepseek-v4-flash-vision-exp", "https://api.deepseek.com"), /not supported/);
-    assert.throws(() => assertCompatibleModel("deepseek-v4-flash", "https://api.deepseek.com"), /not supported/);
+    assert.throws(
+      () => assertCompatibleModel("deepseek-v4-flash-vision-exp", "https://api.deepseek.com"),
+      /not supported/,
+    );
+    assert.throws(
+      () => assertCompatibleModel("deepseek-v4-flash", "https://api.deepseek.com"),
+      /not supported/,
+    );
     assert.doesNotThrow(() => assertCompatibleModel("deepseek-v4-pro", "https://api.deepseek.com"));
-    assert.throws(() => assertCompatibleModel("custom-model", "https://api.deepseek.com"), /not supported/);
+    assert.throws(
+      () => assertCompatibleModel("custom-model", "https://api.deepseek.com"),
+      /not supported/,
+    );
     assert.doesNotThrow(() => assertCompatibleModel("custom-model", "http://127.0.0.1:11434/v1"));
   });
 
   test("connection checks use the same official-model compatibility policy", async () => {
-    const provider = new DeepSeekModelProvider({ ...DEFAULT_CONFIG, apiKey: "unused", model: "custom-model", baseUrl: "https://api.deepseek.com" });
+    const provider = new DeepSeekModelProvider({
+      ...DEFAULT_CONFIG,
+      apiKey: "unused",
+      model: "custom-model",
+      baseUrl: "https://api.deepseek.com",
+    });
     assert.deepStrictEqual(await provider.testConnection(), {
       success: false,
       error: 'Model "custom-model" is not supported by the official DeepSeek API configuration.',
@@ -182,16 +297,29 @@ suite("DeepSeek provider contract", () => {
           object: "chat.completion",
           created: 1,
           model: "deepseek-flash",
-          choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }],
+          choices: [
+            { index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" },
+          ],
         });
       };
       const provider = new DeepSeekModelProvider({ ...DEFAULT_CONFIG, apiKey: "test-key" });
       await provider.chatCompletion({
         model: "deepseek-flash",
-        messages: [{ role: "user", content: [{ type: "text", text: "describe" }, { type: "file", file_id: "file-test123" }] }],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "describe" },
+              { type: "file", file_id: "file-test123" },
+            ],
+          },
+        ],
       });
 
-      assert.deepStrictEqual(bodies.map((body) => body.model), ["deepseek-flash"]);
+      assert.deepStrictEqual(
+        bodies.map((body) => body.model),
+        ["deepseek-flash"],
+      );
       assert.match(JSON.stringify(bodies[0]), /file-test123/);
     } finally {
       globalThis.fetch = originalFetch;
@@ -207,10 +335,20 @@ suite("DeepSeek provider contract", () => {
         return Response.json({ error: { message: "model removed" } }, { status: 410 });
       };
       const provider = new DeepSeekModelProvider({ ...DEFAULT_CONFIG, apiKey: "test-key" });
-      await assert.rejects(provider.chatCompletion({
-        model: "deepseek-flash",
-        messages: [{ role: "user", content: [{ type: "text", text: "describe" }, { type: "file", file_id: "file-test123" }] }],
-      }));
+      await assert.rejects(
+        provider.chatCompletion({
+          model: "deepseek-flash",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "describe" },
+                { type: "file", file_id: "file-test123" },
+              ],
+            },
+          ],
+        }),
+      );
       assert.strictEqual(calls, 1);
     } finally {
       globalThis.fetch = originalFetch;
@@ -226,10 +364,13 @@ suite("DeepSeek provider contract", () => {
         return Response.json({ error: { code: "invalid_api_key" } }, { status: 401 });
       };
       const provider = new DeepSeekModelProvider({ ...DEFAULT_CONFIG, apiKey: "bad-key" });
-      await assert.rejects(provider.chatCompletion({
-        model: "deepseek-flash",
-        messages: [{ role: "user", content: "hello" }],
-      }), /Invalid API credentials/);
+      await assert.rejects(
+        provider.chatCompletion({
+          model: "deepseek-flash",
+          messages: [{ role: "user", content: "hello" }],
+        }),
+        /Invalid API credentials/,
+      );
       assert.strictEqual(calls, 1);
     } finally {
       globalThis.fetch = originalFetch;
@@ -242,17 +383,22 @@ suite("DeepSeek provider contract", () => {
     try {
       globalThis.fetch = async (_input, init) => {
         models.push((JSON.parse(String(init?.body)) as { model: string }).model);
-        return Response.json({ error: { code: "model_not_found", param: "model", message: "Model is not available" } }, { status: 400 });
+        return Response.json(
+          { error: { code: "model_not_found", param: "model", message: "Model is not available" } },
+          { status: 400 },
+        );
       };
       const provider = new DeepSeekModelProvider({
         ...DEFAULT_CONFIG,
         apiKey: "test-key",
         baseUrl: "http://127.0.0.1:11434/v1",
       });
-      await assert.rejects(provider.chatCompletion({
-        model: "llama-3.1-8b",
-        messages: [{ role: "user", content: "hello" }],
-      }));
+      await assert.rejects(
+        provider.chatCompletion({
+          model: "llama-3.1-8b",
+          messages: [{ role: "user", content: "hello" }],
+        }),
+      );
       assert.deepStrictEqual(models, ["llama-3.1-8b"]);
     } finally {
       globalThis.fetch = originalFetch;

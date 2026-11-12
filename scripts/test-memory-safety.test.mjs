@@ -4,7 +4,13 @@ import { spawnSync } from "node:child_process";
 import { createMemoryGuard } from "./test-memory-guard.mjs";
 
 test("assert guard preserves comparisons and bounds DOM failure diagnostics under a heap cap", () => {
-  const child = spawnSync(process.execPath, ["--max-old-space-size=128", "--input-type=module", "-e", `
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--max-old-space-size=128",
+      "--input-type=module",
+      "-e",
+      `
     import assert from "node:assert/strict";
     import loose from "node:assert";
     import { JSDOM } from "jsdom";
@@ -43,20 +49,44 @@ test("assert guard preserves comparisons and bounds DOM failure diagnostics unde
     });
     throws(() => loose.strictEqual(dom.window, null), { code: "ERR_ASSERTION" });
     dom.window.close();
-  `], { cwd: new URL("..", import.meta.url), encoding: "utf8", timeout: 15000, maxBuffer: 32768 });
+  `,
+    ],
+    { cwd: new URL("..", import.meta.url), encoding: "utf8", timeout: 15000, maxBuffer: 32768 },
+  );
   assert.ifError(child.error);
   assert.equal(child.status, 0, child.stderr || String(child.error || child.signal));
 });
 
 test("RSS watchdog stops once and reports the failing test", () => {
-  const snapshot = rssMb => ({ rssMb, heapUsedMb: 1, heapTotalMb: 2, externalMb: 0, arrayBuffersMb: 0 });
-  let rss = 10; let stops = 0; const failures = [];
-  const guard = createMemoryGuard({ limitMb: 20, sample: () => snapshot(rss),
-    currentLabel: () => "failing test", log: () => {}, onExceeded: value => failures.push(value),
-    setIntervalFn: () => 42, clearIntervalFn: () => { stops++; } });
-  guard.start(); guard.start(); guard.check();
+  const snapshot = (rssMb) => ({
+    rssMb,
+    heapUsedMb: 1,
+    heapTotalMb: 2,
+    externalMb: 0,
+    arrayBuffersMb: 0,
+  });
+  let rss = 10;
+  let stops = 0;
+  const failures = [];
+  const guard = createMemoryGuard({
+    limitMb: 20,
+    sample: () => snapshot(rss),
+    currentLabel: () => "failing test",
+    log: () => {},
+    onExceeded: (value) => failures.push(value),
+    setIntervalFn: () => 42,
+    clearIntervalFn: () => {
+      stops++;
+    },
+  });
+  guard.start();
+  guard.start();
+  guard.check();
   assert.equal(guard.breached, false);
-  rss = 25; guard.check(); guard.check(); guard.stop();
+  rss = 25;
+  guard.check();
+  guard.check();
+  guard.stop();
   assert.equal(stops, 1);
   assert.equal(failures.length, 1);
   assert.equal(failures[0].label, "failing test");

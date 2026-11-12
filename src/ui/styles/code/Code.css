@@ -7,7 +7,7 @@ pre {
 .inline-code {
   background: color-mix(in srgb, var(--code-bg) 85%, black 15%);
   border-radius: 4px;
-  padding: .12rem .32rem;
+  padding: 0.12rem 0.32rem;
   font-size: 12px;
 }
 

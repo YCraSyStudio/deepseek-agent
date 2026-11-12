@@ -1,10 +1,26 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { lstat, mkdir, mkdtemp, readFile, rm, symlink, truncate, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
-import { captureWorkspaceSnapshot, isWorkspaceSnapshot, snapshotFilePath, workspaceChangeNotice, WorkspaceSnapshotStore, type SnapshotRoot } from "@/infrastructure/workspace/WorkspaceSnapshot";
+import {
+  captureWorkspaceSnapshot,
+  isWorkspaceSnapshot,
+  snapshotFilePath,
+  workspaceChangeNotice,
+  WorkspaceSnapshotStore,
+  type SnapshotRoot,
+} from "@/infrastructure/workspace/WorkspaceSnapshot";
 
 const execFileAsync = promisify(execFile);
 
@@ -23,19 +39,45 @@ suite("workspace state snapshots", () => {
     await mkdir(path.join(temporary, "data", "history", "chat-1"), { recursive: true });
     await writeFile(path.join(temporary, "data", "history", "chat-1", "manifest.json"), "{}");
   });
-  teardown(async () => {await rm(temporary, { recursive: true, force: true });});
+  teardown(async () => {
+    await rm(temporary, { recursive: true, force: true });
+  });
   test("rejects malformed snapshot shapes and paths outside the declared root", () => {
-    for (const value of [null, 1, {}, { version: 1, roots: [], files: [] }, { version: 1, roots: [1], files: {} },
-      { version: 1, roots: [], files: { file: "invalid-hash" } }]) { assert.equal(isWorkspaceSnapshot(value), false); }
-    for (const label of ["unknown/file.txt", "project/", "project/../escape", "project/a\\b", "project/.git/config", "project/.snapshot/state", "project/a//b"]) {
-      assert.throws(() => snapshotFilePath(temporary, label, roots), /does not belong|Invalid snapshot file path/);
+    for (const value of [
+      null,
+      1,
+      {},
+      { version: 1, roots: [], files: [] },
+      { version: 1, roots: [1], files: {} },
+      { version: 1, roots: [], files: { file: "invalid-hash" } },
+    ]) {
+      assert.equal(isWorkspaceSnapshot(value), false);
     }
-    assert.equal(snapshotFilePath(temporary, "project/source/file.ts", roots), path.join(temporary, "source/file.ts"));
+    for (const label of [
+      "unknown/file.txt",
+      "project/",
+      "project/../escape",
+      "project/a\\b",
+      "project/.git/config",
+      "project/.snapshot/state",
+      "project/a//b",
+    ]) {
+      assert.throws(
+        () => snapshotFilePath(temporary, label, roots),
+        /does not belong|Invalid snapshot file path/,
+      );
+    }
+    assert.equal(
+      snapshotFilePath(temporary, "project/source/file.ts", roots),
+      path.join(temporary, "source/file.ts"),
+    );
   });
   for (const project of ["Cargo.toml", "pom.xml"]) {
     test(`excludes generated target directories from ${project} projects`, async () => {
-      await writeFile(path.join(workspace, project), "Project definition"); await mkdir(path.join(workspace, "target"));
-      await writeFile(path.join(workspace, "target/generated.bin"), "Generated"); await writeFile(path.join(workspace, "source.txt"), "Source");
+      await writeFile(path.join(workspace, project), "Project definition");
+      await mkdir(path.join(workspace, "target"));
+      await writeFile(path.join(workspace, "target/generated.bin"), "Generated");
+      await writeFile(path.join(workspace, "source.txt"), "Source");
       const snapshot = await captureWorkspaceSnapshot(roots);
       assert.equal(Object.hasOwn(snapshot.files, "project/target/generated.bin"), false);
       assert.equal(Object.hasOwn(snapshot.files, "project/source.txt"), true);
@@ -44,18 +86,26 @@ suite("workspace state snapshots", () => {
   for (const content of ["{invalid", "{}"]) {
     test(`repairs a corrupt state index during save: ${content}`, async () => {
       const snapshot = await captureWorkspaceSnapshot(roots);
-      const directory = path.join(store.directory, ".snapshot"); await mkdir(directory, { recursive: true });
+      const directory = path.join(store.directory, ".snapshot");
+      await mkdir(directory, { recursive: true });
       await writeFile(path.join(directory, "state.json"), content);
-      await assert.rejects(store.load()); await store.save(snapshot);
+      await assert.rejects(store.load());
+      await store.save(snapshot);
       assert.deepEqual(await store.load(), snapshot);
     });
   }
   for (const invalid of ["directory", "oversized"] as const) {
     test(`refuses a ${invalid} state index instead of silently overwriting it`, async () => {
       const snapshot = await captureWorkspaceSnapshot(roots);
-      const directory = path.join(store.directory, ".snapshot"); await mkdir(directory, { recursive: true });
+      const directory = path.join(store.directory, ".snapshot");
+      await mkdir(directory, { recursive: true });
       const file = path.join(directory, "state.json");
-      if (invalid === "directory") { await mkdir(file); } else { await writeFile(file, ""); await truncate(file, 32 * 1024 * 1024 + 1); }
+      if (invalid === "directory") {
+        await mkdir(file);
+      } else {
+        await writeFile(file, "");
+        await truncate(file, 32 * 1024 * 1024 + 1);
+      }
       await assert.rejects(store.load(), /Invalid workspace snapshot file/);
       await assert.rejects(store.save(snapshot), /Invalid workspace snapshot file/);
       assert.equal((await lstat(file)).isDirectory(), invalid === "directory");
@@ -63,15 +113,20 @@ suite("workspace state snapshots", () => {
   }
   test("does not recreate snapshot state for a deleted conversation and rejects invalid manifests", async () => {
     const snapshot = await captureWorkspaceSnapshot(roots);
-    const manifest = path.join(temporary, "data/history/chat-1/manifest.json"); await rm(manifest);
-    await store.save(snapshot); assert.equal(await store.load(), undefined);
+    const manifest = path.join(temporary, "data/history/chat-1/manifest.json");
+    await rm(manifest);
+    await store.save(snapshot);
+    assert.equal(await store.load(), undefined);
     await mkdir(manifest);
     await assert.rejects(store.save(snapshot), /Invalid snapshot conversation manifest/);
     assert.equal(await store.load(), undefined);
   });
 
   test("first message captures state locally without sending source code", async () => {
-    await writeFile(path.join(workspace, "auth.ts"), "const secretSource = 'do not send automatically';");
+    await writeFile(
+      path.join(workspace, "auth.ts"),
+      "const secretSource = 'do not send automatically';",
+    );
     const snapshot = await captureWorkspaceSnapshot(roots);
     assert.equal(workspaceChangeNotice(await store.load(), snapshot), "");
     await store.save(snapshot);
@@ -79,7 +134,10 @@ suite("workspace state snapshots", () => {
     const saved = await readFile(path.join(store.directory, ".snapshot", "state.json"), "utf8");
     assert.ok(saved.includes("project/auth.ts"));
     assert.ok(!saved.includes("secretSource"));
-    assert.deepEqual(await new WorkspaceSnapshotStore("chat-1", path.join(temporary, "data")).load(), snapshot);
+    assert.deepEqual(
+      await new WorkspaceSnapshotStore("chat-1", path.join(temporary, "data")).load(),
+      snapshot,
+    );
   });
 
   test("final state absorbs agent edits and the following unchanged turn has no notice", async () => {
@@ -138,7 +196,9 @@ suite("workspace state snapshots", () => {
 
   for (const parentIsRepository of [false, true]) {
     test(`respects nested repository ignores under a ${parentIsRepository ? "Git" : "plain"} workspace folder`, async () => {
-      if (parentIsRepository) {await execFileAsync("git", ["init", workspace]);}
+      if (parentIsRepository) {
+        await execFileAsync("git", ["init", workspace]);
+      }
       const repository = path.join(workspace, "nested project");
       await mkdir(repository);
       await execFileAsync("git", ["init", repository]);
@@ -155,10 +215,18 @@ suite("workspace state snapshots", () => {
       const destination = path.join(temporary, "copy");
       const snapshot = await captureWorkspaceSnapshot(roots, undefined, undefined, destination);
       assert.deepEqual(Object.keys(snapshot.files), [
-        "project/nested project/.gitignore", "project/nested project/new.ts", "project/nested project/tracked.ts", "project/notes.txt",
+        "project/nested project/.gitignore",
+        "project/nested project/new.ts",
+        "project/nested project/tracked.ts",
+        "project/notes.txt",
       ]);
-      assert.equal(await readFile(path.join(destination, "nested project", "new.ts"), "utf8"), "untracked source");
-      await assert.rejects(lstat(path.join(destination, "nested project", "artifacts")), { code: "ENOENT" });
+      assert.equal(
+        await readFile(path.join(destination, "nested project", "new.ts"), "utf8"),
+        "untracked source",
+      );
+      await assert.rejects(lstat(path.join(destination, "nested project", "artifacts")), {
+        code: "ENOENT",
+      });
     });
   }
 
@@ -168,7 +236,17 @@ suite("workspace state snapshots", () => {
     await writeFile(path.join(repository, ".gitignore"), "artifacts/\n");
     await writeFile(path.join(repository, "source.ts"), "source");
     await execFileAsync("git", ["-C", repository, "add", "."]);
-    await execFileAsync("git", ["-C", repository, "-c", "user.name=Snapshot Test", "-c", "user.email=snapshot@example.invalid", "commit", "-m", "fixture"]);
+    await execFileAsync("git", [
+      "-C",
+      repository,
+      "-c",
+      "user.name=Snapshot Test",
+      "-c",
+      "user.email=snapshot@example.invalid",
+      "commit",
+      "-m",
+      "fixture",
+    ]);
     const worktree = path.join(workspace, "checkout");
     await execFileAsync("git", ["-C", repository, "worktree", "add", "--detach", worktree]);
     assert.equal((await lstat(path.join(worktree, ".git"))).isFile(), true);
@@ -176,7 +254,11 @@ suite("workspace state snapshots", () => {
     await writeFile(path.join(worktree, "artifacts", "generated.bin"), "generated");
     await writeFile(path.join(worktree, "new.ts"), "untracked");
     const snapshot = await captureWorkspaceSnapshot(roots);
-    assert.deepEqual(Object.keys(snapshot.files), ["project/checkout/.gitignore", "project/checkout/new.ts", "project/checkout/source.ts"]);
+    assert.deepEqual(Object.keys(snapshot.files), [
+      "project/checkout/.gitignore",
+      "project/checkout/new.ts",
+      "project/checkout/source.ts",
+    ]);
   });
 
   test("accounts for unsaved editor contents", async () => {
@@ -195,7 +277,10 @@ suite("workspace state snapshots", () => {
     await writeFile(path.join(workspace, "same.txt"), "one");
     await writeFile(path.join(second, "same.txt"), "two");
     const before = await captureWorkspaceSnapshot(roots);
-    const after = await captureWorkspaceSnapshot([...roots, { uri: `file://${second}`, localPath: second, alias: "second" }]);
+    const after = await captureWorkspaceSnapshot([
+      ...roots,
+      { uri: `file://${second}`, localPath: second, alias: "second" },
+    ]);
     assert.equal(Object.keys(after.files).length, 2);
     assert.match(workspaceChangeNotice(before, after), /Workspace changed/);
   });
@@ -219,7 +304,9 @@ suite("workspace state snapshots", () => {
 
   test("bounds notices and quotes unusual file names", async () => {
     const before = { version: 1 as const, roots: [], files: {} };
-    const files = Object.fromEntries(Array.from({ length: 300 }, (_, index) => [`project/file-${index}\n.ts`, "0:hash"]));
+    const files = Object.fromEntries(
+      Array.from({ length: 300 }, (_, index) => [`project/file-${index}\n.ts`, "0:hash"]),
+    );
     const notice = workspaceChangeNotice(before, { ...before, files });
     assert.ok(notice.length < 6600);
     assert.match(notice, /200 more changed paths omitted/);

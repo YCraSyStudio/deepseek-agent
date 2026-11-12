@@ -3,7 +3,10 @@ import type * as vscode from "vscode";
 import type { QueuedGenerationMessage } from "@/contracts";
 import type { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
 import { ChatActivityBroadcaster } from "@/vscode/webviews/handlers/chat/activity/ChatActivityBroadcaster";
-import type { HistoryTransitionState, SendMessagePayload } from "@/vscode/webviews/handlers/chat/Types";
+import type {
+  HistoryTransitionState,
+  SendMessagePayload,
+} from "@/vscode/webviews/handlers/chat/Types";
 import type { GenerationRunRecord } from "@/vscode/webviews/handlers/chat/generation/GenerationRun";
 
 suite("chat activity broadcaster", () => {
@@ -96,10 +99,10 @@ suite("chat activity broadcaster", () => {
     broadcaster.post({ type: "clearChat" });
     broadcaster.postGenerationSnapshot();
 
-    assert.deepStrictEqual(messages.map((message) => message.type), [
-      "clearChat",
-      "generationSnapshot",
-    ]);
+    assert.deepStrictEqual(
+      messages.map((message) => message.type),
+      ["clearChat", "generationSnapshot"],
+    );
   });
 });
 
@@ -120,7 +123,10 @@ function createBroadcaster(
   const runs = new Map<string, GenerationRunRecord>(
     (options.active ?? [])
       .filter((active) => cancelling.has(active.generationId))
-      .map((active) => [active.generationId, { status: "cancelling" } as unknown as GenerationRunRecord]),
+      .map((active) => [
+        active.generationId,
+        { status: "cancelling" } as unknown as GenerationRunRecord,
+      ]),
   );
   return new ChatActivityBroadcaster({
     coordinator: {
@@ -145,7 +151,7 @@ function createBroadcaster(
             return true;
           },
         },
-      } as unknown as vscode.WebviewView),
+      }) as unknown as vscode.WebviewView,
     lastReplayedGeneration: new WeakMap<object, string>(),
     recoveredDrafts: new Map<string, QueuedGenerationMessage[]>(),
     runs,

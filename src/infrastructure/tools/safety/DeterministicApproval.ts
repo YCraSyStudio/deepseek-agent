@@ -1,7 +1,6 @@
 import type { CommandFacts } from "./CommandFacts";
 import type { ScriptEffectProfile } from "./ScriptEffects";
 
-
 type ApprovalCode =
   | "workspace-file-mutation"
   | "git-recoverable-path-change"

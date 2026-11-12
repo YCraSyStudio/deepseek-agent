@@ -21,25 +21,40 @@ export async function captureChatSuggestionContext(
           const bytes = await workspace.fs.readFile(uri);
           if (bytes.byteLength <= 64 * 1024) {
             const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
-            if (isRecord(parsed)) {manifest = parsed;}
+            if (isRecord(parsed)) {
+              manifest = parsed;
+            }
           }
         }
       }
-    } catch { /* Missing or malformed metadata must not block drafting. */ }
+    } catch {
+      /* Missing or malformed metadata must not block drafting. */
+    }
     signal.throwIfAborted();
     projects.push({
       folder: metadata(folder.name, 120),
       name: metadata(manifest.displayName ?? manifest.name, 120),
       description: metadata(manifest.description, 400),
-      entries: entries.filter(([name, type]) => (type === 1 || type === 2) && !name.startsWith(".") &&
-        !/^(?:node_modules|dist|build|out|bin|obj|target|coverage)$/i.test(name) &&
-        !/(?:secret|credential|\.pem$|\.key$|\.p12$|\.pfx$)/i.test(name))
-        .map(([name]) => metadata(name, 80)).sort().slice(0, 12),
+      entries: entries
+        .filter(
+          ([name, type]) =>
+            (type === 1 || type === 2) &&
+            !name.startsWith(".") &&
+            !/^(?:node_modules|dist|build|out|bin|obj|target|coverage)$/i.test(name) &&
+            !/(?:secret|credential|\.pem$|\.key$|\.p12$|\.pfx$)/i.test(name),
+        )
+        .map(([name]) => metadata(name, 80))
+        .sort()
+        .slice(0, 12),
     });
   }
   return projects.length ? JSON.stringify({ projects }) : "";
 }
 
 function metadata(value: unknown, limit: number): string | undefined {
-  return typeof value === "string" ? redactSensitiveText(value).replace(/[\r\n\t]/g, " ").slice(0, limit) : undefined;
+  return typeof value === "string"
+    ? redactSensitiveText(value)
+        .replace(/[\r\n\t]/g, " ")
+        .slice(0, limit)
+    : undefined;
 }

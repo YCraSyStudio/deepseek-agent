@@ -12,11 +12,16 @@ exports.mochaGlobalSetup = async function () {
 };
 
 exports.mochaGlobalTeardown = async function () {
-  if (!session || completed) { return; }
+  if (!session || completed) {
+    return;
+  }
   completed = true;
   try {
     const { result } = await session.post("Profiler.takePreciseCoverage");
-    await writeFile(join(process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY, `integration-${process.pid}.json`), JSON.stringify({ result }));
+    await writeFile(
+      join(process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY, `integration-${process.pid}.json`),
+      JSON.stringify({ result }),
+    );
     await session.post("Profiler.stopPreciseCoverage");
   } finally {
     session.disconnect();

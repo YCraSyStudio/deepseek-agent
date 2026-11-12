@@ -3,7 +3,7 @@
     input {
       min-width: 0;
       font-family: var(--font-mono);
-      letter-spacing: .04em;
+      letter-spacing: 0.04em;
       flex: 1;
       &::placeholder {
         letter-spacing: 0;

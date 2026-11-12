@@ -21,7 +21,9 @@ export function getAvailableToolMetadata(definitions: ToolDefinition[]): Availab
 }
 
 function getRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function getSchemaType(schema: unknown): string {

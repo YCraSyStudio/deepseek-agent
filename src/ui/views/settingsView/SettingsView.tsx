@@ -6,7 +6,14 @@ import { ApiTab } from "./tabs";
 import { CustomizationSection, GeneralSection, ToolsSection } from "./sections";
 import StorageSection from "./sections/StorageSection";
 import { getVsCodeApi } from "../../VsCodeApi";
-import { DEFAULT_CONFIG, MODEL_OPTIONS, REASONING_EFFORT_OPTIONS, type ApiCredentialState, type SaveOnBlurFn, type SettingsConfig } from "./model";
+import {
+  DEFAULT_CONFIG,
+  MODEL_OPTIONS,
+  REASONING_EFFORT_OPTIONS,
+  type ApiCredentialState,
+  type SaveOnBlurFn,
+  type SettingsConfig,
+} from "./model";
 import type { AvailableToolInfo, HandlerToWebviewMessage } from "@/contracts";
 import type { StorageInfo } from "@/contracts/Storage";
 import { setInterfaceLanguage, t } from "@webview/i18n";
@@ -41,21 +48,32 @@ function SettingsView() {
   const revisionRef = useRef(-1);
   const pendingSecurityRequestsRef = useRef(new Set<string>());
   const pendingCustomizationRequestsRef = useRef(new Set<string>());
-  const tabRefs = useRef<Record<SettingsTab, HTMLButtonElement | null>>({ general: null, api: null, tools: null, customization: null });
+  const tabRefs = useRef<Record<SettingsTab, HTMLButtonElement | null>>({
+    general: null,
+    api: null,
+    tools: null,
+    customization: null,
+  });
 
   const applyConfig = useCallback((nextConfig: Partial<SettingsConfig>) => {
     setConfig((current) => ({ ...current, ...nextConfig }));
   }, []);
 
-  const updateConfig = useCallback(<K extends keyof SettingsConfig>(key: K, value: SettingsConfig[K]) => {
-    if (key === "interfaceLanguage") {setInterfaceLanguage(value as SettingsConfig["interfaceLanguage"]);}
-    setConfig((current) => ({ ...current, [key]: value }));
-  }, []);
+  const updateConfig = useCallback(
+    <K extends keyof SettingsConfig>(key: K, value: SettingsConfig[K]) => {
+      if (key === "interfaceLanguage") {
+        setInterfaceLanguage(value as SettingsConfig["interfaceLanguage"]);
+      }
+      setConfig((current) => ({ ...current, [key]: value }));
+    },
+    [],
+  );
 
-  const saveOnBlur = useCallback((
-    keyOrPatch: keyof SettingsConfig | Partial<SettingsConfig>,
-    value?: SettingsConfig[keyof SettingsConfig],
-  ) => {
+  const saveOnBlur = useCallback(
+    (
+      keyOrPatch: keyof SettingsConfig | Partial<SettingsConfig>,
+      value?: SettingsConfig[keyof SettingsConfig],
+    ) => {
       const patch = typeof keyOrPatch === "string" ? { [keyOrPatch]: value } : keyOrPatch;
       const requestId = crypto.randomUUID();
       if (Object.prototype.hasOwnProperty.call(patch, "includeHomeAgents")) {
@@ -73,7 +91,9 @@ function SettingsView() {
 
   const requestConfig = useCallback(() => {
     setLoadError(null);
-    if (!loadedRef.current) {setHasLoadedConfig(false);}
+    if (!loadedRef.current) {
+      setHasLoadedConfig(false);
+    }
     vscode?.postMessage({ type: "getConfig" });
   }, [vscode]);
 
@@ -87,11 +107,21 @@ function SettingsView() {
       const order: SettingsTab[] = ["general", "api", "tools", "customization"];
       const currentIndex = order.indexOf(activeTab);
       let nextTab: SettingsTab | undefined;
-      if (event.key === "ArrowRight" || event.key === "ArrowDown") {nextTab = order[(currentIndex + 1) % order.length];}
-      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {nextTab = order[(currentIndex - 1 + order.length) % order.length];}
-      if (event.key === "Home") {nextTab = order[0];}
-      if (event.key === "End") {nextTab = order[order.length - 1];}
-      if (!nextTab) {return;}
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        nextTab = order[(currentIndex + 1) % order.length];
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        nextTab = order[(currentIndex - 1 + order.length) % order.length];
+      }
+      if (event.key === "Home") {
+        nextTab = order[0];
+      }
+      if (event.key === "End") {
+        nextTab = order[order.length - 1];
+      }
+      if (!nextTab) {
+        return;
+      }
       event.preventDefault();
       selectTab(nextTab);
     },
@@ -108,11 +138,17 @@ function SettingsView() {
       const message = event.data;
       switch (message.type) {
         case "configLoaded":
-          if (!shouldApplyConfigRevision(revisionRef.current, message.revision)) {break;}
+          if (!shouldApplyConfigRevision(revisionRef.current, message.revision)) {
+            break;
+          }
           revisionRef.current = message.revision;
-          if (message.config.interfaceLanguage) {setInterfaceLanguage(message.config.interfaceLanguage);}
+          if (message.config.interfaceLanguage) {
+            setInterfaceLanguage(message.config.interfaceLanguage);
+          }
           applyConfig(message.config);
-          if (message.storageInfo) {setStorageInfo(message.storageInfo);}
+          if (message.storageInfo) {
+            setStorageInfo(message.storageInfo);
+          }
           loadedRef.current = true;
           setHasLoadedConfig(true);
           setLoadError(null);
@@ -126,21 +162,29 @@ function SettingsView() {
           }
           if (shouldApplyConfigRevision(revisionRef.current, message.revision)) {
             revisionRef.current = message.revision;
-            if (message.config.interfaceLanguage) {setInterfaceLanguage(message.config.interfaceLanguage);}
+            if (message.config.interfaceLanguage) {
+              setInterfaceLanguage(message.config.interfaceLanguage);
+            }
             applyConfig(message.config);
-            if (message.storageInfo) {setStorageInfo(message.storageInfo);}
+            if (message.storageInfo) {
+              setStorageInfo(message.storageInfo);
+            }
           }
           if (message.credentialUpdated) {
             setApiKeyDraft("");
             setApiCredential(null);
           }
           if (message.status === "success") {
-            setNotification(message.operation === "reset"
-              ? { type: "success", message: t("settings.reset.success") }
-              : null);
+            setNotification(
+              message.operation === "reset"
+                ? { type: "success", message: t("settings.reset.success") }
+                : null,
+            );
           } else if (message.status === "error") {
             setNotification({ type: "error", message: t("settings.save.error") });
-            if (!loadedRef.current) {setLoadError(t("settings.load.error"));}
+            if (!loadedRef.current) {
+              setLoadError(t("settings.load.error"));
+            }
           } else {
             setNotification(null);
           }
@@ -159,20 +203,36 @@ function SettingsView() {
         case "workspaceInstructions":
           setWorkspaceRoots(message.roots);
           setWorkspaceError(message.error);
-          setWorkspaceRootUri((current) => message.roots.some((root) => root.uri === current) ? current
-            : message.roots.find((root) => root.uri === message.preferredRootUri)?.uri ?? message.roots[0]?.uri ?? "");
+          setWorkspaceRootUri((current) =>
+            message.roots.some((root) => root.uri === current)
+              ? current
+              : (message.roots.find((root) => root.uri === message.preferredRootUri)?.uri ??
+                message.roots[0]?.uri ??
+                ""),
+          );
           break;
         case "openWorkspaceInstructionsResult":
-          if (message.requestId !== workspaceRequestRef.current) {break;}
+          if (message.requestId !== workspaceRequestRef.current) {
+            break;
+          }
           workspaceRequestRef.current = undefined;
           setWorkspacePending(false);
-          setWorkspaceError(message.success ? undefined : `${t("settings.customization.workspaceOpenError")}${message.error ? ` ${message.error}` : ""}`);
+          setWorkspaceError(
+            message.success
+              ? undefined
+              : `${t("settings.customization.workspaceOpenError")}${message.error ? ` ${message.error}` : ""}`,
+          );
           break;
         case "openGlobalAgentsResult":
-          if (!pendingCustomizationRequestsRef.current.delete(message.requestId)) {break;}
+          if (!pendingCustomizationRequestsRef.current.delete(message.requestId)) {
+            break;
+          }
           setCustomizationPending(pendingCustomizationRequestsRef.current.size > 0);
           if (!message.success) {
-            setNotification({ type: "error", message: `${t("settings.customization.openError")}${message.error ? ` ${message.error}` : ""}` });
+            setNotification({
+              type: "error",
+              message: `${t("settings.customization.openError")}${message.error ? ` ${message.error}` : ""}`,
+            });
           }
           break;
       }
@@ -196,7 +256,9 @@ function SettingsView() {
           aria-controls="settings-panel-general"
           aria-selected={activeTab === "general"}
           tabIndex={activeTab === "general" ? 0 : -1}
-          ref={(element) => { tabRefs.current.general = element; }}
+          ref={(element) => {
+            tabRefs.current.general = element;
+          }}
           onClick={() => selectTab("general")}
           onKeyDown={handleTabKeyDown}
         >
@@ -210,7 +272,9 @@ function SettingsView() {
           aria-controls="settings-panel-api"
           aria-selected={activeTab === "api"}
           tabIndex={activeTab === "api" ? 0 : -1}
-          ref={(element) => { tabRefs.current.api = element; }}
+          ref={(element) => {
+            tabRefs.current.api = element;
+          }}
           onClick={() => selectTab("api")}
           onKeyDown={handleTabKeyDown}
         >
@@ -224,7 +288,9 @@ function SettingsView() {
           aria-controls="settings-panel-tools"
           aria-selected={activeTab === "tools"}
           tabIndex={activeTab === "tools" ? 0 : -1}
-          ref={(element) => { tabRefs.current.tools = element; }}
+          ref={(element) => {
+            tabRefs.current.tools = element;
+          }}
           onClick={() => selectTab("tools")}
           onKeyDown={handleTabKeyDown}
         >
@@ -238,7 +304,9 @@ function SettingsView() {
           aria-controls="settings-panel-customization"
           aria-selected={activeTab === "customization"}
           tabIndex={activeTab === "customization" ? 0 : -1}
-          ref={(element) => { tabRefs.current.customization = element; }}
+          ref={(element) => {
+            tabRefs.current.customization = element;
+          }}
           onClick={() => selectTab("customization")}
           onKeyDown={handleTabKeyDown}
         >
@@ -253,31 +321,39 @@ function SettingsView() {
         aria-labelledby={`settings-tab-${activeTab}`}
         tabIndex={0}
       >
-        {!hasLoadedConfig && !loadError ? <div className="settingsState" role="status">{t("settings.loading")}</div> : null}
+        {!hasLoadedConfig && !loadError ? (
+          <div className="settingsState" role="status">
+            {t("settings.loading")}
+          </div>
+        ) : null}
         {loadError ? (
           <div className="settingsState settingsError" role="alert">
             <span>{loadError}</span>
-            <button type="button" className="btn-secondary" onClick={requestConfig}>{t("settings.retry")}</button>
+            <button type="button" className="btn-secondary" onClick={requestConfig}>
+              {t("settings.retry")}
+            </button>
           </div>
         ) : null}
         {hasLoadedConfig && activeTab === "general" ? (
           <GeneralSection config={config} updateConfig={updateConfig} saveOnBlur={saveOnBlur}>
-            {storageInfo ? <StorageSection
-              info={storageInfo}
-              pending={storagePending}
-              error={storageError}
-              onSave={(directory) => {
-                setStoragePending(true);
-                setStorageError(undefined);
-                vscode?.postMessage({ type: "setStorageDirectory", directory });
-              }}
-              onBrowse={() => {
-                setStoragePending(true);
-                setStorageError(undefined);
-                vscode?.postMessage({ type: "selectStorageDirectory" });
-              }}
-              onReload={() => vscode?.postMessage({ type: "reloadStorage" })}
-            /> : null}
+            {storageInfo ? (
+              <StorageSection
+                info={storageInfo}
+                pending={storagePending}
+                error={storageError}
+                onSave={(directory) => {
+                  setStoragePending(true);
+                  setStorageError(undefined);
+                  vscode?.postMessage({ type: "setStorageDirectory", directory });
+                }}
+                onBrowse={() => {
+                  setStoragePending(true);
+                  setStorageError(undefined);
+                  vscode?.postMessage({ type: "selectStorageDirectory" });
+                }}
+                onReload={() => vscode?.postMessage({ type: "reloadStorage" })}
+              />
+            ) : null}
           </GeneralSection>
         ) : null}
         {hasLoadedConfig && activeTab === "api" ? (
@@ -320,12 +396,18 @@ function SettingsView() {
             workspacePending={workspacePending}
             workspaceError={workspaceError}
             onOpenWorkspaceAgents={() => {
-              if (!workspaceRootUri || workspacePending) {return;}
+              if (!workspaceRootUri || workspacePending) {
+                return;
+              }
               const requestId = crypto.randomUUID();
               workspaceRequestRef.current = requestId;
               setWorkspacePending(true);
               setWorkspaceError(undefined);
-              vscode?.postMessage({ type: "openWorkspaceInstructions", requestId, rootUri: workspaceRootUri });
+              vscode?.postMessage({
+                type: "openWorkspaceInstructions",
+                requestId,
+                rootUri: workspaceRootUri,
+              });
             }}
             pending={customizationPending}
             onOpenGlobalAgents={() => {
@@ -351,12 +433,24 @@ function SettingsView() {
       >
         {t("settings.reset.label")}
       </button>
-      {permissionUpdatePending ? <div className="settingsState" role="status" aria-live="polite">{t("chat.applyingPermissions")}</div> : null}
+      {permissionUpdatePending ? (
+        <div className="settingsState" role="status" aria-live="polite">
+          {t("chat.applyingPermissions")}
+        </div>
+      ) : null}
 
       {notification ? (
-        <div className={`notification ${notification.type}`} role={notification.type === "error" ? "alert" : "status"}>
+        <div
+          className={`notification ${notification.type}`}
+          role={notification.type === "error" ? "alert" : "status"}
+        >
           <span>{notification.message}</span>
-          <button type="button" className="btn-icon" aria-label={t("settings.notification.dismiss")} onClick={() => setNotification(null)}>
+          <button
+            type="button"
+            className="btn-icon"
+            aria-label={t("settings.notification.dismiss")}
+            onClick={() => setNotification(null)}
+          >
             <span className="codicon codicon-close" aria-hidden="true" />
           </button>
         </div>

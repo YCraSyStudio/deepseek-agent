@@ -29,7 +29,9 @@ export function buildToolCallRequest(options: BuildToolCallRequestOptions): Chat
     maxTokens: cycleOptions.maxTokens ?? DEFAULT_CONFIG.maxTokens,
     userId: cycleOptions.userId,
     privacyMinimizeData: cycleOptions.privacyMinimizeData ?? true,
-    strictToolCallsEnabled: cycleOptions.strictToolCallsEnabled === true && (cycleOptions.isStrictToolCallsEnabled?.() ?? true),
+    strictToolCallsEnabled:
+      cycleOptions.strictToolCallsEnabled === true &&
+      (cycleOptions.isStrictToolCallsEnabled?.() ?? true),
   };
 
   return { ...baseRequest, ...buildChatBody(baseRequest, config) } as ChatRequest;

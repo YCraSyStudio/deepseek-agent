@@ -9,10 +9,14 @@ const coverage = process.env.DEEPSEEK_AGENT_TEST_COVERAGE === "1";
 const projectRoot = __dirname;
 
 function resolveWithExtensions(basePath) {
-  if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) { return basePath; }
+  if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) {
+    return basePath;
+  }
   for (const ext of [".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js"]) {
     const withExt = basePath + ext;
-    if (fs.existsSync(withExt)) { return withExt; }
+    if (fs.existsSync(withExt)) {
+      return withExt;
+    }
   }
   return basePath;
 }
@@ -24,7 +28,9 @@ const aliasPlugin = {
       return { path: resolveWithExtensions(path.resolve(projectRoot, "src", args.path.slice(2))) };
     });
     build.onResolve({ filter: /^@webview\// }, (args) => {
-      return { path: resolveWithExtensions(path.resolve(projectRoot, "src", "ui", args.path.slice(9))) };
+      return {
+        path: resolveWithExtensions(path.resolve(projectRoot, "src", "ui", args.path.slice(9))),
+      };
     });
   },
 };

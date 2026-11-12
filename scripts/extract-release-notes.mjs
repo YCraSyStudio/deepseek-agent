@@ -14,7 +14,9 @@ if (!tagName) {
 const version = tagName.replace(/^refs\/tags\//, "").replace(/^v/, "");
 const manifest = JSON.parse(await readFile(packagePath, "utf8"));
 if (manifest.version !== version) {
-  throw new Error(`Release tag ${tagName} does not match package.json version ${manifest.version}.`);
+  throw new Error(
+    `Release tag ${tagName} does not match package.json version ${manifest.version}.`,
+  );
 }
 
 const changelog = await readFile(changelogPath, "utf8");
@@ -27,7 +29,9 @@ console.log(`Prepared release notes for ${tagName}.`);
 function extractRelease(changelogContent, releaseVersion) {
   const lines = changelogContent.split(/\r?\n/);
   const escapedVersion = escapeRegExp(releaseVersion);
-  const headingPattern = new RegExp(`^##\\s+(?:\\[(?:v)?${escapedVersion}\\]|(?:v)?${escapedVersion})(?:\\s+-\\s+(.+))?\\s*$`);
+  const headingPattern = new RegExp(
+    `^##\\s+(?:\\[(?:v)?${escapedVersion}\\]|(?:v)?${escapedVersion})(?:\\s+-\\s+(.+))?\\s*$`,
+  );
 
   let start = -1;
   let date = "";

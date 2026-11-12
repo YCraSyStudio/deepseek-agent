@@ -55,7 +55,10 @@ function getModelCapabilities(model: string): ModelCapabilities {
   const modelInfo = MODEL_REGISTRY.find((entry) => entry.id === model);
   return modelInfo
     ? { contextTokens: modelInfo.contextLength, maxOutputTokens: modelInfo.maxOutputTokens }
-    : { contextTokens: UNKNOWN_MODEL_CONTEXT_TOKENS, maxOutputTokens: UNKNOWN_MODEL_MAX_OUTPUT_TOKENS };
+    : {
+        contextTokens: UNKNOWN_MODEL_CONTEXT_TOKENS,
+        maxOutputTokens: UNKNOWN_MODEL_MAX_OUTPUT_TOKENS,
+      };
 }
 
 export function getEffectiveMaxTokens(model: string, requestedOutputTokens: number): number {
@@ -84,18 +87,22 @@ export function assessRequestBudget(
   tools: ToolDefinition[],
   model: string,
   requestedOutputTokens: number,
-  estimateTokens: (messages: ChatMessage[], tools: ToolDefinition[]) => number = estimateRequestTokens,
+  estimateTokens: (
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
+  ) => number = estimateRequestTokens,
 ): RequestBudgetAssessment {
   const budget = getContextBudget(model, requestedOutputTokens);
   const estimatedTokens = estimateTokens(messages, tools);
   const softLimitTokens = Math.max(1, Math.floor(budget.inputTokens * INPUT_COMPACTION_RATIO));
   const hardLimitTokens = Math.max(1, Math.floor(budget.inputTokens * INPUT_HARD_LIMIT_RATIO));
   return {
-    status: estimatedTokens >= hardLimitTokens
-      ? "hard_limit"
-      : estimatedTokens >= softLimitTokens
-        ? "compaction_required"
-        : "within_budget",
+    status:
+      estimatedTokens >= hardLimitTokens
+        ? "hard_limit"
+        : estimatedTokens >= softLimitTokens
+          ? "compaction_required"
+          : "within_budget",
     estimatedTokens,
     softLimitTokens,
     hardLimitTokens,
@@ -120,8 +127,8 @@ export function assertRequestFitsContext(
   if (assessment.status === "hard_limit") {
     throw new Error(
       `The active tool cycle needs approximately ${assessment.estimatedTokens.toLocaleString()} input tokens, ` +
-      `but its hard limit is ${assessment.hardLimitTokens.toLocaleString()} for ${model} after reserving output and safety margin. ` +
-      "The tool protocol cannot be truncated safely; start a new message with fewer references.",
+        `but its hard limit is ${assessment.hardLimitTokens.toLocaleString()} for ${model} after reserving output and safety margin. ` +
+        "The tool protocol cannot be truncated safely; start a new message with fewer references.",
     );
   }
 }

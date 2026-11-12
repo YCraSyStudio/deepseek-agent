@@ -24,9 +24,7 @@ interface IncognitoSessionLifecycleDependencies {
 export class IncognitoSessionLifecycle {
   private historyTransition?: HistoryTransitionState;
 
-  constructor(
-    private readonly dependencies: IncognitoSessionLifecycleDependencies,
-  ) {}
+  constructor(private readonly dependencies: IncognitoSessionLifecycleDependencies) {}
 
   getHistoryTransition(): HistoryTransitionState | undefined {
     return this.historyTransition;

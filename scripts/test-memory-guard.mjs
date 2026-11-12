@@ -51,20 +51,26 @@ export function createMemoryGuard({
       breached = true;
       stop();
       const label = currentLabel();
-      log(`Memory limit exceeded (${observed.rssMb}MiB >= ${limitMb}MiB) while running: ${label || "<unknown>"}`);
+      log(
+        `Memory limit exceeded (${observed.rssMb}MiB >= ${limitMb}MiB) while running: ${label || "<unknown>"}`,
+      );
       onExceeded({ ...observed, limitMb, label });
     }
     return observed;
   }
 
   function start() {
-    if (timer !== undefined) { return; }
+    if (timer !== undefined) {
+      return;
+    }
     timer = setIntervalFn(check, intervalMs);
     timer?.unref?.();
   }
 
   function stop() {
-    if (timer === undefined) { return; }
+    if (timer === undefined) {
+      return;
+    }
     clearIntervalFn(timer);
     timer = undefined;
   }
@@ -73,9 +79,15 @@ export function createMemoryGuard({
     start,
     stop,
     check,
-    get breached() { return breached; },
-    get latest() { return latest; },
-    get peak() { return peak; },
+    get breached() {
+      return breached;
+    },
+    get latest() {
+      return latest;
+    },
+    get peak() {
+      return peak;
+    },
   };
 }
 

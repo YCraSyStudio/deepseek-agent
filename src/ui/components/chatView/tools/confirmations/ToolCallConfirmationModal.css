@@ -77,9 +77,16 @@
 .toolCallReviewLine {
   display: block;
   min-width: max-content;
-  &.diffAdd { background: color-mix(in srgb, #2ea043 18%, transparent); }
-  &.diffRemove { background: color-mix(in srgb, #f85149 18%, transparent); }
-  &.diffHunk { color: #a5a5ff; background: color-mix(in srgb, #6f42c1 16%, transparent); }
+  &.diffAdd {
+    background: color-mix(in srgb, #2ea043 18%, transparent);
+  }
+  &.diffRemove {
+    background: color-mix(in srgb, #f85149 18%, transparent);
+  }
+  &.diffHunk {
+    color: #a5a5ff;
+    background: color-mix(in srgb, #6f42c1 16%, transparent);
+  }
 }
 .toolCallOpenFile {
   justify-self: start;
@@ -90,8 +97,13 @@
   border-radius: 6px;
   padding: 5px 9px;
   font: inherit;
-  &:hover { background: var(--button-secondary-hover); }
-  &:focus-visible { outline: 1px solid var(--accent-color); outline-offset: 2px; }
+  &:hover {
+    background: var(--button-secondary-hover);
+  }
+  &:focus-visible {
+    outline: 1px solid var(--accent-color);
+    outline-offset: 2px;
+  }
 }
 .toolCallModalBatchActions {
   border-top: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
@@ -174,7 +186,10 @@
   font-size: 12px;
   font-weight: 600;
   display: flex;
-  transition: background .15s, border-color .15s, color .15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   &:hover {
     background: color-mix(in srgb, var(--bg-secondary) 82%, var(--accent-color) 8%);
     border-color: color-mix(in srgb, var(--accent-color) 55%, var(--border-color));

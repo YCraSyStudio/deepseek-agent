@@ -13,9 +13,17 @@ export class ChatDraftHandler {
         throw new Error("Draft persistence is disabled in incognito mode.");
       }
       const result = await this.store.handle(message);
-      await view.webview.postMessage({ type: "chatDraftResult", requestId: message.requestId, ...result });
+      await view.webview.postMessage({
+        type: "chatDraftResult",
+        requestId: message.requestId,
+        ...result,
+      });
     } catch (error) {
-      await view.webview.postMessage({ type: "chatDraftResult", requestId: message.requestId, error: redactSensitiveText(error) });
+      await view.webview.postMessage({
+        type: "chatDraftResult",
+        requestId: message.requestId,
+        error: redactSensitiveText(error),
+      });
     }
   }
 }

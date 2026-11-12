@@ -52,10 +52,15 @@ export async function readConversationFile(id: string): Promise<StoredConversati
   }
 }
 
-export async function readStoredConversationRecord(directoryPath: string): Promise<StoredConversationRecord | undefined> {
+export async function readStoredConversationRecord(
+  directoryPath: string,
+): Promise<StoredConversationRecord | undefined> {
   try {
     const parsed = await readConversationStorage(directoryPath);
-    if (!parsed || path.resolve(directoryPath) !== path.resolve(getConversationDirectory(parsed.id))) {
+    if (
+      !parsed ||
+      path.resolve(directoryPath) !== path.resolve(getConversationDirectory(parsed.id))
+    ) {
       await deleteIncompatibleConversation(directoryPath);
       return undefined;
     }
@@ -65,8 +70,13 @@ export async function readStoredConversationRecord(directoryPath: string): Promi
       sizeBytes: Buffer.byteLength(JSON.stringify(parsed), "utf8"),
     };
   } catch (error) {
-    if (isFileNotFoundError(error) && ((await stat(path.join(directoryPath, "draft")).catch(() => undefined))?.isDirectory() ||
-      (await stat(path.join(directoryPath, "checkpoint.json")).catch(() => undefined))?.isFile())) {return undefined;}
+    if (
+      isFileNotFoundError(error) &&
+      ((await stat(path.join(directoryPath, "draft")).catch(() => undefined))?.isDirectory() ||
+        (await stat(path.join(directoryPath, "checkpoint.json")).catch(() => undefined))?.isFile())
+    ) {
+      return undefined;
+    }
     await deleteIncompatibleConversation(directoryPath);
     return undefined;
   }
@@ -98,9 +108,11 @@ export async function purgeLegacyConversationStorage(): Promise<void> {
   const historyDirectory = getHistoryDirectory();
   const entries = await readdir(historyDirectory, { withFileTypes: true }).catch(() => []);
   const legacyPaths = entries
-    .filter((entry) =>
-      (entry.isFile() && entry.name.endsWith(".json")) ||
-      (entry.isDirectory() && entry.name === LEGACY_SEGMENT_DIRECTORY_NAME))
+    .filter(
+      (entry) =>
+        (entry.isFile() && entry.name.endsWith(".json")) ||
+        (entry.isDirectory() && entry.name === LEGACY_SEGMENT_DIRECTORY_NAME),
+    )
     .map((entry) => path.join(historyDirectory, entry.name));
   await Promise.all(legacyPaths.map((legacyPath) => deleteIncompatibleConversation(legacyPath)));
 }
@@ -109,7 +121,9 @@ async function deleteIncompatibleConversation(directoryPath: string): Promise<vo
   await rm(directoryPath, { recursive: true, force: true }).catch(() => undefined);
 }
 
-function chunkConversationMessages(messages: StoredConversation["messages"]): StoredConversation["messages"][] {
+function chunkConversationMessages(
+  messages: StoredConversation["messages"],
+): StoredConversation["messages"][] {
   const chunks: StoredConversation["messages"][] = [];
   let current: StoredConversation["messages"] = [];
   let currentBytes = 2;
@@ -123,65 +137,116 @@ function chunkConversationMessages(messages: StoredConversation["messages"]): St
     current.push(message);
     currentBytes += bytes;
   }
-  if (current.length > 0) {chunks.push(current);}
+  if (current.length > 0) {
+    chunks.push(current);
+  }
   return chunks;
 }
 
-async function readConversationStorage(directoryPath: string): Promise<StoredConversation | undefined> {
-  const parsed = JSON.parse(await readFile(path.join(directoryPath, MANIFEST_FILE_NAME), "utf8")) as unknown;
-  if (!isConversationManifest(parsed)) {return undefined;}
+async function readConversationStorage(
+  directoryPath: string,
+): Promise<StoredConversation | undefined> {
+  const parsed = JSON.parse(
+    await readFile(path.join(directoryPath, MANIFEST_FILE_NAME), "utf8"),
+  ) as unknown;
+  if (!isConversationManifest(parsed)) {
+    return undefined;
+  }
   const chunkPaths = await listChunkPaths(directoryPath, parsed.chunks);
-  if (!chunkPaths) {return undefined;}
+  if (!chunkPaths) {
+    return undefined;
+  }
   const messages: StoredConversation["messages"] = [];
   let totalBytes = 0;
   for (const chunkPath of chunkPaths) {
     const metadata = await stat(chunkPath);
-    if (metadata.size > MAX_CHUNK_BYTES + 1024 * 1024) {return undefined;}
+    if (metadata.size > MAX_CHUNK_BYTES + 1024 * 1024) {
+      return undefined;
+    }
     totalBytes += metadata.size;
-    if (totalBytes > MAX_CONVERSATION_BYTES) {return undefined;}
+    if (totalBytes > MAX_CONVERSATION_BYTES) {
+      return undefined;
+    }
     const chunk = JSON.parse(await readFile(chunkPath, "utf8")) as unknown;
-    if (!Array.isArray(chunk)) {return undefined;}
-    messages.push(...chunk as StoredConversation["messages"]);
+    if (!Array.isArray(chunk)) {
+      return undefined;
+    }
+    messages.push(...(chunk as StoredConversation["messages"]));
   }
   const conversation = { ...parsed.conversation, messages };
   return isConversation(conversation) ? conversation : undefined;
 }
 
-async function listChunkPaths(directoryPath: string, expectedChunks: number): Promise<string[] | undefined> {
+async function listChunkPaths(
+  directoryPath: string,
+  expectedChunks: number,
+): Promise<string[] | undefined> {
   const entries = await readdir(directoryPath, { withFileTypes: true });
   const indexed: Array<{ index: number; filePath: string }> = [];
   for (const entry of entries) {
-    if (entry.name === "checkpoint.json" && entry.isFile()) {continue;}
-    if (entry.name === "draft" && entry.isDirectory()) {continue;}
-    if (entry.name === MANIFEST_FILE_NAME || entry.name.startsWith(".")) {continue;}
+    if (entry.name === "checkpoint.json" && entry.isFile()) {
+      continue;
+    }
+    if (entry.name === "draft" && entry.isDirectory()) {
+      continue;
+    }
+    if (entry.name === MANIFEST_FILE_NAME || entry.name.startsWith(".")) {
+      continue;
+    }
     const match = entry.isFile() ? CHUNK_FILE_PATTERN.exec(entry.name) : null;
-    if (!match) {return undefined;}
-    indexed.push({ index: Number.parseInt(match[1]!, 10), filePath: path.join(directoryPath, entry.name) });
+    if (!match) {
+      return undefined;
+    }
+    indexed.push({
+      index: Number.parseInt(match[1]!, 10),
+      filePath: path.join(directoryPath, entry.name),
+    });
   }
-  if (indexed.length !== expectedChunks) {return undefined;}
+  if (indexed.length !== expectedChunks) {
+    return undefined;
+  }
   indexed.sort((left, right) => left.index - right.index);
-  if (indexed.some((entry, position) => entry.index !== position)) {return undefined;}
+  if (indexed.some((entry, position) => entry.index !== position)) {
+    return undefined;
+  }
   return indexed.map((entry) => entry.filePath);
 }
 
 function isConversationManifest(value: unknown): value is ConversationManifest {
-  if (!value || typeof value !== "object") {return false;}
+  if (!value || typeof value !== "object") {
+    return false;
+  }
   const manifest = value as Partial<ConversationManifest>;
   const chunks = manifest.chunks;
-  return manifest.storageSchemaVersion === CHUNK_STORAGE_SCHEMA_VERSION &&
-    !!manifest.conversation && typeof manifest.conversation === "object" &&
-    typeof chunks === "number" && Number.isSafeInteger(chunks) && chunks >= 0 && chunks <= MAX_CHUNK_COUNT;
+  return (
+    manifest.storageSchemaVersion === CHUNK_STORAGE_SCHEMA_VERSION &&
+    !!manifest.conversation &&
+    typeof manifest.conversation === "object" &&
+    typeof chunks === "number" &&
+    Number.isSafeInteger(chunks) &&
+    chunks >= 0 &&
+    chunks <= MAX_CHUNK_COUNT
+  );
 }
 
 async function removeStaleChunks(directoryPath: string, chunkCount: number): Promise<void> {
   const entries = await readdir(directoryPath, { withFileTypes: true }).catch(() => []);
-  await Promise.all(entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => ({ entry, match: CHUNK_FILE_PATTERN.exec(entry.name) }))
-    .filter(({ match }) => match !== null && Number.parseInt(match[1]!, 10) >= chunkCount)
-    .map(({ entry }) => rm(path.join(directoryPath, entry.name), { force: true }).catch(() => undefined)));
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => ({ entry, match: CHUNK_FILE_PATTERN.exec(entry.name) }))
+      .filter(({ match }) => match !== null && Number.parseInt(match[1]!, 10) >= chunkCount)
+      .map(({ entry }) =>
+        rm(path.join(directoryPath, entry.name), { force: true }).catch(() => undefined),
+      ),
+  );
 }
 
 function isFileNotFoundError(error: unknown): boolean {
-  return !!error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === "ENOENT";
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "ENOENT"
+  );
 }

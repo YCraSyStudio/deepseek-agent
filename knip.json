@@ -10,10 +10,7 @@
         "src/test/support/StorageFsFaults.ts",
         "src/test/support/PuppeteerDistributionMock.ts"
       ],
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "scripts/*.{mjs,cjs}"
-      ]
+      "project": ["src/**/*.{ts,tsx}", "scripts/*.{mjs,cjs}"]
     },
     "web-doc": {
       "entry": ["scripts/*.mjs"]

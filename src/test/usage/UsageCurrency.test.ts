@@ -29,20 +29,36 @@ suite("usage display currency", () => {
     assert.ok(cny.includes("¥") && cny.includes("1.50"), cny);
     assert.ok(!cny.includes("CN"), `expected the narrow symbol, got ${cny}`);
 
-    const spanish = formatUsageCost(1.5, { currency: "usd", locale: "es", unavailable: "unavailable" });
+    const spanish = formatUsageCost(1.5, {
+      currency: "usd",
+      locale: "es",
+      unavailable: "unavailable",
+    });
     assert.ok(spanish.includes("1,50"), spanish);
   });
 
   test("keeps sub-cent precision and marks lower bounds", () => {
-    const small = formatUsageCost(0.000123, { currency: "usd", locale: "en", unavailable: "unavailable" });
+    const small = formatUsageCost(0.000123, {
+      currency: "usd",
+      locale: "en",
+      unavailable: "unavailable",
+    });
     assert.ok(small.includes("0.000123"), small);
     assert.strictEqual(
-      formatUsageCost(0.25, { currency: "cny", locale: "en", unavailable: "unavailable", partial: true }).startsWith("≥ "),
+      formatUsageCost(0.25, {
+        currency: "cny",
+        locale: "en",
+        unavailable: "unavailable",
+        partial: true,
+      }).startsWith("≥ "),
       true,
     );
   });
 
   test("reports the placeholder when the cost is unavailable", () => {
-    assert.strictEqual(formatUsageCost(undefined, { currency: "cny", locale: "en", unavailable: "unavailable" }), "unavailable");
+    assert.strictEqual(
+      formatUsageCost(undefined, { currency: "cny", locale: "en", unavailable: "unavailable" }),
+      "unavailable",
+    );
   });
 });

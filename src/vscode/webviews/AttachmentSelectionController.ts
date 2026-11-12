@@ -31,10 +31,8 @@ export class AttachmentSelectionController {
       return;
     }
     try {
-      const { attachments, contextUris } = await this.dependencies.imageAttachments.classifyAndUpload(
-        webviewView.webview,
-        selected,
-      );
+      const { attachments, contextUris } =
+        await this.dependencies.imageAttachments.classifyAndUpload(webviewView.webview, selected);
       await webviewView.webview.postMessage({
         type: "imageAttachmentsSelected",
         requestId,
@@ -84,8 +82,8 @@ async function createContextFile(
   if (looksBinary(contentBytes)) {
     return undefined;
   }
-  const internalFolder = binding.folders.find(
-    (folder) => isUriInsideRoot(uri, vscode.Uri.parse(folder.uri)),
+  const internalFolder = binding.folders.find((folder) =>
+    isUriInsideRoot(uri, vscode.Uri.parse(folder.uri)),
   );
   const name = uri.path.split("/").pop() || "context-file";
   const sensitive = isSensitiveUri(uri);
@@ -124,13 +122,16 @@ function looksBinary(bytes: Uint8Array): boolean {
 }
 
 function isSensitiveUri(uri: vscode.Uri): boolean {
-  return /(^|[/\\.])(env(?:\.[^/\\]+)?|pem|key|p12|pfx|\.ssh|credentials?|secrets?|tokens?)([/\\.]|$)/i.test(uri.path);
+  return /(^|[/\\.])(env(?:\.[^/\\]+)?|pem|key|p12|pfx|\.ssh|credentials?|secrets?|tokens?)([/\\.]|$)/i.test(
+    uri.path,
+  );
 }
 
 function relativeUriPath(root: vscode.Uri, candidate: vscode.Uri): string | undefined {
-  const relative = root.scheme === "file"
-    ? path.relative(root.fsPath, candidate.fsPath)
-    : path.posix.relative(root.path, candidate.path);
+  const relative =
+    root.scheme === "file"
+      ? path.relative(root.fsPath, candidate.fsPath)
+      : path.posix.relative(root.path, candidate.path);
   if (
     relative === ".." ||
     relative.startsWith("../") ||
@@ -141,4 +142,3 @@ function relativeUriPath(root: vscode.Uri, candidate: vscode.Uri): string | unde
   }
   return relative.replace(/\\/g, "/");
 }
-

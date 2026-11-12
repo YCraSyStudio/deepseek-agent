@@ -29,7 +29,13 @@ const PHASE_LABELS: Record<UsagePhase, Parameters<typeof t>[0]> = {
 const RING_RADIUS = 9;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-function UsagePicker({ usage, usageByModel = [], currency = "usd", contextWindow, compaction }: UsagePickerProps) {
+function UsagePicker({
+  usage,
+  usageByModel = [],
+  currency = "usd",
+  contextWindow,
+  compaction,
+}: UsagePickerProps) {
   const { open, rootRef, triggerRef, togglePopover, maxHeight } = useComposerPopover();
   const hasUsage = !!usage && usage.count > 0;
 
@@ -65,16 +71,23 @@ function UsagePicker({ usage, usageByModel = [], currency = "usd", contextWindow
   );
 }
 
-function ContextWindowRing({ status, pending }: { status?: ContextWindowStatus; pending: boolean }) {
-  const fraction = status && status.windowTokens > 0
-    ? Math.min(1, status.usedTokens / status.windowTokens)
-    : 0;
+function ContextWindowRing({
+  status,
+  pending,
+}: {
+  status?: ContextWindowStatus;
+  pending: boolean;
+}) {
+  const fraction =
+    status && status.windowTokens > 0 ? Math.min(1, status.usedTokens / status.windowTokens) : 0;
   const className = [
     "contextRing",
     `tone-${ringTone(status)}`,
     status?.source === "estimated" ? "estimated" : "",
     pending ? "pending" : "",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
@@ -92,9 +105,15 @@ function ContextWindowRing({ status, pending }: { status?: ContextWindowStatus; 
 }
 
 function ringTone(status?: ContextWindowStatus): "idle" | "normal" | "warning" | "danger" {
-  if (!status || status.usedTokens <= 0) {return "idle";}
-  if (status.usedTokens >= status.hardLimitTokens) {return "danger";}
-  if (status.usedTokens >= status.softLimitTokens) {return "warning";}
+  if (!status || status.usedTokens <= 0) {
+    return "idle";
+  }
+  if (status.usedTokens >= status.hardLimitTokens) {
+    return "danger";
+  }
+  if (status.usedTokens >= status.softLimitTokens) {
+    return "warning";
+  }
   return "normal";
 }
 
@@ -104,12 +123,20 @@ function contextLabel(status?: ContextWindowStatus): string {
   }
   const used = formatTokens(status.usedTokens);
   const total = formatTokens(status.windowTokens);
-  const share = status.windowTokens > 0 ? Math.round(status.usedTokens / status.windowTokens * 100) : 0;
+  const share =
+    status.windowTokens > 0 ? Math.round((status.usedTokens / status.windowTokens) * 100) : 0;
   const estimate = status.source === "estimated" ? ` (${t("chat.usage.contextEstimated")})` : "";
   return `${t("chat.usage.contextWindow")}: ${t("chat.usage.contextUsed", { used, total })} · ${share}%${estimate}`;
 }
 
-export function UsagePopover({ usage, usageByModel, currency = "usd", contextWindow, compaction, maxHeight }: {
+export function UsagePopover({
+  usage,
+  usageByModel,
+  currency = "usd",
+  contextWindow,
+  compaction,
+  maxHeight,
+}: {
   usage: UsageAggregate;
   usageByModel: readonly UsageAggregate[];
   currency?: UsageCurrency;
@@ -117,7 +144,8 @@ export function UsagePopover({ usage, usageByModel, currency = "usd", contextWin
   compaction?: ContextCompactionControls;
   maxHeight?: number;
 }) {
-  const reportedCost = estimateAggregateCost(usage, currency) ?? sumModelCosts(usageByModel, currency);
+  const reportedCost =
+    estimateAggregateCost(usage, currency) ?? sumModelCosts(usageByModel, currency);
   const partialCost = reportedCost !== undefined && usage.reported < usage.count;
   const cacheRate = cacheHitRate(usage);
   const phases = USAGE_PHASES.flatMap((phase) => {
@@ -126,19 +154,34 @@ export function UsagePopover({ usage, usageByModel, currency = "usd", contextWin
   });
 
   return (
-    <section className="usagePopover" role="dialog" aria-label={t("chat.usage.conversation")} style={{ maxHeight }}>
+    <section
+      className="usagePopover"
+      role="dialog"
+      aria-label={t("chat.usage.conversation")}
+      style={{ maxHeight }}
+    >
       <header className="usagePopoverHeader">
         <span className="usagePopoverTitle">{t("chat.usage.conversation")}</span>
         {usageByModel.length > 1 ? (
-          <span className="usagePopoverModel">{t("chat.usage.models", { count: usageByModel.length })}</span>
+          <span className="usagePopoverModel">
+            {t("chat.usage.models", { count: usageByModel.length })}
+          </span>
         ) : usage.model ? (
           <span className="usagePopoverModel">{modelLabel(usage.model)}</span>
         ) : null}
       </header>
 
       <div className="usageHero">
-        <UsageMetric label={t("chat.usage.total")} value={formatTokens(usage.totalTokens)} prominent />
-        <UsageMetric label={t("chat.usage.cost")} value={formatCost(reportedCost, currency, partialCost)} prominent />
+        <UsageMetric
+          label={t("chat.usage.total")}
+          value={formatTokens(usage.totalTokens)}
+          prominent
+        />
+        <UsageMetric
+          label={t("chat.usage.cost")}
+          value={formatCost(reportedCost, currency, partialCost)}
+          prominent
+        />
       </div>
 
       <ContextWindowSection status={contextWindow} compaction={compaction} />
@@ -148,7 +191,10 @@ export function UsagePopover({ usage, usageByModel, currency = "usd", contextWin
         <UsageMetric label={t("chat.usage.input")} value={formatTokens(usage.inputTokens)} />
         <UsageMetric label={t("chat.usage.output")} value={formatTokens(usage.outputTokens)} />
         {usage.reasoningTokens !== undefined ? (
-          <UsageMetric label={t("chat.usage.reasoning")} value={formatTokens(usage.reasoningTokens)} />
+          <UsageMetric
+            label={t("chat.usage.reasoning")}
+            value={formatTokens(usage.reasoningTokens)}
+          />
         ) : null}
         {cacheRate !== undefined ? (
           <UsageMetric label={t("chat.usage.cacheHit")} value={`${cacheRate}%`} />
@@ -166,7 +212,11 @@ export function UsagePopover({ usage, usageByModel, currency = "usd", contextWin
         <div className="usageModels">
           <div className="usageSectionLabel">{t("chat.usage.byModel")}</div>
           {usageByModel.map((modelUsage, index) => (
-            <ModelUsageRow key={modelUsage.model ?? `unknown-${index}`} usage={modelUsage} currency={currency} />
+            <ModelUsageRow
+              key={modelUsage.model ?? `unknown-${index}`}
+              usage={modelUsage}
+              currency={currency}
+            />
           ))}
         </div>
       ) : null}
@@ -183,13 +233,17 @@ export function UsagePopover({ usage, usageByModel, currency = "usd", contextWin
   );
 }
 
-function ContextWindowSection({ status, compaction }: {
+function ContextWindowSection({
+  status,
+  compaction,
+}: {
   status?: ContextWindowStatus;
   compaction?: ContextCompactionControls;
 }) {
-  const share = status && status.windowTokens > 0
-    ? Math.min(100, Math.round(status.usedTokens / status.windowTokens * 100))
-    : 0;
+  const share =
+    status && status.windowTokens > 0
+      ? Math.min(100, Math.round((status.usedTokens / status.windowTokens) * 100))
+      : 0;
   const pending = compaction?.pending === true;
   const result = compaction?.result;
 
@@ -215,7 +269,9 @@ function ContextWindowSection({ status, compaction }: {
       </div>
       {status ? (
         <div className="usageContextMeta">
-          <span>{t("chat.usage.contextAutoCompaction", { limit: formatTokens(status.softLimitTokens) })}</span>
+          <span>
+            {t("chat.usage.contextAutoCompaction", { limit: formatTokens(status.softLimitTokens) })}
+          </span>
           {status.compactions > 0 ? (
             <span>{t("chat.usage.contextCompactions", { count: status.compactions })}</span>
           ) : null}
@@ -228,18 +284,27 @@ function ContextWindowSection({ status, compaction }: {
           disabled={pending}
           onClick={compaction.onCompact}
         >
-          <span className={`codicon ${pending ? "codicon-loading codicon-modifier-spin" : "codicon-archive"}`} aria-hidden="true" />
+          <span
+            className={`codicon ${pending ? "codicon-loading codicon-modifier-spin" : "codicon-archive"}`}
+            aria-hidden="true"
+          />
           {pending ? t("chat.usage.compacting") : t("chat.usage.compactNow")}
         </button>
       ) : null}
       {result ? (
-        <p className={`usageCompactResult tone-${result.status}`}>{compactionResultLabel(result)}</p>
+        <p className={`usageCompactResult tone-${result.status}`}>
+          {compactionResultLabel(result)}
+        </p>
       ) : null}
     </div>
   );
 }
 
-function compactionResultLabel(result: { status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }): string {
+function compactionResultLabel(result: {
+  status: "compacted" | "empty" | "failed";
+  freedTokens?: number;
+  error?: string;
+}): string {
   if (result.status === "compacted") {
     return t("chat.usage.compactedFreed", { tokens: formatTokens(result.freedTokens ?? 0) });
   }
@@ -254,18 +319,32 @@ function ModelUsageRow({ usage, currency }: { usage: UsageAggregate; currency: U
   return (
     <div className="usageModelRow">
       <div className="usageModelIdentity">
-        <span className="usageModelName">{usage.model ? modelLabel(usage.model) : t("chat.usage.unknownModel")}</span>
-        <span className="usageModelRequests">{formatNumber(usage.count)} {t("chat.usage.requests").toLocaleLowerCase()}</span>
+        <span className="usageModelName">
+          {usage.model ? modelLabel(usage.model) : t("chat.usage.unknownModel")}
+        </span>
+        <span className="usageModelRequests">
+          {formatNumber(usage.count)} {t("chat.usage.requests").toLocaleLowerCase()}
+        </span>
       </div>
       <div className="usageModelValues">
         <span>{formatTokens(usage.totalTokens)}</span>
-        <span>{formatCost(cost, currency, cost !== undefined && usage.reported < usage.count)}</span>
+        <span>
+          {formatCost(cost, currency, cost !== undefined && usage.reported < usage.count)}
+        </span>
       </div>
     </div>
   );
 }
 
-function UsageMetric({ label, value, prominent = false }: { label: string; value: string; prominent?: boolean }) {
+function UsageMetric({
+  label,
+  value,
+  prominent = false,
+}: {
+  label: string;
+  value: string;
+  prominent?: boolean;
+}) {
   return (
     <div className={`usageMetric ${prominent ? "prominent" : ""}`}>
       <span className="usageMetricValue">{value}</span>
@@ -289,7 +368,8 @@ function PhaseRow({ phase, usage }: { phase: UsagePhase; usage: PhaseUsage }) {
             {hitRate}%
           </span>
         ) : null}
-        {formatTokens(usage.inputTokens)} <span aria-hidden="true">+</span> {formatTokens(usage.outputTokens)}
+        {formatTokens(usage.inputTokens)} <span aria-hidden="true">+</span>{" "}
+        {formatTokens(usage.outputTokens)}
       </span>
     </div>
   );
@@ -300,12 +380,17 @@ function cacheHitRate(usage: PhaseUsage): number | undefined {
     return undefined;
   }
   const total = usage.cacheHitTokens + usage.cacheMissTokens;
-  return total > 0 ? Math.round(usage.cacheHitTokens / total * 100) : undefined;
+  return total > 0 ? Math.round((usage.cacheHitTokens / total) * 100) : undefined;
 }
 
 function formatTokens(value: number | undefined): string {
-  if (value === undefined) {return t("chat.usage.unavailable");}
-  return new Intl.NumberFormat(getUiLocale(), { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  if (value === undefined) {
+    return t("chat.usage.unavailable");
+  }
+  return new Intl.NumberFormat(getUiLocale(), {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 function formatNumber(value: number): string {
@@ -321,8 +406,13 @@ function formatCost(value: number | undefined, currency: UsageCurrency, partial:
   });
 }
 
-function sumModelCosts(values: readonly UsageAggregate[], currency: UsageCurrency): number | undefined {
-  if (values.length === 0) {return undefined;}
+function sumModelCosts(
+  values: readonly UsageAggregate[],
+  currency: UsageCurrency,
+): number | undefined {
+  if (values.length === 0) {
+    return undefined;
+  }
   const costs = values.map((value) => estimateAggregateCost(value, currency));
   return costs.every((cost): cost is number => cost !== undefined)
     ? Math.round(costs.reduce((sum, cost) => sum + cost, 0) * 1_000_000) / 1_000_000
@@ -330,8 +420,10 @@ function sumModelCosts(values: readonly UsageAggregate[], currency: UsageCurrenc
 }
 
 function modelLabel(model: string): string {
-  return MODEL_OPTIONS.find((option) => option.value === model)?.label.replace(/^DeepSeek\s+/i, "")
-    ?? model.replace(/^deepseek-/i, "");
+  return (
+    MODEL_OPTIONS.find((option) => option.value === model)?.label.replace(/^DeepSeek\s+/i, "") ??
+    model.replace(/^deepseek-/i, "")
+  );
 }
 
 export default UsagePicker;

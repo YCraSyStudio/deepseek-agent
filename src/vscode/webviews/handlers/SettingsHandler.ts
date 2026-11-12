@@ -1,19 +1,47 @@
-import { openCustomizationFile, watchCustomizationFiles } from "@/vscode/configuration/CustomizationFiles";
+import {
+  openCustomizationFile,
+  watchCustomizationFiles,
+} from "@/vscode/configuration/CustomizationFiles";
 import * as vscode from "vscode";
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
 import { logWarning } from "@/shared/logging/Logger";
 import { redactSensitiveText } from "@/shared/security/Redaction";
-import { DEEPSEEK_FLASH_MODEL_ID, type AppConfig, type WebviewConfig, type WebviewToHandlerMessage } from "@/contracts";
+import {
+  DEEPSEEK_FLASH_MODEL_ID,
+  type AppConfig,
+  type WebviewConfig,
+  type WebviewToHandlerMessage,
+} from "@/contracts";
 import { getApiOrigin, normalizeApiBaseUrl } from "@/shared/security/ApiOrigin";
 import { toWebviewConfig } from "@/vscode/webviews/WebviewConfig";
 import { getStorageInfo } from "@/vscode/storage/StorageInfo";
-import { getConfiguredStorageDirectory, saveStorageDirectory } from "@/vscode/storage/StorageLocation";
+import {
+  getConfiguredStorageDirectory,
+  saveStorageDirectory,
+} from "@/vscode/storage/StorageLocation";
 import { ensureGlobalInstructionsFile } from "@/infrastructure/persistence/GlobalInstructionsFile";
 import { ensureWorkspaceInstructionsFile } from "@/infrastructure/persistence/WorkspaceInstructionsFile";
 import type { ChatHandler } from "./chat/ChatHandler";
 import { HistoryTransitionController } from "./HistoryTransitionController";
 
-type SettingsMessage = Extract<WebviewToHandlerMessage, { type: "getWorkspaceInstructions" | "openWorkspaceInstructions" | "openGlobalAgents" | "getConfig" | "setStorageDirectory" | "selectStorageDirectory" | "reloadStorage" | "saveConfig" | "resetConfig" | "resolveHistoryTransition" | "deleteApiKey" | "testConnection" }>;
+type SettingsMessage = Extract<
+  WebviewToHandlerMessage,
+  {
+    type:
+      | "getWorkspaceInstructions"
+      | "openWorkspaceInstructions"
+      | "openGlobalAgents"
+      | "getConfig"
+      | "setStorageDirectory"
+      | "selectStorageDirectory"
+      | "reloadStorage"
+      | "saveConfig"
+      | "resetConfig"
+      | "resolveHistoryTransition"
+      | "deleteApiKey"
+      | "testConnection";
+  }
+>;
 type TestConnectionMessage = Extract<WebviewToHandlerMessage, { type: "testConnection" }>;
 
 export class SettingsHandler {
@@ -83,63 +111,123 @@ export class SettingsHandler {
   }
 
   watchWorkspaceInstructions(view: vscode.WebviewView): vscode.Disposable {
-    return watchCustomizationFiles(view, () => (vscode.workspace.workspaceFolders ?? [])
-      .filter((folder) => folder.uri.scheme === "file")
-      .map((folder) => ({ directory: folder.uri, pattern: "AGENTS.md" })),
-    () => {void this.postWorkspaceInstructions(view);});
+    return watchCustomizationFiles(
+      view,
+      () =>
+        (vscode.workspace.workspaceFolders ?? [])
+          .filter((folder) => folder.uri.scheme === "file")
+          .map((folder) => ({ directory: folder.uri, pattern: "AGENTS.md" })),
+      () => {
+        void this.postWorkspaceInstructions(view);
+      },
+    );
   }
 
   private async postWorkspaceInstructions(view: vscode.WebviewView): Promise<void> {
     const revision = ++this.workspaceInstructionsRevision;
     try {
-      const roots = await Promise.all((vscode.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map(async (folder) => {
-        let exists = false;
-        try {
-          const info = await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder.uri, "AGENTS.md"));
-          exists = (info.type & vscode.FileType.File) !== 0;
-        } catch (error) {
-          if (!(error instanceof vscode.FileSystemError && error.code === "FileNotFound") && (error as NodeJS.ErrnoException).code !== "ENOENT") {throw error;}
-        }
-        return { uri: folder.uri.toString(), name: folder.name, exists };
-      }));
-      if (revision !== this.workspaceInstructionsRevision) {return;}
+      const roots = await Promise.all(
+        (vscode.workspace.workspaceFolders ?? [])
+          .filter((folder) => folder.uri.scheme === "file")
+          .map(async (folder) => {
+            let exists = false;
+            try {
+              const info = await vscode.workspace.fs.stat(
+                vscode.Uri.joinPath(folder.uri, "AGENTS.md"),
+              );
+              exists = (info.type & vscode.FileType.File) !== 0;
+            } catch (error) {
+              if (
+                !(error instanceof vscode.FileSystemError && error.code === "FileNotFound") &&
+                (error as NodeJS.ErrnoException).code !== "ENOENT"
+              ) {
+                throw error;
+              }
+            }
+            return { uri: folder.uri.toString(), name: folder.name, exists };
+          }),
+      );
+      if (revision !== this.workspaceInstructionsRevision) {
+        return;
+      }
       const active = vscode.window.activeTextEditor?.document.uri;
-      await view.webview.postMessage({ type: "workspaceInstructions", roots,
-        preferredRootUri: active ? vscode.workspace.getWorkspaceFolder(active)?.uri.toString() : undefined });
+      await view.webview.postMessage({
+        type: "workspaceInstructions",
+        roots,
+        preferredRootUri: active
+          ? vscode.workspace.getWorkspaceFolder(active)?.uri.toString()
+          : undefined,
+      });
     } catch (error) {
       if (revision === this.workspaceInstructionsRevision) {
-        await view.webview.postMessage({ type: "workspaceInstructions", roots: [], error: redactSensitiveText(error) });
+        await view.webview.postMessage({
+          type: "workspaceInstructions",
+          roots: [],
+          error: redactSensitiveText(error),
+        });
       }
     }
   }
 
-  private async _openWorkspaceInstructions(requestId: string, rootUri: string, view: vscode.WebviewView): Promise<void> {
+  private async _openWorkspaceInstructions(
+    requestId: string,
+    rootUri: string,
+    view: vscode.WebviewView,
+  ): Promise<void> {
     try {
-      const folder = vscode.workspace.workspaceFolders?.find((item) => item.uri.scheme === "file" && item.uri.toString() === rootUri);
-      if (!folder) {throw new Error("Select a currently open local workspace folder.");}
+      const folder = vscode.workspace.workspaceFolders?.find(
+        (item) => item.uri.scheme === "file" && item.uri.toString() === rootUri,
+      );
+      if (!folder) {
+        throw new Error("Select a currently open local workspace folder.");
+      }
       const language = this.settings.load().interfaceLanguage;
-      const file = await ensureWorkspaceInstructionsFile(folder.uri.fsPath, language === "auto" ? vscode.env.language : language);
+      const file = await ensureWorkspaceInstructionsFile(
+        folder.uri.fsPath,
+        language === "auto" ? vscode.env.language : language,
+      );
       await openCustomizationFile(file);
       await this.postWorkspaceInstructions(view);
-      await view.webview.postMessage({ type: "openWorkspaceInstructionsResult", requestId, success: true });
+      await view.webview.postMessage({
+        type: "openWorkspaceInstructionsResult",
+        requestId,
+        success: true,
+      });
     } catch (error) {
-      await view.webview.postMessage({ type: "openWorkspaceInstructionsResult", requestId, success: false, error: redactSensitiveText(error) });
+      await view.webview.postMessage({
+        type: "openWorkspaceInstructionsResult",
+        requestId,
+        success: false,
+        error: redactSensitiveText(error),
+      });
     }
   }
 
   private async _openGlobalAgents(requestId: string, view: vscode.WebviewView): Promise<void> {
     try {
       await this.settings.waitForPendingWrites();
-      if (!this.settings.load().includeHomeAgents) {throw new Error("Enable global AGENTS.md instructions before opening the customization file.");}
+      if (!this.settings.load().includeHomeAgents) {
+        throw new Error(
+          "Enable global AGENTS.md instructions before opening the customization file.",
+        );
+      }
       const file = await ensureGlobalInstructionsFile();
       await openCustomizationFile(file);
       await view.webview.postMessage({ type: "openGlobalAgentsResult", requestId, success: true });
     } catch (error) {
-      await view.webview.postMessage({ type: "openGlobalAgentsResult", requestId, success: false, error: redactSensitiveText(error) });
+      await view.webview.postMessage({
+        type: "openGlobalAgentsResult",
+        requestId,
+        success: false,
+        error: redactSensitiveText(error),
+      });
     }
   }
 
-  private async _setStorageDirectory(directory: string | undefined, view: vscode.WebviewView): Promise<void> {
+  private async _setStorageDirectory(
+    directory: string | undefined,
+    view: vscode.WebviewView,
+  ): Promise<void> {
     try {
       let selected = directory;
       if (selected === undefined) {
@@ -150,11 +238,15 @@ export class SettingsHandler {
           defaultUri: vscode.Uri.file(getConfiguredStorageDirectory(this.context)),
         });
         if (folders?.[0]) {
-          if (folders[0].scheme !== "file") {throw new Error("Select a local directory on the extension host.");}
+          if (folders[0].scheme !== "file") {
+            throw new Error("Select a local directory on the extension host.");
+          }
           selected = folders[0].fsPath;
         }
       }
-      if (selected !== undefined) {await saveStorageDirectory(this.context, selected);}
+      if (selected !== undefined) {
+        await saveStorageDirectory(this.context, selected);
+      }
       await view.webview.postMessage({
         type: "storageDirectoryResult",
         storageInfo: getStorageInfo(getConfiguredStorageDirectory(this.context)),
@@ -183,7 +275,11 @@ export class SettingsHandler {
     }
   }
 
-  private async _saveConfig(requestId: string, config: Partial<AppConfig>, webviewView: vscode.WebviewView): Promise<void> {
+  private async _saveConfig(
+    requestId: string,
+    config: Partial<AppConfig>,
+    webviewView: vscode.WebviewView,
+  ): Promise<void> {
     const currentHistoryEnabled = this.settings.load().historyEnabled;
     if (config.historyEnabled !== undefined && config.historyEnabled !== currentHistoryEnabled) {
       await this.historyTransitions.request({
@@ -198,7 +294,7 @@ export class SettingsHandler {
     if (
       config.permissionMode === "full-access" &&
       this.settings.load().permissionMode !== "full-access" &&
-      !await confirmGlobalFullAccess()
+      !(await confirmGlobalFullAccess())
     ) {
       await this._postUpdateResult(webviewView, requestId, "save", "cancelled");
       return;
@@ -208,7 +304,10 @@ export class SettingsHandler {
     const targetBaseUrl = normalizeApiBaseUrl(config.baseUrl ?? currentConfig.baseUrl);
     const currentOrigin = getApiOrigin(currentConfig.baseUrl);
     const targetOrigin = getApiOrigin(targetBaseUrl);
-    if (currentOrigin !== targetOrigin && !await confirmApiOriginChange(currentOrigin, targetOrigin)) {
+    if (
+      currentOrigin !== targetOrigin &&
+      !(await confirmApiOriginChange(currentOrigin, targetOrigin))
+    ) {
       await this._postUpdateResult(webviewView, requestId, "save", "cancelled");
       return;
     }
@@ -221,7 +320,14 @@ export class SettingsHandler {
         await this.secrets.setApiKey(targetBaseUrl, replacement);
       }
       await this.settings.save({ ...config, baseUrl: targetBaseUrl, apiKey: undefined });
-      await this._postUpdateResult(webviewView, requestId, "save", "success", undefined, credentialUpdated);
+      await this._postUpdateResult(
+        webviewView,
+        requestId,
+        "save",
+        "success",
+        undefined,
+        credentialUpdated,
+      );
     } catch (error: unknown) {
       const errorMessage = redactSensitiveText(error, replacement ? [replacement] : []);
       logWarning(`[SettingsHandler] Failed to save settings: ${errorMessage}`);
@@ -232,12 +338,16 @@ export class SettingsHandler {
   private async _resetConfig(requestId: string, webviewView: vscode.WebviewView): Promise<void> {
     const currentOrigin = getApiOrigin(this.settings.load().baseUrl);
     const defaultOrigin = getApiOrigin("https://api.deepseek.com");
-    const originDetail = currentOrigin === defaultOrigin
-      ? ""
-      : ` The API destination will change from ${currentOrigin} to ${defaultOrigin}; any credential already saved for the default origin will become active.`;
+    const originDetail =
+      currentOrigin === defaultOrigin
+        ? ""
+        : ` The API destination will change from ${currentOrigin} to ${defaultOrigin}; any credential already saved for the default origin will become active.`;
     const confirmation = await vscode.window.showWarningMessage(
       "Reset all extension settings to their defaults?",
-      { modal: true, detail: `API keys are stored separately per origin and will be preserved.${originDetail}` },
+      {
+        modal: true,
+        detail: `API keys are stored separately per origin and will be preserved.${originDetail}`,
+      },
       "Reset settings",
     );
     if (confirmation !== "Reset settings") {
@@ -319,7 +429,7 @@ export class SettingsHandler {
   }
 
   private async _postApiKeyStatus(webviewView: vscode.WebviewView, baseUrl: string): Promise<void> {
-    const apiKey = await this.secrets.getApiKey(baseUrl) ?? "";
+    const apiKey = (await this.secrets.getApiKey(baseUrl)) ?? "";
     const status = apiKey ? "configured" : "missing";
     const keyPreview = apiKey ? getApiKeyPreview(apiKey) : undefined;
 
@@ -337,10 +447,13 @@ export class SettingsHandler {
     await this._postApiKeyStatus(webviewView, this.settings.load().baseUrl);
   }
 
-  private async _testConnection(payload: TestConnectionMessage, webviewView: vscode.WebviewView): Promise<void> {
+  private async _testConnection(
+    payload: TestConnectionMessage,
+    webviewView: vscode.WebviewView,
+  ): Promise<void> {
     const { baseUrl, model } = payload;
     const replacement = payload.apiKey?.trim();
-    const apiKey = replacement || await this.secrets.getApiKey(baseUrl);
+    const apiKey = replacement || (await this.secrets.getApiKey(baseUrl));
     if (!apiKey) {
       await webviewView.webview.postMessage({
         type: "connectionTestResult",
@@ -350,13 +463,17 @@ export class SettingsHandler {
       return;
     }
     try {
-      const result = await this.modelProviderFactory.create({
-        ...this.settings.load(),
-        apiKey,
-        baseUrl,
-        model: model || DEEPSEEK_FLASH_MODEL_ID,
-      }).testConnection();
-      if (!result.success) {throw new Error(result.error || "Connection test failed.");}
+      const result = await this.modelProviderFactory
+        .create({
+          ...this.settings.load(),
+          apiKey,
+          baseUrl,
+          model: model || DEEPSEEK_FLASH_MODEL_ID,
+        })
+        .testConnection();
+      if (!result.success) {
+        throw new Error(result.error || "Connection test failed.");
+      }
 
       webviewView.webview.postMessage({
         type: "connectionTestResult",
@@ -370,10 +487,12 @@ export class SettingsHandler {
       });
     }
   }
-
 }
 
-async function confirmApiOriginChange(currentOrigin: string, targetOrigin: string): Promise<boolean> {
+async function confirmApiOriginChange(
+  currentOrigin: string,
+  targetOrigin: string,
+): Promise<boolean> {
   const accepted = await vscode.window.showWarningMessage(
     "Change the destination for API credentials?",
     {
@@ -390,7 +509,8 @@ async function confirmGlobalFullAccess(): Promise<boolean> {
     "Enable global full access?",
     {
       modal: true,
-      detail: "This setting applies globally. Routine and elevated operations may run anywhere. Critical actions that could make the computer unusable or cause broad irreversible loss still require confirmation.",
+      detail:
+        "This setting applies globally. Routine and elevated operations may run anywhere. Critical actions that could make the computer unusable or cause broad irreversible loss still require confirmation.",
     },
     "Enable full access",
   );

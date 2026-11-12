@@ -41,11 +41,18 @@ export function getToolWorkspaceHost(): ToolWorkspaceHost {
   return workspaceHost;
 }
 
-export function runWithToolWorkspaceHost<T>(host: ToolWorkspaceHost, operation: () => Promise<T>): Promise<T> {
+export function runWithToolWorkspaceHost<T>(
+  host: ToolWorkspaceHost,
+  operation: () => Promise<T>,
+): Promise<T> {
   return scopedWorkspaceHost.run(createValidatingWorkspaceHost(host), operation);
 }
 
-export function resolveWorkspacePath(rawPath: string, workspaceRoot: string, options: ResolveWorkspacePathOptions = {}): ResolvedWorkspacePath {
+export function resolveWorkspacePath(
+  rawPath: string,
+  workspaceRoot: string,
+  options: ResolveWorkspacePathOptions = {},
+): ResolvedWorkspacePath {
   if (typeof rawPath !== "string" || rawPath.trim() === "") {
     throw new Error("Workspace path is required");
   }
@@ -66,10 +73,16 @@ export function resolveWorkspacePath(rawPath: string, workspaceRoot: string, opt
   }
 
   const root = path.resolve(workspaceRoot);
-  const absoluteInput = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(root, rawPath);
+  const absoluteInput = path.isAbsolute(rawPath)
+    ? path.resolve(rawPath)
+    : path.resolve(root, rawPath);
   const relativePath = path.relative(root, absoluteInput);
 
-  if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+  if (
+    relativePath === ".." ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
     throw new Error("Workspace path must stay inside the workspace");
   }
 
@@ -92,7 +105,10 @@ export async function resolveWorkspacePathSecure(
 ): Promise<ResolvedWorkspacePath> {
   const lexical = resolveWorkspacePath(rawPath, workspaceRoot, options);
   const realRoot = path.resolve(await resolveRealPath(path.resolve(workspaceRoot)));
-  const realTarget = await resolveTargetThroughExistingAncestor(lexical.absolutePath, resolveRealPath);
+  const realTarget = await resolveTargetThroughExistingAncestor(
+    lexical.absolutePath,
+    resolveRealPath,
+  );
   assertPathInsideRoot(realTarget, realRoot);
   return {
     absolutePath: realTarget,
@@ -132,8 +148,7 @@ function createValidatingWorkspaceHost(host: ToolWorkspaceHost): ToolWorkspaceHo
             if (host.resolvePath) {
               try {
                 accepted.add(await host.resolvePath(rawPath, false));
-              } catch {
-              }
+              } catch {}
             } else {
               const rootPath = host.getRootPath();
               if (!rootPath) {
@@ -150,32 +165,43 @@ function createValidatingWorkspaceHost(host: ToolWorkspaceHost): ToolWorkspaceHo
       : undefined,
     readFile: async (rawPath: string) => host.readFile(await validate(rawPath)),
     readFilePreview: host.readFilePreview
-      ? async (rawPath: string, maxBytes: number) => host.readFilePreview!(await validate(rawPath), maxBytes)
+      ? async (rawPath: string, maxBytes: number) =>
+          host.readFilePreview!(await validate(rawPath), maxBytes)
       : undefined,
-    writeFile: async (rawPath: string, content: Uint8Array) => host.writeFile(await validate(rawPath, true), content),
+    writeFile: async (rawPath: string, content: Uint8Array) =>
+      host.writeFile(await validate(rawPath, true), content),
     movePath: host.movePath
-      ? async (source: string, options: MoveWorkspacePathOptions) => host.movePath!(
-          await validate(source, true),
-          { ...options, destination: await validate(options.destination, true) },
-        )
+      ? async (source: string, options: MoveWorkspacePathOptions) =>
+          host.movePath!(await validate(source, true), {
+            ...options,
+            destination: await validate(options.destination, true),
+          })
       : undefined,
     deletePath: host.deletePath
-      ? async (rawPath: string, options: DeleteWorkspacePathOptions) => host.deletePath!(await validate(rawPath, true), options)
+      ? async (rawPath: string, options: DeleteWorkspacePathOptions) =>
+          host.deletePath!(await validate(rawPath, true), options)
       : undefined,
     stat: async (rawPath: string) => host.stat(await validate(rawPath)),
-    createParentDirectory: async (rawPath: string) => host.createParentDirectory(await validate(rawPath, true)),
+    createParentDirectory: async (rawPath: string) =>
+      host.createParentDirectory(await validate(rawPath, true)),
     readDirectory: async (rawPath: string) => host.readDirectory(await validate(rawPath)),
     readDocumentSymbols: host.readDocumentSymbols
       ? async (rawPath: string) => host.readDocumentSymbols!(await validate(rawPath))
       : undefined,
     prepareFileDiff: host.prepareFileDiff
-      ? async (rawPath: string, before: string, after: string) => host.prepareFileDiff!(await validate(rawPath), before, after)
+      ? async (rawPath: string, before: string, after: string) =>
+          host.prepareFileDiff!(await validate(rawPath), before, after)
       : undefined,
-    clearFileDiffPreview: host.clearFileDiffPreview ? () => host.clearFileDiffPreview!() : undefined,
+    clearFileDiffPreview: host.clearFileDiffPreview
+      ? () => host.clearFileDiffPreview!()
+      : undefined,
   };
 }
 
-async function resolveTargetThroughExistingAncestor(absolutePath: string, resolveRealPath: RealPathResolver): Promise<string> {
+async function resolveTargetThroughExistingAncestor(
+  absolutePath: string,
+  resolveRealPath: RealPathResolver,
+): Promise<string> {
   let candidate = path.resolve(absolutePath);
   const missingSegments: string[] = [];
 
@@ -199,13 +225,25 @@ async function resolveTargetThroughExistingAncestor(absolutePath: string, resolv
 
 function assertPathInsideRoot(absolutePath: string, rootPath: string): void {
   const relativePath = path.relative(rootPath, absolutePath);
-  if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
-    throw new Error("Workspace path resolves outside the workspace through a symbolic link or junction");
+  if (
+    relativePath === ".." ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw new Error(
+      "Workspace path resolves outside the workspace through a symbolic link or junction",
+    );
   }
 }
 
 function isMissingPathError(err: unknown): boolean {
-  return !!err && typeof err === "object" && "code" in err && ((err as { code?: unknown }).code === "ENOENT" || (err as { code?: unknown }).code === "ENOTDIR");
+  return (
+    !!err &&
+    typeof err === "object" &&
+    "code" in err &&
+    ((err as { code?: unknown }).code === "ENOENT" ||
+      (err as { code?: unknown }).code === "ENOTDIR")
+  );
 }
 
 function looksLikeUri(rawPath: string): boolean {

@@ -13,7 +13,13 @@ import {
   rememberPositiveDecision,
   reviewDangerousCommandFailClosed,
 } from "./DangerPolicy";
-import { addProvenFileScope, handlerContext, isAutomaticExecution, requiresWorkspaceMutationPolicy, requiresExplicitToolConfirmation } from "./PipelineContext";
+import {
+  addProvenFileScope,
+  handlerContext,
+  isAutomaticExecution,
+  requiresWorkspaceMutationPolicy,
+  requiresExplicitToolConfirmation,
+} from "./PipelineContext";
 import { createRejectedResult, postToolCallResult } from "./ResultChannel";
 
 const UNTRUSTED_WORKSPACE = "Tool call rejected because the workspace is not trusted";
@@ -39,8 +45,14 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
     {
       name: "workspace_trust",
       async handle(context) {
-        if (!context.ctx.isWorkspaceTrusted() && requiresWorkspaceMutationPolicy(context.ctx, context.toolCall)) {
-          postToolCallResult(context.ctx, createRejectedResult(context.toolCall, UNTRUSTED_WORKSPACE));
+        if (
+          !context.ctx.isWorkspaceTrusted() &&
+          requiresWorkspaceMutationPolicy(context.ctx, context.toolCall)
+        ) {
+          postToolCallResult(
+            context.ctx,
+            createRejectedResult(context.toolCall, UNTRUSTED_WORKSPACE),
+          );
           context.resultText = UNTRUSTED_WORKSPACE;
         }
         return { kind: "continue", context };
@@ -49,22 +61,44 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
     {
       name: "prepare_remote_review",
       async handle(context) {
-        if (context.resultText) {return { kind: "continue", context };}
-        if (!isAutomaticExecution(context.ctx)) {return { kind: "continue", context };}
+        if (context.resultText) {
+          return { kind: "continue", context };
+        }
+        if (!isAutomaticExecution(context.ctx)) {
+          return { kind: "continue", context };
+        }
         if (requiresExplicitToolConfirmation(context.ctx, context.toolCall)) {
-          const result = await context.ctx.toolExecutor.execute(context.toolCall, handlerContext(context.ctx));
-          context.resultText = await handleExecutionResult({ toolCall: context.toolCall, result, ctx: context.ctx, announceStarted: true, round: context.ctx.getCurrentRound() });
+          const result = await context.ctx.toolExecutor.execute(
+            context.toolCall,
+            handlerContext(context.ctx),
+          );
+          context.resultText = await handleExecutionResult({
+            toolCall: context.toolCall,
+            result,
+            ctx: context.ctx,
+            announceStarted: true,
+            round: context.ctx.getCurrentRound(),
+          });
           return { kind: "continue", context };
         }
         if (!requiresWorkspaceMutationPolicy(context.ctx, context.toolCall)) {
-          const result = await context.ctx.toolExecutor.executeForced(context.toolCall, handlerContext(context.ctx));
+          const result = await context.ctx.toolExecutor.executeForced(
+            context.toolCall,
+            handlerContext(context.ctx),
+          );
           postToolCallResult(context.ctx, result);
           context.resultText = result.outcome.content;
           return { kind: "continue", context };
         }
-        context.executionResult = await context.ctx.toolExecutor.execute(context.toolCall, handlerContext(context.ctx));
-        const confirmation = ToolExecutor.isConfirmationRequired(context.executionResult.outcome.content) ?? undefined;
-        context.confirmation = confirmation ? await addProvenFileScope(context.toolCall, confirmation) : undefined;
+        context.executionResult = await context.ctx.toolExecutor.execute(
+          context.toolCall,
+          handlerContext(context.ctx),
+        );
+        const confirmation =
+          ToolExecutor.isConfirmationRequired(context.executionResult.outcome.content) ?? undefined;
+        context.confirmation = confirmation
+          ? await addProvenFileScope(context.toolCall, confirmation)
+          : undefined;
         if (!context.confirmation) {
           context.resultText = await handleExecutionResult({
             toolCall: context.toolCall,
@@ -81,9 +115,15 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
       name: "deterministic_safety",
       async handle(context) {
         const confirmation = context.confirmation;
-        if (context.resultText || !context.executionResult || !confirmation) {return { kind: "continue", context };}
-        if (!isAutomaticExecution(context.ctx)) {return { kind: "continue", context };}
-        if (confirmation.keepAlive === true) {return { kind: "continue", context };}
+        if (context.resultText || !context.executionResult || !confirmation) {
+          return { kind: "continue", context };
+        }
+        if (!isAutomaticExecution(context.ctx)) {
+          return { kind: "continue", context };
+        }
+        if (confirmation.keepAlive === true) {
+          return { kind: "continue", context };
+        }
         const evaluation = await evaluateDeterministicSafety({
           toolCall: context.toolCall,
           confirmation,
@@ -96,7 +136,11 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
         });
         context.decisionKey = evaluation.key;
         if (evaluation.verdict.kind === "approve") {
-          context.resultText = await executeForcedAfterTrust(context.toolCall, context.ctx, confirmation);
+          context.resultText = await executeForcedAfterTrust(
+            context.toolCall,
+            context.ctx,
+            confirmation,
+          );
         }
         return { kind: "continue", context };
       },
@@ -105,28 +149,51 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
       name: "remote_review",
       async handle(context) {
         const confirmation = context.confirmation;
-        if (context.resultText || !context.executionResult || !confirmation) {return { kind: "continue", context };}
-        if (context.decisionKey && positiveDecisionCache.has(context.decisionKey)) {
-          context.resultText = await executeForcedAfterTrust(context.toolCall, context.ctx, confirmation);
+        if (context.resultText || !context.executionResult || !confirmation) {
           return { kind: "continue", context };
         }
-        const review = await reviewDangerousCommandFailClosed(context.toolCall, confirmation, context.ctx);
+        if (context.decisionKey && positiveDecisionCache.has(context.decisionKey)) {
+          context.resultText = await executeForcedAfterTrust(
+            context.toolCall,
+            context.ctx,
+            confirmation,
+          );
+          return { kind: "continue", context };
+        }
+        const review = await reviewDangerousCommandFailClosed(
+          context.toolCall,
+          confirmation,
+          context.ctx,
+        );
         const risk = review.risk;
         const canRunAutomatically = context.ctx.fullAccessMode
           ? risk !== "critical"
           : risk === "routine";
-        if (review.decision === "approve" && isAutomaticConfidence(review.confidence) && canRunAutomatically) {
+        if (
+          review.decision === "approve" &&
+          isAutomaticConfidence(review.confidence) &&
+          canRunAutomatically
+        ) {
           rememberPositiveDecision(context.decisionKey);
-          context.resultText = await executeForcedAfterTrust(context.toolCall, context.ctx, confirmation);
+          context.resultText = await executeForcedAfterTrust(
+            context.toolCall,
+            context.ctx,
+            confirmation,
+          );
           return { kind: "continue", context };
         }
         if (review.decision === "revise" && isAutomaticConfidence(review.confidence)) {
-          context.resultText = rejectCommandForRevision(context.toolCall, review.reason, context.ctx);
+          context.resultText = rejectCommandForRevision(
+            context.toolCall,
+            review.reason,
+            context.ctx,
+          );
           return { kind: "continue", context };
         }
         context.dangerOverride = {
           ...confirmation,
-          dangerLevel: risk === "critical" ? "destructive" : risk === "elevated" ? "dangerous" : "caution",
+          dangerLevel:
+            risk === "critical" ? "destructive" : risk === "elevated" ? "dangerous" : "caution",
           warningMessage: `${confirmation.warningMessage} DeepSeek classified this action as ${risk}: ${review.reason}`,
         };
         return { kind: "continue", context };
@@ -135,15 +202,20 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
     {
       name: "user_confirmation",
       async handle(context) {
-        if (context.resultText) {return { kind: "continue", context };}
+        if (context.resultText) {
+          return { kind: "continue", context };
+        }
         if (context.executionResult && context.confirmation) {
-          context.resultText = await handleExecutionResult({
-            toolCall: context.toolCall,
-            result: context.executionResult,
-            ctx: context.ctx,
-            announceStarted: true,
-            round: context.ctx.getCurrentRound(),
-          }, context.dangerOverride);
+          context.resultText = await handleExecutionResult(
+            {
+              toolCall: context.toolCall,
+              result: context.executionResult,
+              ctx: context.ctx,
+              announceStarted: true,
+              round: context.ctx.getCurrentRound(),
+            },
+            context.dangerOverride,
+          );
         } else if (!isAutomaticExecution(context.ctx)) {
           context.resultText = await executeManualToolCall(context.toolCall, context.ctx);
         }
@@ -153,8 +225,13 @@ export function createToolExecutionPipeline(): ToolExecutionPipeline<ToolPipelin
     {
       name: "execution",
       async handle(context) {
-        if (context.resultText) {return { kind: "continue", context };}
-        const result = await context.ctx.toolExecutor.execute(context.toolCall, handlerContext(context.ctx));
+        if (context.resultText) {
+          return { kind: "continue", context };
+        }
+        const result = await context.ctx.toolExecutor.execute(
+          context.toolCall,
+          handlerContext(context.ctx),
+        );
         context.resultText = await handleExecutionResult({
           toolCall: context.toolCall,
           result,

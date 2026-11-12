@@ -1,9 +1,18 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { WEBVIEW_INPUT_LIMITS, type ImageAttachment, type ReferencedFile } from "@/contracts";
 import "./InputCtrl.css";
 import type { PendingImagePreview } from "../../../model/ClipboardUploads";
 import { FileSelector } from "@webview/components/chatView";
-import ImageLightbox, { type LightboxImage } from "@webview/components/shared/imageLightbox/ImageLightbox";
+import ImageLightbox, {
+  type LightboxImage,
+} from "@webview/components/shared/imageLightbox/ImageLightbox";
 import { useVsCode } from "@webview/views/chatView/contexts";
 import { t } from "@webview/i18n";
 import { usePathCompletions } from "./UsePathCompletions";
@@ -66,7 +75,9 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
     const mountedRef = useRef(true);
     useEffect(() => {
       mountedRef.current = true;
-      return () => { mountedRef.current = false; };
+      return () => {
+        mountedRef.current = false;
+      };
     }, []);
     const vscode = useVsCode();
     const [isControlPressed, setIsControlPressed] = useState(false);
@@ -89,7 +100,14 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       vscode,
       workspaceRevision,
     });
-    const ghost = useChatSuggestions(input, setInput, taRef, vscode, Boolean(pathToken), `${conversationId ?? ""}:${workspaceRevision ?? ""}`);
+    const ghost = useChatSuggestions(
+      input,
+      setInput,
+      taRef,
+      vscode,
+      Boolean(pathToken),
+      `${conversationId ?? ""}:${workspaceRevision ?? ""}`,
+    );
 
     useImperativeHandle(ref, () => taRef.current!, [taRef]);
 
@@ -108,7 +126,12 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
 
     const handleSend = useCallback(async () => {
       const text = input.trim();
-      if ((!text && imageAttachments.length + pendingImages.length === 0) || !vscode || !canSend || submissionPendingRef.current) {
+      if (
+        (!text && imageAttachments.length + pendingImages.length === 0) ||
+        !vscode ||
+        !canSend ||
+        submissionPendingRef.current
+      ) {
         return;
       }
 
@@ -116,8 +139,10 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       ghost.dismiss();
       submissionPendingRef.current = true;
       try {
-        const uploaded = pendingImages.length ? await onPrepareImages?.() ?? [] : [];
-        if (!mountedRef.current) {return;}
+        const uploaded = pendingImages.length ? ((await onPrepareImages?.()) ?? []) : [];
+        if (!mountedRef.current) {
+          return;
+        }
         const clientRequestId = crypto.randomUUID();
         onSend?.(text, clientRequestId, [...imageAttachments, ...uploaded]);
         vscode.postMessage({
@@ -133,8 +158,26 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
         });
       } catch (error: unknown) {
         onImagePasteError?.(error instanceof Error ? error.message : String(error));
-      } finally {submissionPendingRef.current = false;}
-    }, [input, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, vscode, canSend, clearCompletions, ghost, selectedModelRef, reasoningRef, referencedFiles, conversationId, workspaceRevision, onSend]);
+      } finally {
+        submissionPendingRef.current = false;
+      }
+    }, [
+      input,
+      imageAttachments,
+      pendingImages.length,
+      onPrepareImages,
+      onImagePasteError,
+      vscode,
+      canSend,
+      clearCompletions,
+      ghost,
+      selectedModelRef,
+      reasoningRef,
+      referencedFiles,
+      conversationId,
+      workspaceRevision,
+      onSend,
+    ]);
 
     const handleCancel = useCallback(() => {
       if (activeGenerationId && conversationId) {
@@ -149,14 +192,23 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
 
     const handleSteer = useCallback(async () => {
       const text = input.trim();
-      if ((!text && imageAttachments.length + pendingImages.length === 0) || !vscode || !canSend || !conversationId || !activeGenerationId || submissionPendingRef.current) {
+      if (
+        (!text && imageAttachments.length + pendingImages.length === 0) ||
+        !vscode ||
+        !canSend ||
+        !conversationId ||
+        !activeGenerationId ||
+        submissionPendingRef.current
+      ) {
         return;
       }
       ghost.dismiss();
       submissionPendingRef.current = true;
       try {
-        const uploaded = pendingImages.length ? await onPrepareImages?.() ?? [] : [];
-        if (!mountedRef.current) {return;}
+        const uploaded = pendingImages.length ? ((await onPrepareImages?.()) ?? []) : [];
+        if (!mountedRef.current) {
+          return;
+        }
         const clientRequestId = crypto.randomUUID();
         onSend?.(text, clientRequestId, [...imageAttachments, ...uploaded]);
         vscode.postMessage({
@@ -173,12 +225,32 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
         });
       } catch (error: unknown) {
         onImagePasteError?.(error instanceof Error ? error.message : String(error));
-      } finally {submissionPendingRef.current = false;}
-    }, [activeGenerationId, canSend, conversationId, imageAttachments, pendingImages.length, onPrepareImages, onImagePasteError, input, onSend, ghost, reasoningRef, referencedFiles, selectedModelRef, vscode, workspaceRevision]);
+      } finally {
+        submissionPendingRef.current = false;
+      }
+    }, [
+      activeGenerationId,
+      canSend,
+      conversationId,
+      imageAttachments,
+      pendingImages.length,
+      onPrepareImages,
+      onImagePasteError,
+      input,
+      onSend,
+      ghost,
+      reasoningRef,
+      referencedFiles,
+      selectedModelRef,
+      vscode,
+      workspaceRevision,
+    ]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.nativeEvent.isComposing) {return;}
+        if (e.nativeEvent.isComposing) {
+          return;
+        }
         if (completions.length > 0) {
           if (e.key === "ArrowDown") {
             e.preventDefault();
@@ -202,8 +274,20 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
           }
         }
 
-        if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && ghost.accept()) {e.preventDefault(); return;}
-        if (e.key === "Escape") {ghost.dismiss();}
+        if (
+          e.key === "Tab" &&
+          !e.shiftKey &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          ghost.accept()
+        ) {
+          e.preventDefault();
+          return;
+        }
+        if (e.key === "Escape") {
+          ghost.dismiss();
+        }
         if (e.key === "Enter" && !e.shiftKey && canSend) {
           e.preventDefault();
           if (!isProcessing) {
@@ -215,7 +299,18 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
           }
         }
       },
-      [activeIndex, canSend, clearCompletions, completions, ghost, handleSend, handleSteer, insertCompletion, isProcessing, setActiveIndex],
+      [
+        activeIndex,
+        canSend,
+        clearCompletions,
+        completions,
+        ghost,
+        handleSend,
+        handleSteer,
+        insertCompletion,
+        isProcessing,
+        setActiveIndex,
+      ],
     );
 
     const handleChange = useCallback(
@@ -234,27 +329,40 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
       }
     }, [input, requestPathCompletions, ghost]);
 
-    const handlePaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const images = Array.from(event.clipboardData.items)
-        .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
-        .flatMap((item) => item.getAsFile() ? [item.getAsFile()!] : []);
-      if (images.length === 0) {return;}
-      event.preventDefault();
-      if (!vscode) {return;}
-      if (imageAttachments.length + pendingImages.length + images.length > WEBVIEW_INPUT_LIMITS.images) {
-        onImagePasteError?.(`You can attach at most ${WEBVIEW_INPUT_LIMITS.images} images.`);
-        return;
-      }
-      for (const [index, file] of images.entries()) {
-        if (file.size < 1 || file.size > WEBVIEW_INPUT_LIMITS.clipboardImageBytes) {
-          onImagePasteError?.("A pasted image may be at most 16 MiB. Use the attachment picker for larger images.");
-          continue;
+    const handlePaste = useCallback(
+      (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const images = Array.from(event.clipboardData.items)
+          .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+          .flatMap((item) => (item.getAsFile() ? [item.getAsFile()!] : []));
+        if (images.length === 0) {
+          return;
         }
-        const requestId = crypto.randomUUID();
-        const name = file.name || `pasted-image-${Date.now()}-${index + 1}.${extensionForMime(file.type)}`;
-        onPendingImage?.({ requestId, name, previewUri: URL.createObjectURL(file), file });
-      }
-    }, [imageAttachments.length, pendingImages.length, onPendingImage, onImagePasteError, vscode]);
+        event.preventDefault();
+        if (!vscode) {
+          return;
+        }
+        if (
+          imageAttachments.length + pendingImages.length + images.length >
+          WEBVIEW_INPUT_LIMITS.images
+        ) {
+          onImagePasteError?.(`You can attach at most ${WEBVIEW_INPUT_LIMITS.images} images.`);
+          return;
+        }
+        for (const [index, file] of images.entries()) {
+          if (file.size < 1 || file.size > WEBVIEW_INPUT_LIMITS.clipboardImageBytes) {
+            onImagePasteError?.(
+              "A pasted image may be at most 16 MiB. Use the attachment picker for larger images.",
+            );
+            continue;
+          }
+          const requestId = crypto.randomUUID();
+          const name =
+            file.name || `pasted-image-${Date.now()}-${index + 1}.${extensionForMime(file.type)}`;
+          onPendingImage?.({ requestId, name, previewUri: URL.createObjectURL(file), file });
+        }
+      },
+      [imageAttachments.length, pendingImages.length, onPendingImage, onImagePasteError, vscode],
+    );
 
     return (
       <div className="inputComposer">
@@ -267,11 +375,22 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
                   className="composerImagePreview"
                   title={image.name}
                   aria-label={t("chat.enlargeImage", { name: image.name })}
-                  onClick={() => setEnlargedImage({ id: image.requestId, src: image.previewUri, name: image.name })}
+                  onClick={() =>
+                    setEnlargedImage({
+                      id: image.requestId,
+                      src: image.previewUri,
+                      name: image.name,
+                    })
+                  }
                 >
                   <img src={image.previewUri} alt={image.name} />
                 </button>
-                <button type="button" className="composerImageRemove" aria-label={t("chat.removeImage")} onClick={() => onRemovePendingImage?.(image.requestId)}>
+                <button
+                  type="button"
+                  className="composerImageRemove"
+                  aria-label={t("chat.removeImage")}
+                  onClick={() => onRemovePendingImage?.(image.requestId)}
+                >
                   <span className="codicon codicon-close" aria-hidden="true" />
                 </button>
               </div>
@@ -279,19 +398,29 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
             {imageAttachments.map((attachment) => {
               const previewUri = attachment.previewUri;
               return (
-                <div className="composerImageAttachment" key={attachment.id} title={attachment.name}>
-                  {previewUri
-                    ? (
-                      <button
-                        type="button"
-                        className="composerImagePreview"
-                        onClick={() => setEnlargedImage({ id: attachment.id, src: previewUri, name: attachment.name })}
-                        aria-label={t("chat.enlargeImage", { name: attachment.name })}
-                      >
-                        <img src={previewUri} alt={attachment.name} />
-                      </button>
-                    )
-                    : <span className="codicon codicon-file-media" aria-hidden="true" />}
+                <div
+                  className="composerImageAttachment"
+                  key={attachment.id}
+                  title={attachment.name}
+                >
+                  {previewUri ? (
+                    <button
+                      type="button"
+                      className="composerImagePreview"
+                      onClick={() =>
+                        setEnlargedImage({
+                          id: attachment.id,
+                          src: previewUri,
+                          name: attachment.name,
+                        })
+                      }
+                      aria-label={t("chat.enlargeImage", { name: attachment.name })}
+                    >
+                      <img src={previewUri} alt={attachment.name} />
+                    </button>
+                  ) : (
+                    <span className="codicon codicon-file-media" aria-hidden="true" />
+                  )}
                   <button
                     type="button"
                     className="composerImageRemove"
@@ -346,12 +475,18 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
             aria-describedby={ghost.suggestion ? "chat-ghost-help" : undefined}
             aria-expanded={completions.length > 0 && Boolean(pathToken)}
             aria-controls={completions.length > 0 ? "path-completion-listbox" : undefined}
-            aria-activedescendant={completions.length > 0 ? `path-completion-option-${activeIndex}` : undefined}
+            aria-activedescendant={
+              completions.length > 0 ? `path-completion-option-${activeIndex}` : undefined
+            }
             aria-busy={isProcessing}
             maxLength={WEBVIEW_INPUT_LIMITS.chatText}
           />
         </div>
-        {ghost.unavailable ? <span className="chatSuggestionNotice" role="status">{t("chat.suggestionUnavailable")}</span> : null}
+        {ghost.unavailable ? (
+          <span className="chatSuggestionNotice" role="status">
+            {t("chat.suggestionUnavailable")}
+          </span>
+        ) : null}
         <div className="inputComposerFooter">
           {typeof footer === "function" ? footer(ghost.controls) : footer}
           <div className="inputComposerActions">
@@ -369,8 +504,20 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
                   }
                 }}
                 disabled={hasTextContent && !canSend}
-                aria-label={t(!hasTextContent ? "chat.stopGeneration" : isControlPressed ? "chat.queueMessage" : "chat.interruptAndGuide")}
-                data-tooltip={t(!hasTextContent ? "chat.stopGeneration" : isControlPressed ? "chat.queueMessage" : "chat.interruptAndGuide")}
+                aria-label={t(
+                  !hasTextContent
+                    ? "chat.stopGeneration"
+                    : isControlPressed
+                      ? "chat.queueMessage"
+                      : "chat.interruptAndGuide",
+                )}
+                data-tooltip={t(
+                  !hasTextContent
+                    ? "chat.stopGeneration"
+                    : isControlPressed
+                      ? "chat.queueMessage"
+                      : "chat.interruptAndGuide",
+                )}
                 data-tooltip-align="end"
               >
                 <span
@@ -379,7 +526,15 @@ const InputCtrl = forwardRef<HTMLTextAreaElement, Props>(
                 />
               </button>
             ) : (
-              <button className="sendBtn inside" type="button" onClick={handleSend} disabled={!canSend} aria-label={t("chat.sendMessage")} data-tooltip={t("chat.sendMessage")} data-tooltip-align="end">
+              <button
+                className="sendBtn inside"
+                type="button"
+                onClick={handleSend}
+                disabled={!canSend}
+                aria-label={t("chat.sendMessage")}
+                data-tooltip={t("chat.sendMessage")}
+                data-tooltip-align="end"
+              >
                 <span className="codicon codicon-send" aria-hidden="true" />
               </button>
             )}
@@ -406,8 +561,14 @@ function toRequestReference(file: ReferencedFile) {
 }
 
 function extensionForMime(mediaType: string): string {
-  if (mediaType === "image/jpeg") {return "jpg";}
-  if (mediaType === "image/gif") {return "gif";}
-  if (mediaType === "image/webp") {return "webp";}
+  if (mediaType === "image/jpeg") {
+    return "jpg";
+  }
+  if (mediaType === "image/gif") {
+    return "gif";
+  }
+  if (mediaType === "image/webp") {
+    return "webp";
+  }
   return "png";
 }

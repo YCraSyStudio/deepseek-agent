@@ -3,7 +3,11 @@ import { ContextCompactor } from "@/application/chat/context/ContextCompaction";
 import type { ConversationState } from "@/application/chat/ConversationState";
 import type { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
 import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/application/ports";
-import { createUsageAggregate, recordUsage, summarizeConversationUsage } from "@/shared/usage/Usage";
+import {
+  createUsageAggregate,
+  recordUsage,
+  summarizeConversationUsage,
+} from "@/shared/usage/Usage";
 import { isOfficialDeepSeekEndpoint } from "@/shared/usage/UsagePricing";
 import type { SendMessagePayload } from "../Types";
 import { estimatedContextWindow } from "./ContextWindow";
@@ -27,7 +31,10 @@ export class ManualCompaction {
 
   async compact(requestId: string, conversationId?: string): Promise<void> {
     const selectedConversationId = this.options.getSelectedConversationId();
-    if (!selectedConversationId || (conversationId !== undefined && conversationId !== selectedConversationId)) {
+    if (
+      !selectedConversationId ||
+      (conversationId !== undefined && conversationId !== selectedConversationId)
+    ) {
       this.fail(requestId, "Only the conversation that is open can be compacted.");
       return;
     }
@@ -36,14 +43,20 @@ export class ManualCompaction {
       return;
     }
     if (this.options.hasHistoryTransition()) {
-      this.fail(requestId, "Wait for the pending history change to finish before compacting the context.");
+      this.fail(
+        requestId,
+        "Wait for the pending history change to finish before compacting the context.",
+      );
       return;
     }
     if (
       this.options.coordinator.getActiveForConversation(selectedConversationId) ||
       this.options.coordinator.getQueue(selectedConversationId).length > 0
     ) {
-      this.fail(requestId, "Wait for the running generation to finish before compacting the context.");
+      this.fail(
+        requestId,
+        "Wait for the running generation to finish before compacting the context.",
+      );
       return;
     }
 
@@ -71,7 +84,8 @@ export class ManualCompaction {
         model,
         controller.signal,
         undefined,
-        (phase, providerUsage, actualModel) => recordUsage(usage, phase, providerUsage, actualModel),
+        (phase, providerUsage, actualModel) =>
+          recordUsage(usage, phase, providerUsage, actualModel),
       );
       const summary = await compactor.summarize(
         units,
@@ -79,17 +93,21 @@ export class ManualCompaction {
       );
       await this.options.conversationState.saveContextSummary(summary);
       await this.options.conversationState.saveMessages({
-        messages: [this.options.conversationState.createMessage("context", "Context compacted manually", {
-          generationId: `manual-compaction:${requestId}`,
-          ...(usage.count > 0 ? { usage } : {}),
-        })],
+        messages: [
+          this.options.conversationState.createMessage("context", "Context compacted manually", {
+            generationId: `manual-compaction:${requestId}`,
+            ...(usage.count > 0 ? { usage } : {}),
+          }),
+        ],
         model: config.model,
       });
       this.postContextWindow(selectedConversationId, config.model, config.maxTokens);
       this.options.post({
         type: "conversationUsageUpdated",
         conversationId: selectedConversationId,
-        usage: summarizeConversationUsage(this.options.conversationState.getConversation()?.messages ?? []),
+        usage: summarizeConversationUsage(
+          this.options.conversationState.getConversation()?.messages ?? [],
+        ),
       });
       this.options.post({
         type: "contextCompactionResult",
@@ -109,7 +127,11 @@ export class ManualCompaction {
     this.active = undefined;
   }
 
-  private postContextWindow(conversationId: string, model: string, requestedOutputTokens: number): void {
+  private postContextWindow(
+    conversationId: string,
+    model: string,
+    requestedOutputTokens: number,
+  ): void {
     const contextWindow: ContextWindowStatus | undefined = estimatedContextWindow(
       this.options.conversationState,
       model,
@@ -125,7 +147,9 @@ export class ManualCompaction {
   }
 }
 
-function freedTokens(summary: { boundaries?: Array<{ estimatedTokensBefore: number; estimatedTokensAfter: number }> }): number | undefined {
+function freedTokens(summary: {
+  boundaries?: Array<{ estimatedTokensBefore: number; estimatedTokensAfter: number }>;
+}): number | undefined {
   const boundary = summary.boundaries?.at(-1);
   if (!boundary) {
     return undefined;

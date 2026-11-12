@@ -20,4 +20,6 @@ if (process.env.GITHUB_OUTPUT) {
 } else {
   process.stdout.write(outputs);
 }
-console.log(`Release mode: ${mode.release} (${mode.reason})${mode.release ? ` -> ${mode.tag}` : ""}.`);
+console.log(
+  `Release mode: ${mode.release} (${mode.reason})${mode.release ? ` -> ${mode.tag}` : ""}.`,
+);

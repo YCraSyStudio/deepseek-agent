@@ -10,11 +10,13 @@ export function upsertStoredToolCall(toolCalls: StoredToolCall[], value: StoredT
 }
 
 export function isStoredToolStatus(value: unknown): value is StoredToolCall["status"] {
-  return value === "pending" ||
+  return (
+    value === "pending" ||
     value === "awaiting_confirmation" ||
     value === "running" ||
     value === "completed" ||
     value === "rejected" ||
     value === "cancelled" ||
-    value === "error";
+    value === "error"
+  );
 }

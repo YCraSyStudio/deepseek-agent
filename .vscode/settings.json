@@ -1,9 +1,13 @@
 {
-	"files.exclude": {
-		"dist": false
-	},
-	"search.exclude": {
-		"dist": true
-	},
-	"js/ts.tsc.autoDetect": "off"
+  "files.exclude": {
+    "dist": false
+  },
+  "search.exclude": {
+    "dist": true
+  },
+  "js/ts.tsc.autoDetect": "off",
+  "editor.rulers": [100],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "prettier.requireConfig": true
 }

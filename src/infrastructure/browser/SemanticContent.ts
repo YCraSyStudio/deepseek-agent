@@ -29,7 +29,9 @@ export function createNormalizedDocument(
   let remainingCharacters = MAX_DOCUMENT_CHARS;
   for (const rawSection of rawSections) {
     const section = cleanText(rawSection);
-    if (!section || remainingCharacters <= 0) {continue;}
+    if (!section || remainingCharacters <= 0) {
+      continue;
+    }
     sourceSections.push(section.slice(0, remainingCharacters));
     remainingCharacters -= section.length;
   }
@@ -44,29 +46,44 @@ export function createNormalizedDocument(
   };
 }
 
-export function extractSemanticDocument(snapshot: string, fallbackUrl: string): NormalizedWebDocument {
+export function extractSemanticDocument(
+  snapshot: string,
+  fallbackUrl: string,
+): NormalizedWebDocument {
   const title = cleanText(/(?:^|\n)Page Title:\s*([^\n]+)/i.exec(snapshot)?.[1] ?? "Web page");
   const reportedUrl = /(?:^|\n)(?:Page )?URL:\s*(https:\/\/[^\s\n]+)/i.exec(snapshot)?.[1];
   const lines = snapshot.split(/\r?\n/);
   const sections: string[] = [];
   let current: string[] = [];
   const flush = (): void => {
-    if (current.length > 0) {sections.push(current.join("\n\n")); current = [];}
+    if (current.length > 0) {
+      sections.push(current.join("\n\n"));
+      current = [];
+    }
   };
   for (const line of lines) {
-    const heading = /-\s*heading(?:\s+"((?:\\"|[^"])*)"|:\s*(.*?))(?:\s+\[level=(\d+)\])?\s*$/i.exec(line);
+    const heading =
+      /-\s*heading(?:\s+"((?:\\"|[^"])*)"|:\s*(.*?))(?:\s+\[level=(\d+)\])?\s*$/i.exec(line);
     if (heading) {
-      const value = cleanText((heading[1] ?? heading[2] ?? "").replace(/\\"/g, "\""));
+      const value = cleanText((heading[1] ?? heading[2] ?? "").replace(/\\"/g, '"'));
       const level = Number(heading[3] ?? 2);
-      if (level === 1) {flush();}
-      if (value) {current.push(value);}
+      if (level === 1) {
+        flush();
+      }
+      if (value) {
+        current.push(value);
+      }
       continue;
     }
     const paragraph = /-\s*paragraph(?:\s+"((?:\\"|[^"])*)"|:\s*(.*))$/i.exec(line);
     if (paragraph) {
-      if (current.length === 0) {current.push(title);}
-      const value = cleanText((paragraph[1] ?? paragraph[2] ?? "").replace(/\\"/g, "\""));
-      if (value) {current.push(value);}
+      if (current.length === 0) {
+        current.push(title);
+      }
+      const value = cleanText((paragraph[1] ?? paragraph[2] ?? "").replace(/\\"/g, '"'));
+      if (value) {
+        current.push(value);
+      }
     }
   }
   flush();
@@ -80,58 +97,99 @@ export function selectDocumentContent(
   maxChars = 6_000,
 ): SelectedDocumentSections {
   if (query) {
-    const terms = query.toLocaleLowerCase().split(/\s+/).filter((term) => term.length >= 2);
-    const ranked = document.sections.map((section, index) => ({
-      section,
-      index,
-      normalized: section.content.toLocaleLowerCase(),
-    })).map((entry) => ({
-      ...entry,
-      score: terms.reduce((score, term) => score + countOccurrences(entry.normalized, term), 0),
-      matchesAll: terms.every((term) => entry.normalized.includes(term)),
-    })).filter((entry) => entry.matchesAll).sort((a, b) => b.score - a.score || a.index - b.index);
-    return { sections: fitSections(ranked.map((entry) => entry.section), maxChars), cursor: 0 };
+    const terms = query
+      .toLocaleLowerCase()
+      .split(/\s+/)
+      .filter((term) => term.length >= 2);
+    const ranked = document.sections
+      .map((section, index) => ({
+        section,
+        index,
+        normalized: section.content.toLocaleLowerCase(),
+      }))
+      .map((entry) => ({
+        ...entry,
+        score: terms.reduce((score, term) => score + countOccurrences(entry.normalized, term), 0),
+        matchesAll: terms.every((term) => entry.normalized.includes(term)),
+      }))
+      .filter((entry) => entry.matchesAll)
+      .sort((a, b) => b.score - a.score || a.index - b.index);
+    return {
+      sections: fitSections(
+        ranked.map((entry) => entry.section),
+        maxChars,
+      ),
+      cursor: 0,
+    };
   }
   const start = Math.min(Math.max(0, cursor), document.sections.length);
   const sections = fitSections(document.sections.slice(start), maxChars);
   const next = start + sections.length;
-  return { sections, cursor: start, nextCursor: next < document.sections.length ? next : undefined };
+  return {
+    sections,
+    cursor: start,
+    nextCursor: next < document.sections.length ? next : undefined,
+  };
 }
 
-function fitSections(sections: readonly WebContentSection[], maxChars: number): WebContentSection[] {
+function fitSections(
+  sections: readonly WebContentSection[],
+  maxChars: number,
+): WebContentSection[] {
   const selected: WebContentSection[] = [];
   let length = 0;
   for (const section of sections) {
-    if (selected.length > 0 && length + section.content.length > maxChars) {break;}
+    if (selected.length > 0 && length + section.content.length > maxChars) {
+      break;
+    }
     selected.push(section);
     length += section.content.length;
-    if (length >= maxChars) {break;}
+    if (length >= maxChars) {
+      break;
+    }
   }
   return selected;
 }
 
 function splitSection(section: string, fallbackTitle: string): string[] {
-  if (Buffer.byteLength(section, "utf8") <= MAX_SECTION_BYTES) {return [section];}
+  if (Buffer.byteLength(section, "utf8") <= MAX_SECTION_BYTES) {
+    return [section];
+  }
   const blocks = section.split(/\n\n+/).map(cleanText).filter(Boolean);
   if (blocks.length === 1) {
-    const contentBytes = Math.max(512, MAX_SECTION_BYTES - Buffer.byteLength(`${fallbackTitle}\n\n`, "utf8"));
-    return splitUtf8(blocks[0] ?? section, contentBytes).map((piece) => `${fallbackTitle}\n\n${piece}`);
+    const contentBytes = Math.max(
+      512,
+      MAX_SECTION_BYTES - Buffer.byteLength(`${fallbackTitle}\n\n`, "utf8"),
+    );
+    return splitUtf8(blocks[0] ?? section, contentBytes).map(
+      (piece) => `${fallbackTitle}\n\n${piece}`,
+    );
   }
   const title = blocks[0] ?? fallbackTitle;
   const result: string[] = [];
   let current = title;
   for (const block of blocks.slice(1)) {
     const candidate = `${current}\n\n${block}`;
-    if (Buffer.byteLength(candidate, "utf8") <= MAX_SECTION_BYTES) {current = candidate; continue;}
-    if (current !== title || result.length === 0) {result.push(current);}
+    if (Buffer.byteLength(candidate, "utf8") <= MAX_SECTION_BYTES) {
+      current = candidate;
+      continue;
+    }
+    if (current !== title || result.length === 0) {
+      result.push(current);
+    }
     current = `${title}\n\n${block}`;
     if (Buffer.byteLength(current, "utf8") > MAX_SECTION_BYTES) {
-      const pieces = splitUtf8(block, Math.max(512, MAX_SECTION_BYTES - Buffer.byteLength(`${title}\n\n`, "utf8")));
+      const pieces = splitUtf8(
+        block,
+        Math.max(512, MAX_SECTION_BYTES - Buffer.byteLength(`${title}\n\n`, "utf8")),
+      );
       result.push(...pieces.slice(0, -1).map((piece) => `${title}\n\n${piece}`));
       current = `${title}\n\n${pieces.at(-1) ?? ""}`.trim();
     }
   }
-  if (current) {result.push(current);}
+  if (current) {
+    result.push(current);
+  }
   return result;
 }
 
@@ -140,21 +198,35 @@ function splitUtf8(value: string, maxBytes: number): string[] {
   let remaining = value;
   while (Buffer.byteLength(remaining, "utf8") > maxBytes) {
     let end = Math.min(remaining.length, maxBytes);
-    while (end > 1 && Buffer.byteLength(remaining.slice(0, end), "utf8") > maxBytes) {end -= 1;}
+    while (end > 1 && Buffer.byteLength(remaining.slice(0, end), "utf8") > maxBytes) {
+      end -= 1;
+    }
     const soft = Math.max(remaining.lastIndexOf(" ", end), remaining.lastIndexOf(". ", end) + 1);
-    if (soft > end / 2) {end = soft;}
+    if (soft > end / 2) {
+      end = soft;
+    }
     result.push(remaining.slice(0, end).trim());
     remaining = remaining.slice(end).trim();
   }
-  if (remaining) {result.push(remaining);}
+  if (remaining) {
+    result.push(remaining);
+  }
   return result;
 }
 
-function cleanText(value: string): string {return value.replace(/[\t ]+/g, " ").replace(/ *\n */g, "\n").trim();}
+function cleanText(value: string): string {
+  return value
+    .replace(/[\t ]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .trim();
+}
 
 function countOccurrences(value: string, term: string): number {
   let count = 0;
   let cursor = 0;
-  while ((cursor = value.indexOf(term, cursor)) >= 0) {count += 1; cursor += term.length;}
+  while ((cursor = value.indexOf(term, cursor)) >= 0) {
+    count += 1;
+    cursor += term.length;
+  }
   return count;
 }

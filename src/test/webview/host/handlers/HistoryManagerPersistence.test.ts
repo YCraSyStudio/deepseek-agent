@@ -28,15 +28,26 @@ suite("history manager deletion and retention", () => {
     workspace.workspaceFolders = [{ uri: Uri.file(folder), name: "workspace" }];
     settings = { historyEnabled: true, retentionDays: 30 };
     history = new HistoryManager({
-      load: () => ({ ...DEFAULT_CONFIG, historyEnabled: settings.historyEnabled, historyRetentionDays: settings.retentionDays }),
+      load: () => ({
+        ...DEFAULT_CONFIG,
+        historyEnabled: settings.historyEnabled,
+        historyRetentionDays: settings.retentionDays,
+      }),
     } as SettingsRepository);
     await history.initialize();
   });
 
   teardown(async () => {
     resetVsCodeMock();
-    for (const [name, value] of [["NODE_ENV", previousMode], ["DEEPSEEK_AGENT_USER_DATA_DIR", previousDirectory]] as Array<[string, string | undefined]>) {
-      if (value === undefined) { delete process.env[name]; } else { process.env[name] = value; }
+    for (const [name, value] of [
+      ["NODE_ENV", previousMode],
+      ["DEEPSEEK_AGENT_USER_DATA_DIR", previousDirectory],
+    ] as Array<[string, string | undefined]>) {
+      if (value === undefined) {
+        delete process.env[name];
+      } else {
+        process.env[name] = value;
+      }
     }
     await rm(root, { recursive: true, force: true });
   });
@@ -44,8 +55,15 @@ suite("history manager deletion and retention", () => {
   function conversation(id: string, updatedAt = 10): StoredConversation {
     const binding = captureCurrentWorkspaceBinding();
     return {
-      schemaVersion: 2, id, title: id, createdAt: 1, updatedAt, model: DEFAULT_CONFIG.model,
-      workspaceUri: binding.uri, workspaceBinding: binding, messages: [],
+      schemaVersion: 2,
+      id,
+      title: id,
+      createdAt: 1,
+      updatedAt,
+      model: DEFAULT_CONFIG.model,
+      workspaceUri: binding.uri,
+      workspaceBinding: binding,
+      messages: [],
     };
   }
 
@@ -59,9 +77,15 @@ suite("history manager deletion and retention", () => {
   test("deduplicates bulk deletion and honours the expected revision", async () => {
     await history.save(conversation("first", 10));
     await history.save(conversation("second", 20));
-    assert.deepEqual(await history.deleteMany(["first", "first", { id: "second", expectedUpdatedAt: 21 }]), ["first"]);
-    assert.equal(await history.getById("second") !== undefined, true);
-    assert.deepEqual(await history.deleteMany([{ id: "second", expectedUpdatedAt: 20 }, "missing"]), ["second", "missing"]);
+    assert.deepEqual(
+      await history.deleteMany(["first", "first", { id: "second", expectedUpdatedAt: 21 }]),
+      ["first"],
+    );
+    assert.equal((await history.getById("second")) !== undefined, true);
+    assert.deepEqual(
+      await history.deleteMany([{ id: "second", expectedUpdatedAt: 20 }, "missing"]),
+      ["second", "missing"],
+    );
     assert.deepEqual(await history.deleteMany([{ id: "first" }]), ["first"]);
   });
 
@@ -69,13 +93,22 @@ suite("history manager deletion and retention", () => {
     assert.equal(await history.saveIfAbsent(conversation("draft")), true);
     assert.equal(await history.saveIfAbsent(conversation("draft", 99)), false);
     assert.equal((await history.getById("draft"))?.updatedAt, 10);
-    await assert.rejects(history.saveIfAbsent({ id: "invalid" } as StoredConversation), /Refusing to persist an incompatible conversation/);
+    await assert.rejects(
+      history.saveIfAbsent({ id: "invalid" } as StoredConversation),
+      /Refusing to persist an incompatible conversation/,
+    );
   });
 
   test("refuses to overwrite a newer copy written by another window", async () => {
     await history.save(conversation("shared", 30));
-    await assert.rejects(history.save(conversation("shared", 20)), /Conversation changed in another VS Code window/);
-    await assert.rejects(history.save({ ...conversation("shared", 30), title: "edited" }), /Conversation changed in another VS Code window/);
+    await assert.rejects(
+      history.save(conversation("shared", 20)),
+      /Conversation changed in another VS Code window/,
+    );
+    await assert.rejects(
+      history.save({ ...conversation("shared", 30), title: "edited" }),
+      /Conversation changed in another VS Code window/,
+    );
     await history.save({ ...conversation("shared", 40), title: "newer" });
     assert.equal((await history.getById("shared"))?.title, "newer");
   });
@@ -84,12 +117,18 @@ suite("history manager deletion and retention", () => {
     await history.save(conversation("expired", Date.now() - 90 * 86_400_000));
     await history.save(conversation("fresh", Date.now()));
     const summaries = await history.getSummaries();
-    assert.deepEqual(summaries.map((summary) => summary.id), ["fresh"]);
+    assert.deepEqual(
+      summaries.map((summary) => summary.id),
+      ["fresh"],
+    );
     assert.equal(await history.getById("expired"), undefined);
 
     settings.retentionDays = 0;
     await history.save(conversation("unbounded", Date.now() - 900 * 86_400_000));
-    assert.deepEqual((await history.getSummaries()).map((summary) => summary.id), ["fresh", "unbounded"]);
+    assert.deepEqual(
+      (await history.getSummaries()).map((summary) => summary.id),
+      ["fresh", "unbounded"],
+    );
   });
 
   test("stays inert while persistent history is disabled", async () => {

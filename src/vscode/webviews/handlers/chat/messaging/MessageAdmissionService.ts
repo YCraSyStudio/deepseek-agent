@@ -47,10 +47,10 @@ export class MessageAdmissionService {
     if (!conversationState.isIncognito()) {
       try {
         await restoreRequestedConversation(
-        payload.conversationId,
-        conversationState,
-        this.dependencies.historyManager,
-        this.dependencies.loadConversation,
+          payload.conversationId,
+          conversationState,
+          this.dependencies.historyManager,
+          this.dependencies.loadConversation,
         );
       } catch (error: unknown) {
         this.reject(payload, getErrorMessage(error));
@@ -82,12 +82,15 @@ export class MessageAdmissionService {
       return;
     }
     try {
-      this.dependencies.coordinator.enqueue({
-        conversationId,
-        clientRequestId: payload.clientRequestId,
-        queuedAt: Date.now(),
-        payload: { ...payload, conversationId, referencedFiles },
-      }, front);
+      this.dependencies.coordinator.enqueue(
+        {
+          conversationId,
+          clientRequestId: payload.clientRequestId,
+          queuedAt: Date.now(),
+          payload: { ...payload, conversationId, referencedFiles },
+        },
+        front,
+      );
     } catch (error: unknown) {
       this.reject(payload, getErrorMessage(error));
     }

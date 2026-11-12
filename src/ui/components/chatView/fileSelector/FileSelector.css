@@ -2,7 +2,11 @@
   z-index: 20;
   border: 1px solid var(--border-color);
   background: var(--vscode-quickInput-background, var(--bg-secondary));
-  background: color-mix(in srgb, var(--vscode-quickInput-background, var(--bg-secondary)) var(--floating-surface-opacity), transparent);
+  background: color-mix(
+    in srgb,
+    var(--vscode-quickInput-background, var(--bg-secondary)) var(--floating-surface-opacity),
+    transparent
+  );
   backdrop-filter: var(--floating-surface-filter);
   border-radius: 6px;
   max-height: 300px;
@@ -32,7 +36,10 @@
   display: grid;
   &.active,
   &:hover {
-    background: var(--vscode-list-activeSelectionBackground, color-mix(in srgb, var(--accent-color) 30%, transparent));
+    background: var(
+      --vscode-list-activeSelectionBackground,
+      color-mix(in srgb, var(--accent-color) 30%, transparent)
+    );
     color: var(--vscode-list-activeSelectionForeground, var(--text-primary));
   }
 }

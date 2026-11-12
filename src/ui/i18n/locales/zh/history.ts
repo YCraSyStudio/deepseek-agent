@@ -2,7 +2,8 @@ import type { TranslationCatalog } from "../Types";
 
 export const history = {
   history: {
-    incognitoActive: "无痕模式启用时历史记录不可用。已有会话仍会保留，并将在退出无痕模式后重新显示。",
+    incognitoActive:
+      "无痕模式启用时历史记录不可用。已有会话仍会保留，并将在退出无痕模式后重新显示。",
     historyControls: "历史记录控件",
     searchLabel: "搜索历史",
     searchPlaceholder: "搜索历史…",
@@ -31,9 +32,10 @@ export const history = {
     countMessages: "{count} 条消息",
     workspaceMismatch: {
       title: "在此工作区中打开？",
-      description: "此会话属于工作区“{workspace}”，并非当前打开的工作区。要改在这里打开吗？待处理的生成任务、队列中的消息和文件引用将被清除。",
+      description:
+        "此会话属于工作区“{workspace}”，并非当前打开的工作区。要改在这里打开吗？待处理的生成任务、队列中的消息和文件引用将被清除。",
       confirm: "在此打开",
       cancel: "取消",
-    }
-  }
+    },
+  },
 } satisfies TranslationCatalog;

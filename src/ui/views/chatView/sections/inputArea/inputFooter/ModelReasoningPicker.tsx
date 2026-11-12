@@ -32,7 +32,8 @@ function ModelReasoningPicker({
   permission,
   children,
 }: ModelReasoningPickerProps) {
-  const { open, rootRef, triggerRef, openPopover, closePopover, togglePopover, maxHeight } = useComposerPopover();
+  const { open, rootRef, triggerRef, openPopover, closePopover, togglePopover, maxHeight } =
+    useComposerPopover();
   const modelLabel = useMemo(
     () => modelOptions.find((option) => option.value === model)?.label ?? model,
     [model, modelOptions],
@@ -43,9 +44,13 @@ function ModelReasoningPicker({
   );
 
   useEffect(() => {
-    if (!open) {return;}
+    if (!open) {
+      return;
+    }
     const frame = requestAnimationFrame(() => {
-      rootRef.current?.querySelector<HTMLButtonElement>('[role="menuitemradio"][aria-checked="true"]')?.focus();
+      rootRef.current
+        ?.querySelector<HTMLButtonElement>('[role="menuitemradio"][aria-checked="true"]')
+        ?.focus();
     });
     return () => cancelAnimationFrame(frame);
   }, [open, rootRef]);
@@ -69,10 +74,14 @@ function ModelReasoningPicker({
           }
         }}
       >
-        {compact ? <span className="codicon codicon-settings-gear" aria-hidden="true" /> : <span className="modelReasoningValue">
-          <span className="modelReasoningModel">{modelLabel}</span>
-          <span className="modelReasoningEffort">{reasoningLabel}</span>
-        </span>}
+        {compact ? (
+          <span className="codicon codicon-settings-gear" aria-hidden="true" />
+        ) : (
+          <span className="modelReasoningValue">
+            <span className="modelReasoningModel">{modelLabel}</span>
+            <span className="modelReasoningEffort">{reasoningLabel}</span>
+          </span>
+        )}
         <span className={`codicon codicon-chevron-${open ? "up" : "down"}`} aria-hidden="true" />
       </button>
 
@@ -81,7 +90,11 @@ function ModelReasoningPicker({
           className="modelReasoningMenu"
           role="menu"
           style={{ maxHeight }}
-          aria-label={compact ? t("navigation.settings") : `${t("chat.modelSelector")} / ${t("chat.reasoning")}`}
+          aria-label={
+            compact
+              ? t("navigation.settings")
+              : `${t("chat.modelSelector")} / ${t("chat.reasoning")}`
+          }
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();
@@ -90,15 +103,20 @@ function ModelReasoningPicker({
             }
             if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
               event.preventDefault();
-              const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]:not(:disabled)'));
+              const items = Array.from(
+                event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                  '[role="menuitemradio"]:not(:disabled)',
+                ),
+              );
               const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
-              const nextIndex = event.key === "Home"
-                ? 0
-                : event.key === "End"
-                  ? items.length - 1
-                  : event.key === "ArrowDown"
-                    ? (currentIndex + 1) % items.length
-                    : (currentIndex - 1 + items.length) % items.length;
+              const nextIndex =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? items.length - 1
+                    : event.key === "ArrowDown"
+                      ? (currentIndex + 1) % items.length
+                      : (currentIndex - 1 + items.length) % items.length;
               items[nextIndex]?.focus();
             }
           }}
@@ -115,13 +133,15 @@ function ModelReasoningPicker({
             selectedValue={model}
             onSelect={onModelChange}
           />
-          {permission ? <PickerSection
-            label={t("tools.permissionMode")}
-            options={permission.options}
-            selectedValue={permission.value}
-            onSelect={permission.onChange}
-            disabled={permission.pending}
-          /> : null}
+          {permission ? (
+            <PickerSection
+              label={t("tools.permissionMode")}
+              options={permission.options}
+              selectedValue={permission.value}
+              onSelect={permission.onChange}
+              disabled={permission.pending}
+            />
+          ) : null}
           {children}
         </div>
       ) : null}
@@ -137,7 +157,13 @@ interface PickerSectionProps {
   disabled?: boolean;
 }
 
-function PickerSection({ label, options, selectedValue, onSelect, disabled = false }: PickerSectionProps) {
+function PickerSection({
+  label,
+  options,
+  selectedValue,
+  onSelect,
+  disabled = false,
+}: PickerSectionProps) {
   return (
     <section className="modelReasoningSection" aria-label={label}>
       <div className="modelReasoningSectionLabel">{label}</div>

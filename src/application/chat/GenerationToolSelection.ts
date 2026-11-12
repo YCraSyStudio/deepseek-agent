@@ -21,11 +21,17 @@ export function selectGenerationTools(
   return registry.getDefinitionsForAPI().filter((tool) => {
     const name = tool.function.name;
     const registered = registry.get(name);
-    if (name === "complete_code" && !availability.betaFeaturesEnabled) {return false;}
+    if (name === "complete_code" && !availability.betaFeaturesEnabled) {
+      return false;
+    }
 
-    if (name === "capture_screenshot" && !availability.files) {return false;}
+    if (name === "capture_screenshot" && !availability.files) {
+      return false;
+    }
 
-    if (name === "view_image") {return modelSupportsVision(availability.modelId);}
+    if (name === "view_image") {
+      return modelSupportsVision(availability.modelId);
+    }
 
     if (name === IMAGE_ANALYSIS_TOOL_NAME) {
       return availability.modelId === DEEPSEEK_PRO_MODEL_ID;

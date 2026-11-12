@@ -2,7 +2,12 @@ import { createProviderTranscript } from "@/application/chat/ProviderTranscript"
 import { getTextContent } from "@/contracts/deepseek/Chat";
 import { redactSensitiveText } from "@/shared/security/Redaction";
 import { isCancellationError } from "@/shared/utils/Cancellation";
-import type { HandleRunErrorOptions, PostFinalMessageOptions, StoredExecution, ToolCallRunResult } from "./Types";
+import type {
+  HandleRunErrorOptions,
+  PostFinalMessageOptions,
+  StoredExecution,
+  ToolCallRunResult,
+} from "./Types";
 
 export function postFinalToolCallMessage({
   options,
@@ -37,7 +42,11 @@ export function postFinalToolCallMessage({
     timeline,
     toolCalls: toolCallResults.length > 0 ? toolCallResults : undefined,
     partial: !complete,
-    providerTranscript: createProviderTranscript(result.transcript, complete ? "complete" : "incomplete", finishReason),
+    providerTranscript: createProviderTranscript(
+      result.transcript,
+      complete ? "complete" : "incomplete",
+      finishReason,
+    ),
   };
 }
 
@@ -49,7 +58,12 @@ export function handleToolCallRunError({
   streamedContent,
 }: HandleRunErrorOptions): ToolCallRunResult | undefined {
   if (isCancellationError(err, options.signal)) {
-    markUnfinishedExecutions(executedToolCalls, "cancelled", "Cancelled with the active generation.", options);
+    markUnfinishedExecutions(
+      executedToolCalls,
+      "cancelled",
+      "Cancelled with the active generation.",
+      options,
+    );
     const partialToolCalls = Array.from(executedToolCalls.values());
     const timeline = stream.getTimeline();
     const hasPartial = timeline.length > 0 || partialToolCalls.length > 0;
@@ -118,7 +132,11 @@ function markUnfinishedExecutions(
   options: HandleRunErrorOptions["options"],
 ): void {
   for (const execution of executions.values()) {
-    if (execution.status !== "pending" && execution.status !== "awaiting_confirmation" && execution.status !== "running") {
+    if (
+      execution.status !== "pending" &&
+      execution.status !== "awaiting_confirmation" &&
+      execution.status !== "running"
+    ) {
       continue;
     }
     execution.status = status;

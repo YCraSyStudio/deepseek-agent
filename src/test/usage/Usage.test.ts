@@ -33,10 +33,16 @@ suite("usage observability", () => {
     const models = aggregateUsageByModel([aggregate]);
     assert.strictEqual(models.length, 2);
     assert.strictEqual(models.find((entry) => entry.model === "deepseek-flash")?.count, 2);
-    assert.strictEqual(models.find((entry) => entry.model === "future-model")?.byPhase.context_summary?.reported, 0);
+    assert.strictEqual(
+      models.find((entry) => entry.model === "future-model")?.byPhase.context_summary?.reported,
+      0,
+    );
     assert.strictEqual(estimateAggregateCost(aggregate, "usd", OFF_PEAK), undefined);
     assert.strictEqual(estimateAggregateCost(aggregate, "cny", OFF_PEAK), undefined);
-    assert.deepStrictEqual(normalizeUsageAggregate(JSON.parse(JSON.stringify(aggregate))), aggregate);
+    assert.deepStrictEqual(
+      normalizeUsageAggregate(JSON.parse(JSON.stringify(aggregate))),
+      aggregate,
+    );
     const conversation = summarizeConversationUsage([{ usage: aggregate }]);
     assert.strictEqual(conversation.total?.count, 4);
     assert.strictEqual(conversation.byModel.length, 2);
@@ -97,8 +103,14 @@ suite("usage observability", () => {
       assert.strictEqual(parseProviderUsage(null), undefined);
       assert.strictEqual(parseProviderUsage("tokens"), undefined);
       assert.strictEqual(parseProviderUsage({}), undefined);
-      assert.strictEqual(parseProviderUsage({ prompt_tokens: -1, completion_tokens: 2, total_tokens: 1 }), undefined);
-      assert.strictEqual(parseProviderUsage({ prompt_tokens: 1.5, completion_tokens: 2, total_tokens: 3 }), undefined);
+      assert.strictEqual(
+        parseProviderUsage({ prompt_tokens: -1, completion_tokens: 2, total_tokens: 1 }),
+        undefined,
+      );
+      assert.strictEqual(
+        parseProviderUsage({ prompt_tokens: 1.5, completion_tokens: 2, total_tokens: 3 }),
+        undefined,
+      );
     });
   });
 
@@ -134,7 +146,11 @@ suite("usage observability", () => {
       assert.strictEqual(aggregate.cacheMissTokens, 20);
       assert.strictEqual(aggregate.byPhase.tool_round?.requests, 2);
       assert.strictEqual(aggregate.byPhase.tool_round?.reported, 1);
-      assert.strictEqual(aggregate.costUsd, undefined, "partial usage must not produce a partial cost");
+      assert.strictEqual(
+        aggregate.costUsd,
+        undefined,
+        "partial usage must not produce a partial cost",
+      );
     });
 
     test("does not turn entirely absent usage into zero", () => {
@@ -158,7 +174,10 @@ suite("usage observability", () => {
       assert.strictEqual(conversation?.inputTokens, 150);
       assert.strictEqual(conversation?.byPhase.security_review?.requests, 1);
       assert.strictEqual(conversation?.priceCatalogVersion, PRICE_CATALOG_VERSION);
-      assert.strictEqual(conversation?.costUsd, rounded((first.costUsd ?? 0) + (second.costUsd ?? 0)));
+      assert.strictEqual(
+        conversation?.costUsd,
+        rounded((first.costUsd ?? 0) + (second.costUsd ?? 0)),
+      );
     });
 
     test("keeps separate totals when a conversation changes models", () => {
@@ -168,10 +187,13 @@ suite("usage observability", () => {
       recordUsage(custom, "tool_round", completeUsage(50, 10, 40, 10));
 
       const byModel = aggregateUsageByModel([flash, custom]);
-      assert.deepStrictEqual(byModel.map((value) => [value.model, value.count, value.totalTokens]), [
-        ["deepseek-flash", 1, 120],
-        ["custom-model", 1, 60],
-      ]);
+      assert.deepStrictEqual(
+        byModel.map((value) => [value.model, value.count, value.totalTokens]),
+        [
+          ["deepseek-flash", 1, 120],
+          ["custom-model", 1, 60],
+        ],
+      );
     });
 
     test("totals a conversation from every stored message and the unpersisted run", () => {
@@ -179,12 +201,21 @@ suite("usage observability", () => {
       recordUsage(stored, "primary", completeUsage(100, 20, 75, 25));
       const running = createUsageAggregate(true, "deepseek-flash");
       recordUsage(running, "tool_round", completeUsage(50, 10, 40, 10));
-      const messages = [{ generationId: "old", usage: stored }, { generationId: "older-without-usage" }];
+      const messages = [
+        { generationId: "old", usage: stored },
+        { generationId: "older-without-usage" },
+      ];
 
-      const snapshot = summarizeConversationUsage(messages, { generationId: "running", usage: running });
+      const snapshot = summarizeConversationUsage(messages, {
+        generationId: "running",
+        usage: running,
+      });
       assert.strictEqual(snapshot.total?.count, 2);
       assert.strictEqual(snapshot.total?.inputTokens, 150);
-      assert.deepStrictEqual(snapshot.byModel.map((value) => value.count), [2]);
+      assert.deepStrictEqual(
+        snapshot.byModel.map((value) => value.count),
+        [2],
+      );
 
       const persisted = summarizeConversationUsage(
         [...messages, { generationId: "running", usage: running }],
@@ -213,7 +244,10 @@ suite("usage observability", () => {
         rounded((300 * 0.3 + 700 * 0.006 + 100 * 1.2) / 1_000_000),
       );
       assert.strictEqual(estimateUsageCost(usage, "deepseek-v4-flash", OFF_PEAK), undefined);
-      assert.strictEqual(estimateUsageCost(usage, "deepseek-v4-flash-vision-exp", OFF_PEAK), undefined);
+      assert.strictEqual(
+        estimateUsageCost(usage, "deepseek-v4-flash-vision-exp", OFF_PEAK),
+        undefined,
+      );
     });
 
     test("prices DeepSeek V4 Pro at the documented peak and off-peak rates", () => {
@@ -261,7 +295,10 @@ suite("usage observability", () => {
         estimateAggregateCost(partial, "cny", OFF_PEAK),
         rounded((300 * 1 + 700 * 0.02 + 100 * 4) / 1_000_000),
       );
-      assert.strictEqual(estimateAggregateCost(createUsageAggregate(false, "deepseek-flash"), "cny", OFF_PEAK), undefined);
+      assert.strictEqual(
+        estimateAggregateCost(createUsageAggregate(false, "deepseek-flash"), "cny", OFF_PEAK),
+        undefined,
+      );
     });
 
     test("prices the reported subset as a lower bound when some requests omit usage", () => {
@@ -269,7 +306,11 @@ suite("usage observability", () => {
       recordUsage(aggregate, "tool_round", completeUsage(1_000, 100, 700, 300));
       recordUsage(aggregate, "tool_round", undefined);
 
-      assert.strictEqual(aggregate.costUsd, undefined, "the persisted exact cost remains unavailable");
+      assert.strictEqual(
+        aggregate.costUsd,
+        undefined,
+        "the persisted exact cost remains unavailable",
+      );
       assert.strictEqual(
         estimateReportedUsageCost(aggregate, OFF_PEAK),
         rounded((300 * 0.15 + 700 * 0.003 + 100 * 0.6) / 1_000_000),
@@ -283,7 +324,10 @@ suite("usage observability", () => {
     test("does not estimate unknown models or usage without cache attribution", () => {
       const incomplete = { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 };
       assert.strictEqual(estimateUsageCost(incomplete, "deepseek-flash", OFF_PEAK), undefined);
-      assert.strictEqual(estimateUsageCost(completeUsage(10, 2, 5, 5), "llama-3", OFF_PEAK), undefined);
+      assert.strictEqual(
+        estimateUsageCost(completeUsage(10, 2, 5, 5), "llama-3", OFF_PEAK),
+        undefined,
+      );
     });
 
     test("never guesses a price for custom endpoints", () => {
@@ -308,10 +352,19 @@ suite("usage observability", () => {
       const aggregate = createUsageAggregate(false, "custom");
       recordUsage(aggregate, "primary", completeUsage(10, 5, 6, 4));
       assert.strictEqual(normalizeUsageAggregate(undefined), undefined);
-      assert.strictEqual(normalizeUsageAggregate({ schemaVersion: USAGE_SCHEMA_VERSION + 1 }), undefined);
+      assert.strictEqual(
+        normalizeUsageAggregate({ schemaVersion: USAGE_SCHEMA_VERSION + 1 }),
+        undefined,
+      );
       assert.strictEqual(normalizeUsageAggregate({ ...aggregate, count: 2 }), undefined);
       assert.strictEqual(normalizeUsageAggregate({ ...aggregate, inputTokens: 999 }), undefined);
-      assert.strictEqual(normalizeUsageAggregate({ ...aggregate, byPhase: { unknown_phase: aggregate.byPhase.primary } }), undefined);
+      assert.strictEqual(
+        normalizeUsageAggregate({
+          ...aggregate,
+          byPhase: { unknown_phase: aggregate.byPhase.primary },
+        }),
+        undefined,
+      );
     });
 
     test("rejects required totals when no request has reported usage", () => {

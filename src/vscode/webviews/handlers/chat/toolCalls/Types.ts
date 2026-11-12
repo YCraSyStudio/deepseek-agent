@@ -1,6 +1,13 @@
 import type { AutomaticCaptureObservation } from "@/infrastructure/capture/AutomaticCaptureSession";
 import type { AnalyzeImagesRequest, ToolHandlerContext } from "@/application/tools/Types";
-import type { AppConfig, AssistantTimelineEvent, ChatMessage, PermissionSnapshot, ToolCall, ToolDefinition } from "@/contracts";
+import type {
+  AppConfig,
+  AssistantTimelineEvent,
+  ChatMessage,
+  PermissionSnapshot,
+  ToolCall,
+  ToolDefinition,
+} from "@/contracts";
 import type { ToolCallCycleResult } from "@/application/chat/toolCall";
 import type { ToolExecutor } from "@/application/tools/ToolExecutor";
 import type { ConfirmationRequiredResult, ExecutionResult } from "@/application/tools/Types";
@@ -46,7 +53,14 @@ export interface StoredExecution {
   requiresConfirmation?: boolean;
   dangerLevel?: string;
   dangerConfirmed?: boolean;
-  status: "pending" | "awaiting_confirmation" | "running" | "completed" | "rejected" | "cancelled" | "error";
+  status:
+    | "pending"
+    | "awaiting_confirmation"
+    | "running"
+    | "completed"
+    | "rejected"
+    | "cancelled"
+    | "error";
 }
 
 export interface ToolCallRunOptions {
@@ -69,8 +83,13 @@ export interface ToolCallRunOptions {
   authorizedUserUrls: readonly string[];
   budgetManager: GenerationBudgetManager;
   prepareNativeImages?: (messages: ChatMessage[]) => ChatMessage[];
-  prepareAutomaticCapture?: (calls: readonly StoredExecution[]) => (() => Promise<AutomaticCaptureObservation>) | undefined;
-  onContextCompacted?: (data: { estimatedTokensBefore: number; estimatedTokensAfter: number }) => Promise<void> | void;
+  prepareAutomaticCapture?: (
+    calls: readonly StoredExecution[],
+  ) => (() => Promise<AutomaticCaptureObservation>) | undefined;
+  onContextCompacted?: (data: {
+    estimatedTokensBefore: number;
+    estimatedTokensAfter: number;
+  }) => Promise<void> | void;
   captureScreenshot?: ToolHandlerContext["captureScreenshot"];
   applicationSession?: ToolHandlerContext["applicationSession"];
   readInstruction?: ToolHandlerContext["readInstruction"];

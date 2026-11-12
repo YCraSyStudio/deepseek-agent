@@ -9,7 +9,10 @@ suite("mutation failure guard", () => {
     const edit = call("edit_file", { path: "src/App.ts", search: "a", replace: "b" });
     guard.record(edit, execution(edit, "error"));
 
-    assert.match(guard.getBlockReason(call("apply_patch", { path: "src\\App.ts", diff: "patch" }))!, /Read the file/);
+    assert.match(
+      guard.getBlockReason(call("apply_patch", { path: "src\\App.ts", diff: "patch" }))!,
+      /Read the file/,
+    );
 
     const read = call("read_file", { path: "src/App.ts" });
     guard.record(read, execution(read, "completed"));
@@ -32,7 +35,11 @@ suite("mutation failure guard", () => {
 });
 
 function call(name: string, args: Record<string, unknown>): ToolCall {
-  return { id: `${name}-${JSON.stringify(args)}`, type: "function", function: { name, arguments: JSON.stringify(args) } };
+  return {
+    id: `${name}-${JSON.stringify(args)}`,
+    type: "function",
+    function: { name, arguments: JSON.stringify(args) },
+  };
 }
 
 function execution(toolCall: ToolCall, status: StoredExecution["status"]): StoredExecution {

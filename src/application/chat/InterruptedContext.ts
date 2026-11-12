@@ -4,7 +4,14 @@ import { isRecord } from "@/shared/utils/TypeGuards";
 
 const MAX_CONTEXT_CHARACTERS = 8 * 1024;
 const MAX_PARTIAL_CONTENT_CHARACTERS = 2_000;
-const MUTATING_TOOLS = new Set(["create_file", "edit_file", "apply_patch", "move_path", "delete_path", "run_terminal_command"]);
+const MUTATING_TOOLS = new Set([
+  "create_file",
+  "edit_file",
+  "apply_patch",
+  "move_path",
+  "delete_path",
+  "run_terminal_command",
+]);
 const WEB_TOOLS = new Set(["search_web", "read_web"]);
 
 interface LedgerLine {
@@ -13,14 +20,19 @@ interface LedgerLine {
   content: string;
 }
 
-export function buildInterruptedContextContent(content: string, toolCalls: readonly StoredToolCall[] | undefined): string | undefined {
+export function buildInterruptedContextContent(
+  content: string,
+  toolCalls: readonly StoredToolCall[] | undefined,
+): string | undefined {
   const partial = redactSensitiveText(content).trim().slice(0, MAX_PARTIAL_CONTENT_CHARACTERS);
   const lines = (toolCalls ?? []).map((toolCall, index): LedgerLine => ({
     index,
     priority: MUTATING_TOOLS.has(toolCall.toolName) || toolCall.status !== "completed" ? 0 : 1,
     content: JSON.stringify(summarizeToolCall(toolCall)),
   }));
-  if (!partial && lines.length === 0) {return undefined;}
+  if (!partial && lines.length === 0) {
+    return undefined;
+  }
 
   const header = [
     "<interrupted-execution-state>",
@@ -30,9 +42,14 @@ export function buildInterruptedContextContent(content: string, toolCalls: reado
   ];
   const footer = "</interrupted-execution-state>";
   let retained = [...lines];
-  while (render(header, retained, footer).length > MAX_CONTEXT_CHARACTERS && retained.some((line) => line.priority > 0)) {
+  while (
+    render(header, retained, footer).length > MAX_CONTEXT_CHARACTERS &&
+    retained.some((line) => line.priority > 0)
+  ) {
     let removableIndex = retained.length - 1;
-    while (removableIndex >= 0 && retained[removableIndex]?.priority === 0) {removableIndex -= 1;}
+    while (removableIndex >= 0 && retained[removableIndex]?.priority === 0) {
+      removableIndex -= 1;
+    }
     retained.splice(removableIndex, 1);
   }
   while (render(header, retained, footer).length > MAX_CONTEXT_CHARACTERS && retained.length > 0) {
@@ -55,7 +72,9 @@ function summarizeToolCall(toolCall: StoredToolCall): Record<string, unknown> {
     addString(summary, "query", args?.query, 300);
     addString(summary, "filePattern", args?.filePattern, 300);
     addString(summary, "cwd", args?.cwd, 500);
-    if (toolCall.toolName === "run_terminal_command") {addString(summary, "command", args?.command, 240);}
+    if (toolCall.toolName === "run_terminal_command") {
+      addString(summary, "command", args?.command, 240);
+    }
   }
 
   if (toolCall.status !== "completed") {
@@ -68,27 +87,44 @@ function summarizeToolCall(toolCall: StoredToolCall): Record<string, unknown> {
     addString(summary, "beforeHash", result.beforeHash, 128);
     addString(summary, "afterHash", result.afterHash, 128);
     addString(summary, "summary", result.summary, 300);
-    if (typeof result.truncated === "boolean") {summary.truncated = result.truncated;}
-    if (typeof result.timedOut === "boolean") {summary.timedOut = result.timedOut;}
-    if (isRecord(result.diffStats)) {summary.diffStats = result.diffStats;}
+    if (typeof result.truncated === "boolean") {
+      summary.truncated = result.truncated;
+    }
+    if (typeof result.timedOut === "boolean") {
+      summary.timedOut = result.timedOut;
+    }
+    if (isRecord(result.diffStats)) {
+      summary.diffStats = result.diffStats;
+    }
     if (toolCall.toolName === "search_content" && Array.isArray(result.results)) {
-      summary.matchedFiles = [...new Set(result.results.flatMap((entry) => {
-        const file = isRecord(entry) ? entry.file : undefined;
-        return typeof file === "string" ? [redactSensitiveText(file).slice(0, 500)] : [];
-      }))].slice(0, 20);
+      summary.matchedFiles = [
+        ...new Set(
+          result.results.flatMap((entry) => {
+            const file = isRecord(entry) ? entry.file : undefined;
+            return typeof file === "string" ? [redactSensitiveText(file).slice(0, 500)] : [];
+          }),
+        ),
+      ].slice(0, 20);
     }
   }
   return summary;
 }
 
-function addString(target: Record<string, unknown>, key: string, value: unknown, maximum: number): void {
+function addString(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+  maximum: number,
+): void {
   if (typeof value === "string" && value.trim()) {
     target[key] = redactSensitiveText(value).replace(/\s+/g, " ").trim().slice(0, maximum);
   }
 }
 
 function parseRecord(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value !== "string" || !value.trim()) {return undefined;}
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
   try {
     const parsed: unknown = JSON.parse(value);
     return isRecord(parsed) ? parsed : undefined;
@@ -98,5 +134,9 @@ function parseRecord(value: unknown): Record<string, unknown> | undefined {
 }
 
 function render(header: readonly string[], lines: readonly LedgerLine[], footer: string): string {
-  return [...header, ...[...lines].sort((left, right) => left.index - right.index).map((line) => line.content), footer].join("\n");
+  return [
+    ...header,
+    ...[...lines].sort((left, right) => left.index - right.index).map((line) => line.content),
+    footer,
+  ].join("\n");
 }

@@ -48,7 +48,11 @@ export function toTextPreview(buffer: Uint8Array): { content: string; truncated:
   };
 }
 
-export function createUnifiedDiff(options: { filePath: string; before: string; after: string }): UnifiedDiffPreview {
+export function createUnifiedDiff(options: {
+  filePath: string;
+  before: string;
+  after: string;
+}): UnifiedDiffPreview {
   const beforeLines = splitDiffLines(options.before);
   const afterLines = splitDiffLines(options.after);
   const operations = createDiffOperations(beforeLines, afterLines);
@@ -105,7 +109,11 @@ type DiffOffsets = { oldOffset: number; newOffset: number };
 
 function createDiffOperations(beforeLines: string[], afterLines: string[]): DiffOperation[] {
   let prefixLength = 0;
-  while (prefixLength < beforeLines.length && prefixLength < afterLines.length && beforeLines[prefixLength] === afterLines[prefixLength]) {
+  while (
+    prefixLength < beforeLines.length &&
+    prefixLength < afterLines.length &&
+    beforeLines[prefixLength] === afterLines[prefixLength]
+  ) {
     prefixLength += 1;
   }
 
@@ -113,7 +121,8 @@ function createDiffOperations(beforeLines: string[], afterLines: string[]): Diff
   while (
     suffixLength + prefixLength < beforeLines.length &&
     suffixLength + prefixLength < afterLines.length &&
-    beforeLines[beforeLines.length - suffixLength - 1] === afterLines[afterLines.length - suffixLength - 1]
+    beforeLines[beforeLines.length - suffixLength - 1] ===
+      afterLines[afterLines.length - suffixLength - 1]
   ) {
     suffixLength += 1;
   }
@@ -127,16 +136,30 @@ function createDiffOperations(beforeLines: string[], afterLines: string[]): Diff
       : createLinearDiffOperations(beforeMiddle, afterMiddle, offsets);
 
   return [
-    ...beforeLines.slice(0, prefixLength).map((text, index) => createEqualOperation(text, index + 1, index + 1)),
+    ...beforeLines
+      .slice(0, prefixLength)
+      .map((text, index) => createEqualOperation(text, index + 1, index + 1)),
     ...middleOperations,
     ...beforeLines
       .slice(beforeLines.length - suffixLength)
-      .map((text, index) => createEqualOperation(text, beforeLines.length - suffixLength + index + 1, afterLines.length - suffixLength + index + 1)),
+      .map((text, index) =>
+        createEqualOperation(
+          text,
+          beforeLines.length - suffixLength + index + 1,
+          afterLines.length - suffixLength + index + 1,
+        ),
+      ),
   ];
 }
 
-function createLcsDiffOperations(beforeLines: string[], afterLines: string[], offsets: DiffOffsets): DiffOperation[] {
-  const table: number[][] = Array.from({ length: beforeLines.length + 1 }, () => Array(afterLines.length + 1).fill(0));
+function createLcsDiffOperations(
+  beforeLines: string[],
+  afterLines: string[],
+  offsets: DiffOffsets,
+): DiffOperation[] {
+  const table: number[][] = Array.from({ length: beforeLines.length + 1 }, () =>
+    Array(afterLines.length + 1).fill(0),
+  );
 
   for (let oldIndex = beforeLines.length - 1; oldIndex >= 0; oldIndex -= 1) {
     for (let newIndex = afterLines.length - 1; newIndex >= 0; newIndex -= 1) {
@@ -153,37 +176,72 @@ function createLcsDiffOperations(beforeLines: string[], afterLines: string[], of
 
   while (oldIndex < beforeLines.length && newIndex < afterLines.length) {
     if (beforeLines[oldIndex] === afterLines[newIndex]) {
-      operations.push(createEqualOperation(beforeLines[oldIndex], offsets.oldOffset + oldIndex, offsets.newOffset + newIndex));
+      operations.push(
+        createEqualOperation(
+          beforeLines[oldIndex],
+          offsets.oldOffset + oldIndex,
+          offsets.newOffset + newIndex,
+        ),
+      );
       oldIndex += 1;
       newIndex += 1;
       continue;
     }
 
     if (table[oldIndex + 1][newIndex] >= table[oldIndex][newIndex + 1]) {
-      operations.push({ type: "remove", text: beforeLines[oldIndex], oldLine: offsets.oldOffset + oldIndex, newLine: offsets.newOffset + newIndex });
+      operations.push({
+        type: "remove",
+        text: beforeLines[oldIndex],
+        oldLine: offsets.oldOffset + oldIndex,
+        newLine: offsets.newOffset + newIndex,
+      });
       oldIndex += 1;
     } else {
-      operations.push({ type: "add", text: afterLines[newIndex], oldLine: offsets.oldOffset + oldIndex, newLine: offsets.newOffset + newIndex });
+      operations.push({
+        type: "add",
+        text: afterLines[newIndex],
+        oldLine: offsets.oldOffset + oldIndex,
+        newLine: offsets.newOffset + newIndex,
+      });
       newIndex += 1;
     }
   }
 
   while (oldIndex < beforeLines.length) {
-    operations.push({ type: "remove", text: beforeLines[oldIndex], oldLine: offsets.oldOffset + oldIndex, newLine: offsets.newOffset + newIndex });
+    operations.push({
+      type: "remove",
+      text: beforeLines[oldIndex],
+      oldLine: offsets.oldOffset + oldIndex,
+      newLine: offsets.newOffset + newIndex,
+    });
     oldIndex += 1;
   }
 
   while (newIndex < afterLines.length) {
-    operations.push({ type: "add", text: afterLines[newIndex], oldLine: offsets.oldOffset + oldIndex, newLine: offsets.newOffset + newIndex });
+    operations.push({
+      type: "add",
+      text: afterLines[newIndex],
+      oldLine: offsets.oldOffset + oldIndex,
+      newLine: offsets.newOffset + newIndex,
+    });
     newIndex += 1;
   }
 
   return operations;
 }
 
-function createLinearDiffOperations(beforeLines: string[], afterLines: string[], offsets: DiffOffsets): DiffOperation[] {
+function createLinearDiffOperations(
+  beforeLines: string[],
+  afterLines: string[],
+  offsets: DiffOffsets,
+): DiffOperation[] {
   return [
-    ...beforeLines.map((text, index) => ({ type: "remove" as const, text, oldLine: offsets.oldOffset + index, newLine: offsets.newOffset })),
+    ...beforeLines.map((text, index) => ({
+      type: "remove" as const,
+      text,
+      oldLine: offsets.oldOffset + index,
+      newLine: offsets.newOffset,
+    })),
     ...afterLines.map((text, index) => ({
       type: "add" as const,
       text,

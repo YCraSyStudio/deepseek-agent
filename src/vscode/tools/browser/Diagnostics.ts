@@ -3,11 +3,15 @@ import type { HeadlessWebRuntime } from "@/infrastructure/browser/HeadlessWebRun
 
 let runtime: HeadlessWebRuntime | undefined;
 
-export function configureWebRuntimeDiagnostics(value: HeadlessWebRuntime): void {runtime = value;}
+export function configureWebRuntimeDiagnostics(value: HeadlessWebRuntime): void {
+  runtime = value;
+}
 
 export function getWebRuntimeDiagnostics(): Record<string, unknown> {
   return {
-    backend: "local-chromium", searchProvider: "deepseek", nativeVsCodeTools: false,
+    backend: "local-chromium",
+    searchProvider: "deepseek",
+    nativeVsCodeTools: false,
     runtime: runtime?.getDiagnostics() ?? { source: "unresolved", available: false },
     vscodeVersion: vscode.version,
   };

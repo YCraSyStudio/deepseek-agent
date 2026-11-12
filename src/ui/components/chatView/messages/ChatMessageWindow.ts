@@ -1,4 +1,3 @@
-
 export const CHAT_MESSAGE_WINDOW = 40;
 export const CHAT_MESSAGE_WINDOW_PAGE = 40;
 

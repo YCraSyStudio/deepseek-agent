@@ -4,46 +4,118 @@ import { runToolCallCycle } from "@/application/chat/toolCall/ToolCallCycle";
 
 suite("tool call cycle completion", () => {
   test("records an unavailable tool as a protocol result without executing it", async () => {
-    const response = toolResponse("unknown-call", "a.ts"); response.choices[0].message.tool_calls![0].function.name = "unavailable_tool";
-    const responses = [response, finalResponse]; let executed = 0;
-    const result = await runToolCallCycle({ initialMessages: [], tools: [toolDefinition], model: "model",
-      modelClient: { completeRound: async () => responses.shift()!, streamRound: async () => { throw new Error("unexpected stream"); } },
-      executeToolCall: async () => { executed++; return "unused"; } });
-    assert.equal(executed, 0); assert.equal(result.toolCallsExecuted, 0);
-    assert.equal(result.transcript[1].role, "tool"); assert.match(String(result.transcript[1].content), /Error:/);
+    const response = toolResponse("unknown-call", "a.ts");
+    response.choices[0].message.tool_calls![0].function.name = "unavailable_tool";
+    const responses = [response, finalResponse];
+    let executed = 0;
+    const result = await runToolCallCycle({
+      initialMessages: [],
+      tools: [toolDefinition],
+      model: "model",
+      modelClient: {
+        completeRound: async () => responses.shift()!,
+        streamRound: async () => {
+          throw new Error("unexpected stream");
+        },
+      },
+      executeToolCall: async () => {
+        executed++;
+        return "unused";
+      },
+    });
+    assert.equal(executed, 0);
+    assert.equal(result.toolCallsExecuted, 0);
+    assert.equal(result.transcript[1].role, "tool");
+    assert.match(String(result.transcript[1].content), /Error:/);
     assert.equal(result.finalMessage.content, "done");
   });
   for (const problem of ["wrong finish", "empty ID"] as const) {
     test(`refuses to execute a tool response with ${problem}`, async () => {
       const response = toolResponse(problem === "empty ID" ? "" : "call", "a.ts");
-      if (problem === "wrong finish") { response.choices[0].finish_reason = "stop"; }
+      if (problem === "wrong finish") {
+        response.choices[0].finish_reason = "stop";
+      }
       let executed = false;
-      await assert.rejects(runToolCallCycle({ initialMessages: [], tools: [toolDefinition], model: "model",
-        modelClient: { completeRound: async () => response, streamRound: async () => response },
-        executeToolCall: async () => { executed = true; return "unused"; } }), /ended with stop|empty tool-call ID/);
+      await assert.rejects(
+        runToolCallCycle({
+          initialMessages: [],
+          tools: [toolDefinition],
+          model: "model",
+          modelClient: { completeRound: async () => response, streamRound: async () => response },
+          executeToolCall: async () => {
+            executed = true;
+            return "unused";
+          },
+        }),
+        /ended with stop|empty tool-call ID/,
+      );
       assert.equal(executed, false);
     });
   }
   for (const name of ["edit_file", "apply_patch"] as const) {
     test(`deduplicates ${name} arguments that differ only in line endings`, async () => {
       const make = (id: string, ending: string) => {
-        const response = toolResponse(id, "a.ts"); const call = response.choices[0].message.tool_calls![0]; call.function.name = name;
-        call.function.arguments = JSON.stringify({ path: "a.ts", ...(name === "edit_file" ? { search: `old${ending}line`, replace: `new${ending}line` } : { diff: `--- old${ending}+++ new` }) });
+        const response = toolResponse(id, "a.ts");
+        const call = response.choices[0].message.tool_calls![0];
+        call.function.name = name;
+        call.function.arguments = JSON.stringify({
+          path: "a.ts",
+          ...(name === "edit_file"
+            ? { search: `old${ending}line`, replace: `new${ending}line` }
+            : { diff: `--- old${ending}+++ new` }),
+        });
         return response;
       };
-      const responses = [make("first", "\r\n"), make("second", "\n"), finalResponse]; let executed = 0;
-      const definition = { ...toolDefinition, function: { ...toolDefinition.function, name,
-        parameters: { type: "object", properties: { path: { type: "string" }, search: { type: "string" }, replace: { type: "string" }, diff: { type: "string" } }, required: ["path"] } } };
-      const result = await runToolCallCycle({ initialMessages: [], tools: [definition], model: "model",
-        modelClient: { completeRound: async () => responses.shift()!, streamRound: async () => { throw new Error("unexpected stream"); } },
-        executeToolCall: async () => { executed++; return "Changed file"; } });
-      assert.equal(executed, 1); assert.equal(result.rounds, 3);
-      assert.ok(result.transcript.some(message => message.role === "tool" && String(message.content).startsWith("Skipped:")));
+      const responses = [make("first", "\r\n"), make("second", "\n"), finalResponse];
+      let executed = 0;
+      const definition = {
+        ...toolDefinition,
+        function: {
+          ...toolDefinition.function,
+          name,
+          parameters: {
+            type: "object",
+            properties: {
+              path: { type: "string" },
+              search: { type: "string" },
+              replace: { type: "string" },
+              diff: { type: "string" },
+            },
+            required: ["path"],
+          },
+        },
+      };
+      const result = await runToolCallCycle({
+        initialMessages: [],
+        tools: [definition],
+        model: "model",
+        modelClient: {
+          completeRound: async () => responses.shift()!,
+          streamRound: async () => {
+            throw new Error("unexpected stream");
+          },
+        },
+        executeToolCall: async () => {
+          executed++;
+          return "Changed file";
+        },
+      });
+      assert.equal(executed, 1);
+      assert.equal(result.rounds, 3);
+      assert.ok(
+        result.transcript.some(
+          (message) => message.role === "tool" && String(message.content).startsWith("Skipped:"),
+        ),
+      );
     });
   }
 
   test("continues across tool rounds until the model returns a final response", async () => {
-    const responses = [toolResponse("call-1", "README.md"), toolResponse("call-2", "CHANGELOG.md"), finalResponse];
+    const responses = [
+      toolResponse("call-1", "README.md"),
+      toolResponse("call-2", "CHANGELOG.md"),
+      finalResponse,
+    ];
     let executed = 0;
 
     const result = await runToolCallCycle({
@@ -79,7 +151,9 @@ suite("tool call cycle completion", () => {
           requests.push(messages);
           return responses.shift()!;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "created",
       cycleOptions: {
@@ -96,9 +170,13 @@ suite("tool call cycle completion", () => {
       },
     });
 
-    assert.deepStrictEqual(reviewContexts.map(({ completedRounds, toolCallsExecuted }) => ({ completedRounds, toolCallsExecuted })), [
-      { completedRounds: 1, toolCallsExecuted: 1 },
-    ]);
+    assert.deepStrictEqual(
+      reviewContexts.map(({ completedRounds, toolCallsExecuted }) => ({
+        completedRounds,
+        toolCallsExecuted,
+      })),
+      [{ completedRounds: 1, toolCallsExecuted: 1 }],
+    );
     assert.match(String(requests[1].at(-1)?.content), /progress_review_checkpoint/);
     assert.match(String(requests[1].at(-1)?.content), /Run only the final check/);
     assert.strictEqual(result.rounds, 2);
@@ -119,7 +197,9 @@ suite("tool call cycle completion", () => {
             ? toolResponse(`call-${providerRequests}`, `file-${providerRequests}.md`)
             : finalResponse;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "completed",
       cycleOptions: {
@@ -155,13 +235,19 @@ suite("tool call cycle completion", () => {
             ? toolResponse(`call-${providerRequests}`, `file-${providerRequests}.md`)
             : finalResponse;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "completed",
       cycleOptions: {
         reviewProgress: async (context) => {
           reviewedRounds.push(context.completedRounds);
-          return { decision: "continue", confidence: "high", reason: "A primary deliverable remains." };
+          return {
+            decision: "continue",
+            confidence: "high",
+            reason: "A primary deliverable remains.",
+          };
         },
       },
     });
@@ -183,7 +269,9 @@ suite("tool call cycle completion", () => {
       model: "model",
       modelClient: {
         completeRound: async () => responses.shift()!,
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => {
         executions++;
@@ -193,8 +281,13 @@ suite("tool call cycle completion", () => {
 
     assert.strictEqual(executions, 1);
     assert.strictEqual(result.toolCallsExecuted, 1);
-    assert.ok(result.transcript.some((message) =>
-      message.role === "tool" && String(message.content).includes("Skipped: identical tool call")));
+    assert.ok(
+      result.transcript.some(
+        (message) =>
+          message.role === "tool" &&
+          String(message.content).includes("Skipped: identical tool call"),
+      ),
+    );
   });
 
   test("allows the same build again after an intervening mutation", async () => {
@@ -212,7 +305,9 @@ suite("tool call cycle completion", () => {
       model: "model",
       modelClient: {
         completeRound: async () => responses.shift()!,
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async (toolCall) => {
         commands.push((JSON.parse(toolCall.function.arguments) as { command: string }).command);
@@ -220,7 +315,11 @@ suite("tool call cycle completion", () => {
       },
     });
 
-    assert.deepStrictEqual(commands, ["dotnet build", "dotnet add package Example", "dotnet build"]);
+    assert.deepStrictEqual(commands, [
+      "dotnet build",
+      "dotnet add package Example",
+      "dotnet build",
+    ]);
     assert.strictEqual(result.toolCallsExecuted, 3);
   });
 
@@ -241,7 +340,9 @@ suite("tool call cycle completion", () => {
           }
           return responses.shift()!;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "created",
       cycleOptions: {
@@ -273,7 +374,9 @@ suite("tool call cycle completion", () => {
           requestedToolCounts.push(tools.length);
           return responses.shift()!;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "created",
       cycleOptions: {
@@ -291,25 +394,31 @@ suite("tool call cycle completion", () => {
 
   test("never executes tool fragments from a length-truncated response", async () => {
     let executed = false;
-    await assert.rejects(runToolCallCycle({
-      initialMessages: [{ role: "user", content: "read" }],
-      tools: [toolDefinition],
-      model: "model",
-      modelClient: {
-        completeRound: async () => truncatedToolResponse,
-        streamRound: async () => truncatedToolResponse,
-      },
-      executeToolCall: async () => {
-        executed = true;
-        return "should not run";
-      },
-    }), /output limit.*No truncated tool was executed/);
+    await assert.rejects(
+      runToolCallCycle({
+        initialMessages: [{ role: "user", content: "read" }],
+        tools: [toolDefinition],
+        model: "model",
+        modelClient: {
+          completeRound: async () => truncatedToolResponse,
+          streamRound: async () => truncatedToolResponse,
+        },
+        executeToolCall: async () => {
+          executed = true;
+          return "should not run";
+        },
+      }),
+      /output limit.*No truncated tool was executed/,
+    );
     assert.strictEqual(executed, false);
   });
 
   test("retries once when a stopped response only announces a future action", async () => {
     const responses = [stalledResponse, finalResponse];
-    const completionReviews: Array<"complete" | "incomplete" | "unknown"> = ["incomplete", "complete"];
+    const completionReviews: Array<"complete" | "incomplete" | "unknown"> = [
+      "incomplete",
+      "complete",
+    ];
     const requests: ChatMessage[][] = [];
     const streamed: string[] = [];
 
@@ -322,7 +431,9 @@ suite("tool call cycle completion", () => {
           requests.push(messages);
           return responses.shift()!;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "unused",
       cycleOptions: {
@@ -349,7 +460,9 @@ suite("tool call cycle completion", () => {
           requests++;
           return stalledResponse;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "unused",
       cycleOptions: { reviewCompletion: async () => "incomplete" },
@@ -372,7 +485,9 @@ suite("tool call cycle completion", () => {
           requests++;
           return toolShapedAssistantResponse;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => {
         executions++;
@@ -383,11 +498,18 @@ suite("tool call cycle completion", () => {
     assert.strictEqual(requests, 1);
     assert.strictEqual(executions, 0);
     assert.strictEqual(result.rounds, 1);
-    assert.strictEqual(result.finalMessage.content, toolShapedAssistantResponse.choices[0].message.content);
+    assert.strictEqual(
+      result.finalMessage.content,
+      toolShapedAssistantResponse.choices[0].message.content,
+    );
   });
 
   test("appends to the serialized prefix across tool rounds instead of rewriting it", async () => {
-    const responses = [toolResponse("call-1", "README.md"), toolResponse("call-2", "CHANGELOG.md"), finalResponse];
+    const responses = [
+      toolResponse("call-1", "README.md"),
+      toolResponse("call-2", "CHANGELOG.md"),
+      finalResponse,
+    ];
     const requests: ChatMessage[][] = [];
     const toolOrders: string[][] = [];
 
@@ -404,7 +526,9 @@ suite("tool call cycle completion", () => {
           toolOrders.push(tools.map((tool) => tool.function.name));
           return responses.shift()!;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "contents",
     });
@@ -413,7 +537,10 @@ suite("tool call cycle completion", () => {
     for (let index = 1; index < requests.length; index += 1) {
       const previous = requests[index - 1];
       const current = requests[index];
-      assert.ok(current.length > previous.length, `round ${index} replaced instead of appending messages`);
+      assert.ok(
+        current.length > previous.length,
+        `round ${index} replaced instead of appending messages`,
+      );
       assert.deepStrictEqual(
         current.slice(0, previous.length),
         previous,
@@ -428,7 +555,11 @@ suite("tool call cycle completion", () => {
   });
 
   test("appends reviewer checkpoints to the tail instead of rewriting the cached prefix", async () => {
-    const responses = [toolResponse("call-1", "README.md"), toolResponse("call-2", "CHANGELOG.md"), finalResponse];
+    const responses = [
+      toolResponse("call-1", "README.md"),
+      toolResponse("call-2", "CHANGELOG.md"),
+      finalResponse,
+    ];
     const requests: ChatMessage[][] = [];
 
     await runToolCallCycle({
@@ -443,7 +574,9 @@ suite("tool call cycle completion", () => {
           requests.push(structuredClone(messages));
           return responses.shift()!;
         },
-        streamRound: async () => {throw new Error("unexpected streaming round");},
+        streamRound: async () => {
+          throw new Error("unexpected streaming round");
+        },
       },
       executeToolCall: async () => "contents",
       cycleOptions: {
@@ -489,7 +622,11 @@ const terminalToolDefinition = {
   function: {
     name: "run_terminal_command",
     description: "Run a command",
-    parameters: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
+    parameters: {
+      type: "object",
+      properties: { command: { type: "string" } },
+      required: ["command"],
+    },
   },
 };
 
@@ -498,19 +635,23 @@ const truncatedToolResponse: ChatCompletionResponse = {
   object: "chat.completion",
   created: 1,
   model: "model",
-  choices: [{
-    index: 0,
-    finish_reason: "length",
-    message: {
-      role: "assistant",
-      content: null,
-      tool_calls: [{
-        id: "call-1",
-        type: "function",
-        function: { name: "read_file", arguments: '{"path":"README.md"' },
-      }],
+  choices: [
+    {
+      index: 0,
+      finish_reason: "length",
+      message: {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call-1",
+            type: "function",
+            function: { name: "read_file", arguments: '{"path":"README.md"' },
+          },
+        ],
+      },
     },
-  }],
+  ],
 };
 
 function toolResponse(id: string, path: string): ChatCompletionResponse {
@@ -519,19 +660,23 @@ function toolResponse(id: string, path: string): ChatCompletionResponse {
     object: "chat.completion",
     created: 1,
     model: "model",
-    choices: [{
-      index: 0,
-      finish_reason: "tool_calls",
-      message: {
-        role: "assistant",
-        content: null,
-        tool_calls: [{
-          id,
-          type: "function",
-          function: { name: "read_file", arguments: JSON.stringify({ path }) },
-        }],
+    choices: [
+      {
+        index: 0,
+        finish_reason: "tool_calls",
+        message: {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id,
+              type: "function",
+              function: { name: "read_file", arguments: JSON.stringify({ path }) },
+            },
+          ],
+        },
       },
-    }],
+    ],
   };
 }
 
@@ -541,19 +686,23 @@ function terminalResponse(id: string, command: string): ChatCompletionResponse {
     object: "chat.completion",
     created: 1,
     model: "model",
-    choices: [{
-      index: 0,
-      finish_reason: "tool_calls",
-      message: {
-        role: "assistant",
-        content: null,
-        tool_calls: [{
-          id,
-          type: "function",
-          function: { name: "run_terminal_command", arguments: JSON.stringify({ command }) },
-        }],
+    choices: [
+      {
+        index: 0,
+        finish_reason: "tool_calls",
+        message: {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id,
+              type: "function",
+              function: { name: "run_terminal_command", arguments: JSON.stringify({ command }) },
+            },
+          ],
+        },
       },
-    }],
+    ],
   };
 }
 
@@ -570,14 +719,16 @@ const stalledResponse: ChatCompletionResponse = {
   object: "chat.completion",
   created: 1,
   model: "model",
-  choices: [{
-    index: 0,
-    finish_reason: "stop",
-    message: {
-      role: "assistant",
-      content: "I need to clarify the absolute latest version. Let me check.",
+  choices: [
+    {
+      index: 0,
+      finish_reason: "stop",
+      message: {
+        role: "assistant",
+        content: "I need to clarify the absolute latest version. Let me check.",
+      },
     },
-  }],
+  ],
 };
 
 const toolShapedAssistantResponse: ChatCompletionResponse = {
@@ -585,12 +736,14 @@ const toolShapedAssistantResponse: ChatCompletionResponse = {
   object: "chat.completion",
   created: 1,
   model: "model",
-  choices: [{
-    index: 0,
-    finish_reason: "stop",
-    message: {
-      role: "assistant",
-      content: "Example text only: <tool_calls><invoke name=\"read_file\">",
+  choices: [
+    {
+      index: 0,
+      finish_reason: "stop",
+      message: {
+        role: "assistant",
+        content: 'Example text only: <tool_calls><invoke name="read_file">',
+      },
     },
-  }],
+  ],
 };

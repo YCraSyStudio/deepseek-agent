@@ -32,7 +32,9 @@ export default function WorkspaceMismatchModal({
           <h3 id={titleId}>{t("history.workspaceMismatch.title")}</h3>
         </div>
         <div className="workspaceMismatchNotice">
-          <p id={descriptionId}>{t("history.workspaceMismatch.description", { workspace: workspaceName })}</p>
+          <p id={descriptionId}>
+            {t("history.workspaceMismatch.description", { workspace: workspaceName })}
+          </p>
         </div>
         <div className="workspaceMismatchActions">
           <button

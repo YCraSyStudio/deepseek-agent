@@ -18,12 +18,18 @@ suite("assistant activity grouping", () => {
 
     const blocks = groupAssistantTimeline(timeline);
 
-    assert.deepStrictEqual(blocks.map((block) => block.type), ["activity", "content", "activity"]);
+    assert.deepStrictEqual(
+      blocks.map((block) => block.type),
+      ["activity", "content", "activity"],
+    );
     assert.deepStrictEqual(
       blocks[0]?.type === "activity" ? blocks[0].rounds.map((round) => round.round) : [],
       [1, 2],
     );
-    assert.strictEqual(blocks[0]?.type === "activity" && flattenActivityEvents(blocks[0]).length, 3);
+    assert.strictEqual(
+      blocks[0]?.type === "activity" && flattenActivityEvents(blocks[0]).length,
+      3,
+    );
     assert.strictEqual(blocks[1]?.type === "content" && blocks[1].content, "Backend complete.");
   });
 
@@ -34,27 +40,29 @@ suite("assistant activity grouping", () => {
     ];
     const activity = groupAssistantTimeline(timeline)[0];
     assert.ok(activity?.type === "activity");
-    const groups: ToolCallGroup[] = [{
-      id: "round-1",
-      round: 1,
-      expanded: false,
-      toolCalls: [
-        {
-          toolCallId: "call-1",
-          toolName: "read_file",
-          arguments: "{}",
-          status: "completed",
-          round: 1,
-        },
-        {
-          toolCallId: "call-2",
-          toolName: "list_directory",
-          arguments: "{}",
-          status: "running",
-          round: 1,
-        },
-      ],
-    }];
+    const groups: ToolCallGroup[] = [
+      {
+        id: "round-1",
+        round: 1,
+        expanded: false,
+        toolCalls: [
+          {
+            toolCallId: "call-1",
+            toolName: "read_file",
+            arguments: "{}",
+            status: "completed",
+            round: 1,
+          },
+          {
+            toolCallId: "call-2",
+            toolName: "list_directory",
+            arguments: "{}",
+            status: "running",
+            round: 1,
+          },
+        ],
+      },
+    ];
 
     assert.deepStrictEqual(summarizeActivity(flattenActivityEvents(activity), groups), {
       status: "running",
@@ -73,10 +81,16 @@ suite("assistant activity grouping", () => {
 
     const blocks = groupAssistantTimeline(timeline, { compactCompletedCycle: true });
 
-    assert.deepStrictEqual(blocks.map((block) => block.type), ["activity", "content"]);
+    assert.deepStrictEqual(
+      blocks.map((block) => block.type),
+      ["activity", "content"],
+    );
     assert.deepStrictEqual(
       blocks[0]?.type === "activity"
-        ? blocks[0].rounds.map((round) => ({ round: round.round, events: round.events.map((event) => event.id) }))
+        ? blocks[0].rounds.map((round) => ({
+            round: round.round,
+            events: round.events.map((event) => event.id),
+          }))
         : [],
       [
         { round: 1, events: ["content-1", "tools-1"] },
@@ -93,7 +107,8 @@ suite("assistant activity grouping", () => {
       {
         id: "content-final",
         type: "content",
-        content: "The files confirm the architecture. I now have everything I need to summarize it.\n\n## Project summary\n\nStable result.",
+        content:
+          "The files confirm the architecture. I now have everything I need to summarize it.\n\n## Project summary\n\nStable result.",
       },
     ];
 
@@ -101,11 +116,18 @@ suite("assistant activity grouping", () => {
     const activity = blocks[0];
 
     assert.ok(activity?.type === "activity");
-    assert.deepStrictEqual(activity.rounds.map((round) => round.round), [1, 2]);
-    assert.strictEqual(activity.rounds[1]?.events[0]?.type === "content" && activity.rounds[1].events[0].content,
-      "The files confirm the architecture. I now have everything I need to summarize it.");
-    assert.strictEqual(blocks[1]?.type === "content" && blocks[1].content,
-      "## Project summary\n\nStable result.");
+    assert.deepStrictEqual(
+      activity.rounds.map((round) => round.round),
+      [1, 2],
+    );
+    assert.strictEqual(
+      activity.rounds[1]?.events[0]?.type === "content" && activity.rounds[1].events[0].content,
+      "The files confirm the architecture. I now have everything I need to summarize it.",
+    );
+    assert.strictEqual(
+      blocks[1]?.type === "content" && blocks[1].content,
+      "## Project summary\n\nStable result.",
+    );
   });
 
   test("keeps an answer without reasoning or tools outside the activity panel", () => {
@@ -131,7 +153,10 @@ suite("assistant activity grouping", () => {
       createGroup(2, "call-2", "completed"),
     ];
 
-    assert.strictEqual(summarizeActivity(flattenActivityEvents(activity), groups).status, "completed");
+    assert.strictEqual(
+      summarizeActivity(flattenActivityEvents(activity), groups).status,
+      "completed",
+    );
   });
 
   test("uses the recovery fallback when a restored timeline has no tool snapshot", () => {
@@ -141,7 +166,10 @@ suite("assistant activity grouping", () => {
     const activity = groupAssistantTimeline(timeline)[0];
     assert.ok(activity?.type === "activity");
 
-    assert.strictEqual(summarizeActivity(flattenActivityEvents(activity), [], "cancelled").status, "cancelled");
+    assert.strictEqual(
+      summarizeActivity(flattenActivityEvents(activity), [], "cancelled").status,
+      "cancelled",
+    );
   });
 });
 
@@ -160,12 +188,14 @@ function createGroup(
     id: `round-${round}`,
     round,
     expanded: false,
-    toolCalls: [{
-      toolCallId,
-      toolName: "read_file",
-      arguments: "{}",
-      status,
-      round,
-    }],
+    toolCalls: [
+      {
+        toolCallId,
+        toolName: "read_file",
+        arguments: "{}",
+        status,
+        round,
+      },
+    ],
   };
 }

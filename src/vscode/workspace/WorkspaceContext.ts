@@ -33,10 +33,16 @@ interface CapturedEditorSnapshot {
 export function captureCurrentWorkspaceBinding(): WorkspaceBinding {
   const folders = createFolderBindings(vscode.workspace.workspaceFolders ?? []);
   const workspaceFile = vscode.workspace.workspaceFile;
-  const uri = workspaceFile?.toString() ??
+  const uri =
+    workspaceFile?.toString() ??
     (folders.length === 1 ? folders[0]!.uri : createLogicalWorkspaceUri(folders));
-  const name = vscode.workspace.name?.trim() ||
-    (folders.length === 1 ? folders[0]!.name : folders.length > 1 ? "VS Code Workspace" : "No workspace");
+  const name =
+    vscode.workspace.name?.trim() ||
+    (folders.length === 1
+      ? folders[0]!.name
+      : folders.length > 1
+        ? "VS Code Workspace"
+        : "No workspace");
   return createBinding(uri, name, folders);
 }
 
@@ -93,19 +99,26 @@ function getWorkspaceUnavailableMessage(state: WorkspaceConnectionState, name: s
   return `Workspace "${name}" is not open. Open it or reassign the conversation before continuing.`;
 }
 
-export function findSnapshotFolderForUri(snapshot: WorkspaceRunSnapshot, uri: vscode.Uri): WorkspaceFolderSnapshot | undefined {
+export function findSnapshotFolderForUri(
+  snapshot: WorkspaceRunSnapshot,
+  uri: vscode.Uri,
+): WorkspaceFolderSnapshot | undefined {
   return snapshot.folders.find((folder) => isUriInsideRoot(uri, folder.rootUri));
 }
 
-export function formatWorkspacePath(snapshot: WorkspaceRunSnapshot, uri: vscode.Uri): string | undefined {
+export function formatWorkspacePath(
+  snapshot: WorkspaceRunSnapshot,
+  uri: vscode.Uri,
+): string | undefined {
   const folder = findSnapshotFolderForUri(snapshot, uri);
   if (!folder) {
     return undefined;
   }
   const relative = relativeUriPath(folder.rootUri, uri);
-  const pathValue = snapshot.folders.length > 1
-    ? `${folder.alias}${relative ? `/${relative}` : ""}`
-    : relative || ".";
+  const pathValue =
+    snapshot.folders.length > 1
+      ? `${folder.alias}${relative ? `/${relative}` : ""}`
+      : relative || ".";
   return `./${pathValue}`;
 }
 
@@ -118,9 +131,10 @@ export function isUriInsideRoot(candidate: vscode.Uri, root: vscode.Uri): boolea
 }
 
 function relativeUriPath(root: vscode.Uri, candidate: vscode.Uri): string | undefined {
-  const relative = root.scheme === "file"
-    ? path.relative(root.fsPath, candidate.fsPath)
-    : path.posix.relative(root.path, candidate.path);
+  const relative =
+    root.scheme === "file"
+      ? path.relative(root.fsPath, candidate.fsPath)
+      : path.posix.relative(root.path, candidate.path);
   if (
     relative === ".." ||
     relative.startsWith("../") ||
@@ -133,7 +147,9 @@ function relativeUriPath(root: vscode.Uri, candidate: vscode.Uri): string | unde
   return relative.replace(/\\/g, "/");
 }
 
-function createFolderBindings(folders: readonly vscode.WorkspaceFolder[]): WorkspaceFolderBinding[] {
+function createFolderBindings(
+  folders: readonly vscode.WorkspaceFolder[],
+): WorkspaceFolderBinding[] {
   const aliases = createUniqueAliases(folders.map((folder) => folder.name));
   return folders.map((folder, index) => ({
     uri: folder.uri.toString(),
@@ -158,19 +174,41 @@ function createUniqueAliases(names: string[]): string[] {
 }
 
 function normalizeAlias(value: string): string {
-  return value.normalize("NFKC").trim().replace(/[\\/\0]/g, "-").replace(/\s+/g, "-");
+  return value
+    .normalize("NFKC")
+    .trim()
+    .replace(/[\\/\0]/g, "-")
+    .replace(/\s+/g, "-");
 }
 
 function createLogicalWorkspaceUri(folders: WorkspaceFolderBinding[]): string {
   if (folders.length === 0) {
     return "ycrasy-workspace:empty";
   }
-  const digest = hash(folders.map((folder) => folder.uri).sort().join("\0"));
+  const digest = hash(
+    folders
+      .map((folder) => folder.uri)
+      .sort()
+      .join("\0"),
+  );
   return `ycrasy-workspace:untitled:${digest}`;
 }
 
-function createBinding(uri: string, name: string, folders: WorkspaceFolderBinding[]): WorkspaceBinding {
-  const revision = hash(JSON.stringify({ uri, folders: folders.map(({ uri: folderUri, name: folderName, alias }) => ({ uri: folderUri, name: folderName, alias })) }));
+function createBinding(
+  uri: string,
+  name: string,
+  folders: WorkspaceFolderBinding[],
+): WorkspaceBinding {
+  const revision = hash(
+    JSON.stringify({
+      uri,
+      folders: folders.map(({ uri: folderUri, name: folderName, alias }) => ({
+        uri: folderUri,
+        name: folderName,
+        alias,
+      })),
+    }),
+  );
   const hasFolders = folders.length > 0;
   const hasLocalFolder = folders.some((folder) => folder.scheme === "file");
   return {
@@ -193,7 +231,8 @@ function getActiveEditorFolderAlias(binding: WorkspaceBinding): string | undefin
   if (!activeUri) {
     return undefined;
   }
-  return binding.folders.find((folder) => isUriInsideRoot(activeUri, vscode.Uri.parse(folder.uri)))?.alias;
+  return binding.folders.find((folder) => isUriInsideRoot(activeUri, vscode.Uri.parse(folder.uri)))
+    ?.alias;
 }
 
 function captureActiveEditor(snapshot: WorkspaceRunSnapshot): CapturedEditorSnapshot | undefined {
@@ -205,7 +244,9 @@ function captureActiveEditor(snapshot: WorkspaceRunSnapshot): CapturedEditorSnap
   if (!workspacePath) {
     return undefined;
   }
-  const selectionLength = editor.document.offsetAt(editor.selection.end) - editor.document.offsetAt(editor.selection.start);
+  const selectionLength =
+    editor.document.offsetAt(editor.selection.end) -
+    editor.document.offsetAt(editor.selection.start);
   const hasSelection = selectionLength > 0;
   const targetStart = hasSelection ? editor.document.offsetAt(editor.selection.start) : 0;
   const targetEnd = hasSelection
@@ -222,14 +263,24 @@ function captureActiveEditor(snapshot: WorkspaceRunSnapshot): CapturedEditorSnap
   });
 }
 
-function readDocumentPreview(document: vscode.TextDocument, startOffset: number, endOffset: number): string {
+function readDocumentPreview(
+  document: vscode.TextDocument,
+  startOffset: number,
+  endOffset: number,
+): string {
   const length = Math.max(0, endOffset - startOffset);
   if (length <= MAX_ACTIVE_EDITOR_CAPTURE_CHARACTERS) {
-    return document.getText(new vscode.Range(document.positionAt(startOffset), document.positionAt(endOffset)));
+    return document.getText(
+      new vscode.Range(document.positionAt(startOffset), document.positionAt(endOffset)),
+    );
   }
   const side = Math.floor(MAX_ACTIVE_EDITOR_CAPTURE_CHARACTERS / 2);
-  const head = document.getText(new vscode.Range(document.positionAt(startOffset), document.positionAt(startOffset + side)));
-  const tail = document.getText(new vscode.Range(document.positionAt(endOffset - side), document.positionAt(endOffset)));
+  const head = document.getText(
+    new vscode.Range(document.positionAt(startOffset), document.positionAt(startOffset + side)),
+  );
+  const tail = document.getText(
+    new vscode.Range(document.positionAt(endOffset - side), document.positionAt(endOffset)),
+  );
   return `${head}\n...[active editor middle omitted]...\n${tail}`;
 }
 

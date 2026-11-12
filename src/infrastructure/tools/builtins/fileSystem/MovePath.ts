@@ -107,13 +107,14 @@ async function pathExists(workspace: ToolWorkspaceHost, target: string): Promise
 
 function isWorkspaceRoot(target: string): boolean {
   const normalized = target.trim().replace(/\\/g, "/").replace(/\/+$/, "");
-  return normalized === "" || normalized === "." ;
+  return normalized === "" || normalized === ".";
 }
 
 function parseMovePathArgs(args: Record<string, unknown>): MovePathArgs | string {
   const source = args.path;
   const destination = args.destination;
-  const expectedBeforeHash = typeof args.expectedBeforeHash === "string" ? args.expectedBeforeHash : undefined;
+  const expectedBeforeHash =
+    typeof args.expectedBeforeHash === "string" ? args.expectedBeforeHash : undefined;
 
   if (typeof source !== "string" || source.trim() === "") {
     return "Error: path parameter is required";
@@ -147,15 +148,18 @@ export const movePathDefinition: ToolDefinition = {
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path of the file or directory to move. Use an absolute path only for explicitly requested external access.",
+          description:
+            "Workspace-relative path of the file or directory to move. Use an absolute path only for explicitly requested external access.",
         },
         destination: {
           type: "string",
-          description: "Workspace-relative destination path. The parent directory is created automatically and the destination must not exist.",
+          description:
+            "Workspace-relative destination path. The parent directory is created automatically and the destination must not exist.",
         },
         expectedBeforeHash: {
           type: "string",
-          description: "Optional sha256 used to reject the move if the source file changed after preview.",
+          description:
+            "Optional sha256 used to reject the move if the source file changed after preview.",
         },
       },
       required: ["path", "destination"],

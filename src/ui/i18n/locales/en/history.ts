@@ -2,7 +2,8 @@ import type { TranslationCatalog } from "../Types";
 
 export const history = {
   history: {
-    incognitoActive: "History is unavailable while incognito mode is active. Existing conversations remain stored and will return when you leave incognito mode.",
+    incognitoActive:
+      "History is unavailable while incognito mode is active. Existing conversations remain stored and will return when you leave incognito mode.",
     historyControls: "History controls",
     searchLabel: "Search history",
     searchPlaceholder: "Search history…",
@@ -31,9 +32,10 @@ export const history = {
     countMessages: "{count} messages",
     workspaceMismatch: {
       title: "Open in this workspace?",
-      description: "This conversation belongs to \"{workspace}\", which is not the workspace currently open. Open it here instead? Pending generations, queued messages and file references will be cleared.",
+      description:
+        'This conversation belongs to "{workspace}", which is not the workspace currently open. Open it here instead? Pending generations, queued messages and file references will be cleared.',
       confirm: "Open here",
       cancel: "Cancel",
-    }
-  }
+    },
+  },
 } satisfies TranslationCatalog;

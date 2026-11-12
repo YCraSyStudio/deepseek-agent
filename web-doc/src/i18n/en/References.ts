@@ -4,7 +4,8 @@ export const references: PageContent = {
   navTitle: "References",
   title: "References",
   seoTitle: "Settings, commands, and links",
-  description: "Primary links for the extension: marketplace listing, repository, DeepSeek platform, and API documentation.",
+  description:
+    "Primary links for the extension: marketplace listing, repository, DeepSeek platform, and API documentation.",
   lead: "Use these references when validating API behavior, extension packaging, or project support channels.",
   sections: [
     {

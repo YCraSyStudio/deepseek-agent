@@ -20,7 +20,10 @@ import {
 } from "@/vscode/workspace";
 import { createInlineDiffPreview } from "./InlineDiffPreview";
 import { fileChangeRegistry } from "@/vscode/editor/diff/FileChangeRegistry";
-import { executeShellCommand, getSystemCommandShell } from "@/infrastructure/tools/builtins/terminal/ShellExecution";
+import {
+  executeShellCommand,
+  getSystemCommandShell,
+} from "@/infrastructure/tools/builtins/terminal/ShellExecution";
 import {
   createAbortError,
   findFilesInRoot,
@@ -40,22 +43,42 @@ import {
 
 export function createVsCodeToolWorkspace(
   capturedSnapshot?: WorkspaceRunSnapshot,
-  options: { allowOutsideWorkspace?: boolean; unrestricted?: boolean; conversationId?: string } = {},
+  options: {
+    allowOutsideWorkspace?: boolean;
+    unrestricted?: boolean;
+    conversationId?: string;
+  } = {},
 ): ToolWorkspaceHost {
   const inlinePreview = createInlineDiffPreview();
-  const snapshot = capturedSnapshot ?? captureWorkspaceRunSnapshot(captureCurrentWorkspaceBinding());
-  const defaultFolder = snapshot.folders.find((folder) => folder.alias === snapshot.defaultFolderAlias);
+  const snapshot =
+    capturedSnapshot ?? captureWorkspaceRunSnapshot(captureCurrentWorkspaceBinding());
+  const defaultFolder = snapshot.folders.find(
+    (folder) => folder.alias === snapshot.defaultFolderAlias,
+  );
 
   const resolveToolUri = async (rawPath: string, allowSensitive: boolean): Promise<vscode.Uri> => {
-    const externalPath = resolveAllowedExternalPath(snapshot, rawPath, options.allowOutsideWorkspace === true);
+    const externalPath = resolveAllowedExternalPath(
+      snapshot,
+      rawPath,
+      options.allowOutsideWorkspace === true,
+    );
     return externalPath
       ? vscode.Uri.file(externalPath)
-      : toLogicalUri(await resolveAndValidateLogicalPath(snapshot, rawPath, allowSensitive || options.unrestricted === true));
+      : toLogicalUri(
+          await resolveAndValidateLogicalPath(
+            snapshot,
+            rawPath,
+            allowSensitive || options.unrestricted === true,
+          ),
+        );
   };
 
   return {
     getRootPath(): string | undefined {
-      return defaultFolder?.localPath ?? (snapshot.folders.length === 1 ? snapshot.folders[0]?.localPath : undefined);
+      return (
+        defaultFolder?.localPath ??
+        (snapshot.folders.length === 1 ? snapshot.folders[0]?.localPath : undefined)
+      );
     },
 
     getWorkspaceId(): string {
@@ -66,7 +89,20 @@ export function createVsCodeToolWorkspace(
       return getSystemCommandShell();
     },
 
-    executeCommand: (command: string, commandOptions: ToolHostCommandOptions): Promise<ToolHostCommandResult> => executeShellCommand(command, { cwd: commandOptions.cwd, workspaceRoot: commandOptions.workspaceRoot, shell: getSystemCommandShell() }, commandOptions, options.conversationId),
+    executeCommand: (
+      command: string,
+      commandOptions: ToolHostCommandOptions,
+    ): Promise<ToolHostCommandResult> =>
+      executeShellCommand(
+        command,
+        {
+          cwd: commandOptions.cwd,
+          workspaceRoot: commandOptions.workspaceRoot,
+          shell: getSystemCommandShell(),
+        },
+        commandOptions,
+        options.conversationId,
+      ),
 
     async isPathInsideWorkspace(rawPath: string): Promise<boolean> {
       if (path.isAbsolute(rawPath) || path.win32.isAbsolute(rawPath)) {
@@ -75,10 +111,11 @@ export function createVsCodeToolWorkspace(
             continue;
           }
           try {
-            await resolveWorkspacePathSecure(rawPath, folder.localPath, realpath, { allowSensitive: true });
+            await resolveWorkspacePathSecure(rawPath, folder.localPath, realpath, {
+              allowSensitive: true,
+            });
             return true;
-          } catch {
-          }
+          } catch {}
         }
         return false;
       }
@@ -92,7 +129,11 @@ export function createVsCodeToolWorkspace(
     },
 
     async resolvePath(rawPath: string, allowSensitive: boolean): Promise<string> {
-      const externalPath = resolveAllowedExternalPath(snapshot, rawPath, options.allowOutsideWorkspace === true);
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        rawPath,
+        options.allowOutsideWorkspace === true,
+      );
       if (externalPath) {
         return externalPath;
       }
@@ -110,7 +151,9 @@ export function createVsCodeToolWorkspace(
         : undefined;
       if (externalPath) {
         const absolutePath = await realpath(externalPath);
-        const workspaceRoot = defaultFolder?.localPath ?? snapshot.folders.find((folder) => folder.localPath)?.localPath;
+        const workspaceRoot =
+          defaultFolder?.localPath ??
+          snapshot.folders.find((folder) => folder.localPath)?.localPath;
         if (!workspaceRoot) {
           throw new Error("A local workspace root is required for terminal execution.");
         }
@@ -122,7 +165,12 @@ export function createVsCodeToolWorkspace(
       if (!resolved.folder.localPath) {
         throw new Error(`Terminal is unavailable for workspace root "${resolved.folder.alias}".`);
       }
-      const localPath = await resolveWorkspacePathSecure(resolved.relativePath, resolved.folder.localPath, realpath, { allowSensitive: true });
+      const localPath = await resolveWorkspacePathSecure(
+        resolved.relativePath,
+        resolved.folder.localPath,
+        realpath,
+        { allowSensitive: true },
+      );
       return { ...localPath, workspaceRoot: resolved.folder.localPath };
     },
 
@@ -141,31 +189,67 @@ export function createVsCodeToolWorkspace(
         if (remaining === 0) {
           break;
         }
-        const resources = await findFilesInRoot(search.folder.rootUri, search.pattern, remaining, options.signal);
-        results.push(...resources.map((resource) => formatLogicalPath(snapshot, search.folder, toRelativeWorkspacePath(search.folder.rootUri, resource))));
+        const resources = await findFilesInRoot(
+          search.folder.rootUri,
+          search.pattern,
+          remaining,
+          options.signal,
+        );
+        results.push(
+          ...resources.map((resource) =>
+            formatLogicalPath(
+              snapshot,
+              search.folder,
+              toRelativeWorkspacePath(search.folder.rootUri, resource),
+            ),
+          ),
+        );
       }
       return results;
     },
 
     async readFile(relativePath: string): Promise<Uint8Array> {
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
       const uri = externalPath
         ? vscode.Uri.file(externalPath)
-        : toLogicalUri(await resolveAndValidateLogicalPath(snapshot, relativePath, options.unrestricted === true));
+        : toLogicalUri(
+            await resolveAndValidateLogicalPath(
+              snapshot,
+              relativePath,
+              options.unrestricted === true,
+            ),
+          );
       const openDocument = findOpenTextDocument(uri);
       return openDocument
         ? Buffer.from(openDocument.getText(), "utf8")
         : vscode.workspace.fs.readFile(uri);
     },
 
-    async readFilePreview(relativePath: string, maxBytes: number): Promise<ToolWorkspaceFilePreview> {
+    async readFilePreview(
+      relativePath: string,
+      maxBytes: number,
+    ): Promise<ToolWorkspaceFilePreview> {
       if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
         throw new Error("File preview size must be a positive integer");
       }
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
       const uri = externalPath
         ? vscode.Uri.file(externalPath)
-        : toLogicalUri(await resolveAndValidateLogicalPath(snapshot, relativePath, options.unrestricted === true));
+        : toLogicalUri(
+            await resolveAndValidateLogicalPath(
+              snapshot,
+              relativePath,
+              options.unrestricted === true,
+            ),
+          );
       const metadata = await vscode.workspace.fs.stat(uri);
       if (metadata.size <= maxBytes) {
         return { head: await vscode.workspace.fs.readFile(uri), size: metadata.size };
@@ -182,7 +266,12 @@ export function createVsCodeToolWorkspace(
         const head = Buffer.alloc(headLength);
         const tail = Buffer.alloc(tailLength);
         const headRead = await file.read(head, 0, headLength, 0);
-        const tailRead = await file.read(tail, 0, tailLength, Math.max(0, metadata.size - tailLength));
+        const tailRead = await file.read(
+          tail,
+          0,
+          tailLength,
+          Math.max(0, metadata.size - tailLength),
+        );
         return {
           head: head.subarray(0, headRead.bytesRead),
           tail: tail.subarray(0, tailRead.bytesRead),
@@ -194,7 +283,11 @@ export function createVsCodeToolWorkspace(
     },
 
     async writeFile(relativePath: string, content: Uint8Array): Promise<void> {
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
       const uri = externalPath
         ? vscode.Uri.file(externalPath)
         : toLogicalUri(await resolveAndValidateLogicalPath(snapshot, relativePath, true));
@@ -204,8 +297,13 @@ export function createVsCodeToolWorkspace(
         : await readExistingBytes(uri);
       if (openDocument) {
         const replacement = decodeTextEdit(content, relativePath);
-        const range = new vscode.Range(openDocument.positionAt(0), openDocument.positionAt(openDocument.getText().length));
-        const visibleEditor = vscode.window.visibleTextEditors.find((editor) => editor.document === openDocument);
+        const range = new vscode.Range(
+          openDocument.positionAt(0),
+          openDocument.positionAt(openDocument.getText().length),
+        );
+        const visibleEditor = vscode.window.visibleTextEditors.find(
+          (editor) => editor.document === openDocument,
+        );
         let applied: boolean;
         if (visibleEditor) {
           // Give each tool write its own undo step, preserving earlier user edits.
@@ -219,7 +317,9 @@ export function createVsCodeToolWorkspace(
           applied = await vscode.workspace.applyEdit(edit);
         }
         if (!applied) {
-          throw new Error(`VS Code rejected the edit for open document "${relativePath}". No content was changed.`);
+          throw new Error(
+            `VS Code rejected the edit for open document "${relativePath}". No content was changed.`,
+          );
         }
       } else {
         await vscode.workspace.fs.writeFile(uri, content);
@@ -235,20 +335,29 @@ export function createVsCodeToolWorkspace(
         throw new Error(`Source and destination are the same path: "${source}".`);
       }
       inlinePreview.clear();
-      await vscode.workspace.fs.rename(sourceUri, destinationUri, { overwrite: moveOptions.overwrite === true });
+      await vscode.workspace.fs.rename(sourceUri, destinationUri, {
+        overwrite: moveOptions.overwrite === true,
+      });
     },
 
     async deletePath(rawPath: string, deleteOptions: DeleteWorkspacePathOptions): Promise<void> {
       const uri = await resolveToolUri(rawPath, true);
       if (deleteOptions.useTrash && uri.scheme !== "file") {
-        throw new Error(`Moving to the trash is only supported for local filesystem paths. Pass permanent: true to delete "${rawPath}".`);
+        throw new Error(
+          `Moving to the trash is only supported for local filesystem paths. Pass permanent: true to delete "${rawPath}".`,
+        );
       }
       inlinePreview.clear();
       try {
-        await vscode.workspace.fs.delete(uri, { recursive: deleteOptions.recursive, useTrash: deleteOptions.useTrash });
+        await vscode.workspace.fs.delete(uri, {
+          recursive: deleteOptions.recursive,
+          useTrash: deleteOptions.useTrash,
+        });
       } catch (err: unknown) {
         if (deleteOptions.useTrash && isTrashUnavailable(err)) {
-          throw new Error(`The trash is unavailable for "${rawPath}". Pass permanent: true to delete it permanently.`);
+          throw new Error(
+            `The trash is unavailable for "${rawPath}". Pass permanent: true to delete it permanently.`,
+          );
         }
         throw err;
       }
@@ -258,13 +367,23 @@ export function createVsCodeToolWorkspace(
       if (relativePath === "." && snapshot.folders.length > 1) {
         return { type: "directory", size: 0 };
       }
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
-      const stat = await vscode.workspace.fs.stat(externalPath ? vscode.Uri.file(externalPath) : toResolvedUri(snapshot, relativePath));
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
+      const stat = await vscode.workspace.fs.stat(
+        externalPath ? vscode.Uri.file(externalPath) : toResolvedUri(snapshot, relativePath),
+      );
       return { type: toEntryType(stat.type), size: stat.size };
     },
 
     async createParentDirectory(relativePath: string): Promise<void> {
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
       if (externalPath) {
         await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(externalPath)));
         return;
@@ -283,27 +402,48 @@ export function createVsCodeToolWorkspace(
       if (relativePath === "." && snapshot.folders.length > 1) {
         return snapshot.folders.map((folder) => [folder.alias, "directory"]);
       }
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
-      const entries = await vscode.workspace.fs.readDirectory(externalPath ? vscode.Uri.file(externalPath) : toResolvedUri(snapshot, relativePath));
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
+      const entries = await vscode.workspace.fs.readDirectory(
+        externalPath ? vscode.Uri.file(externalPath) : toResolvedUri(snapshot, relativePath),
+      );
       return entries.map(([name, type]) => [name, toEntryType(type)]);
     },
 
     async readDocumentSymbols(relativePath: string): Promise<ToolHostDocumentSymbol[]> {
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
       const uri = externalPath
         ? vscode.Uri.file(externalPath)
-        : toLogicalUri(await resolveAndValidateLogicalPath(snapshot, relativePath, options.unrestricted === true));
-      const document = findOpenTextDocument(uri) ?? await vscode.workspace.openTextDocument(uri);
-      const symbols = await vscode.commands.executeCommand<Array<vscode.DocumentSymbol | vscode.SymbolInformation>>(
-        "vscode.executeDocumentSymbolProvider",
-        document.uri,
-      );
+        : toLogicalUri(
+            await resolveAndValidateLogicalPath(
+              snapshot,
+              relativePath,
+              options.unrestricted === true,
+            ),
+          );
+      const document = findOpenTextDocument(uri) ?? (await vscode.workspace.openTextDocument(uri));
+      const symbols = await vscode.commands.executeCommand<
+        Array<vscode.DocumentSymbol | vscode.SymbolInformation>
+      >("vscode.executeDocumentSymbolProvider", document.uri);
       return (symbols ?? []).map(toHostDocumentSymbol);
     },
 
     async prepareFileDiff(relativePath: string, before: string, after: string): Promise<void> {
-      const externalPath = resolveAllowedExternalPath(snapshot, relativePath, options.allowOutsideWorkspace === true);
-      const originalUri = externalPath ? vscode.Uri.file(externalPath) : toResolvedUri(snapshot, relativePath);
+      const externalPath = resolveAllowedExternalPath(
+        snapshot,
+        relativePath,
+        options.allowOutsideWorkspace === true,
+      );
+      const originalUri = externalPath
+        ? vscode.Uri.file(externalPath)
+        : toResolvedUri(snapshot, relativePath);
       await inlinePreview.show(originalUri, before, after);
     },
 
@@ -313,7 +453,9 @@ export function createVsCodeToolWorkspace(
   };
 }
 
-function toHostDocumentSymbol(symbol: vscode.DocumentSymbol | vscode.SymbolInformation): ToolHostDocumentSymbol {
+function toHostDocumentSymbol(
+  symbol: vscode.DocumentSymbol | vscode.SymbolInformation,
+): ToolHostDocumentSymbol {
   if (symbol instanceof vscode.SymbolInformation) {
     return {
       name: symbol.name,
@@ -360,6 +502,8 @@ function decodeTextEdit(content: Uint8Array, relativePath: string): string {
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(content);
   } catch {
-    throw new Error(`Cannot apply binary or invalid UTF-8 content to open document "${relativePath}". Close the editor or use a text-safe change.`);
+    throw new Error(
+      `Cannot apply binary or invalid UTF-8 content to open document "${relativePath}". Close the editor or use a text-safe change.`,
+    );
   }
 }

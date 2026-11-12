@@ -6,14 +6,17 @@ import { join, resolve } from "node:path";
 
 const projectRoot = process.cwd();
 const scriptPath = resolve(projectRoot, "scripts/detect-release-mode.mjs");
-const manifest = JSON.parse(readFileSync(resolve(projectRoot, "package.json"), "utf8")) as { version: string };
+const manifest = JSON.parse(readFileSync(resolve(projectRoot, "package.json"), "utf8")) as {
+  version: string;
+};
 
 suite("release mode detection", () => {
   test("publishes a pushed version tag", () => {
-    assert.deepStrictEqual(
-      run({ GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/tags/v0.1.14" }),
-      { release: "true", tag: "v0.1.14", reason: "v-tag" },
-    );
+    assert.deepStrictEqual(run({ GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/tags/v0.1.14" }), {
+      release: "true",
+      tag: "v0.1.14",
+      reason: "v-tag",
+    });
   });
 
   test("publishes a main push whose commit subject requests a release", () => {
@@ -52,7 +55,11 @@ suite("release mode detection", () => {
   test("ignores a release request outside main", () => {
     for (const ref of ["refs/heads/develop", "refs/heads/release-0.1"]) {
       assert.deepStrictEqual(
-        run({ GITHUB_EVENT_NAME: "push", GITHUB_REF: ref, HEAD_COMMIT_MESSAGE: "release: cut v0.1.14" }),
+        run({
+          GITHUB_EVENT_NAME: "push",
+          GITHUB_REF: ref,
+          HEAD_COMMIT_MESSAGE: "release: cut v0.1.14",
+        }),
         { release: "false", tag: "", reason: "none" },
         `Unexpected release for ${ref}.`,
       );
@@ -61,12 +68,28 @@ suite("release mode detection", () => {
 
   test("ignores events that cannot carry a release request", () => {
     const events: NodeJS.ProcessEnv[] = [
-      { GITHUB_EVENT_NAME: "pull_request", GITHUB_REF: "refs/pull/98/merge", HEAD_COMMIT_MESSAGE: "release: cut v0.1.14" },
-      { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/heads/main", HEAD_COMMIT_MESSAGE: "" },
-      { GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", HEAD_COMMIT_MESSAGE: "Merge pull request #98 from YCraSyStudio/develop" },
+      {
+        GITHUB_EVENT_NAME: "pull_request",
+        GITHUB_REF: "refs/pull/98/merge",
+        HEAD_COMMIT_MESSAGE: "release: cut v0.1.14",
+      },
+      {
+        GITHUB_EVENT_NAME: "workflow_dispatch",
+        GITHUB_REF: "refs/heads/main",
+        HEAD_COMMIT_MESSAGE: "",
+      },
+      {
+        GITHUB_EVENT_NAME: "push",
+        GITHUB_REF: "refs/heads/main",
+        HEAD_COMMIT_MESSAGE: "Merge pull request #98 from YCraSyStudio/develop",
+      },
     ];
     for (const event of events) {
-      assert.deepStrictEqual(run(event), { release: "false", tag: "", reason: "none" }, JSON.stringify(event));
+      assert.deepStrictEqual(
+        run(event),
+        { release: "false", tag: "", reason: "none" },
+        JSON.stringify(event),
+      );
     }
   });
 

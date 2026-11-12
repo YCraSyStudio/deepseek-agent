@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
 import { getGlobalInstructionsFilePath } from "@/infrastructure/persistence/GlobalInstructionsFile";
-import {
-  captureCurrentWorkspaceBinding,
-  captureWorkspaceRunSnapshot,
-} from "@/vscode/workspace";
+import { captureCurrentWorkspaceBinding, captureWorkspaceRunSnapshot } from "@/vscode/workspace";
 import { createAbortError, throwIfAborted } from "@/shared/utils/Cancellation";
 
 const AGENTS_FILE_NAME = "AGENTS.md";
@@ -65,11 +62,15 @@ export async function loadProjectInstructions(
     );
   }
 
-  const loaded = await Promise.all(candidates.map((candidate) => readInstructionSource(candidate, signal)));
+  const loaded = await Promise.all(
+    candidates.map((candidate) => readInstructionSource(candidate, signal)),
+  );
   throwIfAborted(signal);
   const sources: LoadedInstructionSource[] = [];
   let totalBytes = 0;
-  for (const source of loaded.filter((item): item is LoadedInstructionSource => item !== undefined).sort((a, b) => a.precedence - b.precedence)) {
+  for (const source of loaded
+    .filter((item): item is LoadedInstructionSource => item !== undefined)
+    .sort((a, b) => a.precedence - b.precedence)) {
     if (totalBytes + source.bytes <= MAX_TOTAL_BYTES) {
       sources.push(source);
       totalBytes += source.bytes;
@@ -83,7 +84,10 @@ export async function loadProjectInstructions(
   };
 }
 
-export function appendProjectInstructionsToSystemPrompt(systemPrompt: string, projectInstructions: string): string {
+export function appendProjectInstructionsToSystemPrompt(
+  systemPrompt: string,
+  projectInstructions: string,
+): string {
   if (!projectInstructions.trim()) {
     return systemPrompt;
   }
@@ -105,7 +109,9 @@ async function readInstructionSource(
     throwIfAborted(signal);
     const metadata = await vscode.workspace.fs.stat(candidate.uri);
     throwIfAborted(signal);
-    if (metadata.size > MAX_SOURCE_BYTES) {return undefined;}
+    if (metadata.size > MAX_SOURCE_BYTES) {
+      return undefined;
+    }
     const bytes = await vscode.workspace.fs.readFile(candidate.uri);
     throwIfAborted(signal);
     if (bytes.byteLength > MAX_SOURCE_BYTES) {
@@ -135,8 +141,11 @@ async function readInstructionSource(
 }
 
 function formatSourcePath(candidate: CandidateSource): string {
-  if (candidate.scope === "home") {return candidate.uri.fsPath;}
-  const relativePath = candidate.scope === "workspace-local" ? ".deepseek-agent/AGENTS.md" : "AGENTS.md";
+  if (candidate.scope === "home") {
+    return candidate.uri.fsPath;
+  }
+  const relativePath =
+    candidate.scope === "workspace-local" ? ".deepseek-agent/AGENTS.md" : "AGENTS.md";
   return candidate.rootAlias ? `./${candidate.rootAlias}/${relativePath}` : relativePath;
 }
 
@@ -146,7 +155,10 @@ function formatProjectInstructions(sources: LoadedInstructionSource[]): string {
   }
 
   const sections = sources.map((source) => {
-    const rootScope = source.scope === "home" ? "" : ` applies-to-root=${JSON.stringify(source.path.split("/").slice(0, 2).join("/"))}`;
+    const rootScope =
+      source.scope === "home"
+        ? ""
+        : ` applies-to-root=${JSON.stringify(source.path.split("/").slice(0, 2).join("/"))}`;
     return `<project-instructions source=${JSON.stringify(source.path)}${rootScope}>
 ${source.content.replace(/<\/project-instructions>/gi, "&lt;/project-instructions&gt;")}
 </project-instructions>`;

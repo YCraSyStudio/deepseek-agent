@@ -1,10 +1,7 @@
 import { ConversationState } from "@/application/chat/ConversationState";
 import { buildInterruptedContextContent } from "@/application/chat/InterruptedContext";
 import type { StoredConversation } from "@/application/chat/ProviderTranscript";
-import {
-  type GenerationCheckpointStore,
-  type HistoryManager,
-} from "@/vscode/storage";
+import { type GenerationCheckpointStore, type HistoryManager } from "@/vscode/storage";
 import type { SettingsRepository } from "@/application/ports";
 import type { QueuedGenerationMessage } from "@/contracts";
 
@@ -54,26 +51,20 @@ export async function recoverGenerationCheckpoints(
       if (
         !existingMessages.some(
           (message) =>
-            message.role === "assistant" &&
-            message.generationId === checkpoint.generationId,
+            message.role === "assistant" && message.generationId === checkpoint.generationId,
         ) &&
-        (
-          checkpoint.content ||
+        (checkpoint.content ||
           checkpoint.timeline.length > 0 ||
           checkpoint.toolCalls.length > 0 ||
-          checkpoint.providerTranscript
-        )
+          checkpoint.providerTranscript)
       ) {
         const completed =
-          checkpoint.status === "completed" &&
-          checkpoint.providerTranscript?.status === "complete";
+          checkpoint.status === "completed" && checkpoint.providerTranscript?.status === "complete";
         const recoveredToolCalls = checkpoint.toolCalls.map((tool) =>
           !completed &&
-          (
-            tool.status === "pending" ||
+          (tool.status === "pending" ||
             tool.status === "awaiting_confirmation" ||
-            tool.status === "running"
-          )
+            tool.status === "running")
             ? {
                 ...tool,
                 status: "cancelled" as const,
@@ -83,19 +74,33 @@ export async function recoverGenerationCheckpoints(
               }
             : tool,
         );
-        messages.push(state.createMessage("assistant", checkpoint.content, {
-          generationId: checkpoint.generationId,
-          generationStatus: checkpoint.status === "error" ? "error" : completed ? "completed" : "interrupted",
-          timeline: checkpoint.timeline,
-          contextContent: completed ? checkpoint.content : buildInterruptedContextContent(checkpoint.content, recoveredToolCalls),
-          providerTranscript: checkpoint.providerTranscript,
-          toolCalls: recoveredToolCalls,
-        }));
+        messages.push(
+          state.createMessage("assistant", checkpoint.content, {
+            generationId: checkpoint.generationId,
+            generationStatus:
+              checkpoint.status === "error" ? "error" : completed ? "completed" : "interrupted",
+            timeline: checkpoint.timeline,
+            contextContent: completed
+              ? checkpoint.content
+              : buildInterruptedContextContent(checkpoint.content, recoveredToolCalls),
+            providerTranscript: checkpoint.providerTranscript,
+            toolCalls: recoveredToolCalls,
+          }),
+        );
       }
-      if (checkpoint.status === "error" && checkpoint.error && !existingMessages.some(
-        message => message.role === "error" && message.generationId === checkpoint.generationId,
-      )) {
-        messages.push(state.createMessage("error", checkpoint.error, { generationId: checkpoint.generationId, generationStatus: "error" }));
+      if (
+        checkpoint.status === "error" &&
+        checkpoint.error &&
+        !existingMessages.some(
+          (message) => message.role === "error" && message.generationId === checkpoint.generationId,
+        )
+      ) {
+        messages.push(
+          state.createMessage("error", checkpoint.error, {
+            generationId: checkpoint.generationId,
+            generationStatus: "error",
+          }),
+        );
       }
       if (messages.length > 0) {
         await state.saveMessages({

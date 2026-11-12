@@ -5,7 +5,7 @@ import { getUiLocale } from "./i18n";
 
 document.documentElement.lang = getUiLocale();
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
   </StrictMode>,

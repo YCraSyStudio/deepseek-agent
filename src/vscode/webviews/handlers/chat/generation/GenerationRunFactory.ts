@@ -25,15 +25,15 @@ export async function createGenerationState({
   task,
   workspaceSnapshot,
 }: CreateGenerationStateOptions): Promise<ConversationState> {
-  const sourceConversation = await historyManager.getById(task.conversationId) ??
-    (
-      activeConversationState.getActiveConversationId() === task.conversationId
-        ? activeConversationState.getConversation()
-        : undefined
-    );
-  const selectedMode = activeConversationState.getActiveConversationId() === task.conversationId
-    ? activeConversationState.getPersistenceMode()
-    : undefined;
+  const sourceConversation =
+    (await historyManager.getById(task.conversationId)) ??
+    (activeConversationState.getActiveConversationId() === task.conversationId
+      ? activeConversationState.getConversation()
+      : undefined);
+  const selectedMode =
+    activeConversationState.getActiveConversationId() === task.conversationId
+      ? activeConversationState.getPersistenceMode()
+      : undefined;
   const state = new ConversationState(
     historyManager,
     selectedMode ?? (config.historyEnabled ? "persistent" : "incognito"),
@@ -80,10 +80,12 @@ export function createGenerationRunRecord({
   state,
   toolRegistry,
 }: CreateGenerationRunRecordOptions): GenerationRunRecord {
-  const session = new ToolCallSession(new ToolExecutor(toolRegistry, () => {
-    const host = getToolWorkspaceHost();
-    return host.getWorkspaceId?.() ?? host.getRootPath() ?? "workspace:unknown";
-  }));
+  const session = new ToolCallSession(
+    new ToolExecutor(toolRegistry, () => {
+      const host = getToolWorkspaceHost();
+      return host.getWorkspaceId?.() ?? host.getRootPath() ?? "workspace:unknown";
+    }),
+  );
 
   return {
     generationId,

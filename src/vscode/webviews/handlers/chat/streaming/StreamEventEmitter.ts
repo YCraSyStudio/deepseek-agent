@@ -13,7 +13,10 @@ export interface StreamDonePayload {
 
 export class StreamEventEmitter {
   private readonly timeline: AssistantTimelineEvent[] = [];
-  private activeTextEvent: Extract<AssistantTimelineEvent, { type: "reasoning" | "content" }> | null = null;
+  private activeTextEvent: Extract<
+    AssistantTimelineEvent,
+    { type: "reasoning" | "content" }
+  > | null = null;
 
   constructor(private readonly eventSink: GenerationEventSink<Record<string, unknown>>) {}
 
@@ -43,7 +46,9 @@ export class StreamEventEmitter {
 
   getTimeline(): AssistantTimelineEvent[] {
     return this.timeline.map((event) =>
-      event.type === "tool-group" ? { ...event, toolCallIds: [...event.toolCallIds] } : { ...event },
+      event.type === "tool-group"
+        ? { ...event, toolCallIds: [...event.toolCallIds] }
+        : { ...event },
     );
   }
 
@@ -99,9 +104,10 @@ export class StreamEventEmitter {
     }
 
     const activeTextEvent = this.activeTextEvent;
-    activeTextEvent.content = eventType === "reasoning"
-      ? appendBoundedUtf8(activeTextEvent.content, content, MAX_RETAINED_REASONING_BYTES)
-      : activeTextEvent.content + content;
+    activeTextEvent.content =
+      eventType === "reasoning"
+        ? appendBoundedUtf8(activeTextEvent.content, content, MAX_RETAINED_REASONING_BYTES)
+        : activeTextEvent.content + content;
     void this.eventSink.publish({
       type: "streamTimelineDelta",
       eventId: activeTextEvent.id,

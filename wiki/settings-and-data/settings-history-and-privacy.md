@@ -1,10 +1,12 @@
 [Back](2.INDEX.MD)
 
-# Settings, Secrets, and History
+# Settings, History, and Privacy
 
 ## Settings
 
 `src/vscode/storage/SettingsManager.ts` atomically stores normalized general settings in `~/.ycrasy-agent/settings.json` and provider settings in `~/.ycrasy-agent/deepseek/settings.json`. Runtime reads use the confirmed in-memory revision. The old `~/.deepseek-agent/` contents migrate automatically on the first activation of the new version, after which the old directory is removed. Later starts skip migration when that directory is absent. See [Provider Storage](provider-storage.md) for migration and conflict handling.
+
+Settings are extension-owned files, not VS Code `configuration` keys. The UI has four tabs: General, API, Tools and Customization. The complete field list, defaults and accepted ranges are in the [settings reference](settings-reference.md).
 
 `HistoryTransitionController` owns the two-phase persistent/incognito transition so configuration writes, pending-generation decisions, and save/discard outcomes remain ordered.
 
@@ -13,7 +15,7 @@ Current defaults and limits:
 - models: `deepseek-v4-flash-vision-exp` (default) and `deepseek-v4-pro`.
 - permission modes: `default`, `auto-approve`, and `full-access` only.
 - Web search: enabled by default and represented by one capability toggle.
-- output allowance: 8,192 tokens, clamped to 1–384,000.
+- output allowance: 384,000 tokens by default, clamped to 1–384,000.
 - concurrent generations: 8, clamped to 1–16.
 - history retention: 30 days by default.
 
@@ -56,6 +58,8 @@ Terminal generation statuses are `completed`, `cancelled`, `interrupted`, and `e
 History is limited by retention and quota and excludes the active conversation from silent cleanup. Activation accepts only schema-v2 conversations; incompatible files and their segments are permanently deleted rather than migrated or quarantined. Disabling history enters Incognito mode: active data stays in memory and reaches history only through an explicit save transition.
 
 ## Workspace snapshots and revert
+
+The restore flow and its user-facing actions are described in [Workspace recovery](../tools-and-permissions/workspace-recovery.md). This section owns the storage layout and limits.
 
 Each chat mirrors relevant source files directly into `~/.ycrasy-agent/snapshoots/<chat-id>/` (under the configured data root when customized). There is no extra `workspace/` folder. Multiple roots use their aliases as subdirectories. These are independent file copies, never hard links to live source files; reflink copying is used when supported.
 

@@ -46,7 +46,10 @@ const CONTAINER_KINDS = new Set([
   "object",
 ]);
 
-export function buildSymbolTree(roots: readonly ToolHostDocumentSymbol[], lines: readonly string[]): CodeSymbol[] {
+export function buildSymbolTree(
+  roots: readonly ToolHostDocumentSymbol[],
+  lines: readonly string[],
+): CodeSymbol[] {
   return buildLevel(roots, lines).map((symbol) => withContainer(symbol));
 }
 
@@ -74,7 +77,9 @@ export function resolveSymbol(symbols: readonly CodeSymbol[], requested: string)
     }
   }
   const byName = symbols.filter((symbol) => symbol.name === tail);
-  return byName.length > 0 ? byName : symbols.filter((symbol) => symbol.name.toLowerCase() === tail.toLowerCase());
+  return byName.length > 0
+    ? byName
+    : symbols.filter((symbol) => symbol.name.toLowerCase() === tail.toLowerCase());
 }
 
 export function splitSourceLines(content: string): string[] {
@@ -82,7 +87,10 @@ export function splitSourceLines(content: string): string[] {
   return source.replace(/\r\n?/g, "\n").split("\n");
 }
 
-function buildLevel(raws: readonly ToolHostDocumentSymbol[], lines: readonly string[]): CodeSymbol[] {
+function buildLevel(
+  raws: readonly ToolHostDocumentSymbol[],
+  lines: readonly string[],
+): CodeSymbol[] {
   const result: CodeSymbol[] = [];
   for (const raw of raws) {
     const kind = raw.kind.toLowerCase();
@@ -96,7 +104,11 @@ function buildLevel(raws: readonly ToolHostDocumentSymbol[], lines: readonly str
   return result;
 }
 
-function createSymbol(raw: ToolHostDocumentSymbol, lines: readonly string[], kind: string): CodeSymbol {
+function createSymbol(
+  raw: ToolHostDocumentSymbol,
+  lines: readonly string[],
+  kind: string,
+): CodeSymbol {
   return {
     name: raw.name,
     qualifiedName: raw.name,

@@ -30,7 +30,9 @@ async function handleListDir(args: Record<string, unknown>): Promise<string> {
     let bytes = Buffer.byteLength(`Contents of ${dirPath}:\n`, "utf8");
     for (const item of allItems.slice(0, MAX_DIRECTORY_ENTRIES)) {
       const itemBytes = Buffer.byteLength(`${item}\n`, "utf8");
-      if (bytes + itemBytes > MAX_DIRECTORY_OUTPUT_BYTES) {break;}
+      if (bytes + itemBytes > MAX_DIRECTORY_OUTPUT_BYTES) {
+        break;
+      }
       items.push(item);
       bytes += itemBytes;
     }
@@ -45,14 +47,16 @@ export const listDirDefinition: ToolDefinition = {
   type: "function",
   function: {
     name: "list_directory",
-    description: "List files and directories at a project path. Excludes node_modules, .git, dist, build, and hidden files by default.",
+    description:
+      "List files and directories at a project path. Excludes node_modules, .git, dist, build, and hidden files by default.",
     strict: true,
     parameters: {
       type: "object",
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path. Defaults to the root. Use an absolute path only for explicitly requested external access.",
+          description:
+            "Workspace-relative path. Defaults to the root. Use an absolute path only for explicitly requested external access.",
         },
         showHidden: {
           type: "boolean",

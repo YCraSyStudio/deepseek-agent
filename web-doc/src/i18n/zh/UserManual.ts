@@ -4,7 +4,8 @@ export const userManual: PageContent = {
   navTitle: "用户手册",
   title: "用户手册",
   seoTitle: "用户手册：聊天、工具与权限",
-  description: "安装扩展、配置 API 密钥，并使用聊天、图像、权限、工作区工具、终端、上下文和全局历史记录。",
+  description:
+    "安装扩展、配置 API 密钥，并使用聊天、图像、权限、工作区工具、终端、上下文和全局历史记录。",
   lead: "配置 API key，选择权限模式，然后从侧边栏使用 DeepSeek，并明确控制每一项工作区操作。",
   sections: [
     {

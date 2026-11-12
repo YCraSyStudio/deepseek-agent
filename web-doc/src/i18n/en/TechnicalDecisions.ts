@@ -4,7 +4,8 @@ export const technicalDecisions: PageContent = {
   navTitle: "Technical decisions",
   title: "Technical decisions",
   seoTitle: "Architecture and layer decisions",
-  description: "How the extension is layered, how generations are owned and recovered, and how streaming, tools, and persistence are designed.",
+  description:
+    "How the extension is layered, how generations are owned and recovered, and how streaming, tools, and persistence are designed.",
   lead: "The extension separates domain state, DeepSeek transport, VS Code capabilities, and React rendering so safety rules remain authoritative in the extension host.",
   sections: [
     {

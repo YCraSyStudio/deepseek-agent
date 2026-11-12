@@ -10,7 +10,10 @@ suite("Tool flow", () => {
 
   teardown(async () => {
     if (createdUri) {
-      await vscode.workspace.fs.delete(createdUri, { useTrash: false }).then(() => undefined, () => undefined);
+      await vscode.workspace.fs.delete(createdUri, { useTrash: false }).then(
+        () => undefined,
+        () => undefined,
+      );
       createdUri = undefined;
     }
     await chat?.dispose();
@@ -21,7 +24,14 @@ suite("Tool flow", () => {
     const fixture = await createFixture("alpha\n");
     chat = await ChatE2e.create();
     chat.transport
-      .respond({ toolCalls: [{ name: "edit_file", arguments: { path: fixture.fileName, search: "alpha", replace: "beta" } }] })
+      .respond({
+        toolCalls: [
+          {
+            name: "edit_file",
+            arguments: { path: fixture.fileName, search: "alpha", replace: "beta" },
+          },
+        ],
+      })
       .respond({ text: "The note now says beta." });
 
     const generationId = await chat.startTurn(`Rename alpha to beta in ${fixture.fileName}`);
@@ -68,7 +78,14 @@ suite("Tool flow", () => {
     const fixture = await createFixture("alpha\n");
     chat = await ChatE2e.create();
     chat.transport
-      .respond({ toolCalls: [{ name: "edit_file", arguments: { path: fixture.fileName, search: "alpha", replace: "destroyed" } }] })
+      .respond({
+        toolCalls: [
+          {
+            name: "edit_file",
+            arguments: { path: fixture.fileName, search: "alpha", replace: "destroyed" },
+          },
+        ],
+      })
       .respond({ text: "The edit was not applied." });
 
     const generationId = await chat.startTurn(`Overwrite ${fixture.fileName}`);
@@ -96,17 +113,23 @@ suite("Tool flow", () => {
     await vscode.workspace.fs.writeFile(createdUri, Buffer.from(content));
     return {
       fileName,
-      read: async () => Buffer.from(await vscode.workspace.fs.readFile(createdUri!)).toString("utf8"),
+      read: async () =>
+        Buffer.from(await vscode.workspace.fs.readFile(createdUri!)).toString("utf8"),
     };
   }
 });
 
-function firstToolCall(post: PostedMessage): { id: string; function: { name: string; arguments: string } } {
+function firstToolCall(post: PostedMessage): {
+  id: string;
+  function: { name: string; arguments: string };
+} {
   const toolCalls = Array.isArray(post.toolCalls)
-    ? post.toolCalls as Array<{ id: string; function: { name: string; arguments: string } }>
+    ? (post.toolCalls as Array<{ id: string; function: { name: string; arguments: string } }>)
     : [];
   const [first] = toolCalls;
-  if (!first) {throw new Error("The confirmation event did not include a tool call");}
+  if (!first) {
+    throw new Error("The confirmation event did not include a tool call");
+  }
   return first;
 }
 

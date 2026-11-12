@@ -17,7 +17,10 @@ export function t(source: TranslationKey, values: Values = {}): string {
 }
 
 function translateForLocale(locale: UiLocale, source: string, values: Values = {}): string {
-  const template = findTranslation(localeCatalogs[locale], source) ?? findTranslation(localeCatalogs.en, source) ?? source;
+  const template =
+    findTranslation(localeCatalogs[locale], source) ??
+    findTranslation(localeCatalogs.en, source) ??
+    source;
   return template.replace(/\{([a-zA-Z][a-zA-Z0-9]*)\}/g, (match, key: string) =>
     Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : match,
   );
@@ -25,18 +28,26 @@ function translateForLocale(locale: UiLocale, source: string, values: Values = {
 
 function findTranslation(catalog: TranslationCatalog, key: string): string | undefined {
   const direct = catalog[key];
-  if (typeof direct === "string") {return direct;}
+  if (typeof direct === "string") {
+    return direct;
+  }
   let current: string | TranslationCatalog | undefined = catalog;
   for (const segment of key.split(".")) {
-    if (typeof current === "string") {return undefined;}
+    if (typeof current === "string") {
+      return undefined;
+    }
     current = current[segment];
-    if (current === undefined) {return undefined;}
+    if (current === undefined) {
+      return undefined;
+    }
   }
   return typeof current === "string" ? current : undefined;
 }
 
 export function formatUiDate(value: Date): string {
-  return new Intl.DateTimeFormat(uiLocale, { dateStyle: "medium", timeStyle: "short" }).format(value);
+  return new Intl.DateTimeFormat(uiLocale, { dateStyle: "medium", timeStyle: "short" }).format(
+    value,
+  );
 }
 
 export function getUiLocale(): UiLocale {
@@ -45,8 +56,12 @@ export function getUiLocale(): UiLocale {
 
 export function setInterfaceLanguage(language: InterfaceLanguage): void {
   const nextLocale = language === "auto" ? detectUiLocale(getSystemLanguage()) : language;
-  if (typeof document !== "undefined") {document.documentElement.lang = nextLocale;}
-  if (nextLocale === uiLocale) {return;}
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = nextLocale;
+  }
+  if (nextLocale === uiLocale) {
+    return;
+  }
   uiLocale = nextLocale;
   localeListeners.forEach((listener) => listener());
 }
@@ -58,8 +73,12 @@ export function subscribeUiLocale(listener: () => void): () => void {
 
 export function detectUiLocale(value: string): UiLocale {
   const language = value.toLowerCase();
-  if (language.startsWith("es")) {return "es";}
-  if (language.startsWith("zh")) {return "zh";}
+  if (language.startsWith("es")) {
+    return "es";
+  }
+  if (language.startsWith("zh")) {
+    return "zh";
+  }
   return "en";
 }
 

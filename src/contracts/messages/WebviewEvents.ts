@@ -25,19 +25,48 @@ import type {
 
 export type HandlerToWebviewMessage =
   | import("../ChatDraft").ChatDraftResult
-  | { type: "reusableInstructions"; entries: import("../Customization").ReusableInstruction[]; error?: string }
+  | {
+      type: "reusableInstructions";
+      entries: import("../Customization").ReusableInstruction[];
+      error?: string;
+    }
   | { type: "reusableInstructionResult"; requestId: string; success: boolean; error?: string }
-  | { type: "workspaceInstructions"; roots: import("../Customization").WorkspaceInstructionsRoot[]; preferredRootUri?: string; error?: string }
+  | {
+      type: "workspaceInstructions";
+      roots: import("../Customization").WorkspaceInstructionsRoot[];
+      preferredRootUri?: string;
+      error?: string;
+    }
   | { type: "openWorkspaceInstructionsResult"; requestId: string; success: boolean; error?: string }
   | { type: "openGlobalAgentsResult"; requestId: string; success: boolean; error?: string }
   | { type: "chatSuggestion"; requestId: string; text: string }
-  | { type: "workspaceTurn"; requestId: string; conversationId: string; generationId: string; paths: string[]; reverted: boolean; error?: string }
+  | {
+      type: "workspaceTurn";
+      requestId: string;
+      conversationId: string;
+      generationId: string;
+      paths: string[];
+      reverted: boolean;
+      error?: string;
+    }
   | { type: "storageDirectoryResult"; storageInfo: StorageInfo; error?: string }
   | { type: "protocolReady"; protocolVersion: 5 }
   | { type: "protocolError"; supportedVersion: 5; error: string }
   | { type: "requestRejected"; requestId?: string; action?: string; error: string }
-  | { type: "screenshotPreview"; requestId: string; conversationId: string; uri?: string; metadata?: CaptureScreenshotResult; error?: string }
-  | { type: "configLoaded"; revision: number; config: Partial<WebviewConfig>; storageInfo?: StorageInfo }
+  | {
+      type: "screenshotPreview";
+      requestId: string;
+      conversationId: string;
+      uri?: string;
+      metadata?: CaptureScreenshotResult;
+      error?: string;
+    }
+  | {
+      type: "configLoaded";
+      revision: number;
+      config: Partial<WebviewConfig>;
+      storageInfo?: StorageInfo;
+    }
   | {
       type: "historyTransitionRequired";
       requestId: string;
@@ -58,16 +87,47 @@ export type HandlerToWebviewMessage =
       error?: string;
     }
   | { type: "connectionTestResult"; success: boolean; error?: string }
-  | { type: "apiKeyDeleteResult"; requestId: string; status: "success" | "error" | "cancelled"; error?: string }
+  | {
+      type: "apiKeyDeleteResult";
+      requestId: string;
+      status: "success" | "error" | "cancelled";
+      error?: string;
+    }
   | { type: "apiKeyStatusSettings"; status: "configured" | "missing"; keyPreview?: string }
   | { type: "apiKeyStatus"; status: "configured" | "missing"; keyPreview?: string }
-  | { type: "generationAccepted"; generationId: string; conversationId: string; clientRequestId: string }
+  | {
+      type: "generationAccepted";
+      generationId: string;
+      conversationId: string;
+      clientRequestId: string;
+    }
   | { type: "messageQueued"; conversationId: string; clientRequestId: string; position: number }
-  | { type: "generationActivityChanged"; conversationId: string; generationId?: string; status: "queued" | "running" | "cancelling" | "settled"; queuedMessages: number }
-  | { type: "cancelGenerationResult"; requestId: string; generationId: string; conversationId: string; status: "accepted" | "stale" }
+  | {
+      type: "generationActivityChanged";
+      conversationId: string;
+      generationId?: string;
+      status: "queued" | "running" | "cancelling" | "settled";
+      queuedMessages: number;
+    }
+  | {
+      type: "cancelGenerationResult";
+      requestId: string;
+      generationId: string;
+      conversationId: string;
+      status: "accepted" | "stale";
+    }
   | { type: "newConversationReady"; requestId: string }
-  | { type: "generationSnapshot"; generations: GenerationSnapshot[]; recoveredDrafts: Array<{ conversationId: string; messages: QueuedGenerationMessage[] }> }
-  | { type: "contextCompactionUpdated"; generationId: string; conversationId: string; status: "compacting" | "completed" }
+  | {
+      type: "generationSnapshot";
+      generations: GenerationSnapshot[];
+      recoveredDrafts: Array<{ conversationId: string; messages: QueuedGenerationMessage[] }>;
+    }
+  | {
+      type: "contextCompactionUpdated";
+      generationId: string;
+      conversationId: string;
+      status: "compacting" | "completed";
+    }
   | { type: "contextCompacted"; generationId: string; conversationId: string }
   | { type: "contextWindowUpdated"; conversationId: string; contextWindow: ContextWindowStatus }
   | {
@@ -77,11 +137,35 @@ export type HandlerToWebviewMessage =
       freedTokens?: number;
       error?: string;
     }
-  | { type: "generationRecoveryStarted"; generationId: string; conversationId: string; reason: "excessive_reasoning"; message: string }
-  | { type: "resourceLimitReached"; generationId?: string; conversationId?: string; resource: string; error: string }
+  | {
+      type: "generationRecoveryStarted";
+      generationId: string;
+      conversationId: string;
+      reason: "excessive_reasoning";
+      message: string;
+    }
+  | {
+      type: "resourceLimitReached";
+      generationId?: string;
+      conversationId?: string;
+      resource: string;
+      error: string;
+    }
   | { type: "showTyping"; generationId: string; conversationId: string }
-  | { type: "streamTimelineDelta"; generationId: string; conversationId: string; eventId: string; eventType: "reasoning" | "content"; content: string }
-  | { type: "streamTimelineToolGroup"; generationId: string; conversationId: string; event: Extract<AssistantTimelineEvent, { type: "tool-group" }> }
+  | {
+      type: "streamTimelineDelta";
+      generationId: string;
+      conversationId: string;
+      eventId: string;
+      eventType: "reasoning" | "content";
+      content: string;
+    }
+  | {
+      type: "streamTimelineToolGroup";
+      generationId: string;
+      conversationId: string;
+      event: Extract<AssistantTimelineEvent, { type: "tool-group" }>;
+    }
   | {
       type: "streamDone";
       generationId: string;
@@ -109,11 +193,33 @@ export type HandlerToWebviewMessage =
       };
     }
   | { type: "clearChat" }
-  | { type: "projectInstructionsStatus"; generationId: string; conversationId: string; sources: ProjectInstructionStatusSource[]; homeAgentsAllowed: boolean }
-  | { type: "workspaceContextChanged"; requestId?: string; conversationId?: string; context: WorkspaceContextStatus }
-  | { type: "workspaceRebindResult"; success: boolean; context?: WorkspaceContextStatus; error?: string }
+  | {
+      type: "projectInstructionsStatus";
+      generationId: string;
+      conversationId: string;
+      sources: ProjectInstructionStatusSource[];
+      homeAgentsAllowed: boolean;
+    }
+  | {
+      type: "workspaceContextChanged";
+      requestId?: string;
+      conversationId?: string;
+      context: WorkspaceContextStatus;
+    }
+  | {
+      type: "workspaceRebindResult";
+      success: boolean;
+      context?: WorkspaceContextStatus;
+      error?: string;
+    }
   | { type: "contextFilesSelected"; files: ReferencedFile[] }
-  | { type: "pathCompletions"; requestId: number; query: string; workspaceRevision: string; items: PathCompletionItem[] }
+  | {
+      type: "pathCompletions";
+      requestId: number;
+      query: string;
+      workspaceRevision: string;
+      items: PathCompletionItem[];
+    }
   | { type: "modelChanged"; modelId: string }
   | { type: "history"; conversations: ConversationSummary[] }
   | { type: "historyError"; requestId?: string; error: string }
@@ -124,10 +230,24 @@ export type HandlerToWebviewMessage =
       usage?: ConversationUsageSnapshot;
       contextWindow?: ContextWindowStatus;
     }
-  | { type: "conversationPageLoaded"; requestId: string; id: string; messages: Conversation["messages"]; hasEarlierMessages: boolean; cursor?: string }
+  | {
+      type: "conversationPageLoaded";
+      requestId: string;
+      id: string;
+      messages: Conversation["messages"];
+      hasEarlierMessages: boolean;
+      cursor?: string;
+    }
   | { type: "conversationLoadRejected"; requestId: string }
   | { type: "conversationDeleted"; id: string }
-  | { type: "toolCallStarted"; generationId: string; conversationId: string; toolCalls: ToolCall[]; round: number; totalRounds?: number }
+  | {
+      type: "toolCallStarted";
+      generationId: string;
+      conversationId: string;
+      toolCalls: ToolCall[];
+      round: number;
+      totalRounds?: number;
+    }
   | {
       type: "toolCallResult";
       generationId: string;
@@ -139,7 +259,13 @@ export type HandlerToWebviewMessage =
       rejected?: boolean;
       status: "completed" | "rejected" | "cancelled" | "error";
     }
-  | { type: "toolCallActionAccepted"; generationId: string; conversationId: string; toolCallId: string; status: "running" | "rejected" }
+  | {
+      type: "toolCallActionAccepted";
+      generationId: string;
+      conversationId: string;
+      toolCallId: string;
+      status: "running" | "rejected";
+    }
   | {
       type: "toolCallConfirmationRequired";
       generationId: string;
@@ -150,8 +276,24 @@ export type HandlerToWebviewMessage =
       dangerConfirmation?: DangerConfirmationData;
     }
   | { type: "availableTools"; tools: AvailableToolInfo[] }
-  | { type: "imageAttachmentsSelected"; requestId: string; attachments: ImageAttachment[]; error?: string }
-  | { type: "imageAttachmentDeleted"; requestId: string; fileId: string; success: boolean; error?: string }
-  | { type: "assistantUsageUpdated"; generationId: string; conversationId: string; usage: UsageAggregate }
+  | {
+      type: "imageAttachmentsSelected";
+      requestId: string;
+      attachments: ImageAttachment[];
+      error?: string;
+    }
+  | {
+      type: "imageAttachmentDeleted";
+      requestId: string;
+      fileId: string;
+      success: boolean;
+      error?: string;
+    }
+  | {
+      type: "assistantUsageUpdated";
+      generationId: string;
+      conversationId: string;
+      usage: UsageAggregate;
+    }
   | { type: "conversationUsageUpdated"; conversationId: string; usage: ConversationUsageSnapshot }
   | { type: "runningTasks"; conversationId?: string; tasks: RunningTaskInfo[] };

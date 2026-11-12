@@ -45,31 +45,43 @@ export class GenerationBudgetManager {
       tools,
       this.model,
       this.effectiveMaxTokens,
-      (requestMessages, requestTools) => Math.ceil(estimateRequestTokens(requestMessages, requestTools) * this.estimateScale),
+      (requestMessages, requestTools) =>
+        Math.ceil(estimateRequestTokens(requestMessages, requestTools) * this.estimateScale),
     );
   }
 
-  assertRequestFitsContext(messages: ChatMessage[], tools: ToolDefinition[]): RequestBudgetAssessment {
+  assertRequestFitsContext(
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
+  ): RequestBudgetAssessment {
     const assessment = this.assessRequest(messages, tools);
     if (assessment.status === "hard_limit") {
       throw new Error(
         `The active request needs approximately ${assessment.estimatedTokens.toLocaleString()} input tokens, ` +
-        `but its calibrated hard limit is ${assessment.hardLimitTokens.toLocaleString()} for ${this.model} after reserving output and safety margin. ` +
-        "Reduce the current request or continue in a new message.",
+          `but its calibrated hard limit is ${assessment.hardLimitTokens.toLocaleString()} for ${this.model} after reserving output and safety margin. ` +
+          "Reduce the current request or continue in a new message.",
       );
     }
     return assessment;
   }
 
   recordPromptUsage(messages: ChatMessage[], tools: ToolDefinition[], usage?: ProviderUsage): void {
-    if (!usage || usage.prompt_tokens <= 0) {return;}
+    if (!usage || usage.prompt_tokens <= 0) {
+      return;
+    }
     const estimated = estimateRequestTokens(messages, tools);
-    if (estimated <= 0) {return;}
+    if (estimated <= 0) {
+      return;
+    }
     const observedScale = usage.prompt_tokens / estimated;
     this.estimateScale = Math.min(4, Math.max(this.estimateScale, observedScale));
   }
 
-  recordRequestContext(messages: ChatMessage[], tools: ToolDefinition[], usage?: ProviderUsage): void {
+  recordRequestContext(
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
+    usage?: ProviderUsage,
+  ): void {
     if (usage && usage.prompt_tokens > 0) {
       this.requestContextTokens = usage.prompt_tokens + (usage.completion_tokens ?? 0);
       return;
@@ -104,7 +116,10 @@ export class GenerationBudgetManager {
     this.resetOutput();
   }
 
-  observeOutput(reasoning: string | undefined, content: string | undefined): OutputBudgetAssessment {
+  observeOutput(
+    reasoning: string | undefined,
+    content: string | undefined,
+  ): OutputBudgetAssessment {
     this.reasoningBytes += Buffer.byteLength(reasoning ?? "", "utf8");
     this.contentBytes += Buffer.byteLength(content ?? "", "utf8");
     const reasoningTokens = Math.ceil(this.reasoningBytes / 3);
@@ -113,11 +128,14 @@ export class GenerationBudgetManager {
     const reasoningRatio = estimatedTokens === 0 ? 0 : reasoningTokens / estimatedTokens;
     const reasoningLimit = Math.floor(this.effectiveMaxTokens * OUTPUT_REASONING_LIMIT_RATIO);
     return {
-      status: estimatedTokens >= this.effectiveMaxTokens
-        ? "hard_limit"
-        : estimatedTokens >= reasoningLimit && reasoningRatio >= 0.75 && contentTokens < MIN_SIGNIFICANT_CONTENT_TOKENS
-          ? "output_reasoning_limit"
-          : "within_budget",
+      status:
+        estimatedTokens >= this.effectiveMaxTokens
+          ? "hard_limit"
+          : estimatedTokens >= reasoningLimit &&
+              reasoningRatio >= 0.75 &&
+              contentTokens < MIN_SIGNIFICANT_CONTENT_TOKENS
+            ? "output_reasoning_limit"
+            : "within_budget",
       estimatedTokens,
       reasoningTokens,
       contentTokens,
@@ -129,5 +147,4 @@ export class GenerationBudgetManager {
     this.reasoningBytes = 0;
     this.contentBytes = 0;
   }
-
 }

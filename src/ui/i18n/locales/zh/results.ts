@@ -32,6 +32,6 @@ export const results = {
     outputTruncated: "输出已截断",
     commandCompletedWithoutOutput: "命令完成但没有输出。",
     truncatedDiffNotice: "Diff 预览已截断，但文件操作已完成。",
-    onlyTheFirstSizeIsShown: "仅显示前 {size}。"
-  }
+    onlyTheFirstSizeIsShown: "仅显示前 {size}。",
+  },
 } satisfies TranslationCatalog;

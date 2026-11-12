@@ -11,7 +11,10 @@ interface StoredApiCredentials {
 export class SecretsManager {
   private static mutationQueue: Promise<void> = Promise.resolve();
 
-  static async migrateLegacyApiKey(context: vscode.ExtensionContext, baseUrl: string): Promise<void> {
+  static async migrateLegacyApiKey(
+    context: vscode.ExtensionContext,
+    baseUrl: string,
+  ): Promise<void> {
     await SecretsManager.enqueueMutation(async () => {
       const legacyKey = await context.secrets.get(API_KEY_SECRET_KEY);
       if (!legacyKey) {
@@ -27,13 +30,20 @@ export class SecretsManager {
     });
   }
 
-  static async getApiKey(context: vscode.ExtensionContext, baseUrl: string): Promise<string | undefined> {
+  static async getApiKey(
+    context: vscode.ExtensionContext,
+    baseUrl: string,
+  ): Promise<string | undefined> {
     await SecretsManager.migrateLegacyApiKey(context, baseUrl);
     const credentials = await readCredentials(context);
     return credentials.byOrigin[getApiOrigin(baseUrl)];
   }
 
-  static async setApiKey(context: vscode.ExtensionContext, baseUrl: string, key: string): Promise<void> {
+  static async setApiKey(
+    context: vscode.ExtensionContext,
+    baseUrl: string,
+    key: string,
+  ): Promise<void> {
     if (!key) {
       throw new Error("The API key replacement must not be empty.");
     }
@@ -70,7 +80,9 @@ async function readCredentials(context: vscode.ExtensionContext): Promise<Stored
       return { version: 2, byOrigin: {} };
     }
     const byOrigin = Object.fromEntries(
-      Object.entries(value.byOrigin).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0),
+      Object.entries(value.byOrigin).filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0,
+      ),
     );
     return { version: 2, byOrigin };
   } catch {

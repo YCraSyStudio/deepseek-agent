@@ -1,6 +1,8 @@
 export function normalizeAssistantMarkdown(content: string): string {
   const unwrapped = unwrapXmlResponse(content);
-  return transformOutsideCodeFences(unwrapped, (text) => normalizeGfmTables(unescapeMarkdownSyntax(text)));
+  return transformOutsideCodeFences(unwrapped, (text) =>
+    normalizeGfmTables(unescapeMarkdownSyntax(text)),
+  );
 }
 
 function transformOutsideCodeFences(content: string, transform: (text: string) => string): string {
@@ -12,7 +14,15 @@ function transformOutsideCodeFences(content: string, transform: (text: string) =
 
 function unwrapXmlResponse(content: string): string {
   let text = content.trim();
-  const wrapperTags = new Set(["answer", "response", "final", "content", "message", "summary", "result"]);
+  const wrapperTags = new Set([
+    "answer",
+    "response",
+    "final",
+    "content",
+    "message",
+    "summary",
+    "result",
+  ]);
 
   for (let i = 0; i < 3; i += 1) {
     const match = text.match(/^<([A-Za-z][\w:-]*)(?:\s[^>]*)?>\s*([\s\S]*?)\s*<\/\1>$/);
@@ -68,7 +78,12 @@ function normalizeGfmTables(content: string): string {
         continue;
       }
 
-      if (!inTable && nextCells.length >= 2 && !isSeparatorRow(nextCells) && !isLikelyNonTableLine(nextLine)) {
+      if (
+        !inTable &&
+        nextCells.length >= 2 &&
+        !isSeparatorRow(nextCells) &&
+        !isLikelyNonTableLine(nextLine)
+      ) {
         normalized.push(formatTableRow(cells));
         normalized.push(formatSeparatorRow(cells.length));
         inTable = true;
@@ -102,7 +117,9 @@ function isSeparatorRow(cells: string[]): boolean {
 
 function isLikelyNonTableLine(line: string): boolean {
   const trimmed = line.trim();
-  return !trimmed || /^#{1,6}\s/.test(trimmed) || /^[-*+]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed);
+  return (
+    !trimmed || /^#{1,6}\s/.test(trimmed) || /^[-*+]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)
+  );
 }
 
 function formatTableRow(cells: string[]): string {

@@ -3,7 +3,11 @@ import "./SettingsForm.css";
 
 type ContentProps = { children: ReactNode; className?: string };
 
-export function SettingsSection({ title, children, className = "" }: ContentProps & { title: string }) {
+export function SettingsSection({
+  title,
+  children,
+  className = "",
+}: ContentProps & { title: string }) {
   return (
     <section className={`settingsSection ${className}`}>
       <h3 className="sectionTitle">{title}</h3>
@@ -23,7 +27,18 @@ type SettingsGroupProps = ContentProps & {
   tooltip?: string;
 };
 
-export function SettingsGroup({ title, children, className = "", collapsible = false, defaultOpen = true, variant = "section", count, busy, headerAction, tooltip }: SettingsGroupProps) {
+export function SettingsGroup({
+  title,
+  children,
+  className = "",
+  collapsible = false,
+  defaultOpen = true,
+  variant = "section",
+  count,
+  busy,
+  headerAction,
+  tooltip,
+}: SettingsGroupProps) {
   const classes = `settingsGroup settingsGroup--${variant} ${className}`;
   if (collapsible) {
     return (
@@ -41,11 +56,18 @@ export function SettingsGroup({ title, children, className = "", collapsible = f
   return (
     <div className={classes}>
       {headerAction ? (
-        <div className="settingsGroupHeader" data-tooltip={tooltip} data-tooltip-position="bottom" data-tooltip-align="start">
+        <div
+          className="settingsGroupHeader"
+          data-tooltip={tooltip}
+          data-tooltip-position="bottom"
+          data-tooltip-align="start"
+        >
           <h3 className="sectionTitle">{title}</h3>
           {headerAction}
         </div>
-      ) : <h3 className="sectionTitle">{title}</h3>}
+      ) : (
+        <h3 className="sectionTitle">{title}</h3>
+      )}
       {children}
     </div>
   );
@@ -60,12 +82,28 @@ type SettingsFieldProps = ContentProps & {
   busy?: boolean;
 };
 
-export function SettingsField({ label, htmlFor, children, layout = "inline", tooltip, description, busy, className = "" }: SettingsFieldProps) {
+export function SettingsField({
+  label,
+  htmlFor,
+  children,
+  layout = "inline",
+  tooltip,
+  description,
+  busy,
+  className = "",
+}: SettingsFieldProps) {
   return (
     <div className={`settingsField settingsField--${layout} ${className}`} aria-busy={busy}>
       {label && (
-        <label htmlFor={htmlFor} tabIndex={tooltip ? 0 : undefined}
-          data-tooltip={tooltip} data-tooltip-position="bottom" data-tooltip-align="start">{label}</label>
+        <label
+          htmlFor={htmlFor}
+          tabIndex={tooltip ? 0 : undefined}
+          data-tooltip={tooltip}
+          data-tooltip-position="bottom"
+          data-tooltip-align="start"
+        >
+          {label}
+        </label>
       )}
       <div className="settingsFieldControl">{children}</div>
       {description && <div className="settingsFieldDescription">{description}</div>}
@@ -73,7 +111,13 @@ export function SettingsField({ label, htmlFor, children, layout = "inline", too
   );
 }
 
-export function SettingsInputAction({ children, action }: { children: ReactNode; action: ReactNode }) {
+export function SettingsInputAction({
+  children,
+  action,
+}: {
+  children: ReactNode;
+  action: ReactNode;
+}) {
   return (
     <div className="settingsInputAction">
       {children}

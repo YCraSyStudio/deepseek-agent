@@ -4,7 +4,8 @@ export const changelog: PageContent = {
   navTitle: "Changelog",
   title: "Changelog",
   seoTitle: "Notas de versión y changelog",
-  description: "Todas las pre-versiones 0.1.x publicadas de YCraSy DeepSeek Agent con sus cambios visibles para el usuario.",
+  description:
+    "Todas las pre-versiones 0.1.x publicadas de YCraSy DeepSeek Agent con sus cambios visibles para el usuario.",
   lead: "La preview 0.1.16 incorpora snapshots recuperables del workspace, migración del almacenamiento, personalización de instrucciones, junto con completados beta y búsqueda web renovada.",
   sections: [
     {

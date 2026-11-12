@@ -12,4 +12,7 @@ export interface ReusableInstruction {
   rootUri?: string;
 }
 
-export { INSTRUCTION_TEMPLATE_IDS, type InstructionTemplateId } from "@/shared/instructions/InstructionTemplates";
+export {
+  INSTRUCTION_TEMPLATE_IDS,
+  type InstructionTemplateId,
+} from "@/shared/instructions/InstructionTemplates";

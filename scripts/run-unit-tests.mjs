@@ -12,18 +12,23 @@ import { selectUnitTests } from "./unit-test-selection.mjs";
 // that class of runaway into a fast, local abort instead of exhausting host memory.
 const defaultHeapLimitMb = 3072;
 const heapLimitMb = Number(process.env.DEEPSEEK_AGENT_TEST_HEAP_MB ?? defaultHeapLimitMb);
-const heapCapConfigured = process.execArgv.some((argument) => argument.startsWith("--max-old-space-size"))
-  || /--max-old-space-size/.test(process.env.NODE_OPTIONS ?? "");
+const heapCapConfigured =
+  process.execArgv.some((argument) => argument.startsWith("--max-old-space-size")) ||
+  /--max-old-space-size/.test(process.env.NODE_OPTIONS ?? "");
 if (!heapCapConfigured && process.env.DEEPSEEK_AGENT_TEST_HEAP_GUARD !== "1") {
-  const child = spawn(process.execPath, [
-    `--max-old-space-size=${heapLimitMb}`,
-    ...process.execArgv,
-    fileURLToPath(import.meta.url),
-    ...process.argv.slice(2),
-  ], { stdio: "inherit", env: { ...process.env, DEEPSEEK_AGENT_TEST_HEAP_GUARD: "1" } });
+  const child = spawn(
+    process.execPath,
+    [
+      `--max-old-space-size=${heapLimitMb}`,
+      ...process.execArgv,
+      fileURLToPath(import.meta.url),
+      ...process.argv.slice(2),
+    ],
+    { stdio: "inherit", env: { ...process.env, DEEPSEEK_AGENT_TEST_HEAP_GUARD: "1" } },
+  );
   const exitCode = await new Promise((resolveExit) => {
     child.once("error", () => resolveExit(1));
-    child.once("exit", (code, signal) => resolveExit(signal ? 1 : code ?? 1));
+    child.once("exit", (code, signal) => resolveExit(signal ? 1 : (code ?? 1)));
   });
   process.exit(exitCode);
 }
@@ -31,8 +36,10 @@ if (!heapCapConfigured && process.env.DEEPSEEK_AGENT_TEST_HEAP_GUARD !== "1") {
 const outDir = resolve(".tmp/unit-tests");
 const testDir = resolve("src/test");
 const integrationDir = resolve(testDir, "integration");
-const unitTests = collectTests(testDir)
-  .filter((fileName) => !fileName.startsWith(`${integrationDir}\\`) && !fileName.startsWith(`${integrationDir}/`));
+const unitTests = collectTests(testDir).filter(
+  (fileName) =>
+    !fileName.startsWith(`${integrationDir}\\`) && !fileName.startsWith(`${integrationDir}/`),
+);
 let entryPoints;
 try {
   entryPoints = selectUnitTests(unitTests, testDir, process.argv.slice(2));
@@ -49,8 +56,16 @@ const adapterTestDir = resolve(testDir, "webview/ui/chat/presentation/adapters")
 const adapterTests = entryPoints.filter((file) => file.startsWith(`${adapterTestDir}${sep}`));
 const storageTestDir = resolve(testDir, "storage/persistence/failures");
 const storageTests = entryPoints.filter((file) => file.startsWith(`${storageTestDir}${sep}`));
-const chromiumDistributionTests = entryPoints.filter((file) => file.startsWith(`${resolve(testDir, "tools/browser/distribution")}${sep}`));
-const standardTests = entryPoints.filter((file) => !hostTests.includes(file) && !adapterTests.includes(file) && !storageTests.includes(file) && !chromiumDistributionTests.includes(file));
+const chromiumDistributionTests = entryPoints.filter((file) =>
+  file.startsWith(`${resolve(testDir, "tools/browser/distribution")}${sep}`),
+);
+const standardTests = entryPoints.filter(
+  (file) =>
+    !hostTests.includes(file) &&
+    !adapterTests.includes(file) &&
+    !storageTests.includes(file) &&
+    !chromiumDistributionTests.includes(file),
+);
 const buildOptions = {
   bundle: true,
   format: "esm",
@@ -63,7 +78,9 @@ const buildOptions = {
   sourcemap: true,
   packages: "external",
   loader: { ".svg": "dataurl", ".ttf": "dataurl" },
-  alias: { "@vscode/codicons/dist/codicon.css": resolve("node_modules/@vscode/codicons/dist/codicon.css") },
+  alias: {
+    "@vscode/codicons/dist/codicon.css": resolve("node_modules/@vscode/codicons/dist/codicon.css"),
+  },
 };
 
 await esbuild.build({ ...buildOptions, entryPoints: standardTests });
@@ -95,7 +112,10 @@ if (storageTests.length) {
   await esbuild.build({
     ...buildOptions,
     entryPoints: storageTests,
-    alias: { ...buildOptions.alias, "node:fs/promises": resolve(testDir, "support/StorageFsFaults.ts") },
+    alias: {
+      ...buildOptions.alias,
+      "node:fs/promises": resolve(testDir, "support/StorageFsFaults.ts"),
+    },
   });
 }
 
@@ -103,8 +123,12 @@ if (storageTests.length) {
 // Every other browser test uses the actual Puppeteer package.
 if (chromiumDistributionTests.length) {
   await esbuild.build({
-    ...buildOptions, entryPoints: chromiumDistributionTests,
-    alias: { ...buildOptions.alias, "@puppeteer/browsers": resolve(testDir, "support/PuppeteerDistributionMock.ts") },
+    ...buildOptions,
+    entryPoints: chromiumDistributionTests,
+    alias: {
+      ...buildOptions.alias,
+      "@puppeteer/browsers": resolve(testDir, "support/PuppeteerDistributionMock.ts"),
+    },
   });
 }
 
@@ -149,19 +173,28 @@ const runner = mocha.run();
 runner.on("test", (test) => {
   currentTest = test.fullTitle();
   recordProgress("start", currentTest, memorySnapshot());
-  if (memoryDiagnostics) { console.error(`[memory] start ${currentTest} ${formatSnapshot(memorySnapshot())}`); }
+  if (memoryDiagnostics) {
+    console.error(`[memory] start ${currentTest} ${formatSnapshot(memorySnapshot())}`);
+  }
 });
 runner.on("test end", (test) => {
   const snapshot = guard.check();
   memoryHistory.push({ test: test.fullTitle(), ...snapshot });
   recordProgress("end", test.fullTitle(), snapshot);
-  if (memoryDiagnostics) { console.error(`[memory] end   ${test.fullTitle()} ${formatSnapshot(snapshot)}`); }
+  if (memoryDiagnostics) {
+    console.error(`[memory] end   ${test.fullTitle()} ${formatSnapshot(snapshot)}`);
+  }
 });
 const failures = await new Promise((resolveRun) => {
   runner.once("end", () => resolveRun(runner.failures));
 });
 guard.stop();
-writeMemoryReport({ reason: "completed", test: currentTest, snapshot: { ...guard.peak }, history: memoryHistory });
+writeMemoryReport({
+  reason: "completed",
+  test: currentTest,
+  snapshot: { ...guard.peak },
+  history: memoryHistory,
+});
 
 if (failures) {
   process.exitCode = 1;
@@ -170,18 +203,28 @@ if (failures) {
 // A synchronous runaway loop blocks timers, so the watchdog cannot run. The progress
 // file is rewritten before every test and survives an external kill, naming the culprit.
 function recordProgress(event, testName, snapshot) {
-  if (!memoryReportPath) { return; }
+  if (!memoryReportPath) {
+    return;
+  }
   try {
-    writeFileSync(`${memoryReportPath}.progress.json`, JSON.stringify({ event, test: testName, pid: process.pid, ...snapshot }, null, 2));
+    writeFileSync(
+      `${memoryReportPath}.progress.json`,
+      JSON.stringify({ event, test: testName, pid: process.pid, ...snapshot }, null, 2),
+    );
   } catch {
     // Diagnostics must never mask the test result.
   }
 }
 
 function writeMemoryReport({ reason, test: testName, snapshot, history }) {
-  if (!memoryReportPath) { return; }
+  if (!memoryReportPath) {
+    return;
+  }
   try {
-    writeFileSync(memoryReportPath, JSON.stringify({ reason, test: testName, peak: snapshot, history }, null, 2));
+    writeFileSync(
+      memoryReportPath,
+      JSON.stringify({ reason, test: testName, peak: snapshot, history }, null, 2),
+    );
   } catch (error) {
     console.error(`Unable to write the memory report: ${String(error)}`);
   }

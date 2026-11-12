@@ -1,7 +1,16 @@
-import { mapReasoningEffort, type AppConfig, type ChatCompletionRequest, type ChatMessage, type StreamChunk } from "@/contracts";
+import {
+  mapReasoningEffort,
+  type AppConfig,
+  type ChatCompletionRequest,
+  type ChatMessage,
+  type StreamChunk,
+} from "@/contracts";
 import type { ModelProvider } from "@/application/ports";
 import { createSystemMessage } from "@/contracts/deepseek/Chat";
-import { PartialStreamError, type StreamedAssistantResult } from "@/application/errors/PartialStreamError";
+import {
+  PartialStreamError,
+  type StreamedAssistantResult,
+} from "@/application/errors/PartialStreamError";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import { StreamEventEmitter } from "./StreamEventEmitter";
 import type { SendMessagePayload } from "../Types";
@@ -24,8 +33,18 @@ interface SendMessageStreamingOptions {
   budgetManager?: GenerationBudgetManager;
 }
 
-export async function sendMessageStreaming({ messages, payload, config, provider, eventSink, signal, onUsage, budgetManager }: SendMessageStreamingOptions): Promise<StreamedAssistantResult> {
-  const activeBudgetManager = budgetManager ?? new GenerationBudgetManager(payload.modelId || config.model, config.maxTokens);
+export async function sendMessageStreaming({
+  messages,
+  payload,
+  config,
+  provider,
+  eventSink,
+  signal,
+  onUsage,
+  budgetManager,
+}: SendMessageStreamingOptions): Promise<StreamedAssistantResult> {
+  const activeBudgetManager =
+    budgetManager ?? new GenerationBudgetManager(payload.modelId || config.model, config.maxTokens);
   return streamAttempt({
     messages,
     payload,
@@ -39,16 +58,22 @@ export async function sendMessageStreaming({ messages, payload, config, provider
   });
 }
 
-async function streamAttempt(options: SendMessageStreamingOptions & { conciseRecovery: boolean }): Promise<StreamedAssistantResult> {
-  const { messages, payload, config, provider, eventSink, signal, onUsage, conciseRecovery } = options;
-  const budgetManager = options.budgetManager ?? new GenerationBudgetManager(payload.modelId || config.model, config.maxTokens);
+async function streamAttempt(
+  options: SendMessageStreamingOptions & { conciseRecovery: boolean },
+): Promise<StreamedAssistantResult> {
+  const { messages, payload, config, provider, eventSink, signal, onUsage, conciseRecovery } =
+    options;
+  const budgetManager =
+    options.budgetManager ??
+    new GenerationBudgetManager(payload.modelId || config.model, config.maxTokens);
   const hasSystemPrompt = messages.length > 0 && messages[0].role === "system";
   const requestMessages = conciseRecovery ? withConciseRecoveryInstruction(messages) : messages;
   const request: ChatCompletionRequest = {
     model: payload.modelId || config.model,
     messages: hasSystemPrompt ? requestMessages : [createSystemMessage(), ...requestMessages],
     stream: true,
-    thinking: conciseRecovery || payload.reasoning === "off" ? { type: "disabled" } : { type: "enabled" },
+    thinking:
+      conciseRecovery || payload.reasoning === "off" ? { type: "disabled" } : { type: "enabled" },
     reasoning_effort: conciseRecovery ? undefined : mapReasoningEffort(payload.reasoning),
     max_tokens: budgetManager.effectiveMaxTokens,
   };
@@ -105,13 +130,16 @@ async function streamAttempt(options: SendMessageStreamingOptions & { conciseRec
       await eventSink.publish({
         type: "generationRecoveryStarted",
         reason: "excessive_reasoning",
-        message: "The previous attempt was reasoning more than necessary. Retrying once with a concise response.",
+        message:
+          "The previous attempt was reasoning more than necessary. Retrying once with a concise response.",
       });
       return streamAttempt({ ...options, conciseRecovery: true });
     }
     if (result.content || result.reasoning) {
       throw new PartialStreamError(
-        isCancellationError(err, signal) ? "Stream cancelled with partial content" : `Stream failed after partial content: ${getErrorMessage(err)}`,
+        isCancellationError(err, signal)
+          ? "Stream cancelled with partial content"
+          : `Stream failed after partial content: ${getErrorMessage(err)}`,
         result,
         isCancellationError(err, signal) ? "cancelled" : "failed",
       );
@@ -126,7 +154,9 @@ async function streamAttempt(options: SendMessageStreamingOptions & { conciseRec
   result.timeline = stream.getTimeline();
   if (finishReason !== "stop") {
     const message = describeIncompleteFinish(finishReason);
-    if (result.content || result.reasoning) {throw new PartialStreamError(message, result, "failed");}
+    if (result.content || result.reasoning) {
+      throw new PartialStreamError(message, result, "failed");
+    }
     throw new Error(message);
   }
   stream.done({ finish_reason: finishReason });
@@ -134,20 +164,30 @@ async function streamAttempt(options: SendMessageStreamingOptions & { conciseRec
 }
 
 function withConciseRecoveryInstruction(messages: ChatMessage[]): ChatMessage[] {
-  const instruction = "The previous attempt approached its output budget while reasoning. Reasoning further is unnecessary. Trust successful results already present, avoid additional verification, and provide the required answer or single essential tool call concisely.";
-  return messages.map((message, index) => index === 0 && message.role === "system"
-    ? { ...message, content: `${message.content ?? ""}\n\n<concise_recovery>${instruction}</concise_recovery>` }
-    : message);
+  const instruction =
+    "The previous attempt approached its output budget while reasoning. Reasoning further is unnecessary. Trust successful results already present, avoid additional verification, and provide the required answer or single essential tool call concisely.";
+  return messages.map((message, index) =>
+    index === 0 && message.role === "system"
+      ? {
+          ...message,
+          content: `${message.content ?? ""}\n\n<concise_recovery>${instruction}</concise_recovery>`,
+        }
+      : message,
+  );
 }
 
 function describeIncompleteFinish(reason: string | null | undefined): string {
   switch (reason) {
-    case "length": return "DeepSeek stopped because the output limit was reached. The response was saved as incomplete.";
-    case "content_filter": return "DeepSeek stopped because content was filtered. The response was saved as incomplete.";
-    case "insufficient_system_resource": return "DeepSeek stopped because provider resources were insufficient. The response was saved as incomplete.";
+    case "length":
+      return "DeepSeek stopped because the output limit was reached. The response was saved as incomplete.";
+    case "content_filter":
+      return "DeepSeek stopped because content was filtered. The response was saved as incomplete.";
+    case "insufficient_system_resource":
+      return "DeepSeek stopped because provider resources were insufficient. The response was saved as incomplete.";
     case undefined:
-    case null: return "DeepSeek ended without a terminal finish reason. The response was saved as incomplete.";
-    default: return `DeepSeek ended with unsupported finish reason "${reason}". The response was saved as incomplete.`;
+    case null:
+      return "DeepSeek ended without a terminal finish reason. The response was saved as incomplete.";
+    default:
+      return `DeepSeek ended with unsupported finish reason "${reason}". The response was saved as incomplete.`;
   }
 }
-

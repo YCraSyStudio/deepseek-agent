@@ -28,8 +28,14 @@ suite("file change registry", () => {
 
   test("ignores binary and oversized documents", () => {
     const registry = new FileChangeRegistry(OPTIONS);
-    assert.strictEqual(registry.record("image.png", undefined, Buffer.from([0, 1, 2, 3])), undefined);
-    assert.strictEqual(registry.record("big.txt", undefined, Buffer.alloc(OPTIONS.maxDocumentBytes + 1, 65)), undefined);
+    assert.strictEqual(
+      registry.record("image.png", undefined, Buffer.from([0, 1, 2, 3])),
+      undefined,
+    );
+    assert.strictEqual(
+      registry.record("big.txt", undefined, Buffer.alloc(OPTIONS.maxDocumentBytes + 1, 65)),
+      undefined,
+    );
     assert.strictEqual(registry.size, 0);
   });
 

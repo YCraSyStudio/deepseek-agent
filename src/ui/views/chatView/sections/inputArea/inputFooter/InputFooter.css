@@ -23,7 +23,7 @@
   padding: 2px 10px 2px 6px;
   font-size: 11px;
   line-height: 1.6;
-  animation: .2s ease-out chipIn;
+  animation: 0.2s ease-out chipIn;
   display: inline-flex;
   body.vscode-dark & {
     background: var(--vscode-badge-background, #4a4a4a);
@@ -33,7 +33,7 @@
 @keyframes chipIn {
   from {
     opacity: 0;
-    transform: scale(.85);
+    transform: scale(0.85);
   }
   to {
     opacity: 1;
@@ -55,13 +55,13 @@
   font-size: 10px;
 }
 .fileChipLabel {
-  opacity: .6;
+  opacity: 0.6;
   text-transform: uppercase;
   font-size: 9px;
 }
 .fileChipRemove {
   cursor: pointer;
-  opacity: .5;
+  opacity: 0.5;
   color: inherit;
   background: none;
   border: none;
@@ -104,7 +104,10 @@
   justify-content: space-between;
   gap: 7px;
   padding: var(--control-padding-block) var(--control-padding-inline);
-  transition: border-color .16s, box-shadow .16s, background-color .16s;
+  transition:
+    border-color 0.16s,
+    box-shadow 0.16s,
+    background-color 0.16s;
 
   &:hover {
     background: var(--control-hover-bg);
@@ -199,7 +202,11 @@
   z-index: 30;
   border: 1px solid var(--vscode-menu-border, var(--border-color));
   background: var(--vscode-menu-background, var(--bg-secondary));
-  background: color-mix(in srgb, var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity), transparent);
+  background: color-mix(
+    in srgb,
+    var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity),
+    transparent
+  );
   backdrop-filter: var(--floating-surface-filter);
   color: var(--vscode-menu-foreground, var(--text-primary));
   border-radius: 12px;
@@ -242,7 +249,7 @@
 
   &:disabled {
     cursor: default;
-    opacity: .35;
+    opacity: 0.35;
   }
 }
 .contextRing {
@@ -253,7 +260,7 @@
 .contextRingTrack {
   fill: none;
   stroke: currentColor;
-  stroke-opacity: .28;
+  stroke-opacity: 0.28;
   stroke-width: 2.5;
 }
 .contextRingValue {
@@ -263,7 +270,7 @@
   stroke-linecap: round;
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
-  transition: stroke-dashoffset .25s ease-out;
+  transition: stroke-dashoffset 0.25s ease-out;
 }
 .contextRing.tone-idle {
   color: var(--text-secondary, #999);
@@ -278,7 +285,7 @@
   color: var(--vscode-errorForeground, #f14c4c);
 }
 .contextRing.estimated {
-  opacity: .75;
+  opacity: 0.75;
 }
 .contextRing.pending {
   animation: contextRingPulse 1.1s ease-in-out infinite;
@@ -286,7 +293,7 @@
 @keyframes contextRingPulse {
   0%,
   100% {
-    opacity: .4;
+    opacity: 0.4;
   }
   50% {
     opacity: 1;
@@ -346,7 +353,7 @@
     background: currentColor;
     border-radius: 4px;
     height: 100%;
-    transition: width .25s ease-out;
+    transition: width 0.25s ease-out;
     display: block;
   }
 }
@@ -384,7 +391,7 @@
 
   &:disabled {
     cursor: default;
-    opacity: .6;
+    opacity: 0.6;
   }
 }
 .usageCompactResult {
@@ -408,7 +415,11 @@
   z-index: 30;
   border: 1px solid var(--vscode-menu-border, var(--border-color));
   background: var(--vscode-menu-background, var(--bg-secondary));
-  background: color-mix(in srgb, var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity), transparent);
+  background: color-mix(
+    in srgb,
+    var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity),
+    transparent
+  );
   backdrop-filter: var(--floating-surface-filter);
   color: var(--vscode-menu-foreground, var(--text-primary));
   border-radius: 12px;
@@ -443,7 +454,11 @@
 }
 .usageHero {
   border: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--vscode-menu-background, var(--bg-secondary)) 92%, var(--vscode-focusBorder) 8%);
+  background: color-mix(
+    in srgb,
+    var(--vscode-menu-background, var(--bg-secondary)) 92%,
+    var(--vscode-focusBorder) 8%
+  );
   border-radius: 9px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-bottom: 10px;
@@ -633,6 +648,12 @@
   min-height: 28px;
   border-radius: var(--control-radius);
   cursor: pointer;
-  &:hover:not(:disabled) { background: var(--control-hover-bg); color: var(--text-primary); }
-  &:disabled { opacity: .4; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    background: var(--control-hover-bg);
+    color: var(--text-primary);
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }

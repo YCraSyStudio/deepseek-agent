@@ -11,8 +11,12 @@ export function getDefaultUserDataDirectory(): string {
 
 export function resolveUserDataDirectory(value: string): string {
   const trimmed = value.trim();
-  const expanded = trimmed === "~" ? os.homedir()
-    : trimmed.startsWith("~/") || trimmed.startsWith("~\\") ? path.join(os.homedir(), trimmed.slice(2)) : trimmed;
+  const expanded =
+    trimmed === "~"
+      ? os.homedir()
+      : trimmed.startsWith("~/") || trimmed.startsWith("~\\")
+        ? path.join(os.homedir(), trimmed.slice(2))
+        : trimmed;
   if (!expanded || expanded.includes("\0") || !path.isAbsolute(expanded)) {
     throw new Error("Enter an absolute directory path.");
   }
@@ -25,7 +29,8 @@ export function configureUserDataDirectory(directory: string | undefined): void 
 }
 
 export function getUserDataDirectory(): string {
-  const testOverride = process.env.NODE_ENV === "test" ? process.env.DEEPSEEK_AGENT_USER_DATA_DIR : undefined;
+  const testOverride =
+    process.env.NODE_ENV === "test" ? process.env.DEEPSEEK_AGENT_USER_DATA_DIR : undefined;
   if (testOverride) {
     return path.resolve(testOverride);
   }
@@ -45,7 +50,11 @@ export function getLegacyGenerationCheckpointDirectory(): string {
 }
 
 export function getGenerationCheckpointPath(conversationId: string): string {
-  if (!conversationId || conversationId.length > 512 || [".", "..", "new-chat-draft"].includes(conversationId)) {
+  if (
+    !conversationId ||
+    conversationId.length > 512 ||
+    [".", "..", "new-chat-draft"].includes(conversationId)
+  ) {
     throw new Error("Invalid checkpoint conversation ID");
   }
   return path.join(getHistoryDirectory(), encodeURIComponent(conversationId), "checkpoint.json");

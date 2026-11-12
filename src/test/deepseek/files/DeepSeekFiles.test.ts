@@ -1,5 +1,8 @@
 import * as assert from "node:assert";
-import { deleteDeepSeekFile, uploadDeepSeekImage } from "@/infrastructure/deepseek/files/DeepSeekFiles";
+import {
+  deleteDeepSeekFile,
+  uploadDeepSeekImage,
+} from "@/infrastructure/deepseek/files/DeepSeekFiles";
 
 suite("DeepSeek Files API", () => {
   test("uploads multipart user_data and returns reusable file metadata", async () => {
@@ -17,7 +20,10 @@ suite("DeepSeek Files API", () => {
         const file = init.body.get("file");
         assert.ok(file instanceof File);
         assert.strictEqual(file.name, "image.png");
-        assert.deepStrictEqual(new Uint8Array(await file.arrayBuffer()), Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+        assert.deepStrictEqual(
+          new Uint8Array(await file.arrayBuffer()),
+          Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        );
         return Response.json({
           id: "file-api-test123",
           object: "file",
@@ -52,9 +58,17 @@ suite("DeepSeek Files API", () => {
         assert.strictEqual(init?.method, "DELETE");
         return Response.json({ id: "file-api-test123", deleted: true });
       };
-      await deleteDeepSeekFile({ apiKey: "test-key", baseUrl: "https://api.deepseek.com", fileId: "file-api-test123" });
+      await deleteDeepSeekFile({
+        apiKey: "test-key",
+        baseUrl: "https://api.deepseek.com",
+        fileId: "file-api-test123",
+      });
       await assert.rejects(
-        deleteDeepSeekFile({ apiKey: "test-key", baseUrl: "https://api.deepseek.com", fileId: "../models" }),
+        deleteDeepSeekFile({
+          apiKey: "test-key",
+          baseUrl: "https://api.deepseek.com",
+          fileId: "../models",
+        }),
         /Invalid DeepSeek file identifier/,
       );
     } finally {

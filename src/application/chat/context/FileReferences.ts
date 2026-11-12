@@ -14,7 +14,9 @@ export function buildFileContext(files: ReferencedFileContext[]): string {
 
     if (file.content) {
       const content = file.content.replace(/<\/referenced-file>/gi, "&lt;/referenced-file&gt;");
-      const selection = file.selection ? ` selection=${JSON.stringify(`${file.selection.startLine}:${file.selection.startCharacter}-${file.selection.endLine}:${file.selection.endCharacter}`)}` : "";
+      const selection = file.selection
+        ? ` selection=${JSON.stringify(`${file.selection.startLine}:${file.selection.startCharacter}-${file.selection.endLine}:${file.selection.endCharacter}`)}`
+        : "";
       const scope = file.scope === "external-snapshot" ? ` scope="external-snapshot"` : "";
       return `<referenced-file path=${JSON.stringify(file.path)}${scope}${selection} bytes=${Buffer.byteLength(content, "utf8")}>
 ${content}

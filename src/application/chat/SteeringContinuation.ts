@@ -8,7 +8,9 @@ export function buildSteeringContinuationInstruction(
   steering: SteeringContinuation | undefined,
   conversation: StoredConversation | undefined,
 ): string | undefined {
-  if (!steering || !conversation) {return undefined;}
+  if (!steering || !conversation) {
+    return undefined;
+  }
   const sourceMessages = conversation.messages.filter(
     (message) => message.generationId === steering.sourceGenerationId,
   );
@@ -16,7 +18,9 @@ export function buildSteeringContinuationInstruction(
     (message) => message.role === "assistant" && message.generationStopReason === "steered",
   );
   const hasOriginalRequest = sourceMessages.some((message) => message.role === "user");
-  if (!sourceWasSteered || !hasOriginalRequest) {return undefined;}
+  if (!sourceWasSteered || !hasOriginalRequest) {
+    return undefined;
+  }
 
   return [
     "<live-steering>",

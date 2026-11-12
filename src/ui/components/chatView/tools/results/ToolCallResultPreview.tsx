@@ -2,7 +2,10 @@ import type { VsCodeApi } from "@webview/VsCodeApi";
 import type { ToolCallState } from "@webview/views/chatView/ChatViewTypes";
 import { hidesSuccessfulFileResult } from "./FileToolPresentation";
 import { detectDiff } from "@webview/views/chatView/utils/Format";
-import { parseStructuredToolResult, parseTerminalResult } from "@webview/views/chatView/utils/FileType";
+import {
+  parseStructuredToolResult,
+  parseTerminalResult,
+} from "@webview/views/chatView/utils/FileType";
 import {
   renderDiffPreview,
   renderPlainResult,

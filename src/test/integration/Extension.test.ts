@@ -20,7 +20,11 @@ import { runWithToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
 import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
 import { ChangeDiffViewer } from "@/vscode/editor/diff/ChangeDiffViewer";
 import { fileChangeRegistry } from "@/vscode/editor/diff/FileChangeRegistry";
-import { captureCurrentWorkspaceBinding, captureWorkspaceRunSnapshot, type WorkspaceRunSnapshot } from "@/vscode/workspace";
+import {
+  captureCurrentWorkspaceBinding,
+  captureWorkspaceRunSnapshot,
+  type WorkspaceRunSnapshot,
+} from "@/vscode/workspace";
 import { getPathCompletionItems } from "@/vscode/editor/EditorActions";
 import { HistoryManager } from "@/vscode/storage/HistoryManager";
 import { VsCodeSettingsRepository } from "@/vscode/storage/RepositoryAdapters";
@@ -33,19 +37,28 @@ const settingsRepository = new VsCodeSettingsRepository();
 // only runs after a successful suite. Keep failure reports measurable too.
 if (process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY) {
   suiteTeardown(async () => {
-    const hooks = await import(pathToFileURL(path.resolve(__dirname, "../../scripts/integration-coverage.cjs")).href);
+    const hooks = await import(
+      pathToFileURL(path.resolve(__dirname, "../../scripts/integration-coverage.cjs")).href
+    );
     await hooks.mochaGlobalTeardown();
   });
 }
 
-
 suite("Extension integration", () => {
   test("runs snapshot and editor operations in an isolated temporary workspace", () => {
-    const folder = vscode.workspace.workspaceFolders?.[0]; assert.ok(folder);
-    assert.equal(folder.uri.fsPath, vscode.Uri.file(process.env.DEEPSEEK_AGENT_INTEGRATION_WORKSPACE!).fsPath);
-    const extension = vscode.extensions.getExtension("yarcrasy.deepseek-agent"); assert.ok(extension);
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    assert.ok(folder);
+    assert.equal(
+      folder.uri.fsPath,
+      vscode.Uri.file(process.env.DEEPSEEK_AGENT_INTEGRATION_WORKSPACE!).fsPath,
+    );
+    const extension = vscode.extensions.getExtension("yarcrasy.deepseek-agent");
+    assert.ok(extension);
     const relative = path.relative(extension.extensionPath, folder.uri.fsPath);
-    assert.ok(relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative), "Integration workspace must be outside the extension checkout");
+    assert.ok(
+      relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative),
+      "Integration workspace must be outside the extension checkout",
+    );
   });
 
   test("starts an empty chat after settings, history or recovery storage fails", async () => {
@@ -57,17 +70,27 @@ suite("Extension integration", () => {
       const provider = Object.assign(Object.create(WebviewProvider.prototype), {
         settings: {
           getPersistenceError: () => error,
-          enterDegradedMode: (reason: unknown) => {error = reason;},
+          enterDegradedMode: (reason: unknown) => {
+            error = reason;
+          },
         },
-        historyManager: { async initialize() {
-          historyCalls += 1;
-          if (failure === "history") {throw new Error("Unavailable history");}
-        } },
-        chatHandler: { async initialize() {
-          chatCalls += 1;
-          if (!error && failure === "recovery") {throw new Error("Unavailable checkpoints");}
-          ready = true;
-        } },
+        historyManager: {
+          async initialize() {
+            historyCalls += 1;
+            if (failure === "history") {
+              throw new Error("Unavailable history");
+            }
+          },
+        },
+        chatHandler: {
+          async initialize() {
+            chatCalls += 1;
+            if (!error && failure === "recovery") {
+              throw new Error("Unavailable checkpoints");
+            }
+            ready = true;
+          },
+        },
       }) as WebviewProvider;
       await provider.initialize();
       assert.ok(ready, failure);
@@ -80,7 +103,10 @@ suite("Extension integration", () => {
   test("activates under the Marketplace identifier and registers its main command", async () => {
     const extension = vscode.extensions.getExtension("yarcrasy.deepseek-agent");
 
-    assert.ok(extension, "The development extension should be discoverable by its Marketplace identifier.");
+    assert.ok(
+      extension,
+      "The development extension should be discoverable by its Marketplace identifier.",
+    );
     const testDataDirectory = process.env.DEEPSEEK_AGENT_USER_DATA_DIR;
     assert.ok(testDataDirectory);
     const historyDirectory = path.join(testDataDirectory, "history");
@@ -97,7 +123,10 @@ suite("Extension integration", () => {
     await manager.initialize();
     await manager.getSummaries();
     for (const incompatiblePath of incompatiblePaths) {
-      await assert.rejects(access(incompatiblePath), (error: NodeJS.ErrnoException) => error.code === "ENOENT");
+      await assert.rejects(
+        access(incompatiblePath),
+        (error: NodeJS.ErrnoException) => error.code === "ENOENT",
+      );
     }
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes("deepseek-agent.openChat"));
@@ -118,7 +147,10 @@ suite("Extension integration", () => {
     assert.ok(binding.revision);
     assert.deepStrictEqual(await getPathCompletionItems("../", binding), []);
     const resolvedTerminalRoot = await createVsCodeToolWorkspace().resolveLocalPath!();
-    assert.strictEqual(resolvedTerminalRoot.workspaceRoot, vscode.workspace.workspaceFolders?.[0]?.uri.fsPath);
+    assert.strictEqual(
+      resolvedTerminalRoot.workspaceRoot,
+      vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+    );
   });
 
   test("keeps the multi-root virtual root listable but rejects it as a terminal cwd", async () => {
@@ -158,15 +190,26 @@ suite("Extension integration", () => {
     const restrictedHost = createVsCodeToolWorkspace();
     const permissiveHost = createVsCodeToolWorkspace(undefined, { allowOutsideWorkspace: true });
 
-    await assert.rejects(restrictedHost.resolvePath!(externalPath, false), /relative to the selected workspace/);
-    assert.strictEqual(await permissiveHost.resolvePath!(externalPath, false), path.resolve(externalPath));
+    await assert.rejects(
+      restrictedHost.resolvePath!(externalPath, false),
+      /relative to the selected workspace/,
+    );
+    assert.strictEqual(
+      await permissiveHost.resolvePath!(externalPath, false),
+      path.resolve(externalPath),
+    );
     assert.strictEqual(await permissiveHost.isPathInsideWorkspace!(externalPath), false);
   });
 
   test("reads only bounded head and tail excerpts for large local files", async () => {
-    const folder = vscode.workspace.workspaceFolders?.[0]; assert.ok(folder);
-    const name = `large-preview-${randomUUID()}.json`; const uri = vscode.Uri.joinPath(folder.uri, name);
-    await vscode.workspace.fs.writeFile(uri, Buffer.from(JSON.stringify({ payload: "x".repeat(4096) })));
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    assert.ok(folder);
+    const name = `large-preview-${randomUUID()}.json`;
+    const uri = vscode.Uri.joinPath(folder.uri, name);
+    await vscode.workspace.fs.writeFile(
+      uri,
+      Buffer.from(JSON.stringify({ payload: "x".repeat(4096) })),
+    );
     try {
       const host = createVsCodeToolWorkspace();
       const preview = await host.readFilePreview!(name, 1_024);
@@ -175,7 +218,9 @@ suite("Extension integration", () => {
       assert.strictEqual(preview.tail?.byteLength, 512);
       assert.match(Buffer.from(preview.head).toString("utf8"), /^\{/);
       assert.match(Buffer.from(preview.tail!).toString("utf8"), /}\s*$/);
-    } finally { await vscode.workspace.fs.delete(uri, { useTrash: false }); }
+    } finally {
+      await vscode.workspace.fs.delete(uri, { useTrash: false });
+    }
   });
 
   test("reads and edits the authoritative open buffer with undo support", async () => {
@@ -189,12 +234,19 @@ suite("Extension integration", () => {
       const document = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(document);
       const userEdit = new vscode.WorkspaceEdit();
-      userEdit.replace(uri, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), "unsaved user text\n");
+      userEdit.replace(
+        uri,
+        new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+        "unsaved user text\n",
+      );
       assert.strictEqual(await vscode.workspace.applyEdit(userEdit), true);
       assert.strictEqual(document.isDirty, true);
 
       const host = createVsCodeToolWorkspace();
-      assert.strictEqual(Buffer.from(await host.readFile(fileName)).toString("utf8"), "unsaved user text\n");
+      assert.strictEqual(
+        Buffer.from(await host.readFile(fileName)).toString("utf8"),
+        "unsaved user text\n",
+      );
       await host.writeFile(fileName, Buffer.from("unsaved user text plus tool change\n"));
       assert.strictEqual(document.getText(), "unsaved user text plus tool change\n");
       assert.strictEqual(document.isDirty, true);
@@ -205,7 +257,10 @@ suite("Extension integration", () => {
       await editorCommand(document, "undo", "unsaved user text\n");
       assert.strictEqual(document.getText(), "unsaved user text\n");
       assert.strictEqual(document.isDirty, true);
-      assert.strictEqual(Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8"), "saved\n");
+      assert.strictEqual(
+        Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8"),
+        "saved\n",
+      );
       await editorCommand(document, "redo", "unsaved user text plus tool change\n");
       assert.strictEqual(document.getText(), "unsaved user text plus tool change\n");
     } finally {
@@ -224,11 +279,28 @@ suite("Extension integration", () => {
     try {
       const document = await vscode.workspace.openTextDocument(uri);
       const editor = await vscode.window.showTextDocument(document, { preview: false });
-      assert.strictEqual(await editor.edit((edit) => edit.replace(new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), "unsaved user text\n")), true);
+      assert.strictEqual(
+        await editor.edit((edit) =>
+          edit.replace(
+            new vscode.Range(
+              document.positionAt(0),
+              document.positionAt(document.getText().length),
+            ),
+            "unsaved user text\n",
+          ),
+        ),
+        true,
+      );
       await vscode.window.showTextDocument(foreground, { preview: false });
       assert.ok(!vscode.window.visibleTextEditors.some((visible) => visible.document === document));
-      await createVsCodeToolWorkspace().writeFile(path.basename(uri.fsPath), Buffer.from("tool result\n"));
-      assert.strictEqual(vscode.window.activeTextEditor?.document.uri.toString(), foreground.toString());
+      await createVsCodeToolWorkspace().writeFile(
+        path.basename(uri.fsPath),
+        Buffer.from("tool result\n"),
+      );
+      assert.strictEqual(
+        vscode.window.activeTextEditor?.document.uri.toString(),
+        foreground.toString(),
+      );
       assert.strictEqual(document.getText(), "tool result\n");
       await vscode.window.showTextDocument(document, { preview: false });
       await editorCommand(document, "undo", "unsaved user text\n");
@@ -251,16 +323,24 @@ suite("Extension integration", () => {
     await vscode.workspace.fs.writeFile(editedUri, Buffer.from("alpha\n"));
 
     try {
-      const editedEditor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(editedUri));
+      const editedEditor = await vscode.window.showTextDocument(
+        await vscode.workspace.openTextDocument(editedUri),
+      );
       await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(userUri), {
         viewColumn: vscode.ViewColumn.Beside,
       });
-      await expectActiveEditor(userUri, "The user's editor must already be the active one before the preview runs.");
+      await expectActiveEditor(
+        userUri,
+        "The user's editor must already be the active one before the preview runs.",
+      );
 
       const host = createVsCodeToolWorkspace();
       await host.prepareFileDiff!(path.basename(editedUri.fsPath), "alpha\n", "beta\n");
 
-      await expectActiveEditor(userUri, "A pending edit preview must not take focus from the user's editor.");
+      await expectActiveEditor(
+        userUri,
+        "A pending edit preview must not take focus from the user's editor.",
+      );
       const previewEditor = vscode.window.visibleTextEditors.find(
         (editor) => editor.document.uri.toString(true) === editedUri.toString(true),
       );
@@ -285,16 +365,28 @@ suite("Extension integration", () => {
 
     try {
       await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(userUri));
-      await expectActiveEditor(userUri, "The user's editor must already be the active one before the preview runs.");
+      await expectActiveEditor(
+        userUri,
+        "The user's editor must already be the active one before the preview runs.",
+      );
       const tabsBefore = countTabs();
 
       const host = createVsCodeToolWorkspace();
       await host.prepareFileDiff!(path.basename(editedUri.fsPath), "alpha\n", "beta\n");
 
-      await expectActiveEditor(userUri, "A pending edit must not take focus from the user's editor.");
-      assert.strictEqual(countTabs(), tabsBefore, "A pending edit must not open an editor tab the user did not ask for.");
+      await expectActiveEditor(
+        userUri,
+        "A pending edit must not take focus from the user's editor.",
+      );
+      assert.strictEqual(
+        countTabs(),
+        tabsBefore,
+        "A pending edit must not open an editor tab the user did not ask for.",
+      );
       assert.ok(
-        !vscode.window.visibleTextEditors.some((editor) => editor.document.uri.toString(true) === editedUri.toString(true)),
+        !vscode.window.visibleTextEditors.some(
+          (editor) => editor.document.uri.toString(true) === editedUri.toString(true),
+        ),
         "A pending edit must not reveal a file the user is not editing.",
       );
     } finally {
@@ -330,7 +422,9 @@ suite("Extension integration", () => {
 
       const diffTab = vscode.window.tabGroups.all
         .flatMap((group) => group.tabs)
-        .find((tab) => tab.input instanceof vscode.TabInputTextDiff && tab.label.includes(fileName));
+        .find(
+          (tab) => tab.input instanceof vscode.TabInputTextDiff && tab.label.includes(fileName),
+        );
       assert.ok(diffTab, "The recorded change should open as a native diff for the edited file.");
     } finally {
       viewer.dispose();
@@ -360,7 +454,10 @@ suite("Extension integration", () => {
     };
     try {
       await first.save({ ...base, updatedAt: now + 2 });
-      await assert.rejects(second.save({ ...base, updatedAt: now + 1 }), /changed in another VS Code window/);
+      await assert.rejects(
+        second.save({ ...base, updatedAt: now + 1 }),
+        /changed in another VS Code window/,
+      );
     } finally {
       await first.delete(id);
     }
@@ -368,7 +465,10 @@ suite("Extension integration", () => {
 
   test("searches literal workspace content through the VS Code filesystem without exposing sensitive files", async () => {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    assert.ok(workspaceFolder, "The integration test must run with the repository open as a workspace.");
+    assert.ok(
+      workspaceFolder,
+      "The integration test must run with the repository open as a workspace.",
+    );
 
     const directoryName = `search-content-${randomUUID()}`;
     const testDirectoryUri = vscode.Uri.joinPath(workspaceFolder.uri, directoryName);
@@ -384,21 +484,25 @@ suite("Extension integration", () => {
 
     try {
       const host = createVsCodeToolWorkspace();
-      const result = await runWithToolWorkspaceHost(host, () => searchContentHandler({
-        query: "[literal] & value",
-        filePattern: `${directoryName}/*`,
-      }));
+      const result = await runWithToolWorkspaceHost(host, () =>
+        searchContentHandler({
+          query: "[literal] & value",
+          filePattern: `${directoryName}/*`,
+        }),
+      );
       const payload = JSON.parse(result) as {
         type?: string;
         results?: Array<{ file: string; line: number; text: string }>;
       };
 
       assert.strictEqual(payload.type, "SearchResults");
-      assert.deepStrictEqual(payload.results, [{
-        file: `${directoryName}/safe file.txt`,
-        line: 1,
-        text: "marker [literal] & value",
-      }]);
+      assert.deepStrictEqual(payload.results, [
+        {
+          file: `${directoryName}/safe file.txt`,
+          line: 1,
+          text: "marker [literal] & value",
+        },
+      ]);
     } finally {
       await vscode.workspace.fs.delete(testDirectoryUri, { recursive: true, useTrash: false });
     }
@@ -422,8 +526,20 @@ suite("Extension integration", () => {
       workspaceUri: binding.uri,
       workspaceBinding: binding,
       messages: [
-        { id: "old-user", role: "user", content: oldContent, createdAt: 1, generationId: "generation-old" },
-        { id: "old-assistant", role: "assistant", content: oldContent, createdAt: 2, generationId: "generation-old" },
+        {
+          id: "old-user",
+          role: "user",
+          content: oldContent,
+          createdAt: 1,
+          generationId: "generation-old",
+        },
+        {
+          id: "old-assistant",
+          role: "assistant",
+          content: oldContent,
+          createdAt: 2,
+          generationId: "generation-old",
+        },
       ],
     });
     const budgetManager = new GenerationBudgetManager("custom-model", 8_192);
@@ -444,11 +560,20 @@ suite("Extension integration", () => {
 
     const compacted = await fitGenerationRequestContext({
       messages,
-      payload: { clientRequestId: "request", text: "continue", modelId: "custom-model", reasoning: "high" },
+      payload: {
+        clientRequestId: "request",
+        text: "continue",
+        modelId: "custom-model",
+        reasoning: "high",
+      },
       config: { ...DEFAULT_CONFIG, model: "custom-model", maxTokens: 8_192 },
       provider: new SummaryProvider(),
       state,
-      eventSink: { publish: (event) => {events.push(event as Record<string, unknown>);} },
+      eventSink: {
+        publish: (event) => {
+          events.push(event as Record<string, unknown>);
+        },
+      },
       workspaceSnapshot: captureWorkspaceRunSnapshot(binding),
       generationId,
       record,
@@ -456,18 +581,32 @@ suite("Extension integration", () => {
       permissionMode: "default",
       enabledTools: [],
       signal: new AbortController().signal,
-      checkpoint: async (run) => {checkpointStatuses.push(run.status);},
+      checkpoint: async (run) => {
+        checkpointStatuses.push(run.status);
+      },
     });
 
     assert.strictEqual(record.status, "streaming");
     assert.ok(budgetManager.assessRequest(compacted, []).status !== "hard_limit");
     assert.deepStrictEqual(checkpointStatuses, ["compacting"]);
     assert.deepStrictEqual(
-      events.filter((event) => event.type === "contextCompactionUpdated" || event.type === "contextCompacted")
-        .map((event) => event.type === "contextCompactionUpdated" ? `${event.type}:${event.status}` : event.type),
-      ["contextCompactionUpdated:compacting", "contextCompacted", "contextCompactionUpdated:completed"],
+      events
+        .filter(
+          (event) => event.type === "contextCompactionUpdated" || event.type === "contextCompacted",
+        )
+        .map((event) =>
+          event.type === "contextCompactionUpdated" ? `${event.type}:${event.status}` : event.type,
+        ),
+      [
+        "contextCompactionUpdated:compacting",
+        "contextCompacted",
+        "contextCompactionUpdated:completed",
+      ],
     );
-    assert.strictEqual(state.getConversation()?.messages.filter((message) => message.role === "context").length, 1);
+    assert.strictEqual(
+      state.getConversation()?.messages.filter((message) => message.role === "context").length,
+      1,
+    );
   });
 });
 
@@ -504,16 +643,33 @@ class SummaryProvider implements ModelProvider {
       object: "chat.completion",
       created: 1,
       model: request.model,
-      choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "Compact summary" } }],
+      choices: [
+        {
+          index: 0,
+          finish_reason: "stop",
+          message: { role: "assistant", content: "Compact summary" },
+        },
+      ],
     };
   }
 
-  async chatCompletionStream(_request: ChatCompletionRequest, _onChunk: (chunk: StreamChunk) => void): Promise<void> {}
-  async testConnection(): Promise<{ success: boolean }> {return { success: true };}
-  async listModels(): Promise<Array<{ id: string; name: string }>> {return [];}
+  async chatCompletionStream(
+    _request: ChatCompletionRequest,
+    _onChunk: (chunk: StreamChunk) => void,
+  ): Promise<void> {}
+  async testConnection(): Promise<{ success: boolean }> {
+    return { success: true };
+  }
+  async listModels(): Promise<Array<{ id: string; name: string }>> {
+    return [];
+  }
 }
 
-async function editorCommand(document: vscode.TextDocument, command: "undo" | "redo", expected: string): Promise<void> {
+async function editorCommand(
+  document: vscode.TextDocument,
+  command: "undo" | "redo",
+  expected: string,
+): Promise<void> {
   // The generic undo command otherwise targets a DOM input when the test
   // window is in the background, rather than the editor undo stack.
   await vscode.commands.executeCommand("workbench.action.focusWindow");
@@ -522,11 +678,28 @@ async function editorCommand(document: vscode.TextDocument, command: "undo" | "r
   let cleanup = () => {};
   const changed = new Promise<void>((resolve, reject) => {
     const listener = vscode.workspace.onDidChangeTextDocument((event) => {
-      if (event.document === document && document.getText() === expected) { resolve(); }
+      if (event.document === document && document.getText() === expected) {
+        resolve();
+      }
     });
-    const timeout = setTimeout(() => reject(new Error(`${command} did not restore the expected editor content: ${JSON.stringify(document.getText())}`)), 3000);
-    cleanup = () => { clearTimeout(timeout); listener.dispose(); };
+    const timeout = setTimeout(
+      () =>
+        reject(
+          new Error(
+            `${command} did not restore the expected editor content: ${JSON.stringify(document.getText())}`,
+          ),
+        ),
+      3000,
+    );
+    cleanup = () => {
+      clearTimeout(timeout);
+      listener.dispose();
+    };
   });
-  try { await vscode.commands.executeCommand(command); await changed; }
-  finally { cleanup(); }
+  try {
+    await vscode.commands.executeCommand(command);
+    await changed;
+  } finally {
+    cleanup();
+  }
 }

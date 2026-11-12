@@ -21,7 +21,10 @@ export interface UsageCostFormatOptions {
   partial?: boolean;
 }
 
-export function formatUsageCost(value: number | undefined, options: UsageCostFormatOptions): string {
+export function formatUsageCost(
+  value: number | undefined,
+  options: UsageCostFormatOptions,
+): string {
   if (value === undefined) {
     return options.unavailable;
   }

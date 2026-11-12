@@ -23,6 +23,6 @@ export const confirmations = {
     destructiveOnceDescription: "此已审查操作仅批准一次。后续修改都会接受新的独立审查。",
     destructiveAction: "破坏性操作",
     potentiallyDangerousAction: "潜在危险操作",
-    cautionRequired: "需要谨慎"
-  }
+    cautionRequired: "需要谨慎",
+  },
 } satisfies TranslationCatalog;

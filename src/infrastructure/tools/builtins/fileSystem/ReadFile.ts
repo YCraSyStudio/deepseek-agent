@@ -35,7 +35,12 @@ async function handleReadFile(args: Record<string, unknown>): Promise<string> {
       ? await workspace.readFilePreview(filePath, MAX_READ_PREVIEW_BYTES)
       : undefined;
     const content = preview
-      ? Buffer.concat([Buffer.from(preview.head), ...(preview.tail ? [Buffer.from("\n...[middle omitted]...\n"), Buffer.from(preview.tail)] : [])])
+      ? Buffer.concat([
+          Buffer.from(preview.head),
+          ...(preview.tail
+            ? [Buffer.from("\n...[middle omitted]...\n"), Buffer.from(preview.tail)]
+            : []),
+        ])
       : await workspace.readFile(filePath);
     if (bufferLooksBinary(content)) {
       return createStructuredResult("file", {
@@ -62,7 +67,11 @@ async function handleReadFile(args: Record<string, unknown>): Promise<string> {
   }
 }
 
-async function readLineRange(workspace: ToolWorkspaceHost, filePath: string, range: LineRange): Promise<string> {
+async function readLineRange(
+  workspace: ToolWorkspaceHost,
+  filePath: string,
+  range: LineRange,
+): Promise<string> {
   const content = await workspace.readFile(filePath);
   if (bufferLooksBinary(content)) {
     return createStructuredResult("file", {
@@ -151,11 +160,13 @@ export const readFileDefinition: ToolDefinition = {
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path, for example src/Main.ts. Use an absolute path only when the user explicitly requests access outside the workspace and the active permission mode allows it.",
+          description:
+            "Workspace-relative path, for example src/Main.ts. Use an absolute path only when the user explicitly requests access outside the workspace and the active permission mode allows it.",
         },
         offset: {
           type: "integer",
-          description: "Optional 1-based line number to start reading from. Returns that line and the lines after it, up to limit.",
+          description:
+            "Optional 1-based line number to start reading from. Returns that line and the lines after it, up to limit.",
         },
         limit: {
           type: "integer",

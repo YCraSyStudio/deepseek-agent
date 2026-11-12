@@ -5,15 +5,25 @@
   gap: 12px;
   min-width: 0;
 }
-.reusableInstructionActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.reusableInstructionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .reusableInstructionItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   text-align: left;
-  > span { min-width: 0; overflow-wrap: anywhere; }
-  small { display: block; color: var(--text-secondary); }
+  > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  small {
+    display: block;
+    color: var(--text-secondary);
+  }
 }
 
 .reusableInstructionName {
@@ -21,6 +31,12 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  > input { flex: 1; min-width: 0; }
-  > span { flex-shrink: 0; color: var(--text-secondary); }
+  > input {
+    flex: 1;
+    min-width: 0;
+  }
+  > span {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
 }

@@ -24,11 +24,16 @@ export async function openWorkspaceFile(
       const targetLine = Math.max(0, line - 1);
       const position = new vscode.Position(targetLine, 0);
       editor.selection = new vscode.Selection(position, position);
-      editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+      editor.revealRange(
+        new vscode.Range(position, position),
+        vscode.TextEditorRevealType.InCenter,
+      );
     }
   } catch (err) {
     logError(`[EditorActions] Error opening file '${filePath}'`, err);
-    await vscode.window.showErrorMessage(err instanceof Error ? err.message : "Unable to open the workspace file.");
+    await vscode.window.showErrorMessage(
+      err instanceof Error ? err.message : "Unable to open the workspace file.",
+    );
   }
 }
 
@@ -41,11 +46,16 @@ export async function validateWorkspaceFilePath(
   return snapshot;
 }
 
-export async function insertCodeIntoActiveEditor(code: string, binding: WorkspaceBinding): Promise<void> {
+export async function insertCodeIntoActiveEditor(
+  code: string,
+  binding: WorkspaceBinding,
+): Promise<void> {
   const snapshot = captureWorkspaceRunSnapshot(binding);
   const editor = vscode.window.activeTextEditor;
   if (!editor || !findSnapshotFolderForUri(snapshot, editor.document.uri)) {
-    await vscode.window.showInformationMessage("Open an editor that belongs to this chat workspace before inserting code.");
+    await vscode.window.showInformationMessage(
+      "Open an editor that belongs to this chat workspace before inserting code.",
+    );
     return;
   }
 
@@ -71,7 +81,11 @@ export async function getPathCompletionItems(
     const prefix = remainder.toLocaleLowerCase();
     return snapshot.folders
       .filter((folder) => folder.alias.toLocaleLowerCase().startsWith(prefix))
-      .map((folder) => ({ label: `${folder.alias}/`, path: `./${folder.alias}/`, type: "directory" as const }))
+      .map((folder) => ({
+        label: folder.alias,
+        path: `./${folder.alias}`,
+        type: "directory" as const,
+      }))
       .slice(0, 50);
   }
 
@@ -81,30 +95,41 @@ export async function getPathCompletionItems(
   }
   const slashIndex = rootRelativeQuery.lastIndexOf("/");
   const directoryPart = slashIndex >= 0 ? rootRelativeQuery.slice(0, slashIndex + 1) : "";
-  const namePrefix = (slashIndex >= 0 ? rootRelativeQuery.slice(slashIndex + 1) : rootRelativeQuery).toLocaleLowerCase();
-  const directoryUri = vscode.Uri.joinPath(folder.rootUri, ...directoryPart.split("/").filter(Boolean));
-  const outputPrefix = snapshot.folders.length > 1 ? `./${folder.alias}/${directoryPart}` : `./${directoryPart}`;
+  const namePrefix = (
+    slashIndex >= 0 ? rootRelativeQuery.slice(slashIndex + 1) : rootRelativeQuery
+  ).toLocaleLowerCase();
+  const directoryUri = vscode.Uri.joinPath(
+    folder.rootUri,
+    ...directoryPart.split("/").filter(Boolean),
+  );
+  const outputPrefix =
+    snapshot.folders.length > 1 ? `./${folder.alias}/${directoryPart}` : `./${directoryPart}`;
 
   try {
-    const logicalDirectory = snapshot.folders.length > 1
-      ? `${folder.alias}/${directoryPart || "."}`
-      : directoryPart || ".";
+    const logicalDirectory =
+      snapshot.folders.length > 1
+        ? `${folder.alias}/${directoryPart || "."}`
+        : directoryPart || ".";
     await createVsCodeToolWorkspace(snapshot).resolvePath!(logicalDirectory, false);
     const entries = await vscode.workspace.fs.readDirectory(directoryUri);
     return entries
-      .filter(([name, type]) =>
-        !name.startsWith(".") &&
-        name.toLocaleLowerCase().startsWith(namePrefix) &&
-        (type & vscode.FileType.SymbolicLink) === 0)
+      .filter(
+        ([name, type]) =>
+          !name.startsWith(".") &&
+          name.toLocaleLowerCase().startsWith(namePrefix) &&
+          (type & vscode.FileType.SymbolicLink) === 0,
+      )
       .map(([name, type]) => {
         const isDirectory = type === vscode.FileType.Directory;
         return {
-          label: isDirectory ? `${name}/` : name,
-          path: `${outputPrefix}${name}${isDirectory ? "/" : ""}`,
+          label: name,
+          path: `${outputPrefix}${name}`,
           type: isDirectory ? "directory" : "file",
         } satisfies PathCompletionItem;
       })
-      .sort((a, b) => a.type === b.type ? a.label.localeCompare(b.label) : a.type === "directory" ? -1 : 1)
+      .sort((a, b) =>
+        a.type === b.type ? a.label.localeCompare(b.label) : a.type === "directory" ? -1 : 1,
+      )
       .slice(0, 50);
   } catch {
     return [];
@@ -113,10 +138,12 @@ export async function getPathCompletionItems(
 
 function isSafeCompletionQuery(query: string): boolean {
   const normalized = query.replace(/\\/g, "/");
-  return normalized.startsWith("./") &&
+  return (
+    normalized.startsWith("./") &&
     !normalized.split("/").includes("..") &&
     !normalized.includes("\0") &&
-    !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(normalized.slice(2));
+    !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(normalized.slice(2))
+  );
 }
 
 function resolveCompletionRoot(
@@ -145,11 +172,14 @@ function resolveWorkspaceUri(snapshot: WorkspaceRunSnapshot, input: string): vsc
     throw new Error("The file path must stay inside the chat workspace.");
   }
   const parts = normalized.split("/").filter(Boolean);
-  const folder = snapshot.folders.length === 1
-    ? snapshot.folders[0]
-    : snapshot.folders.find((candidate) => candidate.alias === parts.shift());
+  const folder =
+    snapshot.folders.length === 1
+      ? snapshot.folders[0]
+      : snapshot.folders.find((candidate) => candidate.alias === parts.shift());
   if (!folder) {
-    throw new Error(`Choose a workspace root alias: ${snapshot.folders.map((candidate) => candidate.alias).join(", ")}.`);
+    throw new Error(
+      `Choose a workspace root alias: ${snapshot.folders.map((candidate) => candidate.alias).join(", ")}.`,
+    );
   }
   return vscode.Uri.joinPath(folder.rootUri, ...parts);
 }

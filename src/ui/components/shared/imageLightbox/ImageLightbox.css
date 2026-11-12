@@ -25,9 +25,9 @@
   flex: none;
   padding: 10px 14px 2px;
   font-size: 11px;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
   overflow: hidden;
-  opacity: .8;
+  opacity: 0.8;
 }
 
 .imageLightboxViewport {
@@ -109,7 +109,7 @@
 
   &:disabled {
     cursor: default;
-    opacity: .35;
+    opacity: 0.35;
   }
 
   &:focus-visible {
@@ -153,7 +153,7 @@
 @keyframes imageLightboxEnter {
   from {
     opacity: 0;
-    transform: scale(.985);
+    transform: scale(0.985);
   }
   to {
     opacity: 1;

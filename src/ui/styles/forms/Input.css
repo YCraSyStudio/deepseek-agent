@@ -7,7 +7,9 @@ textarea {
   color: var(--text-primary);
   border-radius: 10px;
   padding: 9px 10px;
-  transition: border-color .16s, box-shadow .16s;
+  transition:
+    border-color 0.16s,
+    box-shadow 0.16s;
 
   &:focus {
     border-color: var(--input-focus-border);
@@ -18,5 +20,5 @@ textarea {
 
 input[type="password"] {
   font-family: var(--font-mono);
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
 }

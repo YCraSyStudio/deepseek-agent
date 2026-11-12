@@ -10,68 +10,131 @@ import { probeGitRecovery } from "@/infrastructure/tools/safety/GitRecovery";
 const execute = promisify(execFile);
 suite("Git recovery with real repositories", () => {
   let root: string;
-  setup(async () => { root = await mkdtemp(path.join(tmpdir(), "git-recovery-")); });
-  teardown(async () => { await rm(root, { recursive: true, force: true }); });
+  setup(async () => {
+    root = await mkdtemp(path.join(tmpdir(), "git-recovery-"));
+  });
+  teardown(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
   const unavailable = { insideRepository: false, recoverable: false, reason: "git-unavailable" };
-  async function git(...args: string[]) { return execute("git", ["-C", root, ...args]); }
+  async function git(...args: string[]) {
+    return execute("git", ["-C", root, ...args]);
+  }
   async function repository() {
     await git("init", "--quiet");
     await writeFile(path.join(root, "tracked.txt"), "original\n");
-    await mkdir(path.join(root, "nested")); await writeFile(path.join(root, "nested", "space name.txt"), "nested\n");
-    await writeFile(path.join(root, ".gitignore"), "ignored.txt\n"); await git("add", ".");
-    await git("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "fixture");
+    await mkdir(path.join(root, "nested"));
+    await writeFile(path.join(root, "nested", "space name.txt"), "nested\n");
+    await writeFile(path.join(root, ".gitignore"), "ignored.txt\n");
+    await git("add", ".");
+    await git(
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "--quiet",
+      "-m",
+      "fixture",
+    );
   }
   test("rejects invalid targets without requiring a repository", async () => {
     for (const target of ["", "  ", "bad\0name", "bad\nname", "relative.txt"]) {
-      assert.deepEqual(await probeGitRecovery(target), { insideRepository: false, recoverable: false, reason: "untracked-path" });
+      assert.deepEqual(await probeGitRecovery(target), {
+        insideRepository: false,
+        recoverable: false,
+        reason: "untracked-path",
+      });
     }
   });
   test("identifies ordinary directories and nonexistent parents as nonrepositories", async () => {
     for (const target of [path.join(root, "file"), path.join(root, "missing", "file")]) {
-      assert.deepEqual(await probeGitRecovery(target), { insideRepository: false, recoverable: false, reason: "not-a-repository" });
+      assert.deepEqual(await probeGitRecovery(target), {
+        insideRepository: false,
+        recoverable: false,
+        reason: "not-a-repository",
+      });
     }
   });
   test("clean committed files are recoverable through absolute or workspace-relative paths", async () => {
     await repository();
-    for (const [target, options] of [[path.join(root, "tracked.txt"), {}], ["nested/space name.txt", { workspaceRoot: root }]] as const) {
-      assert.deepEqual(await probeGitRecovery(target, options), { insideRepository: true, recoverable: true, reason: "recoverable" });
+    for (const [target, options] of [
+      [path.join(root, "tracked.txt"), {}],
+      ["nested/space name.txt", { workspaceRoot: root }],
+    ] as const) {
+      assert.deepEqual(await probeGitRecovery(target, options), {
+        insideRepository: true,
+        recoverable: true,
+        reason: "recoverable",
+      });
     }
   });
   test("recognizes tracked and deleted files through a directory alias", async () => {
     await repository();
     const alias = path.join(root, "alias");
     await symlink(root, alias, process.platform === "win32" ? "junction" : "dir");
-    assert.deepEqual(await probeGitRecovery(path.join(alias, "tracked.txt")),
-      { insideRepository: true, recoverable: true, reason: "recoverable" });
+    assert.deepEqual(await probeGitRecovery(path.join(alias, "tracked.txt")), {
+      insideRepository: true,
+      recoverable: true,
+      reason: "recoverable",
+    });
     await rm(path.join(root, "tracked.txt"));
-    assert.deepEqual(await probeGitRecovery(path.join(alias, "tracked.txt")),
-      { insideRepository: true, recoverable: false, reason: "uncommitted-changes" });
+    assert.deepEqual(await probeGitRecovery(path.join(alias, "tracked.txt")), {
+      insideRepository: true,
+      recoverable: false,
+      reason: "uncommitted-changes",
+    });
   });
   test("untracked and ignored files report different recovery reasons", async () => {
     await repository();
-    for (const [name, reason] of [["new.txt", "untracked-path"], ["ignored.txt", "ignored-path"]]) {
+    for (const [name, reason] of [
+      ["new.txt", "untracked-path"],
+      ["ignored.txt", "ignored-path"],
+    ]) {
       await writeFile(path.join(root, name), "new\n");
-      assert.deepEqual(await probeGitRecovery(name, { workspaceRoot: root }), { insideRepository: true, recoverable: false, reason });
+      assert.deepEqual(await probeGitRecovery(name, { workspaceRoot: root }), {
+        insideRepository: true,
+        recoverable: false,
+        reason,
+      });
     }
   });
   test("unstaged, staged and deleted files are not presented as safely recoverable", async () => {
-    await repository(); await writeFile(path.join(root, "tracked.txt"), "modified\n");
+    await repository();
+    await writeFile(path.join(root, "tracked.txt"), "modified\n");
     const expected = { insideRepository: true, recoverable: false, reason: "uncommitted-changes" };
     assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root }), expected);
-    await git("add", "tracked.txt"); assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root }), expected);
-    await rm(path.join(root, "tracked.txt")); assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root }), expected);
+    await git("add", "tracked.txt");
+    assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root }), expected);
+    await rm(path.join(root, "tracked.txt"));
+    assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root }), expected);
   });
   test("unrelated dirty files do not prevent recovery of a clean target", async () => {
-    await repository(); await writeFile(path.join(root, "nested", "space name.txt"), "changed");
-    assert.equal((await probeGitRecovery("tracked.txt", { workspaceRoot: root })).recoverable, true);
+    await repository();
+    await writeFile(path.join(root, "nested", "space name.txt"), "changed");
+    assert.equal(
+      (await probeGitRecovery("tracked.txt", { workspaceRoot: root })).recoverable,
+      true,
+    );
   });
   test("bare repositories are not treated as working trees", async () => {
     await git("init", "--bare", "--quiet");
-    assert.deepEqual(await probeGitRecovery(path.join(root, "HEAD")), { insideRepository: false, recoverable: false, reason: "not-a-repository" });
+    assert.deepEqual(await probeGitRecovery(path.join(root, "HEAD")), {
+      insideRepository: false,
+      recoverable: false,
+      reason: "not-a-repository",
+    });
   });
   test("an already cancelled probe returns unavailable without invoking Git", async () => {
-    await repository(); const abort = new AbortController(); abort.abort();
-    assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root, signal: abort.signal }), unavailable);
+    await repository();
+    const abort = new AbortController();
+    abort.abort();
+    assert.deepEqual(
+      await probeGitRecovery("tracked.txt", { workspaceRoot: root, signal: abort.signal }),
+      unavailable,
+    );
   });
   if (process.platform !== "win32") {
     for (const [command, flag, insideRepository] of [
@@ -83,9 +146,13 @@ suite("Git recovery with real repositories", () => {
       test(`reports unavailable if Git disappears after ${command} ${flag}`, async () => {
         await repository();
         const oldPath = process.env.PATH;
-        const executable = oldPath?.split(path.delimiter).map((directory) => path.join(directory, "git")).find((candidate) => existsSync(candidate));
+        const executable = oldPath
+          ?.split(path.delimiter)
+          .map((directory) => path.join(directory, "git"))
+          .find((candidate) => existsSync(candidate));
         assert.ok(executable);
-        const bin = path.join(root, "bin"); await mkdir(bin);
+        const bin = path.join(root, "bin");
+        await mkdir(bin);
         const shim = path.join(bin, "git");
         // Execute the actual Git command, then simulate its executable disappearing
         // before the next independent probe stage.
@@ -101,9 +168,16 @@ process.stdout.write(result.stdout || ""); process.stderr.write(result.stderr ||
         await execute(shim, ["-C", root, "--version"]);
         try {
           process.env.PATH = bin;
-          assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root }), { ...unavailable, insideRepository });
+          assert.deepEqual(await probeGitRecovery("tracked.txt", { workspaceRoot: root }), {
+            ...unavailable,
+            insideRepository,
+          });
         } finally {
-          if (oldPath === undefined) { delete process.env.PATH; } else { process.env.PATH = oldPath; }
+          if (oldPath === undefined) {
+            delete process.env.PATH;
+          } else {
+            process.env.PATH = oldPath;
+          }
         }
       });
     }
@@ -111,7 +185,15 @@ process.stdout.write(result.stdout || ""); process.stderr.write(result.stderr ||
 
   test("missing Git executable reports unavailable", async () => {
     const oldPath = process.env.PATH;
-    try { process.env.PATH = root; assert.deepEqual(await probeGitRecovery(path.join(root, "file")), unavailable); }
-    finally { if (oldPath === undefined) { delete process.env.PATH; } else { process.env.PATH = oldPath; } }
+    try {
+      process.env.PATH = root;
+      assert.deepEqual(await probeGitRecovery(path.join(root, "file")), unavailable);
+    } finally {
+      if (oldPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = oldPath;
+      }
+    }
   });
 });

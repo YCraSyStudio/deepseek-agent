@@ -10,9 +10,15 @@ export type TranslationKey<T> = {
       : never;
 }[keyof T & string];
 
-type UnionToIntersection<T> = (T extends unknown ? (value: T) => void : never) extends (value: infer I) => void ? I : never;
+type UnionToIntersection<T> = (T extends unknown ? (value: T) => void : never) extends (
+  value: infer I,
+) => void
+  ? I
+  : never;
 
-export function mergeCatalogSections<const T extends readonly TranslationCatalog[]>(...sections: T): UnionToIntersection<T[number]> {
+export function mergeCatalogSections<const T extends readonly TranslationCatalog[]>(
+  ...sections: T
+): UnionToIntersection<T[number]> {
   const catalog: Record<string, string | TranslationCatalog> = {};
   for (const section of sections) {
     for (const [key, value] of Object.entries(section)) {

@@ -1,4 +1,9 @@
-import type { AppConfig, ChatCompletionRequest, ChatCompletionResponse, ChatMessage } from "@/contracts";
+import type {
+  AppConfig,
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ChatMessage,
+} from "@/contracts";
 import type {
   CompletionReviewContext,
   CompletionReviewDecision,
@@ -45,11 +50,16 @@ export interface ReviewCompletionOptions extends CompletionReviewContext {
   providerConfig: AppConfig;
   signal?: AbortSignal;
   prefixCache?: ConversationPrefixCache;
-  complete?: (signal: AbortSignal, request: ChatCompletionRequest) => Promise<ChatCompletionResponse>;
+  complete?: (
+    signal: AbortSignal,
+    request: ChatCompletionRequest,
+  ) => Promise<ChatCompletionResponse>;
   onUsage?: (usage?: ProviderUsage) => void;
 }
 
-export async function reviewCompletion(options: ReviewCompletionOptions): Promise<CompletionReviewDecision> {
+export async function reviewCompletion(
+  options: ReviewCompletionOptions,
+): Promise<CompletionReviewDecision> {
   const timeoutSignal = AbortSignal.timeout(REVIEW_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
   const prefixCache = options.prefixCache ?? defaultPrefixCache;
@@ -57,23 +67,34 @@ export async function reviewCompletion(options: ReviewCompletionOptions): Promis
   const reusePrefix = prefixCache.reusable;
   const request: ChatCompletionRequest = {
     model: options.providerConfig.model,
-    messages: reusePrefix ? buildTranscriptReviewMessages(options) : buildDistilledReviewMessages(options),
+    messages: reusePrefix
+      ? buildTranscriptReviewMessages(options)
+      : buildDistilledReviewMessages(options),
     max_tokens: 160,
     temperature: 0,
     thinking: { type: "disabled" },
     tool_choice: "none",
-    ...(options.providerConfig.privacyMinimizeData === false && options.providerConfig.userId ? { user_id: options.providerConfig.userId } : {}),
+    ...(options.providerConfig.privacyMinimizeData === false && options.providerConfig.userId
+      ? { user_id: options.providerConfig.userId }
+      : {}),
   };
 
   let usage: ProviderUsage | undefined;
   try {
     const response = options.complete
       ? await options.complete(signal, request)
-      : await chatCompletion(request, options.providerConfig.apiKey, options.providerConfig.baseUrl, signal);
+      : await chatCompletion(
+          request,
+          options.providerConfig.apiKey,
+          options.providerConfig.baseUrl,
+          signal,
+        );
     usage = response.usage;
     return parseCompletionReview(getTextContent(response.choices[0]?.message.content));
   } catch (error: unknown) {
-    if (options.signal?.aborted) {throw error;}
+    if (options.signal?.aborted) {
+      throw error;
+    }
     logWarning("[CompletionReviewer] DeepSeek completion review was unavailable", error);
     return "unknown";
   } finally {
@@ -123,7 +144,9 @@ function recordPrefixCacheProbe(
   prefixTokens: number,
   usage?: ProviderUsage,
 ): void {
-  if (!prefixCache.reusable || prefixTokens < PROBE_MINIMUM_PREFIX_TOKENS) {return;}
+  if (!prefixCache.reusable || prefixTokens < PROBE_MINIMUM_PREFIX_TOKENS) {
+    return;
+  }
   if (usage?.prompt_cache_hit_tokens === 0) {
     prefixCache.reusable = false;
     logWarning(
@@ -132,12 +155,21 @@ function recordPrefixCacheProbe(
   }
 }
 
-export function parseCompletionReview(content: string | null | undefined): CompletionReviewDecision {
-  if (!content) {return "unknown";}
+export function parseCompletionReview(
+  content: string | null | undefined,
+): CompletionReviewDecision {
+  if (!content) {
+    return "unknown";
+  }
   try {
-    const normalized = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const normalized = content
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "");
     const value = JSON.parse(normalized) as unknown;
-    if (!isRecord(value) || !hasOnlyKeys(value, ["decision", "reason"])) {return "unknown";}
+    if (!isRecord(value) || !hasOnlyKeys(value, ["decision", "reason"])) {
+      return "unknown";
+    }
     if (
       (value.decision !== "complete" && value.decision !== "incomplete") ||
       typeof value.reason !== "string" ||
@@ -157,7 +189,12 @@ function buildCompletionEvidence(options: CompletionReviewContext): Record<strin
     .reverse()
     .find((message) => message.role === "user" && !isTurnGuidanceMessage(message));
   const recentEvents = options.messages
-    .filter((message) => message.role !== "system" && message !== latestUserMessage && !isTurnGuidanceMessage(message))
+    .filter(
+      (message) =>
+        message.role !== "system" &&
+        message !== latestUserMessage &&
+        !isTurnGuidanceMessage(message),
+    )
     .slice(-MAX_RECENT_EVENTS)
     .map(summarizeMessage);
 
@@ -173,7 +210,9 @@ function buildCompletionEvidence(options: CompletionReviewContext): Record<strin
 function summarizeMessage(message: ChatMessage): Record<string, unknown> {
   return {
     role: message.role,
-    ...(getTextContent(message.content) ? { content: bound(getTextContent(message.content), MAX_EVENT_FIELD_BYTES) } : {}),
+    ...(getTextContent(message.content)
+      ? { content: bound(getTextContent(message.content), MAX_EVENT_FIELD_BYTES) }
+      : {}),
     ...(message.name ? { name: message.name } : {}),
     ...(message.tool_calls?.length
       ? {
@@ -189,4 +228,3 @@ function summarizeMessage(message: ChatMessage): Record<string, unknown> {
 function bound(value: string, maxBytes: number): string {
   return boundUtf8HeadTail(value, maxBytes).text;
 }
-

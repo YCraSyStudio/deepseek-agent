@@ -8,7 +8,10 @@
     appearance: textfield;
 
     &::-webkit-inner-spin-button,
-    &::-webkit-outer-spin-button { appearance: none; margin: 0; }
+    &::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
+    }
   }
 }
 
@@ -30,8 +33,16 @@
     background: transparent;
     color: var(--text-secondary);
 
-    > .codicon { font-size: 12px; }
-    &:hover:not(:disabled) { background: var(--control-hover-bg); color: var(--text-primary); opacity: 1; }
-    &:disabled { opacity: .35; }
+    > .codicon {
+      font-size: 12px;
+    }
+    &:hover:not(:disabled) {
+      background: var(--control-hover-bg);
+      color: var(--text-primary);
+      opacity: 1;
+    }
+    &:disabled {
+      opacity: 0.35;
+    }
   }
 }

@@ -4,10 +4,7 @@ import type { ConversationState } from "@/application/chat/ConversationState";
 import type { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
 import type { StoredConversation } from "@/application/chat/ProviderTranscript";
 import type { GenerationCheckpointStore, HistoryManager } from "@/vscode/storage";
-import {
-  captureCurrentWorkspaceBinding,
-  resolveWorkspaceContext,
-} from "@/vscode/workspace";
+import { captureCurrentWorkspaceBinding, resolveWorkspaceContext } from "@/vscode/workspace";
 import { getErrorMessage } from "../ChatErrors";
 import type { ConversationWorkspaceReferences } from "./ConversationWorkspaceReferences";
 import type { GenerationRunRecord } from "../generation/GenerationRun";
@@ -100,23 +97,23 @@ export class ConversationWorkspaceCoordinator {
       );
       return;
     }
-    await vscode.commands.executeCommand(
-      "vscode.openFolder",
-      vscode.Uri.parse(binding.uri),
-      { forceNewWindow: true },
-    );
+    await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.parse(binding.uri), {
+      forceNewWindow: true,
+    });
   }
 
   async handleFoldersChanged(selectedConversationId?: string): Promise<void> {
     const affected = new Set<string>();
     const conversationIds = new Set([
-      ...this.dependencies.coordinator.getActiveGenerations()
+      ...this.dependencies.coordinator
+        .getActiveGenerations()
         .map((active) => active.task.conversationId),
       ...this.dependencies.coordinator.getQueuedConversationIds(),
     ]);
     for (const conversationId of conversationIds) {
       const selected = this.dependencies.conversationState.getConversation();
-      const conversation = await this.dependencies.historyManager.getById(conversationId) ??
+      const conversation =
+        (await this.dependencies.historyManager.getById(conversationId)) ??
         (selected?.id === conversationId ? selected : undefined);
       const binding = conversation?.workspaceBinding;
       if (binding && resolveWorkspaceContext(binding).state !== "connected") {
@@ -142,11 +139,14 @@ export class ConversationWorkspaceCoordinator {
     if (queued.length === 0) {
       return;
     }
-    this.dependencies.recoveredDrafts.set(conversationId, queued.map((task) => ({
-      clientRequestId: task.clientRequestId,
-      text: task.payload.text,
-      queuedAt: task.queuedAt,
-    })));
+    this.dependencies.recoveredDrafts.set(
+      conversationId,
+      queued.map((task) => ({
+        clientRequestId: task.clientRequestId,
+        text: task.payload.text,
+        queuedAt: task.queuedAt,
+      })),
+    );
   }
 
   private async interruptActiveGeneration(conversationId: string): Promise<void> {

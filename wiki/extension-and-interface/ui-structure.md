@@ -16,7 +16,14 @@ The composer is one rounded container modeled after a compact coding-agent input
 
 `HistoryView` lists, loads, paginates, deletes, and restores conversations. Undo remains available before permanent deletion cleans image files.
 
-`SettingsView` has three public tabs: General, API, and Tools. Tools contains Permission mode followed by the Web search toggle and engine selector. There is no per-tool permission matrix or separate Web search tab, and saving does not show a redundant success toast. General includes Usage & cost, where the token breakdown toggle and the display currency (`USD` or `CNY`) live; changing the currency reprices the conversation popover from DeepSeek's own published table for that currency.
+`SettingsView` has four tabs: General, API, Tools, and Customization.
+
+- **General** contains interface language, history retention, the concurrent-generation limit, Storage (data directory and snapshot quota), Usage & cost, and Privacy.
+- **API** contains the credential and model, Beta features, and Advanced (API origin, sampling, output allowance).
+- **Tools** contains the available-tool catalog, permission mode, capture permission, and the Web search toggle with its region selector.
+- **Customization** contains the global and workspace `AGENTS.md` actions and reusable instructions.
+
+There is no per-tool permission matrix or separate Web search tab, and saving does not show a redundant success toast. General includes Usage & cost, where the token breakdown toggle and the display currency (`USD` or `CNY`) live; changing the currency reprices the conversation popover from DeepSeek's own published table for that currency.
 
 ## Rendering
 

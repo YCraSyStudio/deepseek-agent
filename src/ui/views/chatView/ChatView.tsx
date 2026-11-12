@@ -7,12 +7,30 @@ import { useChatConfig } from "./hooks";
 import WorkspaceMismatchModal from "@webview/components/shared/workspaceMismatchModal/WorkspaceMismatchModal";
 import type { ApiKeyStatus, ChatMessage, ContextCompactionResult } from "./ChatViewTypes";
 import { getVsCodeApi } from "@webview/VsCodeApi";
-import type { ContextWindowStatus, Conversation, HandlerToWebviewMessage, ImageAttachment, PermissionMode, QueuedGenerationMessage, ReferencedFile, RunningTaskInfo, WorkspaceContextStatus } from "@/contracts";
+import type {
+  ContextWindowStatus,
+  Conversation,
+  HandlerToWebviewMessage,
+  ImageAttachment,
+  PermissionMode,
+  QueuedGenerationMessage,
+  ReferencedFile,
+  RunningTaskInfo,
+  WorkspaceContextStatus,
+} from "@/contracts";
 import { t } from "@webview/i18n";
 import { beginNavigationRequest, isLatestNavigationRequest } from "@webview/NavigationRequests";
 import { ClipboardUploads, type PendingImagePreview } from "./model/ClipboardUploads";
-import { summarizeConversationUsage, type ConversationUsageSnapshot, type UsageCurrency } from "@/shared/usage/Usage";
-import { submitChatDraft, useChatCommandMessages, type PendingChatRequest } from "./hooks/UseChatCommandMessages";
+import {
+  summarizeConversationUsage,
+  type ConversationUsageSnapshot,
+  type UsageCurrency,
+} from "@/shared/usage/Usage";
+import {
+  submitChatDraft,
+  useChatCommandMessages,
+  type PendingChatRequest,
+} from "./hooks/UseChatCommandMessages";
 import { insertImageReference } from "./utils/ImageReference";
 import {
   getSavedChatState,
@@ -46,7 +64,14 @@ interface WorkspaceMismatch {
   workspaceName: string;
 }
 
-function ChatView({ loadedConversation, conversationUsage, contextWindow, navigationPending = false, earlierMessagesLoaded = 0, onCancelWorkspaceMismatch }: ChatViewProps) {
+function ChatView({
+  loadedConversation,
+  conversationUsage,
+  contextWindow,
+  navigationPending = false,
+  earlierMessagesLoaded = 0,
+  onCancelWorkspaceMismatch,
+}: ChatViewProps) {
   const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus>("missing");
   const [isProcessing, setIsProcessing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -68,10 +93,13 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const conversationIdRef = useRef(conversationId);
   const activeGenerationIdRef = useRef(activeGenerationId);
   const pendingRequestsRef = useRef(new Map<string, PendingChatRequest>());
-  const getGenerationScope = useCallback(() => ({
-    conversationId: conversationIdRef.current,
-    activeGenerationId: activeGenerationIdRef.current,
-  }), []);
+  const getGenerationScope = useCallback(
+    () => ({
+      conversationId: conversationIdRef.current,
+      activeGenerationId: activeGenerationIdRef.current,
+    }),
+    [],
+  );
   const draftRef = useRef(draft);
   const draftEditedRef = useRef(false);
   const referencedFilesRef = useRef(referencedFiles);
@@ -79,7 +107,10 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   const [requestError, setRequestError] = useState<string>();
   const [hostUsage, setHostUsage] = useState(conversationUsage);
   const [contextWindowStatus, setContextWindowStatus] = useState(contextWindow);
-  const [compaction, setCompaction] = useState<{ pending: boolean; result?: ContextCompactionResult }>({ pending: false });
+  const [compaction, setCompaction] = useState<{
+    pending: boolean;
+    result?: ContextCompactionResult;
+  }>({ pending: false });
   const compactionRequestRef = useRef<string | undefined>(undefined);
   const initialConfigHandledRef = useRef(false);
   const savedDraftIdRef = useRef<string | undefined>(loadedConversation?.id);
@@ -99,19 +130,25 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     setContextWindowStatus(next);
   }, []);
 
-  const handleContextCompactionResult = useCallback((result: ContextCompactionResult & { requestId: string }) => {
-    if (compactionRequestRef.current !== result.requestId) {
-      return;
-    }
-    compactionRequestRef.current = undefined;
-    setCompaction({
-      pending: false,
-      result: { status: result.status, freedTokens: result.freedTokens, error: result.error },
-    });
-    if (result.status === "compacted") {
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "context", content: "" }]);
-    }
-  }, []);
+  const handleContextCompactionResult = useCallback(
+    (result: ContextCompactionResult & { requestId: string }) => {
+      if (compactionRequestRef.current !== result.requestId) {
+        return;
+      }
+      compactionRequestRef.current = undefined;
+      setCompaction({
+        pending: false,
+        result: { status: result.status, freedTokens: result.freedTokens, error: result.error },
+      });
+      if (result.status === "compacted") {
+        setMessages((current) => [
+          ...current,
+          { id: crypto.randomUUID(), role: "context", content: "" },
+        ]);
+      }
+    },
+    [],
+  );
 
   const handleCompactContext = useCallback(() => {
     const vscode = getVsCodeApi();
@@ -121,7 +158,11 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     const requestId = crypto.randomUUID();
     compactionRequestRef.current = requestId;
     setCompaction({ pending: true });
-    vscode.postMessage({ type: "compactContext", requestId, conversationId: conversationIdRef.current });
+    vscode.postMessage({
+      type: "compactContext",
+      requestId,
+      conversationId: conversationIdRef.current,
+    });
   }, []);
 
   useEffect(() => {
@@ -163,9 +204,18 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   } = useChatConfig();
 
   const handleConfigLoaded = useMemo(
-    () => (config: { revision: number; reasoning?: string; model?: string; permissionMode?: PermissionMode; historyEnabled?: boolean; usageBreakdown?: boolean; usageCostCurrency?: UsageCurrency }) => {
-      applySavedConfig(config, config.revision);
-    },
+    () =>
+      (config: {
+        revision: number;
+        reasoning?: string;
+        model?: string;
+        permissionMode?: PermissionMode;
+        historyEnabled?: boolean;
+        usageBreakdown?: boolean;
+        usageCostCurrency?: UsageCurrency;
+      }) => {
+        applySavedConfig(config, config.revision);
+      },
     [applySavedConfig],
   );
 
@@ -186,7 +236,12 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     const input = textareaRef.current;
     const start = input?.selectionStart ?? draftRef.current.length;
     const end = input?.selectionEnd ?? start;
-    const { text, caret } = insertImageReference(draftRef.current, start, end, t("chat.imageReference", { number }));
+    const { text, caret } = insertImageReference(
+      draftRef.current,
+      start,
+      end,
+      t("chat.imageReference", { number }),
+    );
     setDraft(text);
     requestAnimationFrame(() => {
       textareaRef.current?.focus();
@@ -194,7 +249,11 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     });
   }, []);
 
-  const handleSend = (text: string, clientRequestId: string, submittedImages?: ImageAttachment[]) => {
+  const handleSend = (
+    text: string,
+    clientRequestId: string,
+    submittedImages?: ImageAttachment[],
+  ) => {
     pendingRequestsRef.current.set(clientRequestId, {
       text,
       references: [...referencedFilesRef.current],
@@ -202,12 +261,30 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
       referenceIds: referencedFilesRef.current.map(referenceIdentity),
       imageIds: (submittedImages ?? imageAttachmentsRef.current).map((attachment) => attachment.id),
     });
-    submitChatDraft(clientRequestId, {
-      activeGenerationId: activeGenerationIdRef, conversationId: conversationIdRef,
-      draft: draftRef, imageAttachments: imageAttachmentsRef, referencedFiles: referencedFilesRef,
-      pendingRequests: pendingRequestsRef, workspaceRequestId: workspaceRequestIdRef,
-    }, { setActiveGenerationId, setConversationId, setDraft, setImageAttachments, setIsProcessing,
-      setMessages, setRecoveredDrafts, setReferencedFiles, setRequestError, setWorkspaceContext });
+    submitChatDraft(
+      clientRequestId,
+      {
+        activeGenerationId: activeGenerationIdRef,
+        conversationId: conversationIdRef,
+        draft: draftRef,
+        imageAttachments: imageAttachmentsRef,
+        referencedFiles: referencedFilesRef,
+        pendingRequests: pendingRequestsRef,
+        workspaceRequestId: workspaceRequestIdRef,
+      },
+      {
+        setActiveGenerationId,
+        setConversationId,
+        setDraft,
+        setImageAttachments,
+        setIsProcessing,
+        setMessages,
+        setRecoveredDrafts,
+        setReferencedFiles,
+        setRequestError,
+        setWorkspaceContext,
+      },
+    );
     persistSubmittedDraft();
     setRequestError(undefined);
   };
@@ -217,7 +294,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, []);
 
   const removeImageAttachment = useCallback((attachment: ImageAttachment) => {
-    imageAttachmentsRef.current = imageAttachmentsRef.current.filter(item => item.id !== attachment.id);
+    imageAttachmentsRef.current = imageAttachmentsRef.current.filter(
+      (item) => item.id !== attachment.id,
+    );
     setImageAttachments((items) => items.filter((item) => item.id !== attachment.id));
     getVsCodeApi()?.postMessage({
       type: "deleteImageAttachment",
@@ -241,22 +320,34 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     setPendingImages(clipboardUploads.current.previews());
   }, []);
 
-  const resolveImageUpload = useCallback((requestId: string, attachments: ImageAttachment[], error?: string) => {
-    const result = clipboardUploads.current.complete(requestId, attachments, error);
-    setPendingImages(clipboardUploads.current.previews());
-    imageAttachmentsRef.current = [...imageAttachmentsRef.current, ...result.accepted].slice(0, 8);
-    for (const attachment of result.discarded) {
-      getVsCodeApi()?.postMessage({ type: "deleteImageAttachment", requestId: crypto.randomUUID(), attachment });
-    }
-    return result.accepted;
-  }, []);
+  const resolveImageUpload = useCallback(
+    (requestId: string, attachments: ImageAttachment[], error?: string) => {
+      const result = clipboardUploads.current.complete(requestId, attachments, error);
+      setPendingImages(clipboardUploads.current.previews());
+      imageAttachmentsRef.current = [...imageAttachmentsRef.current, ...result.accepted].slice(
+        0,
+        8,
+      );
+      for (const attachment of result.discarded) {
+        getVsCodeApi()?.postMessage({
+          type: "deleteImageAttachment",
+          requestId: crypto.randomUUID(),
+          attachment,
+        });
+      }
+      return result.accepted;
+    },
+    [],
+  );
 
   const prepareImages = useCallback(async () => {
     setIsUploadingImages(true);
     const uploads = clipboardUploads.current;
     try {
       const preparation = uploads.uploadSelected(async (preview) => {
-        if (!preview.file) {throw new Error("The pasted image is no longer available.");}
+        if (!preview.file) {
+          throw new Error("The pasted image is no longer available.");
+        }
         const bytes = new Uint8Array(await preview.file.arrayBuffer());
         const chunks: string[] = [];
         for (let offset = 0; offset < bytes.length; offset += 0x8000) {
@@ -283,14 +374,24 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     return () => {
       uploads.dispose();
       // Keep only a cleanup listener for uploads removed during navigation.
-      if (!uploads.outstanding) {return;}
+      if (!uploads.outstanding) {
+        return;
+      }
       const cleanup = (event: MessageEvent) => {
-        if (event.data.type !== "imageAttachmentsSelected") {return;}
+        if (event.data.type !== "imageAttachmentsSelected") {
+          return;
+        }
         const result = uploads.complete(event.data.requestId, event.data.attachments);
         for (const attachment of result.discarded) {
-          getVsCodeApi()?.postMessage({ type: "deleteImageAttachment", requestId: crypto.randomUUID(), attachment });
+          getVsCodeApi()?.postMessage({
+            type: "deleteImageAttachment",
+            requestId: crypto.randomUUID(),
+            attachment,
+          });
         }
-        if (!uploads.outstanding) {window.removeEventListener("message", cleanup);}
+        if (!uploads.outstanding) {
+          window.removeEventListener("message", cleanup);
+        }
       };
       window.addEventListener("message", cleanup);
     };
@@ -298,11 +399,31 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
 
   const canSend = useMemo(() => {
     const trimmedDraft = draft.trim();
-    const workspaceReady = workspaceContext?.state === "connected" || workspaceContext?.state === "empty";
-    return stateHydrated && (historyEnabled === false || attachmentsHydrated) && !isUploadingImages && !navigationPending && !isPermissionUpdatePending &&
+    const workspaceReady =
+      workspaceContext?.state === "connected" || workspaceContext?.state === "empty";
+    return (
+      stateHydrated &&
+      (historyEnabled === false || attachmentsHydrated) &&
+      !isUploadingImages &&
+      !navigationPending &&
+      !isPermissionUpdatePending &&
       (trimmedDraft.length > 0 || imageAttachments.length > 0 || pendingImages.length > 0) &&
-      apiKeyStatus === "configured" && workspaceReady;
-  }, [draft, imageAttachments, pendingImages.length, isUploadingImages, apiKeyStatus, isPermissionUpdatePending, navigationPending, workspaceContext, stateHydrated, historyEnabled, attachmentsHydrated]);
+      apiKeyStatus === "configured" &&
+      workspaceReady
+    );
+  }, [
+    draft,
+    imageAttachments,
+    pendingImages.length,
+    isUploadingImages,
+    apiKeyStatus,
+    isPermissionUpdatePending,
+    navigationPending,
+    workspaceContext,
+    stateHydrated,
+    historyEnabled,
+    attachmentsHydrated,
+  ]);
 
   useEffect(() => {
     focusInput();
@@ -314,15 +435,18 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     getVsCodeApi()?.postMessage({ type: "getWorkspaceContext", requestId, conversationId });
   }, [conversationId]);
 
-  const handleStopRunningTask = useCallback((task: RunningTaskInfo) => {
-    setStoppingTasks((current) => new Set(current).add(task.id));
-    getVsCodeApi()?.postMessage({
-      type: "stopRunningTask",
-      requestId: crypto.randomUUID(),
-      conversationId,
-      sessionId: task.id,
-    });
-  }, [conversationId]);
+  const handleStopRunningTask = useCallback(
+    (task: RunningTaskInfo) => {
+      setStoppingTasks((current) => new Set(current).add(task.id));
+      getVsCodeApi()?.postMessage({
+        type: "stopRunningTask",
+        requestId: crypto.randomUUID(),
+        conversationId,
+        sessionId: task.id,
+      });
+    },
+    [conversationId],
+  );
 
   useEffect(() => {
     setRunningTasks([]);
@@ -331,11 +455,17 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
     const handleRunningTasks = (event: MessageEvent<HandlerToWebviewMessage>) => {
       const message = event.data;
       if (message.type === "requestRejected") {
-        if (message.action === "stopRunningTask") {setStoppingTasks(new Set());}
+        if (message.action === "stopRunningTask") {
+          setStoppingTasks(new Set());
+        }
         return;
       }
-      if (message.type !== "runningTasks") {return;}
-      if (conversationId !== undefined && message.conversationId !== conversationId) {return;}
+      if (message.type !== "runningTasks") {
+        return;
+      }
+      if (conversationId !== undefined && message.conversationId !== conversationId) {
+        return;
+      }
       setRunningTasks(message.tasks);
       setStoppingTasks(new Set());
     };
@@ -355,7 +485,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
       return;
     }
     const mismatch = `${conversationId}:${workspaceContext.binding.revision}`;
-    if (workspaceMismatchRef.current === mismatch) {return;}
+    if (workspaceMismatchRef.current === mismatch) {
+      return;
+    }
     workspaceMismatchRef.current = mismatch;
     setWorkspaceMismatch({
       conversationId,
@@ -366,10 +498,17 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   useEffect(() => {
     const handleRestorationResult = (event: MessageEvent<HandlerToWebviewMessage>) => {
       const message = event.data;
-      if (message.type !== "historyError" || !message.requestId ||
-        message.requestId !== restorationRequestRef.current) {return;}
+      if (
+        message.type !== "historyError" ||
+        !message.requestId ||
+        message.requestId !== restorationRequestRef.current
+      ) {
+        return;
+      }
       restorationRequestRef.current = undefined;
-      if (!isLatestNavigationRequest(message.requestId)) {return;}
+      if (!isLatestNavigationRequest(message.requestId)) {
+        return;
+      }
       setRequestError(message.error);
       if (message.error === "Conversation not found") {
         conversationIdRef.current = undefined;
@@ -381,7 +520,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, []);
 
   useEffect(() => {
-    if (historyEnabled === undefined) {return;}
+    if (historyEnabled === undefined) {
+      return;
+    }
     let cancelled = false;
     const vscode = getVsCodeApi();
     const restore = async () => {
@@ -390,37 +531,72 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
         if (historyEnabled) {
           const requestedId = loadedConversation?.id ?? getSavedChatState()?.conversationId;
           let restoredFromStorage = true;
-          try {await hydrateDraftAttachments(requestedId, () => !cancelled);}
-          catch {restoredFromStorage = false;if (!cancelled) {setRequestError(t("chat.draftAttachmentsSaveFailed"));}}
-          if (cancelled) {return;}
+          try {
+            await hydrateDraftAttachments(requestedId, () => !cancelled);
+          } catch {
+            restoredFromStorage = false;
+            if (!cancelled) {
+              setRequestError(t("chat.draftAttachmentsSaveFailed"));
+            }
+          }
+          if (cancelled) {
+            return;
+          }
           const savedState = getChatDraft(requestedId);
-          if (savedState && (!loadedConversation || savedState.conversationId === loadedConversation.id)) {
-            if (!draftEditedRef.current) {setDraft(savedState.draft);}
-            setReferencedFiles(current => mergeReferencedFiles(savedState.referencedFiles, current));
+          if (
+            savedState &&
+            (!loadedConversation || savedState.conversationId === loadedConversation.id)
+          ) {
+            if (!draftEditedRef.current) {
+              setDraft(savedState.draft);
+            }
+            setReferencedFiles((current) =>
+              mergeReferencedFiles(savedState.referencedFiles, current),
+            );
             setImageAttachments(savedState.imageAttachments);
             savedDraftIdRef.current = savedState.conversationId;
             conversationIdRef.current = savedState.conversationId;
             setConversationId(savedState.conversationId);
             try {
-              if (cancelled) {return;}
-              for (const preview of restorePendingDraftImages(savedState.conversationId)) {clipboardUploads.current.add(preview);}
+              if (cancelled) {
+                return;
+              }
+              for (const preview of restorePendingDraftImages(savedState.conversationId)) {
+                clipboardUploads.current.add(preview);
+              }
               setPendingImages(clipboardUploads.current.previews());
               const restored = getChatDraft(savedState.conversationId);
-              if (restored) {setReferencedFiles(current => mergeReferencedFiles(current, restored.referencedFiles));}
+              if (restored) {
+                setReferencedFiles((current) =>
+                  mergeReferencedFiles(current, restored.referencedFiles),
+                );
+              }
               setAttachmentsHydrated(restoredFromStorage);
             } catch {
-              if (!cancelled) {setRequestError(t("chat.draftAttachmentsSaveFailed"));}
+              if (!cancelled) {
+                setRequestError(t("chat.draftAttachmentsSaveFailed"));
+              }
             }
-            if (cancelled) {return;}
+            if (cancelled) {
+              return;
+            }
             if (!loadedConversation && savedState.conversationId) {
               const requestId = beginNavigationRequest();
               restorationRequestRef.current = requestId;
-              vscode?.postMessage({ type: "loadConversation", requestId, id: savedState.conversationId });
+              vscode?.postMessage({
+                type: "loadConversation",
+                requestId,
+                id: savedState.conversationId,
+              });
             }
-          } else {setAttachmentsHydrated(restoredFromStorage);}
+          } else {
+            setAttachmentsHydrated(restoredFromStorage);
+          }
         }
       }
-      if (cancelled) {return;}
+      if (cancelled) {
+        return;
+      }
       if (!historyEnabled) {
         clearSavedChatState();
         vscode?.setState<IncognitoChatViewState>({ schemaVersion: 3, mode: "incognito" });
@@ -428,7 +604,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
       setStateHydrated(true);
     };
     void restore();
-    return () => {cancelled = true;};
+    return () => {
+      cancelled = true;
+    };
   }, [historyEnabled, loadedConversation]);
 
   useEffect(() => {
@@ -439,29 +617,56 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
 
   useEffect(() => {
     const vscode = getVsCodeApi();
-    if (!stateHydrated || historyEnabled === undefined || (historyEnabled && !attachmentsHydrated)) {
+    if (
+      !stateHydrated ||
+      historyEnabled === undefined ||
+      (historyEnabled && !attachmentsHydrated)
+    ) {
       return;
     }
     if (!historyEnabled) {
       vscode?.setState<IncognitoChatViewState>({ schemaVersion: 3, mode: "incognito" });
       return;
     }
-    saveChatDraft({
-      schemaVersion: 5,
-      mode: "persistent",
-      draft,
-      referencedFiles,
-      imageAttachments,
-      conversationId,
-    }, { conversationId: savedDraftIdRef.current });
+    saveChatDraft(
+      {
+        schemaVersion: 5,
+        mode: "persistent",
+        draft,
+        referencedFiles,
+        imageAttachments,
+        conversationId,
+      },
+      { conversationId: savedDraftIdRef.current },
+    );
     savedDraftIdRef.current = conversationId;
     savePendingDraftImages(conversationId, pendingImages);
-  }, [draft, referencedFiles, imageAttachments, pendingImages, conversationId, historyEnabled, stateHydrated, attachmentsHydrated]);
+  }, [
+    draft,
+    referencedFiles,
+    imageAttachments,
+    pendingImages,
+    conversationId,
+    historyEnabled,
+    stateHydrated,
+    attachmentsHydrated,
+  ]);
 
   useEffect(() => {
-    if (!stateHydrated || !attachmentsHydrated || !historyEnabled) {return;}
-    void persistDraftAttachments(conversationId).catch(() => setRequestError(t("chat.draftAttachmentsSaveFailed")));
-  }, [pendingImages, referencedFiles, conversationId, stateHydrated, attachmentsHydrated, historyEnabled]);
+    if (!stateHydrated || !attachmentsHydrated || !historyEnabled) {
+      return;
+    }
+    void persistDraftAttachments(conversationId).catch(() =>
+      setRequestError(t("chat.draftAttachmentsSaveFailed")),
+    );
+  }, [
+    pendingImages,
+    referencedFiles,
+    conversationId,
+    stateHydrated,
+    attachmentsHydrated,
+    historyEnabled,
+  ]);
 
   useEffect(() => {
     if (stateHydrated) {
@@ -470,7 +675,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, [stateHydrated]);
 
   const handleConfirmWorkspaceMismatch = useCallback(() => {
-    if (!workspaceMismatch) {return;}
+    if (!workspaceMismatch) {
+      return;
+    }
     workspaceMismatchRef.current = undefined;
     setWorkspaceMismatch(null);
     getVsCodeApi()?.postMessage({
@@ -487,15 +694,27 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
   }, [onCancelWorkspaceMismatch]);
 
   const persistSubmittedDraft = useCallback(() => {
-    if (!historyEnabled) {return;}
+    if (!historyEnabled) {
+      return;
+    }
     // Commit the cleared draft before a navigation/remount can restore the sent one.
     const id = conversationIdRef.current;
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: id, draft: draftRef.current,
-      referencedFiles: referencedFilesRef.current, imageAttachments: imageAttachmentsRef.current },
-    { conversationId: savedDraftIdRef.current });
+    saveChatDraft(
+      {
+        schemaVersion: 5,
+        mode: "persistent",
+        conversationId: id,
+        draft: draftRef.current,
+        referencedFiles: referencedFilesRef.current,
+        imageAttachments: imageAttachmentsRef.current,
+      },
+      { conversationId: savedDraftIdRef.current },
+    );
     savedDraftIdRef.current = id;
     savePendingDraftImages(id, clipboardUploads.current.previews());
-    void persistDraftAttachments(id).catch(() => setRequestError(t("chat.draftAttachmentsSaveFailed")));
+    void persistDraftAttachments(id).catch(() =>
+      setRequestError(t("chat.draftAttachmentsSaveFailed")),
+    );
   }, [historyEnabled]);
 
   useChatCommandMessages({
@@ -538,7 +757,9 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
       <MessagesSection
         getGenerationScope={getGenerationScope}
         conversationId={conversationId}
-        historyCursor={loadedConversation?.hasEarlierMessages ? loadedConversation.historyCursor : undefined}
+        historyCursor={
+          loadedConversation?.hasEarlierMessages ? loadedConversation.historyCursor : undefined
+        }
         activeGenerationId={activeGenerationId}
         messages={messages}
         onMessagesChange={setMessages}
@@ -556,14 +777,36 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
         onFocusInput={focusInput}
         onReferenceImage={handleReferenceImage}
       />
-      {apiKeyStatus === "missing" ? <div className="statusMessage warning">{t("chat.apiKeyMissing")}</div> : null}
-      {isPermissionUpdatePending ? <div className="statusMessage" role="status" aria-live="polite">{t("chat.applyingPermissions")}</div> : null}
-      {configUpdateError ? <div className="statusMessage warning" role="alert">{configUpdateError}</div> : null}
-      {requestError ? <div className="statusMessage warning" role="alert">{requestError}</div> : null}
-      {historyEnabled === false ? <div className="statusMessage incognito" role="status">{t("chat.incognitoActive")}</div> : null}
+      {apiKeyStatus === "missing" ? (
+        <div className="statusMessage warning">{t("chat.apiKeyMissing")}</div>
+      ) : null}
+      {isPermissionUpdatePending ? (
+        <div className="statusMessage" role="status" aria-live="polite">
+          {t("chat.applyingPermissions")}
+        </div>
+      ) : null}
+      {configUpdateError ? (
+        <div className="statusMessage warning" role="alert">
+          {configUpdateError}
+        </div>
+      ) : null}
+      {requestError ? (
+        <div className="statusMessage warning" role="alert">
+          {requestError}
+        </div>
+      ) : null}
+      {historyEnabled === false ? (
+        <div className="statusMessage incognito" role="status">
+          {t("chat.incognitoActive")}
+        </div>
+      ) : null}
 
       <div className="inputArea">
-        <RunningTasks tasks={runningTasks} stopping={stoppingTasks} onStop={handleStopRunningTask} />
+        <RunningTasks
+          tasks={runningTasks}
+          stopping={stoppingTasks}
+          onStop={handleStopRunningTask}
+        />
         {recoveredDrafts.length > 0 ? (
           <div className="statusMessage">
             {t("chat.recoveredDrafts")}
@@ -575,12 +818,23 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
                   draftRef.current = item.text;
                   setDraft(item.text);
                   if (item.imageAttachments?.length) {
-                    setImageAttachments(current => [...current, ...item.imageAttachments!.filter(image => !current.some(existing => existing.id === image.id))].slice(0, 8));
+                    setImageAttachments((current) =>
+                      [
+                        ...current,
+                        ...item.imageAttachments!.filter(
+                          (image) => !current.some((existing) => existing.id === image.id),
+                        ),
+                      ].slice(0, 8),
+                    );
                   }
                   if (item.referencedFiles?.length) {
-                    setReferencedFiles((current) => mergeReferencedFiles(current, item.referencedFiles!));
+                    setReferencedFiles((current) =>
+                      mergeReferencedFiles(current, item.referencedFiles!),
+                    );
                   }
-                  setRecoveredDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                  setRecoveredDrafts((current) =>
+                    current.filter((_, itemIndex) => itemIndex !== index),
+                  );
                   if (conversationId) {
                     getVsCodeApi()?.postMessage({
                       type: "consumeRecoveredDraft",
@@ -598,12 +852,20 @@ function ChatView({ loadedConversation, conversationUsage, contextWindow, naviga
         <InputCtrls
           ref={textareaRef}
           input={draft}
-          setInput={(value) => {draftEditedRef.current = true;draftRef.current = value;setDraft(value);}}
+          setInput={(value) => {
+            draftEditedRef.current = true;
+            draftRef.current = value;
+            setDraft(value);
+          }}
           isProcessing={isProcessing}
           canSend={canSend}
           selectedModelRef={selectedModelRef}
           reasoningRef={reasoningRef}
-          placeholder={apiKeyStatus === "configured" ? t("chat.askAnythingAboutYourCode") : t("chat.configureApiKey")}
+          placeholder={
+            apiKeyStatus === "configured"
+              ? t("chat.askAnythingAboutYourCode")
+              : t("chat.configureApiKey")
+          }
           rows={1}
           referencedFiles={referencedFiles}
           imageAttachments={imageAttachments}

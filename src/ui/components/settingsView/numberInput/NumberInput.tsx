@@ -12,24 +12,40 @@ export default function NumberInput(props: Props) {
   const disabled = props.disabled || props.readOnly;
   const change = (direction: number) => {
     const node = input.current;
-    if (!node || disabled) {return;}
+    if (!node || disabled) {
+      return;
+    }
     node.focus();
     const before = node.value;
     node.stepUp(direction);
-    if (node.value !== before) {node.dispatchEvent(new Event("input", { bubbles: true }));}
+    if (node.value !== before) {
+      node.dispatchEvent(new Event("input", { bubbles: true }));
+    }
   };
   return (
     <div className="numberInput">
       <input {...props} ref={input} type="number" />
       <div className="numberInputControls">
-        <button type="button" tabIndex={-1} aria-label={t("settings.number.increase")} aria-controls={props.id}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("settings.number.increase")}
+          aria-controls={props.id}
           disabled={disabled || (Number.isFinite(maximum) && value >= maximum)}
-          onMouseDown={(event) => event.preventDefault()} onClick={() => change(1)}>
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => change(1)}
+        >
           <span className="codicon codicon-chevron-up" aria-hidden="true" />
         </button>
-        <button type="button" tabIndex={-1} aria-label={t("settings.number.decrease")} aria-controls={props.id}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("settings.number.decrease")}
+          aria-controls={props.id}
           disabled={disabled || (Number.isFinite(minimum) && value <= minimum)}
-          onMouseDown={(event) => event.preventDefault()} onClick={() => change(-1)}>
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => change(-1)}
+        >
           <span className="codicon codicon-chevron-down" aria-hidden="true" />
         </button>
       </div>

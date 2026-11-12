@@ -52,7 +52,9 @@ function HistoryView() {
         setIsLoading(false);
         setError(message.error || t("history.historyCouldNotBeLoaded"));
       } else if (message.type === "conversationDeleted") {
-        setConversations((current) => current.filter((conversation) => conversation.id !== message.id));
+        setConversations((current) =>
+          current.filter((conversation) => conversation.id !== message.id),
+        );
       } else if (message.type === "generationActivityChanged") {
         setActivity((current) => {
           const next = { ...current };
@@ -64,10 +66,14 @@ function HistoryView() {
           return next;
         });
       } else if (message.type === "generationSnapshot") {
-        setActivity(Object.fromEntries(message.generations.map((generation) => [
-          generation.conversationId,
-          generation.status === "cancelling" ? "cancelling" : "running",
-        ])));
+        setActivity(
+          Object.fromEntries(
+            message.generations.map((generation) => [
+              generation.conversationId,
+              generation.status === "cancelling" ? "cancelling" : "running",
+            ]),
+          ),
+        );
       } else if (message.type === "configLoaded" || message.type === "configUpdateResult") {
         if (message.config.historyEnabled !== undefined) {
           setHistoryEnabled(message.config.historyEnabled);
@@ -85,7 +91,10 @@ function HistoryView() {
   const workspaceOptions = useMemo(() => collectWorkspaceOptions(conversations), [conversations]);
 
   useEffect(() => {
-    if (workspaceFilter !== ALL_WORKSPACES && !workspaceOptions.some((option) => option.uri === workspaceFilter)) {
+    if (
+      workspaceFilter !== ALL_WORKSPACES &&
+      !workspaceOptions.some((option) => option.uri === workspaceFilter)
+    ) {
       setWorkspaceFilter(ALL_WORKSPACES);
     }
   }, [workspaceFilter, workspaceOptions]);
@@ -93,20 +102,30 @@ function HistoryView() {
   const visibleConversations = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return conversations.filter((conversation) => {
-      if (workspaceFilter !== ALL_WORKSPACES && conversation.workspaceUri !== workspaceFilter) {return false;}
-      if (!normalizedQuery) {return true;}
-      return conversation.title.toLocaleLowerCase().includes(normalizedQuery) ||
-        conversation.workspaceUri.toLocaleLowerCase().includes(normalizedQuery);
+      if (workspaceFilter !== ALL_WORKSPACES && conversation.workspaceUri !== workspaceFilter) {
+        return false;
+      }
+      if (!normalizedQuery) {
+        return true;
+      }
+      return (
+        conversation.title.toLocaleLowerCase().includes(normalizedQuery) ||
+        conversation.workspaceUri.toLocaleLowerCase().includes(normalizedQuery)
+      );
     });
   }, [conversations, query, workspaceFilter]);
 
   const visibleRows = useMemo(() => {
     const sorted = [...visibleConversations].sort((a, b) => {
       switch (sortBy) {
-        case "date_asc": return a.updatedAt - b.updatedAt;
-        case "title_asc": return a.title.localeCompare(b.title);
-        case "title_desc": return b.title.localeCompare(a.title);
-        case "date_desc": return b.updatedAt - a.updatedAt;
+        case "date_asc":
+          return a.updatedAt - b.updatedAt;
+        case "title_asc":
+          return a.title.localeCompare(b.title);
+        case "title_desc":
+          return b.title.localeCompare(a.title);
+        case "date_desc":
+          return b.updatedAt - a.updatedAt;
       }
     });
     return buildHistoryRows(sorted, groupBy);
@@ -118,15 +137,29 @@ function HistoryView() {
 
   useEffect(() => setPage(1), [query, sortBy, workspaceFilter, groupBy]);
   useEffect(() => {
-    if (page > pageCount) {setPage(pageCount);}
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
   }, [page, pageCount]);
 
   return (
     <div className="historyView">
-      <div className="historyToolbar" aria-label={t("history.historyControls")} hidden={historyEnabled === false}>
+      <div
+        className="historyToolbar"
+        aria-label={t("history.historyControls")}
+        hidden={historyEnabled === false}
+      >
         <div className="searchBar">
-          <label className="srOnly" htmlFor="historySearch">{t("history.searchLabel")}</label>
-          <input type="search" id="historySearch" placeholder={t("history.searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} />
+          <label className="srOnly" htmlFor="historySearch">
+            {t("history.searchLabel")}
+          </label>
+          <input
+            type="search"
+            id="historySearch"
+            placeholder={t("history.searchPlaceholder")}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
           <span className="codicon codicon-search" aria-hidden="true" />
         </div>
         <button
@@ -136,14 +169,21 @@ function HistoryView() {
           data-tooltip={t("history.deleteFilteredHistory")}
           data-tooltip-align="end"
           disabled={visibleConversations.length === 0 || isLoading}
-          onClick={() => vscode?.postMessage({ type: "deleteConversations", ids: visibleConversations.map((conversation) => conversation.id) })}
+          onClick={() =>
+            vscode?.postMessage({
+              type: "deleteConversations",
+              ids: visibleConversations.map((conversation) => conversation.id),
+            })
+          }
         >
           <span className="codicon codicon-trash" aria-hidden="true" />
         </button>
       </div>
 
       <div className="historyFilters" hidden={historyEnabled === false}>
-        <label className="srOnly" htmlFor="historyWorkspaceFilter">{t("history.filterByWorkspace")}</label>
+        <label className="srOnly" htmlFor="historyWorkspaceFilter">
+          {t("history.filterByWorkspace")}
+        </label>
         <select
           className="workspaceFilter"
           id="historyWorkspaceFilter"
@@ -153,10 +193,16 @@ function HistoryView() {
         >
           <option value={ALL_WORKSPACES}>{t("history.allWorkspaces")}</option>
           {workspaceOptions.map((option) => (
-            <option key={option.uri} value={option.uri} title={option.label}>{`${option.label} (${option.count})`}</option>
+            <option
+              key={option.uri}
+              value={option.uri}
+              title={option.label}
+            >{`${option.label} (${option.count})`}</option>
           ))}
         </select>
-        <label className="srOnly" htmlFor="historySort">{t("history.sortHistory")}</label>
+        <label className="srOnly" htmlFor="historySort">
+          {t("history.sortHistory")}
+        </label>
         <select
           className="sortBy"
           id="historySort"
@@ -165,7 +211,9 @@ function HistoryView() {
           value={sortBy}
           onChange={(event) => {
             const order = parseSortOrder(event.target.value);
-            if (order) {setSortBy(order);}
+            if (order) {
+              setSortBy(order);
+            }
           }}
         >
           <option value="date_desc">{t("history.dateNewest")}</option>
@@ -182,48 +230,103 @@ function HistoryView() {
           data-tooltip-align="end"
           onClick={() => setGroupBy(groupBy === "workspace" ? "none" : "workspace")}
         >
-          <span className={`codicon codicon-${groupBy === "workspace" ? "list-tree" : "list-flat"}`} aria-hidden="true" />
+          <span
+            className={`codicon codicon-${groupBy === "workspace" ? "list-tree" : "list-flat"}`}
+            aria-hidden="true"
+          />
           <span className="groupToggleLabel">{t("history.groupByWorkspace")}</span>
         </button>
       </div>
 
       <div className="historyList" aria-busy={isLoading} aria-live="polite">
-        {historyEnabled === false ? <div className="historyState">{t("history.incognitoActive")}</div> : null}
-        {historyEnabled !== false && isLoading ? <div className="historyState" role="status">{t("history.loadingHistory")}</div> : null}
+        {historyEnabled === false ? (
+          <div className="historyState">{t("history.incognitoActive")}</div>
+        ) : null}
+        {historyEnabled !== false && isLoading ? (
+          <div className="historyState" role="status">
+            {t("history.loadingHistory")}
+          </div>
+        ) : null}
         {historyEnabled !== false && !isLoading && error ? (
           <div className="historyState historyError" role="alert">
             <span>{t("history.historyCouldNotBeLoaded")}</span>
             <small>{error}</small>
-            <button type="button" className="btn-secondary" onClick={requestHistory}>{t("settings.retry")}</button>
+            <button type="button" className="btn-secondary" onClick={requestHistory}>
+              {t("settings.retry")}
+            </button>
           </div>
         ) : null}
         {historyEnabled !== false && !isLoading && !error && visibleRows.length === 0 ? (
-          <div className="historyState">{query || workspaceFilter !== ALL_WORKSPACES ? t("history.noConversationsMatchYourSearch") : t("history.noHistoryYet")}</div>
-        ) : null}
-        {historyEnabled !== false && !isLoading && !error ? paginatedRows.map((row) => row.kind === "group" ? (
-          <div className="historyGroup" key={`group:${row.key}`} role="presentation">
-            <span className="historyGroupLabel" title={row.label}>{row.label}</span>
-            <span className="historyGroupCount">{t("history.groupSummary", { count: row.count })}</span>
+          <div className="historyState">
+            {query || workspaceFilter !== ALL_WORKSPACES
+              ? t("history.noConversationsMatchYourSearch")
+              : t("history.noHistoryYet")}
           </div>
-        ) : (
-          <HistoryListItem
-            key={row.conversation.id}
-            title={row.conversation.title}
-            datetime={new Date(row.conversation.updatedAt)}
-            messageCount={row.conversation.messageCount}
-            workspace={groupBy === "none" ? formatWorkspaceName(row.conversation.workspaceUri) : undefined}
-            activity={activity[row.conversation.id]}
-            onClick={() => vscode?.postMessage({ type: "loadConversation", requestId: beginNavigationRequest(), id: row.conversation.id })}
-            onDelete={() => vscode?.postMessage({ type: "deleteConversation", id: row.conversation.id })}
-          />
-        )) : null}
+        ) : null}
+        {historyEnabled !== false && !isLoading && !error
+          ? paginatedRows.map((row) =>
+              row.kind === "group" ? (
+                <div className="historyGroup" key={`group:${row.key}`} role="presentation">
+                  <span className="historyGroupLabel" title={row.label}>
+                    {row.label}
+                  </span>
+                  <span className="historyGroupCount">
+                    {t("history.groupSummary", { count: row.count })}
+                  </span>
+                </div>
+              ) : (
+                <HistoryListItem
+                  key={row.conversation.id}
+                  title={row.conversation.title}
+                  datetime={new Date(row.conversation.updatedAt)}
+                  messageCount={row.conversation.messageCount}
+                  workspace={
+                    groupBy === "none"
+                      ? formatWorkspaceName(row.conversation.workspaceUri)
+                      : undefined
+                  }
+                  activity={activity[row.conversation.id]}
+                  onClick={() =>
+                    vscode?.postMessage({
+                      type: "loadConversation",
+                      requestId: beginNavigationRequest(),
+                      id: row.conversation.id,
+                    })
+                  }
+                  onDelete={() =>
+                    vscode?.postMessage({ type: "deleteConversation", id: row.conversation.id })
+                  }
+                />
+              ),
+            )
+          : null}
       </div>
 
       {historyEnabled !== false && !isLoading && !error && visibleRows.length > PAGE_SIZE ? (
         <nav className="historyPagination" aria-label={t("history.historyPages")}>
-          <button type="button" className="btn-secondary" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>{t("history.previous")}</button>
-          <span aria-live="polite">{t("history.pageSummary", { page: currentPage, pages: pageCount, count: visibleConversations.length })}</span>
-          <button type="button" className="btn-secondary" disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>{t("history.next")}</button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={currentPage === 1}
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+          >
+            {t("history.previous")}
+          </button>
+          <span aria-live="polite">
+            {t("history.pageSummary", {
+              page: currentPage,
+              pages: pageCount,
+              count: visibleConversations.length,
+            })}
+          </span>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={currentPage === pageCount}
+            onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+          >
+            {t("history.next")}
+          </button>
         </nav>
       ) : null}
     </div>
@@ -233,5 +336,10 @@ function HistoryView() {
 export default HistoryView;
 
 function parseSortOrder(value: string): SortOrder | undefined {
-  return value === "date_desc" || value === "date_asc" || value === "title_asc" || value === "title_desc" ? value : undefined;
+  return value === "date_desc" ||
+    value === "date_asc" ||
+    value === "title_asc" ||
+    value === "title_desc"
+    ? value
+    : undefined;
 }

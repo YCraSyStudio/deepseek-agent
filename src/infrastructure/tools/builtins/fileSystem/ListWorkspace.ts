@@ -32,7 +32,10 @@ interface WorkspaceScope {
   label: string;
 }
 
-async function handleListWorkspace(args: Record<string, unknown>, context?: ToolHandlerContext): Promise<string> {
+async function handleListWorkspace(
+  args: Record<string, unknown>,
+  context?: ToolHandlerContext,
+): Promise<string> {
   const scope = normalizeScope(args.path);
   const workspace = getToolWorkspaceHost();
   if (!workspace.getRootPath() && !workspace.getWorkspaceId?.()) {
@@ -55,19 +58,27 @@ async function handleListWorkspace(args: Record<string, unknown>, context?: Tool
     if (context?.signal?.aborted) {
       throw createAbortError();
     }
-    throw new Error(`Cannot list workspace path "${scope.label}": ${state.rootReadError ?? "unreadable path"}`);
+    throw new Error(
+      `Cannot list workspace path "${scope.label}": ${state.rootReadError ?? "unreadable path"}`,
+    );
   }
 
   const header = `Workspace tree for "${scope.label}" (${state.files} files, ${state.directories} folders). Hidden entries are included; a folder shown as "${COLLAPSED}" holds more entries than this summary lists:`;
   const notes: string[] = [];
   if (state.collapsed > 0) {
-    notes.push(`...[${state.collapsed} folder${state.collapsed === 1 ? " is" : "s are"} summarized as "${COLLAPSED}". Use list_directory on one to open it.]`);
+    notes.push(
+      `...[${state.collapsed} folder${state.collapsed === 1 ? " is" : "s are"} summarized as "${COLLAPSED}". Use list_directory on one to open it.]`,
+    );
   }
   if (state.truncated) {
-    notes.push(`...[tree truncated after ${MAX_TREE_LINES} entries. Pass the path argument to scope it to one subtree.]`);
+    notes.push(
+      `...[tree truncated after ${MAX_TREE_LINES} entries. Pass the path argument to scope it to one subtree.]`,
+    );
   }
   if (state.overflowed) {
-    notes.push(`...[stopped after reading ${MAX_DIRECTORY_READS} folders. Pass the path argument to scope the tree.]`);
+    notes.push(
+      `...[stopped after reading ${MAX_DIRECTORY_READS} folders. Pass the path argument to scope the tree.]`,
+    );
   }
   if (state.files + state.directories === 0) {
     notes.push("...[no entries found. Verify the path with list_directory.]");
@@ -94,7 +105,11 @@ function normalizeScope(value: unknown): WorkspaceScope {
   if (trimmed.split("/").includes("..")) {
     throw new Error("path must stay inside the workspace");
   }
-  if (trimmed.startsWith("/") || path.win32.isAbsolute(trimmed) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed)) {
+  if (
+    trimmed.startsWith("/") ||
+    path.win32.isAbsolute(trimmed) ||
+    /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed)
+  ) {
     throw new Error("path must be relative to the selected workspace");
   }
   return { path: trimmed, label: trimmed };
@@ -165,7 +180,11 @@ async function renderDirectory(
 
     lines.push(`${prefix}${name}/`);
     used += 1;
-    const counters = { files: state.files, directories: state.directories, collapsed: state.collapsed };
+    const counters = {
+      files: state.files,
+      directories: state.directories,
+      collapsed: state.collapsed,
+    };
     const child = await renderDirectory(
       workspace,
       joinPath(dirPath, name),
@@ -204,7 +223,9 @@ function joinPath(dirPath: string, name: string): string {
   return dirPath === "." ? name : `${dirPath}/${name}`;
 }
 
-function sortEntries(entries: ReadonlyArray<[string, ToolWorkspaceEntryType]>): Array<[string, ToolWorkspaceEntryType]> {
+function sortEntries(
+  entries: ReadonlyArray<[string, ToolWorkspaceEntryType]>,
+): Array<[string, ToolWorkspaceEntryType]> {
   return [...entries].sort(([leftName, leftType], [rightName, rightType]) => {
     const leftIsDirectory = leftType === "directory" ? 0 : 1;
     const rightIsDirectory = rightType === "directory" ? 0 : 1;
@@ -241,14 +262,15 @@ export const listWorkspaceDefinition: ToolDefinition = {
   function: {
     name: "list_workspace",
     description:
-      "List the whole project as one indented tree in a single call. Prefer this once when starting a task instead of repeated list_directory calls. Hidden entries are included, and folders with too much content are summarized as \"...\"; call list_directory on one of those to open it. Use the path argument to scope the tree to a subfolder.",
+      'List the whole project as one indented tree in a single call. Prefer this once when starting a task instead of repeated list_directory calls. Hidden entries are included, and folders with too much content are summarized as "..."; call list_directory on one of those to open it. Use the path argument to scope the tree to a subfolder.',
     strict: true,
     parameters: {
       type: "object",
       properties: {
         path: {
           type: "string",
-          description: "Optional workspace-relative subfolder to scope the tree. Defaults to the whole workspace.",
+          description:
+            "Optional workspace-relative subfolder to scope the tree. Defaults to the whole workspace.",
         },
       },
       required: [],

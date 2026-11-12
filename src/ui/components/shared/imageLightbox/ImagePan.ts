@@ -1,4 +1,3 @@
-
 import type { ImageSize } from "./ImageZoom";
 
 export interface ScrollOffset {

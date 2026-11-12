@@ -112,7 +112,10 @@ export class GenerationRunFinalizer {
         conversationId: record.conversationId,
       });
     }
-    const contextWindow = measuredContextWindow(record.budgetManager, countCompactions(record.state));
+    const contextWindow = measuredContextWindow(
+      record.budgetManager,
+      countCompactions(record.state),
+    );
     if (contextWindow) {
       eventSink.publish({
         type: "contextWindowUpdated",
@@ -123,9 +126,13 @@ export class GenerationRunFinalizer {
   }
 
   private hasPersistedAssistant(record: GenerationRunRecord): boolean {
-    return record.state.getConversation()?.messages.some(
-      (message) => message.role === "assistant" && message.generationId === record.generationId,
-    ) ?? false;
+    return (
+      record.state
+        .getConversation()
+        ?.messages.some(
+          (message) => message.role === "assistant" && message.generationId === record.generationId,
+        ) ?? false
+    );
   }
 
   private async finalizeCancellation(
@@ -150,20 +157,30 @@ export class GenerationRunFinalizer {
     if (interrupted) {
       this.dependencies.resultStore.transitionToTerminal(record, "interrupted");
     }
-    const persistedError = record.state.getConversation()?.messages.some(
-      message => message.role === "error" && message.generationId === record.generationId,
-    );
-    if ((record.status as string) === "completed" || interrupted || (record.status === "error" && record.errorPersisted && persistedError)) {
+    const persistedError = record.state
+      .getConversation()
+      ?.messages.some(
+        (message) => message.role === "error" && message.generationId === record.generationId,
+      );
+    if (
+      (record.status as string) === "completed" ||
+      interrupted ||
+      (record.status === "error" && record.errorPersisted && persistedError)
+    ) {
       await this.dependencies.checkpointStore.delete(record.conversationId);
     } else {
       await this.dependencies.checkpoint(record, true);
     }
-    const pendingIsError = record.pendingTerminalEvent?.type === "streamError" || record.status === "error";
+    const pendingIsError =
+      record.pendingTerminalEvent?.type === "streamError" || record.status === "error";
     publishGenerationTerminal(
       record,
       this.dependencies.generationEventCallbacks,
       pendingIsError
-        ? { type: "streamError", error: String(record.pendingTerminalEvent?.error ?? "Generation failed") }
+        ? {
+            type: "streamError",
+            error: String(record.pendingTerminalEvent?.error ?? "Generation failed"),
+          }
         : {
             type: "streamDone",
             status: interrupted ? "interrupted" : "completed",

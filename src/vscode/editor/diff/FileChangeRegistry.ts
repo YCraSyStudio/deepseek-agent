@@ -24,7 +24,11 @@ export class FileChangeRegistry {
 
   constructor(private readonly options: FileChangeRegistryOptions = DEFAULT_OPTIONS) {}
 
-  public record(path: string, before: Uint8Array | undefined, after: Uint8Array): RecordedFileChange | undefined {
+  public record(
+    path: string,
+    before: Uint8Array | undefined,
+    after: Uint8Array,
+  ): RecordedFileChange | undefined {
     if (!path.trim() || after.byteLength > this.options.maxDocumentBytes) {
       return undefined;
     }
@@ -48,7 +52,11 @@ export class FileChangeRegistry {
     return change;
   }
 
-  public find(path: string, beforeHash: string | undefined, afterHash: string): RecordedFileChange | undefined {
+  public find(
+    path: string,
+    beforeHash: string | undefined,
+    afterHash: string,
+  ): RecordedFileChange | undefined {
     const entries = [...this.changes.values()];
     for (let index = entries.length - 1; index >= 0; index -= 1) {
       const change = entries[index]!;

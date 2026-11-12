@@ -10,11 +10,23 @@ suite("webview entrypoint bootstrap", () => {
     // A separate static entry preserves production source mappings and prevents
     // ReactDOM from initializing in the main test process before its DOM exists.
     const entry = resolve(".tmp/unit-tests/bootstrap/Main.mjs");
-    await build({ entryPoints: [resolve("src/ui/Main.tsx")], outfile: entry, bundle: true,
-      platform: "node", target: "node24", format: "esm", packages: "external", sourcemap: true,
+    await build({
+      entryPoints: [resolve("src/ui/Main.tsx")],
+      outfile: entry,
+      bundle: true,
+      platform: "node",
+      target: "node24",
+      format: "esm",
+      packages: "external",
+      sourcemap: true,
       resolveExtensions: [".ts", ".tsx", ".mjs", ".js", ".json"],
       loader: { ".css": "empty", ".svg": "dataurl", ".ttf": "dataurl" },
-      alias: { "@vscode/codicons/dist/codicon.css": resolve("node_modules/@vscode/codicons/dist/codicon.css") } });
+      alias: {
+        "@vscode/codicons/dist/codicon.css": resolve(
+          "node_modules/@vscode/codicons/dist/codicon.css",
+        ),
+      },
+    });
     const bootstrap = `
       import assert from 'node:assert/strict';
       import { JSDOM } from 'jsdom';
@@ -40,9 +52,16 @@ suite("webview entrypoint bootstrap", () => {
       dom.window.close();
       process.exit(0);
     `;
-    const child = spawnSync(process.execPath, ["--max-old-space-size=256", "--input-type=module", "-e", bootstrap], {
-      env: process.env, encoding: "utf8", timeout: 12000, maxBuffer: 64 * 1024,
-    });
+    const child = spawnSync(
+      process.execPath,
+      ["--max-old-space-size=256", "--input-type=module", "-e", bootstrap],
+      {
+        env: process.env,
+        encoding: "utf8",
+        timeout: 12000,
+        maxBuffer: 64 * 1024,
+      },
+    );
     assert.ifError(child.error);
     assert.equal(child.status, 0, child.stderr || String(child.error || child.signal));
   });

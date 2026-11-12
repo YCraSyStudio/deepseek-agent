@@ -1,7 +1,14 @@
 import { isChatDraftRequest } from "@/infrastructure/persistence/ChatDraftStore";
 import { isInstructionName } from "@/shared/instructions/InstructionNames";
 import { INSTRUCTION_TEMPLATE_IDS } from "@/contracts/Customization";
-import { MAX_OUTPUT_TOKENS, WEBVIEW_INPUT_LIMITS, WEBVIEW_PROTOCOL_VERSION, isReasoningEffort, type AppConfig, type WebviewToHandlerMessage } from "@/contracts";
+import {
+  MAX_OUTPUT_TOKENS,
+  WEBVIEW_INPUT_LIMITS,
+  WEBVIEW_PROTOCOL_VERSION,
+  isReasoningEffort,
+  type AppConfig,
+  type WebviewToHandlerMessage,
+} from "@/contracts";
 import { isAllowedApiBaseUrl } from "@/shared/security/ApiOrigin";
 import { SETTING_KEYS_LIST } from "@/application/settings/ConfigurationSchema";
 import { isImageAttachmentShape } from "@/contracts/attachments";
@@ -30,11 +37,25 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
 
   switch (value.type) {
     case "chatDraft":
-      return hasOnlyKeys(value, ["type", "requestId", "operation", "conversationId", "draft", "attachments"]) && isChatDraftRequest(value);
+      return (
+        hasOnlyKeys(value, [
+          "type",
+          "requestId",
+          "operation",
+          "conversationId",
+          "draft",
+          "attachments",
+        ]) && isChatDraftRequest(value)
+      );
     case "initializeProtocol":
-      return hasOnlyKeys(value, ["type", "protocolVersion"]) && value.protocolVersion === WEBVIEW_PROTOCOL_VERSION;
+      return (
+        hasOnlyKeys(value, ["type", "protocolVersion"]) &&
+        value.protocolVersion === WEBVIEW_PROTOCOL_VERSION
+      );
     case "setStorageDirectory":
-      return hasOnlyKeys(value, ["type", "directory"]) && isNonEmptyBoundedString(value.directory, 4096);
+      return (
+        hasOnlyKeys(value, ["type", "directory"]) && isNonEmptyBoundedString(value.directory, 4096)
+      );
     case "selectStorageDirectory":
     case "reloadStorage":
     case "getConfig":
@@ -46,78 +67,143 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
       return hasOnlyKeys(value, ["type"]);
     case "getScreenshotPreview":
     case "openScreenshot":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "screenshotId"]) &&
-        isNonEmptyBoundedString(value.requestId, 128) && typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
-        typeof value.screenshotId === "string" && /^screenshot-\d+$/.test(value.screenshotId);
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "conversationId", "screenshotId"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        typeof value.conversationId === "string" &&
+        /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
+        typeof value.screenshotId === "string" &&
+        /^screenshot-\d+$/.test(value.screenshotId)
+      );
     case "newConversation":
     case "openGlobalAgents":
     case "cancelChatSuggestion":
-      return hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128);
+      return (
+        hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128)
+      );
     case "getChatSuggestion":
-      return hasOnlyKeys(value, ["type", "requestId", "prefix"]) && isNonEmptyBoundedString(value.requestId, 128) &&
-        isBoundedString(value.prefix, 12_000);
-    case "selectAttachments":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "prefix"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512));
+        isBoundedString(value.prefix, 12_000)
+      );
+    case "selectAttachments":
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512))
+      );
     case "openReusableInstruction":
-      return hasOnlyKeys(value, ["type", "requestId", "id"]) && isNonEmptyBoundedString(value.requestId, 128) && isNonEmptyBoundedString(value.id, 256);
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "id"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        isNonEmptyBoundedString(value.id, 256)
+      );
     case "createReusableInstruction":
-      return hasOnlyKeys(value, ["type", "requestId", "scope", "rootUri", "name", "description", "template"]) &&
-        isNonEmptyBoundedString(value.requestId, 128) && isEnumOf(value.scope, ["global", "workspace"]) &&
+      return (
+        hasOnlyKeys(value, [
+          "type",
+          "requestId",
+          "scope",
+          "rootUri",
+          "name",
+          "description",
+          "template",
+        ]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        isEnumOf(value.scope, ["global", "workspace"]) &&
         (value.template === undefined || isEnumOf(value.template, INSTRUCTION_TEMPLATE_IDS)) &&
-        (value.scope === "workspace" ? isNonEmptyBoundedString(value.rootUri, 32768) : value.rootUri === undefined) &&
+        (value.scope === "workspace"
+          ? isNonEmptyBoundedString(value.rootUri, 32768)
+          : value.rootUri === undefined) &&
         isInstructionName(value.name) &&
-        isNonEmptyBoundedString(value.description, 350) && !/[\r\n\u0000]/.test(value.description as string);
+        isNonEmptyBoundedString(value.description, 350) &&
+        !/[\r\n\u0000]/.test(value.description as string)
+      );
     case "openWorkspaceInstructions":
-      return hasOnlyKeys(value, ["type", "requestId", "rootUri"]) &&
-        isNonEmptyBoundedString(value.requestId, 128) && isNonEmptyBoundedString(value.rootUri, 32768);
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "rootUri"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        isNonEmptyBoundedString(value.rootUri, 32768)
+      );
     case "uploadClipboardImage":
-      return hasOnlyKeys(value, ["type", "requestId", "name", "mediaType", "size", "dataBase64"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "name", "mediaType", "size", "dataBase64"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
         isNonEmptyBoundedString(value.name, 512) &&
-        typeof value.mediaType === "string" && ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(value.mediaType) &&
-        Number.isSafeInteger(value.size) && (value.size as number) > 0 && (value.size as number) <= WEBVIEW_INPUT_LIMITS.clipboardImageBytes &&
-        isNonEmptyBoundedString(value.dataBase64, Math.ceil(WEBVIEW_INPUT_LIMITS.clipboardImageBytes * 4 / 3) + 8) &&
-        /^[A-Za-z0-9+/]+={0,2}$/.test(value.dataBase64);
+        typeof value.mediaType === "string" &&
+        ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(value.mediaType) &&
+        Number.isSafeInteger(value.size) &&
+        (value.size as number) > 0 &&
+        (value.size as number) <= WEBVIEW_INPUT_LIMITS.clipboardImageBytes &&
+        isNonEmptyBoundedString(
+          value.dataBase64,
+          Math.ceil((WEBVIEW_INPUT_LIMITS.clipboardImageBytes * 4) / 3) + 8,
+        ) &&
+        /^[A-Za-z0-9+/]+={0,2}$/.test(value.dataBase64)
+      );
     case "deleteImageAttachment":
-      return hasOnlyKeys(value, ["type", "requestId", "attachment"]) &&
-        isNonEmptyBoundedString(value.requestId, 128) && isImageAttachment(value.attachment);
-    case "getWorkspaceContext":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "attachment"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512));
+        isImageAttachment(value.attachment)
+      );
+    case "getWorkspaceContext":
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512))
+      );
     case "rebindConversationWorkspace":
-      return hasOnlyKeys(value, ["type", "conversationId", "workspaceRevision"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "conversationId", "workspaceRevision"]) &&
         isNonEmptyBoundedString(value.conversationId, 512) &&
-        isOptionalBoundedString(value.workspaceRevision, 256);
+        isOptionalBoundedString(value.workspaceRevision, 256)
+      );
     case "openConversationWorkspace":
-      return hasOnlyKeys(value, ["type", "conversationId"]) &&
-        isNonEmptyBoundedString(value.conversationId, 512);
+      return (
+        hasOnlyKeys(value, ["type", "conversationId"]) &&
+        isNonEmptyBoundedString(value.conversationId, 512)
+      );
     case "resetConfig":
     case "deleteApiKey":
-      return hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128);
+      return (
+        hasOnlyKeys(value, ["type", "requestId"]) && isNonEmptyBoundedString(value.requestId, 128)
+      );
     case "resolveHistoryTransition":
-      return hasOnlyKeys(value, ["type", "requestId", "decision"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "decision"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
-        (value.decision === "stop" || value.decision === "save" || value.decision === "discard" || value.decision === "cancel");
+        (value.decision === "stop" ||
+          value.decision === "save" ||
+          value.decision === "discard" ||
+          value.decision === "cancel")
+      );
     case "cancelGeneration":
-      return hasOnlyKeys(value, ["type", "requestId", "generationId", "conversationId"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "generationId", "conversationId"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
         isNonEmptyBoundedString(value.generationId, 512) &&
-        isNonEmptyBoundedString(value.conversationId, 512);
+        isNonEmptyBoundedString(value.conversationId, 512)
+      );
     case "compactContext":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "conversationId"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512));
+        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512))
+      );
     case "consumeRecoveredDraft":
-      return hasOnlyKeys(value, ["type", "conversationId", "clientRequestId"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "conversationId", "clientRequestId"]) &&
         isNonEmptyBoundedString(value.conversationId, 512) &&
-        isNonEmptyBoundedString(value.clientRequestId, 512);
+        isNonEmptyBoundedString(value.clientRequestId, 512)
+      );
     case "saveConfig":
-      return hasOnlyKeys(value, ["type", "requestId", "config"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "config"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
-        isAppConfigPatch(value.config);
+        isAppConfigPatch(value.config)
+      );
     case "testConnection":
       return (
         hasOnlyKeys(value, ["type", "apiKey", "baseUrl", "model"]) &&
@@ -128,29 +214,56 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
     case "sendMessage":
       return validateSendMessage(value);
     case "steerGeneration":
-      return validateSendMessageFields(value, ["type", "generationId", "clientRequestId", "text", "modelId", "reasoning", "conversationId", "workspaceRevision", "referencedFiles", "imageAttachments"]) &&
+      return (
+        validateSendMessageFields(value, [
+          "type",
+          "generationId",
+          "clientRequestId",
+          "text",
+          "modelId",
+          "reasoning",
+          "conversationId",
+          "workspaceRevision",
+          "referencedFiles",
+          "imageAttachments",
+        ]) &&
         isNonEmptyBoundedString(value.generationId, 512) &&
-        isNonEmptyBoundedString(value.conversationId, 512);
+        isNonEmptyBoundedString(value.conversationId, 512)
+      );
     case "copyCode":
       return hasOnlyKeys(value, ["type", "code"]) && isBoundedString(value.code, MAX_CODE_TEXT);
     case "insertCode":
-      return hasOnlyKeys(value, ["type", "code", "conversationId", "workspaceRevision"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "code", "conversationId", "workspaceRevision"]) &&
         isBoundedString(value.code, MAX_CODE_TEXT) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512)) &&
-        isOptionalBoundedString(value.workspaceRevision, 256);
+        (value.conversationId === undefined ||
+          isNonEmptyBoundedString(value.conversationId, 512)) &&
+        isOptionalBoundedString(value.workspaceRevision, 256)
+      );
     case "selectModel":
       return hasOnlyKeys(value, ["type", "modelId"]) && isNonEmptyBoundedString(value.modelId, 256);
     case "deleteConversation":
       return hasOnlyKeys(value, ["type", "id"]) && isNonEmptyBoundedString(value.id, 512);
     case "loadConversation":
-      return hasOnlyKeys(value, ["type", "requestId", "id"]) &&
-        isNonEmptyBoundedString(value.requestId, 128) && isNonEmptyBoundedString(value.id, 512);
-    case "loadConversationPage":
-      return hasOnlyKeys(value, ["type", "requestId", "id", "cursor"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "id"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
-        isNonEmptyBoundedString(value.id, 512) && isNonEmptyBoundedString(value.cursor, 512);
+        isNonEmptyBoundedString(value.id, 512)
+      );
+    case "loadConversationPage":
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "id", "cursor"]) &&
+        isNonEmptyBoundedString(value.requestId, 128) &&
+        isNonEmptyBoundedString(value.id, 512) &&
+        isNonEmptyBoundedString(value.cursor, 512)
+      );
     case "deleteConversations":
-      return hasOnlyKeys(value, ["type", "ids"]) && Array.isArray(value.ids) && value.ids.length <= 100 && value.ids.every((id) => isNonEmptyBoundedString(id, 512));
+      return (
+        hasOnlyKeys(value, ["type", "ids"]) &&
+        Array.isArray(value.ids) &&
+        value.ids.length <= 100 &&
+        value.ids.every((id) => isNonEmptyBoundedString(id, 512))
+      );
     case "executeToolCall":
       return (
         hasOnlyKeys(value, ["type", "generationId", "toolCallId", "action"]) &&
@@ -164,77 +277,127 @@ export function isWebviewToHandlerMessage(value: unknown): value is WebviewToHan
         Number.isSafeInteger(value.requestId) &&
         (value.requestId as number) >= 0 &&
         isBoundedString(value.query, 4096) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512)) &&
+        (value.conversationId === undefined ||
+          isNonEmptyBoundedString(value.conversationId, 512)) &&
         isOptionalBoundedString(value.workspaceRevision, 256)
       );
     case "openFile":
       return (
         hasOnlyKeys(value, ["type", "path", "line", "conversationId", "workspaceRevision"]) &&
         isNonEmptyBoundedString(value.path, 32_768) &&
-        (value.line === undefined || (Number.isSafeInteger(value.line) && (value.line as number) >= 1)) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512)) &&
+        (value.line === undefined ||
+          (Number.isSafeInteger(value.line) && (value.line as number) >= 1)) &&
+        (value.conversationId === undefined ||
+          isNonEmptyBoundedString(value.conversationId, 512)) &&
         isOptionalBoundedString(value.workspaceRevision, 256)
       );
     case "openFileDiff":
       return (
-        hasOnlyKeys(value, ["type", "path", "diff", "beforeHash", "afterHash", "preview", "conversationId", "generationId", "workspaceRevision"]) &&
+        hasOnlyKeys(value, [
+          "type",
+          "path",
+          "diff",
+          "beforeHash",
+          "afterHash",
+          "preview",
+          "conversationId",
+          "generationId",
+          "workspaceRevision",
+        ]) &&
         isNonEmptyBoundedString(value.path, 32_768) &&
         (value.diff === undefined || isBoundedString(value.diff, MAX_CHANGE_DIFF_TEXT)) &&
-        (isNonEmptyBoundedString(value.diff, MAX_CHANGE_DIFF_TEXT) || isNonEmptyBoundedString(value.afterHash, 64)) &&
+        (isNonEmptyBoundedString(value.diff, MAX_CHANGE_DIFF_TEXT) ||
+          isNonEmptyBoundedString(value.afterHash, 64)) &&
         isOptionalBoundedString(value.beforeHash, 64) &&
         isOptionalBoundedString(value.afterHash, 64) &&
         isOptionalBoolean(value.preview) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512)) &&
+        (value.conversationId === undefined ||
+          isNonEmptyBoundedString(value.conversationId, 512)) &&
         (value.generationId === undefined || isNonEmptyBoundedString(value.generationId, 200)) &&
         isOptionalBoundedString(value.workspaceRevision, 256)
       );
     case "getRunningTasks":
-      return hasOnlyKeys(value, ["type", "conversationId"]) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512));
+      return (
+        hasOnlyKeys(value, ["type", "conversationId"]) &&
+        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512))
+      );
     case "stopRunningTask":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "sessionId"]) &&
+      return (
+        hasOnlyKeys(value, ["type", "requestId", "conversationId", "sessionId"]) &&
         isNonEmptyBoundedString(value.requestId, 128) &&
-        (value.conversationId === undefined || isNonEmptyBoundedString(value.conversationId, 512)) &&
-        isNonEmptyBoundedString(value.sessionId, 512);
+        (value.conversationId === undefined ||
+          isNonEmptyBoundedString(value.conversationId, 512)) &&
+        isNonEmptyBoundedString(value.sessionId, 512)
+      );
     case "getWorkspaceTurn":
     case "revertWorkspaceTurn":
     case "reviewWorkspaceTurn":
-      return hasOnlyKeys(value, ["type", "requestId", "conversationId", "generationId", ...(value.type === "reviewWorkspaceTurn" ? ["path"] : [])]) &&
+      return (
+        hasOnlyKeys(value, [
+          "type",
+          "requestId",
+          "conversationId",
+          "generationId",
+          ...(value.type === "reviewWorkspaceTurn" ? ["path"] : []),
+        ]) &&
         (value.path === undefined || isNonEmptyBoundedString(value.path, 32_768)) &&
         isNonEmptyBoundedString(value.requestId, 512) &&
-        typeof value.conversationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
-        typeof value.generationId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(value.generationId);
+        typeof value.conversationId === "string" &&
+        /^[A-Za-z0-9_-]{1,200}$/.test(value.conversationId) &&
+        typeof value.generationId === "string" &&
+        /^[A-Za-z0-9_-]{1,200}$/.test(value.generationId)
+      );
     default:
       return false;
   }
 }
 
 function validateSendMessage(value: Record<string, unknown>): boolean {
-  return validateSendMessageFields(value, ["type", "clientRequestId", "text", "modelId", "reasoning", "conversationId", "workspaceRevision", "referencedFiles", "imageAttachments"]);
+  return validateSendMessageFields(value, [
+    "type",
+    "clientRequestId",
+    "text",
+    "modelId",
+    "reasoning",
+    "conversationId",
+    "workspaceRevision",
+    "referencedFiles",
+    "imageAttachments",
+  ]);
 }
 
-function validateSendMessageFields(value: Record<string, unknown>, keys: readonly string[]): boolean {
+function validateSendMessageFields(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean {
   if (
     !hasOnlyKeys(value, keys) ||
     !isNonEmptyBoundedString(value.clientRequestId, 512) ||
     !isBoundedString(value.text, MAX_CHAT_TEXT) ||
     !isNonEmptyBoundedString(value.modelId, 256) ||
-    (value.reasoning !== "off" && value.reasoning !== "low" && value.reasoning !== "high" && value.reasoning !== "max") ||
+    (value.reasoning !== "off" &&
+      value.reasoning !== "low" &&
+      value.reasoning !== "high" &&
+      value.reasoning !== "max") ||
     (value.conversationId !== undefined && !isNonEmptyBoundedString(value.conversationId, 512)) ||
     !isOptionalBoundedString(value.workspaceRevision, 256)
   ) {
     return false;
   }
 
-  if (!value.text.trim() && (!Array.isArray(value.imageAttachments) || value.imageAttachments.length === 0)) {
+  if (
+    !value.text.trim() &&
+    (!Array.isArray(value.imageAttachments) || value.imageAttachments.length === 0)
+  ) {
     return false;
   }
 
-  if (value.imageAttachments !== undefined && (
-    !Array.isArray(value.imageAttachments) ||
-    value.imageAttachments.length > WEBVIEW_INPUT_LIMITS.images ||
-    !value.imageAttachments.every(isImageAttachment)
-  )) {
+  if (
+    value.imageAttachments !== undefined &&
+    (!Array.isArray(value.imageAttachments) ||
+      value.imageAttachments.length > WEBVIEW_INPUT_LIMITS.images ||
+      !value.imageAttachments.every(isImageAttachment))
+  ) {
     return false;
   }
 
@@ -249,13 +412,26 @@ function validateSendMessageFields(value: Record<string, unknown>, keys: readonl
   for (const reference of value.referencedFiles) {
     if (
       !isRecord(reference) ||
-      !hasOnlyKeys(reference, ["path", "content", "type", "selection", "referenceId", "scope", "rootUri", "bindingRevision"]) ||
+      !hasOnlyKeys(reference, [
+        "path",
+        "content",
+        "type",
+        "selection",
+        "referenceId",
+        "scope",
+        "rootUri",
+        "bindingRevision",
+      ]) ||
       !isNonEmptyBoundedString(reference.path, 32_768) ||
       (reference.type !== "file" && reference.type !== "directory") ||
-      (reference.content !== undefined && !isBoundedString(reference.content, MAX_REFERENCE_CONTENT)) ||
+      (reference.content !== undefined &&
+        !isBoundedString(reference.content, MAX_REFERENCE_CONTENT)) ||
       (reference.selection !== undefined && !isSelectionRange(reference.selection)) ||
-      (reference.referenceId !== undefined && !isNonEmptyBoundedString(reference.referenceId, 512)) ||
-      (reference.scope !== undefined && reference.scope !== "workspace" && reference.scope !== "external-snapshot") ||
+      (reference.referenceId !== undefined &&
+        !isNonEmptyBoundedString(reference.referenceId, 512)) ||
+      (reference.scope !== undefined &&
+        reference.scope !== "workspace" &&
+        reference.scope !== "external-snapshot") ||
       !isOptionalBoundedString(reference.rootUri, 32_768) ||
       !isOptionalBoundedString(reference.bindingRevision, 256)
     ) {
@@ -270,22 +446,44 @@ function validateSendMessageFields(value: Record<string, unknown>, keys: readonl
 }
 
 function isImageAttachment(value: unknown): boolean {
-  if (!isRecord(value) || !hasOnlyKeys(value, [
-    "id", "fileId", "name", "mediaType", "size", "source", "uploadedAt", "expiresAt",
-    "apiBaseUrl", "cacheFileName", "previewUri", "imageNumber",
-  ])) {return false;}
-  return isImageAttachmentShape(value) &&
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, [
+      "id",
+      "fileId",
+      "name",
+      "mediaType",
+      "size",
+      "source",
+      "uploadedAt",
+      "expiresAt",
+      "apiBaseUrl",
+      "cacheFileName",
+      "previewUri",
+      "imageNumber",
+    ])
+  ) {
+    return false;
+  }
+  return (
+    isImageAttachmentShape(value) &&
     isNonEmptyBoundedString(value.id, 512) &&
     isNonEmptyBoundedString(value.fileId, 512) &&
     isNonEmptyBoundedString(value.name, 512) &&
     (value.size as number) <= WEBVIEW_INPUT_LIMITS.imageBytes &&
     isAllowedApiBaseUrl(value.apiBaseUrl) &&
-    isNonEmptyBoundedString(value.cacheFileName, 256);
+    isNonEmptyBoundedString(value.cacheFileName, 256)
+  );
 }
 
 function isSelectionRange(value: unknown): boolean {
-  return isRecord(value) && hasOnlyKeys(value, ["startLine", "startCharacter", "endLine", "endCharacter"]) &&
-    [value.startLine, value.startCharacter, value.endLine, value.endCharacter].every((part) => Number.isSafeInteger(part) && (part as number) >= 1);
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ["startLine", "startCharacter", "endLine", "endCharacter"]) &&
+    [value.startLine, value.startCharacter, value.endLine, value.endCharacter].every(
+      (part) => Number.isSafeInteger(part) && (part as number) >= 1,
+    )
+  );
 }
 
 const INTERFACE_LANGUAGES = ["auto", "en", "es", "zh"] as const;
@@ -306,7 +504,8 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
   }
 
   return (
-    (value.interfaceLanguage === undefined || isEnumOf(value.interfaceLanguage, INTERFACE_LANGUAGES)) &&
+    (value.interfaceLanguage === undefined ||
+      isEnumOf(value.interfaceLanguage, INTERFACE_LANGUAGES)) &&
     isOptionalBoundedString(value.apiKey, 16_384) &&
     (value.baseUrl === undefined || isAllowedApiBaseUrl(value.baseUrl)) &&
     (value.model === undefined || isNonEmptyBoundedString(value.model, 256)) &&
@@ -314,23 +513,38 @@ function isAppConfigPatch(value: unknown): value is Partial<AppConfig> {
     (value.reasoningEffort === undefined || isReasoningEffort(value.reasoningEffort)) &&
     isOptionalNumberInRange(value.temperature, 0, 2) &&
     isOptionalNumberInRange(value.topP, 0, 1) &&
-    (value.maxTokens === undefined || (Number.isSafeInteger(value.maxTokens) && (value.maxTokens as number) >= 1 && (value.maxTokens as number) <= MAX_OUTPUT_TOKENS)) &&
-    (value.maxConcurrentGenerations === undefined || (Number.isSafeInteger(value.maxConcurrentGenerations) && (value.maxConcurrentGenerations as number) >= 1 && (value.maxConcurrentGenerations as number) <= 16)) &&
+    (value.maxTokens === undefined ||
+      (Number.isSafeInteger(value.maxTokens) &&
+        (value.maxTokens as number) >= 1 &&
+        (value.maxTokens as number) <= MAX_OUTPUT_TOKENS)) &&
+    (value.maxConcurrentGenerations === undefined ||
+      (Number.isSafeInteger(value.maxConcurrentGenerations) &&
+        (value.maxConcurrentGenerations as number) >= 1 &&
+        (value.maxConcurrentGenerations as number) <= 16)) &&
     (value.permissionMode === undefined || isEnumOf(value.permissionMode, PERMISSION_MODES)) &&
     isOptionalBoolean(value.historyEnabled) &&
-    (value.historyRetentionDays === undefined || (Number.isSafeInteger(value.historyRetentionDays) && (value.historyRetentionDays as number) >= 0 && (value.historyRetentionDays as number) <= 3650)) &&
-    (value.snapshotStorageLimitMb === undefined || (Number.isSafeInteger(value.snapshotStorageLimitMb) && (value.snapshotStorageLimitMb as number) >= 64 && (value.snapshotStorageLimitMb as number) <= 65536)) &&
+    (value.historyRetentionDays === undefined ||
+      (Number.isSafeInteger(value.historyRetentionDays) &&
+        (value.historyRetentionDays as number) >= 0 &&
+        (value.historyRetentionDays as number) <= 3650)) &&
+    (value.snapshotStorageLimitMb === undefined ||
+      (Number.isSafeInteger(value.snapshotStorageLimitMb) &&
+        (value.snapshotStorageLimitMb as number) >= 64 &&
+        (value.snapshotStorageLimitMb as number) <= 65536)) &&
     isOptionalBoolean(value.includeHomeAgents) &&
     isOptionalBoolean(value.usageBreakdown) &&
-    (value.usageCostCurrency === undefined || isEnumOf(value.usageCostCurrency, USAGE_CURRENCIES)) &&
-    (value.capturePermission === undefined || isEnumOf(value.capturePermission, ["ask", "first-use", "always"])) &&
+    (value.usageCostCurrency === undefined ||
+      isEnumOf(value.usageCostCurrency, USAGE_CURRENCIES)) &&
+    (value.capturePermission === undefined ||
+      isEnumOf(value.capturePermission, ["ask", "first-use", "always"])) &&
     isOptionalBoolean(value.webSearchEnabled) &&
     isOptionalBoolean(value.privacyMinimizeData) &&
     isOptionalBoolean(value.betaFeaturesEnabled) &&
     isOptionalBoolean(value.editorSuggestionsEnabled) &&
     isOptionalBoolean(value.chatSuggestionsEnabled) &&
-    (value.webSearchRegion === undefined || (typeof value.webSearchRegion === "string" && /^(?:auto|global|[A-Za-z]{2})$/.test(value.webSearchRegion))) &&
+    (value.webSearchRegion === undefined ||
+      (typeof value.webSearchRegion === "string" &&
+        /^(?:auto|global|[A-Za-z]{2})$/.test(value.webSearchRegion))) &&
     isOptionalBoundedString(value.userId, 256)
   );
 }
-

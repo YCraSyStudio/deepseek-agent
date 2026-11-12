@@ -26,8 +26,12 @@ suite("JSON file storage", () => {
     const order: string[] = [];
     let releaseFirst: (() => void) | undefined;
     let markFirstStarted: (() => void) | undefined;
-    const gate = new Promise<void>((resolve) => {releaseFirst = resolve;});
-    const firstStarted = new Promise<void>((resolve) => {markFirstStarted = resolve;});
+    const gate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const firstStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve;
+    });
     try {
       const first = withFileLock(target, async () => {
         order.push("first-start");
@@ -36,7 +40,9 @@ suite("JSON file storage", () => {
         order.push("first-end");
       });
       await firstStarted;
-      const second = withFileLock(target, async () => {order.push("second");});
+      const second = withFileLock(target, async () => {
+        order.push("second");
+      });
       await new Promise((resolve) => setTimeout(resolve, 80));
       assert.deepStrictEqual(order, ["first-start"]);
       releaseFirst?.();

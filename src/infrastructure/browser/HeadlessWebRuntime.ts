@@ -25,7 +25,10 @@ export class HeadlessWebRuntime {
   private active = 0;
   private completed = 0;
   private failed = 0;
-  constructor(private readonly browsers: Pick<ChromiumProvider, "executable">, private readonly assertEnabled: () => void = () => undefined) {}
+  constructor(
+    private readonly browsers: Pick<ChromiumProvider, "executable">,
+    private readonly assertEnabled: () => void = () => undefined,
+  ) {}
 
   async render(url: string, policy: WebAccessPolicy, signal?: AbortSignal): Promise<RenderedPage> {
     this.assertEnabled();
@@ -41,8 +44,11 @@ export class HeadlessWebRuntime {
     try {
       proxy = await createPublicWebProxy(combined);
       browser = launchHeadlessBrowser(binary, join(temporary, "profile"), combined, [
-        `--proxy-server=${proxy.url}`, "--proxy-bypass-list=<-loopback>", "--disable-quic",
-        "--force-webrtc-ip-handling-policy=disable_non_proxied_udp", "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1",
+        `--proxy-server=${proxy.url}`,
+        "--proxy-bypass-list=<-loopback>",
+        "--disable-quic",
+        "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+        "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1",
       ]);
       const page = await browser.page();
       await page.request("Page.enable");
@@ -50,35 +56,64 @@ export class HeadlessWebRuntime {
       page.on!("Fetch.requestPaused", (event) => {
         const request = event.request as { url?: string; method?: string } | undefined;
         let allowed = request?.method === "GET";
-        try {policy.assertNavigationAllowed(request?.url ?? "");} catch {allowed = false;}
-        void page.request(allowed ? "Fetch.continueRequest" : "Fetch.failRequest", {
-          requestId: event.requestId, ...(!allowed ? { errorReason: "BlockedByClient" } : {}),
-        }).catch(() => undefined);
+        try {
+          policy.assertNavigationAllowed(request?.url ?? "");
+        } catch {
+          allowed = false;
+        }
+        void page
+          .request(allowed ? "Fetch.continueRequest" : "Fetch.failRequest", {
+            requestId: event.requestId,
+            ...(!allowed ? { errorReason: "BlockedByClient" } : {}),
+          })
+          .catch(() => undefined);
       });
-      await page.request("Fetch.enable", { patterns: [{ resourceType: "Document", requestStage: "Request" }] });
+      await page.request("Fetch.enable", {
+        patterns: [{ resourceType: "Document", requestStage: "Request" }],
+      });
       const navigation = await page.request("Page.navigate", { url: authorized });
-      if (navigation.errorText) {throw new Error(`Web navigation failed: ${String(navigation.errorText).slice(0, 200)}`);}
+      if (navigation.errorText) {
+        throw new Error(`Web navigation failed: ${String(navigation.errorText).slice(0, 200)}`);
+      }
       const value = await readChromiumDocument(page, combined);
       policy.assertNavigationAllowed(value.url);
       const result = createRenderedPage(value.title, value.url, value.content);
       this.completed++;
       return result;
-    } catch (error) {this.failed++; throw error;}
-    finally {
+    } catch (error) {
+      this.failed++;
+      throw error;
+    } finally {
       this.active--;
-      try {await browser?.dispose();}
-      finally {await proxy?.close(); await rm(temporary, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });}
+      try {
+        await browser?.dispose();
+      } finally {
+        await proxy?.close();
+        await rm(temporary, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      }
     }
   }
 
   getDiagnostics(): Record<string, unknown> {
-    return { source: "local-chromium", available: !this.shutdown.signal.aborted, active: this.active, completed: this.completed, failed: this.failed };
+    return {
+      source: "local-chromium",
+      available: !this.shutdown.signal.aborted,
+      active: this.active,
+      completed: this.completed,
+      failed: this.failed,
+    };
   }
-  async dispose(): Promise<void> {this.shutdown.abort(new Error("Web runtime disposed"));}
+  async dispose(): Promise<void> {
+    this.shutdown.abort(new Error("Web runtime disposed"));
+  }
 }
 
-async function readChromiumDocument(page: CdpConnection, signal: AbortSignal): Promise<{ title: string; url: string; content: string }> {
-  const extraction = await page.request("Runtime.evaluate", { expression: `new Promise((resolve, reject) => {
+async function readChromiumDocument(
+  page: CdpConnection,
+  signal: AbortSignal,
+): Promise<{ title: string; url: string; content: string }> {
+  const extraction = await page.request("Runtime.evaluate", {
+    expression: `new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Page load timed out')), 7000);
     const read = () => setTimeout(() => {
       clearTimeout(timer);
@@ -91,18 +126,34 @@ async function readChromiumDocument(page: CdpConnection, signal: AbortSignal): P
       resolve({title: document.title, url: location.href, content: (clone?.textContent || '').slice(0, 524288)});
     }, 300);
     document.readyState === 'complete' ? read() : window.addEventListener('load', read, {once: true});
-  })`, awaitPromise: true, returnByValue: true });
+  })`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
   signal.throwIfAborted();
-  const value = (extraction.result as { value?: { title: string; url: string; content: string } } | undefined)?.value;
-  if (extraction.exceptionDetails || !value) {throw new Error("The web page could not be read before its loading deadline");}
+  const value = (
+    extraction.result as { value?: { title: string; url: string; content: string } } | undefined
+  )?.value;
+  if (extraction.exceptionDetails || !value) {
+    throw new Error("The web page could not be read before its loading deadline");
+  }
   return value;
 }
 
 export function createRenderedPage(title: string, url: string, rawContent: string): RenderedPage {
-  const content = rawContent.replace(/<(script|style|iframe|object)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "").trim();
-  if (!content) {throw new Error("The web page did not return readable text content");}
+  const content = rawContent
+    .replace(/<(script|style|iframe|object)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
+    .trim();
+  if (!content) {
+    throw new Error("The web page did not return readable text content");
+  }
   return {
-    title, url, content, sections: [content], outline: [], links: [],
+    title,
+    url,
+    content,
+    sections: [content],
+    outline: [],
+    links: [],
     contentHash: createHash("sha256").update(content).digest("hex"),
     injectionRisk: detectPromptInjection(content) ? "suspected" : "none",
   };

@@ -9,11 +9,10 @@ const TOOL_EXECUTION_STAGE_ORDER = [
   "record_and_publish",
 ] as const;
 
-type ToolExecutionStageName = typeof TOOL_EXECUTION_STAGE_ORDER[number];
+type ToolExecutionStageName = (typeof TOOL_EXECUTION_STAGE_ORDER)[number];
 
 export type ToolPipelineDecision<TContext, TResult> =
-  | { kind: "continue"; context?: TContext }
-  | { kind: "resolved"; result: TResult };
+  { kind: "continue"; context?: TContext } | { kind: "resolved"; result: TResult };
 
 export interface ToolExecutionStage<TContext, TResult> {
   readonly name: ToolExecutionStageName;

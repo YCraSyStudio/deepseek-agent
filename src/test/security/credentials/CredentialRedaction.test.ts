@@ -13,8 +13,14 @@ suite("credential redaction", () => {
     assert.strictEqual(diagnostic.includes(secret), false);
     assert.match(diagnostic, /\[REDACTED\]/);
     assert.strictEqual(redactSensitiveText(`token: "${secret}"`).includes(secret), false);
-    assert.strictEqual(redactSensitiveText('{"apiKey":"opaque-credential"}').includes("opaque-credential"), false);
-    assert.strictEqual(redactSensitiveText("invalid api key opaque-credential").includes("opaque-credential"), false);
+    assert.strictEqual(
+      redactSensitiveText('{"apiKey":"opaque-credential"}').includes("opaque-credential"),
+      false,
+    );
+    assert.strictEqual(
+      redactSensitiveText("invalid api key opaque-credential").includes("opaque-credential"),
+      false,
+    );
   });
 
   test("redacts an explicitly supplied opaque credential", () => {

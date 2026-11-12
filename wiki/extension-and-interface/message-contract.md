@@ -48,20 +48,40 @@ sequenceDiagram
 
 The removed `selectContextFiles` and `selectImageAttachments` request formats are not part of protocol 5.
 
-## Other request groups
+## Configuration, storage and customization
 
-- Configuration: `getConfig`, `saveConfig`, `resetConfig`, and `testConnection` use correlated requests and authoritative revisions.
-- History: `getHistory`, `loadConversation`, `loadConversationPage`, and `deleteConversation` use navigation IDs and opaque pagination cursors.
-- Tools: `executeToolCall`, `getAvailableTools`, `openFile`, and change-view actions.
-- Workspace: `getWorkspaceContext`, `rebindConversationWorkspace`, `openConversationWorkspace`, and `getPathCompletions`.
+- Settings: `getConfig`, `saveConfig`, `resetConfig`, `testConnection`, and `deleteApiKey` use correlated requests, authoritative revisions, and masked credential status.
+- Data directory: `selectStorageDirectory`, `setStorageDirectory`, and `reloadStorage` return `storageDirectoryResult`.
+- Instructions: `getReusableInstructions`, `createReusableInstruction`, `openReusableInstruction`, `getWorkspaceInstructions`, `openWorkspaceInstructions`, and `openGlobalAgents`.
+- History transition: `resolveHistoryTransition` answers a `historyTransitionRequired` event with `stop`, `save`, `discard`, or `cancel`.
+
+## History and navigation
+
+- History: `getHistory`, `loadConversation`, `loadConversationPage`, `deleteConversation`, and `deleteConversations` use navigation IDs and opaque pagination cursors.
 - Navigation: `newConversation` binds a blank view only through its matching `newConversationReady`.
+- Generation recovery: `getGenerationSnapshot` restores active runs, queues, and recoverable drafts; `consumeRecoveredDraft` consumes one.
+- Context: `compactContext` requests manual compaction and is answered by `contextCompactionResult`, with `contextCompactionUpdated` progress events.
+
+## Tools and workspace
+
+- Tools: `executeToolCall`, `getAvailableTools`, `openFile`, `openFileDiff`, `reviewWorkspaceTurn`, `getWorkspaceTurn`, and `revertWorkspaceTurn`.
+- Screenshots: `getScreenshotPreview` and `openScreenshot` return `screenshotPreview` or open the stored image.
+- Workspace: `getWorkspaceContext`, `rebindConversationWorkspace`, `openConversationWorkspace`, and `getPathCompletions`.
+- Running tasks: `getRunningTasks` and `stopRunningTask` return `runningTasks`.
+- Code actions: `copyCode`, `insertCode`, and `selectModel`.
+
+## Editor and chat suggestions
+
+- `getChatSuggestion` requests a manual continuation for the current draft; `cancelChatSuggestion` aborts it.
+- `chatSuggestion` returns the bounded text and is matched by `requestId`.
+- Editor inline completions run in the host through the VS Code provider and do not cross this message contract. See [editor assistance](editor-assistance.md).
 
 ## Main outgoing events
 
-- lifecycle: `generationAccepted`, `messageQueued`, `generationActivityChanged`, `generationSnapshot`, `cancelGenerationResult`.
-- streaming: `streamTimelineDelta`, `streamTimelineToolGroup`, `streamDone`, `streamError`, `contextCompacted`, `generationRecoveryStarted`, and `resourceLimitReached`.
-- tools: `toolCallStarted`, `toolCallResult`, and `toolCallConfirmationRequired`.
-- state: `configLoaded`, `configUpdateResult`, `history`, `conversationLoaded`, `conversationPageLoaded`, `workspaceContextChanged`, and `workspaceRebindResult`.
+- Lifecycle: `generationAccepted`, `messageQueued`, `generationActivityChanged`, `generationSnapshot`, `cancelGenerationResult`, `newConversationReady`, and `historyTransitionRequired`.
+- Streaming: `streamTimelineDelta`, `streamTimelineToolGroup`, `showTyping`, `streamDone`, `streamError`, `contextCompactionUpdated`, `contextCompacted`, `contextWindowUpdated`, `generationRecoveryStarted`, and `resourceLimitReached`.
+- Tools: `toolCallStarted`, `toolCallResult`, `toolCallActionAccepted`, `toolCallConfirmationRequired`, `availableTools`, and `runningTasks`.
+- State: `configLoaded`, `configUpdateResult`, `connectionTestResult`, `apiKeyStatus`, `apiKeyStatusSettings`, `apiKeyDeleteResult`, `history`, `conversationLoaded`, `conversationPageLoaded`, `conversationDeleted`, `workspaceContextChanged`, `workspaceRebindResult`, `pathCompletions`, `reusableInstructions`, `workspaceInstructions`, `chatSuggestion`, `workspaceTurn`, `screenshotPreview`, and `requestRejected`.
 
 Conversation files remain schema version 2. User and assistant messages carry generation ownership; messages may include image attachment metadata, and assistant/error messages carry one terminal generation status.
 

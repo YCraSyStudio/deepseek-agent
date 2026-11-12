@@ -12,14 +12,25 @@ interface ApiTabProps {
   onApiKeyChange: (value: string) => void;
   onApiKeyBlur: (value: string) => void;
   modelOptions: Array<{ value: string; label: string }>;
-  reasoningEffortOptions: ReadonlyArray<{ value: NonNullable<SettingsConfig["reasoningEffort"]>; label: TranslationKey }>;
+  reasoningEffortOptions: ReadonlyArray<{
+    value: NonNullable<SettingsConfig["reasoningEffort"]>;
+    label: TranslationKey;
+  }>;
 }
 
 function ApiTab(props: ApiTabProps) {
   return (
     <ApiSection {...props}>
-      <BetaSection config={props.config} updateConfig={props.updateConfig} saveOnBlur={props.saveOnBlur} />
-      <AdvancedSection config={props.config} updateConfig={props.updateConfig} saveOnBlur={props.saveOnBlur} />
+      <BetaSection
+        config={props.config}
+        updateConfig={props.updateConfig}
+        saveOnBlur={props.saveOnBlur}
+      />
+      <AdvancedSection
+        config={props.config}
+        updateConfig={props.updateConfig}
+        saveOnBlur={props.saveOnBlur}
+      />
     </ApiSection>
   );
 }

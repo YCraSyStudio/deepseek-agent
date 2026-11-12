@@ -4,16 +4,26 @@ import { findDuplicateConversationIds } from "@/application/chat/ConversationDed
 
 suite("conversation history deduplication", () => {
   test("removes contained fragments but keeps unrelated conversations", () => {
-    const complete = conversation("complete", ["user-1", "assistant-1", "user-2", "assistant-2"], 20);
+    const complete = conversation(
+      "complete",
+      ["user-1", "assistant-1", "user-2", "assistant-2"],
+      20,
+    );
     const fragment = conversation("fragment", ["user-1", "assistant-1"], 10);
     const unrelated = conversation("unrelated", ["other-user", "other-assistant"], 30);
 
-    assert.deepStrictEqual([...findDuplicateConversationIds([fragment, unrelated, complete])], ["fragment"]);
+    assert.deepStrictEqual(
+      [...findDuplicateConversationIds([fragment, unrelated, complete])],
+      ["fragment"],
+    );
   });
 
   test("does not merge matching message ids across workspaces", () => {
     const first = conversation("first", ["user-1", "assistant-1"], 10);
-    const second = { ...conversation("second", ["user-1", "assistant-1", "user-2"], 20), workspaceUri: "file:///other" };
+    const second = {
+      ...conversation("second", ["user-1", "assistant-1", "user-2"], 20),
+      workspaceUri: "file:///other",
+    };
     assert.strictEqual(findDuplicateConversationIds([first, second]).size, 0);
   });
 });

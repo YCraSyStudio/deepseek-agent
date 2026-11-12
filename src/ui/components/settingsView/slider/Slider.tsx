@@ -18,7 +18,17 @@ function parseSliderValue(value: string): number | undefined {
   return Number.isFinite(parsedValue) ? parsedValue : undefined;
 }
 
-function Slider({ id, label, value, min, max, step, disabled = false, onChange, onBlur }: SliderProps) {
+function Slider({
+  id,
+  label,
+  value,
+  min,
+  max,
+  step,
+  disabled = false,
+  onChange,
+  onBlur,
+}: SliderProps) {
   return (
     <SettingsField className="slider" label={label} htmlFor={id}>
       <div className="sliderWithValue">

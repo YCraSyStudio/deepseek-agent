@@ -2,7 +2,8 @@ import type { TranslationCatalog } from "../Types";
 
 export const chat = {
   chat: {
-    draftAttachmentsSaveFailed: "No se han podido guardar o recuperar los adjuntos del borrador localmente. Mantén esta ventana abierta hasta que el almacenamiento esté disponible.",
+    draftAttachmentsSaveFailed:
+      "No se han podido guardar o recuperar los adjuntos del borrador localmente. Mantén esta ventana abierta hasta que el almacenamiento esté disponible.",
     completionFiles: "Archivos",
     completionInstructions: "Instrucciones",
     completionWorkspace: "Workspace",
@@ -12,12 +13,14 @@ export const chat = {
     cancelSuggestion: "Cancelar sugerencia",
     suggestionUnavailable: "No hay una sugerencia disponible. Reintenta o añade más detalles.",
     acceptSuggestion: "Sugerencia disponible. Tab para aceptar, Escape para descartar.",
-    incognitoActive: "El modo incógnito está activo. Este chat se perderá al recargar la extensión.",
+    incognitoActive:
+      "El modo incógnito está activo. Este chat se perderá al recargar la extensión.",
     applyingPermissions: "Aplicando permisos...",
     apiKeyMissing: "Falta la API key",
     askAnythingAboutYourCode: "Pregunta cualquier cosa sobre tu código...",
     configureApiKey: "Configura primero la API key en Ajustes...",
-    emptyDescription: "Pregunta sobre código, genera fragmentos o recibe razonamiento en el editor.",
+    emptyDescription:
+      "Pregunta sobre código, genera fragmentos o recibe razonamiento en el editor.",
     send: "enviar",
     newLine: "nueva línea",
     modelSelector: "Selector de modelo",
@@ -110,8 +113,8 @@ export const chat = {
         contextSummary: "Resumen de contexto",
         fileCompaction: "Compactación de archivos",
         visionAnalysis: "Análisis visual",
-        codeCompletion: "Completación beta de código"
-      }
-    }
-  }
+        codeCompletion: "Completación beta de código",
+      },
+    },
+  },
 } satisfies TranslationCatalog;

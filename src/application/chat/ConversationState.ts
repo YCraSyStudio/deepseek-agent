@@ -1,4 +1,9 @@
-import type { ChatMessage, ChatPersistenceMode, ConversationMessage, WorkspaceBinding } from "@/contracts";
+import type {
+  ChatMessage,
+  ChatPersistenceMode,
+  ConversationMessage,
+  WorkspaceBinding,
+} from "@/contracts";
 import { randomUUID } from "crypto";
 import { createConversationTitle } from "./ConversationTitle";
 import type {
@@ -94,9 +99,7 @@ export class ConversationState {
       return [];
     }
 
-    const coveredGenerationIds = new Set(
-      conversation.contextSummary?.coveredGenerationIds ?? [],
-    );
+    const coveredGenerationIds = new Set(conversation.contextSummary?.coveredGenerationIds ?? []);
     const grouped = new Map<string, StoredConversationMessage[]>();
     for (const message of conversation.messages) {
       const generationId = message.generationId ?? `message:${message.id}`;
@@ -123,7 +126,18 @@ export class ConversationState {
   createMessage(
     role: ConversationMessage["role"],
     content: string,
-    extra: Pick<StoredConversationMessage, "timeline" | "toolCalls" | "generationId" | "generationStatus" | "generationStopReason" | "providerTranscript" | "contextContent" | "usage" | "imageAttachments"> = {},
+    extra: Pick<
+      StoredConversationMessage,
+      | "timeline"
+      | "toolCalls"
+      | "generationId"
+      | "generationStatus"
+      | "generationStopReason"
+      | "providerTranscript"
+      | "contextContent"
+      | "usage"
+      | "imageAttachments"
+    > = {},
   ): StoredConversationMessage {
     return {
       id: randomUUID(),
@@ -148,8 +162,13 @@ export class ConversationState {
 
     const existing = this.activeConversation;
     const now = nextUpdatedAt(existing?.updatedAt);
-    const nextMessages = [...(existing?.messages ?? []), ...options.messages].map(compactCompletedMessage);
-    const workspaceBinding = existing?.workspaceBinding ?? this.conversationStore.getWorkspaceBinding?.() ?? createUnknownWorkspaceBinding();
+    const nextMessages = [...(existing?.messages ?? []), ...options.messages].map(
+      compactCompletedMessage,
+    );
+    const workspaceBinding =
+      existing?.workspaceBinding ??
+      this.conversationStore.getWorkspaceBinding?.() ??
+      createUnknownWorkspaceBinding();
     const conversation: StoredConversation = {
       schemaVersion: 2,
       id: existing?.id ?? randomUUID(),
@@ -170,22 +189,37 @@ export class ConversationState {
     }
   }
 
-  async updateMessageAttachments(messageId: string, attachments: NonNullable<StoredConversationMessage["imageAttachments"]>): Promise<void> {
-    if (!this.activeConversation) {throw new Error("No active conversation");}
+  async updateMessageAttachments(
+    messageId: string,
+    attachments: NonNullable<StoredConversationMessage["imageAttachments"]>,
+  ): Promise<void> {
+    if (!this.activeConversation) {
+      throw new Error("No active conversation");
+    }
     const message = this.activeConversation.messages.find((item) => item.id === messageId);
-    if (!message) {throw new Error("Conversation message not found");}
+    if (!message) {
+      throw new Error("Conversation message not found");
+    }
     message.imageAttachments = structuredClone(attachments);
     this.activeConversation.updatedAt = nextUpdatedAt(this.activeConversation.updatedAt);
-    if (this.persistenceMode === "persistent") {await this.conversationStore.save(this.activeConversation);}
+    if (this.persistenceMode === "persistent") {
+      await this.conversationStore.save(this.activeConversation);
+    }
   }
 
   async updateMessageContext(messageId: string, content: string): Promise<void> {
-    if (!this.activeConversation) {throw new Error("No active conversation");}
+    if (!this.activeConversation) {
+      throw new Error("No active conversation");
+    }
     const message = this.activeConversation.messages.find((item) => item.id === messageId);
-    if (!message) {throw new Error("Conversation message not found");}
+    if (!message) {
+      throw new Error("Conversation message not found");
+    }
     message.contextContent = content;
     this.activeConversation.updatedAt = nextUpdatedAt(this.activeConversation.updatedAt);
-    if (this.persistenceMode === "persistent") {await this.conversationStore.save(this.activeConversation);}
+    if (this.persistenceMode === "persistent") {
+      await this.conversationStore.save(this.activeConversation);
+    }
   }
 
   async saveContextSummary(summary: ConversationContextSummary): Promise<void> {
@@ -240,31 +274,52 @@ function toApiMessages(messages: StoredConversationMessage[]): ChatMessage[] {
     }
 
     if (message.role === "user") {
-      const validAttachments = message.imageAttachments?.filter((attachment) => attachment.expiresAt > Date.now()) ?? [];
+      const validAttachments =
+        message.imageAttachments?.filter((attachment) => attachment.expiresAt > Date.now()) ?? [];
       const content = message.contextContent ?? message.content;
-      return [{
-        role: "user" as const,
-        content: validAttachments.length > 0
-          ? [
-              { type: "text" as const, text: content || "Describe the attached image." },
-              ...validAttachments.map((attachment) => ({ type: "file" as const, file_id: attachment.fileId })),
-            ]
-          : content,
-      }];
+      return [
+        {
+          role: "user" as const,
+          content:
+            validAttachments.length > 0
+              ? [
+                  { type: "text" as const, text: content || "Describe the attached image." },
+                  ...validAttachments.map((attachment) => ({
+                    type: "file" as const,
+                    file_id: attachment.fileId,
+                  })),
+                ]
+              : content,
+        },
+      ];
     }
 
     if (message.generationStatus === "interrupted" || message.generationStatus === "cancelled") {
       const interruptedContent = message.contextContent ?? message.content;
-      return interruptedContent.trim() ? [{ role: "assistant" as const, content: interruptedContent }] : [];
+      return interruptedContent.trim()
+        ? [{ role: "assistant" as const, content: interruptedContent }]
+        : [];
     }
 
     const content = message.contextContent ?? message.content;
-    const finalMessage = message.providerTranscript?.status === "complete"
-      ? message.providerTranscript.messages.slice().reverse().find((entry) => entry.role === "assistant" && !entry.tool_calls?.length)
-      : undefined;
-    return content.trim() ? [{ role: "assistant" as const, content,
-      ...(typeof finalMessage?.reasoning_content === "string" ? { reasoning_content: finalMessage.reasoning_content } : {}),
-    }] : [];
+    const finalMessage =
+      message.providerTranscript?.status === "complete"
+        ? message.providerTranscript.messages
+            .slice()
+            .reverse()
+            .find((entry) => entry.role === "assistant" && !entry.tool_calls?.length)
+        : undefined;
+    return content.trim()
+      ? [
+          {
+            role: "assistant" as const,
+            content,
+            ...(typeof finalMessage?.reasoning_content === "string"
+              ? { reasoning_content: finalMessage.reasoning_content }
+              : {}),
+          },
+        ]
+      : [];
   });
 }
 
@@ -279,15 +334,13 @@ function compactCompletedMessage(message: StoredConversationMessage): StoredConv
   if (message.role !== "assistant" || message.providerTranscript?.status !== "complete") {
     return structuredClone(message);
   }
-  const {
-    providerTranscript,
-    ...rest
-  } = message;
+  const { providerTranscript, ...rest } = message;
   return {
     ...structuredClone(rest),
     // Drop tool payloads from completed turns, but retain the final answer's
     // reasoning: thinking requests with tools require it on subsequent turns.
     providerTranscript: compactCompletedProviderTranscript(providerTranscript),
-    contextContent: message.contextContent ?? getFinalAssistantContent(providerTranscript) ?? message.content,
+    contextContent:
+      message.contextContent ?? getFinalAssistantContent(providerTranscript) ?? message.content,
   };
 }

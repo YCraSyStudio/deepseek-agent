@@ -43,13 +43,20 @@ suite("chat handler generation pipeline", () => {
     name: "Fixture",
     testConnection: async () => ({ success: true }),
     listModels: async () => [],
-    chatCompletion: async () => { throw new Error("Unexpected nonstream request"); },
+    chatCompletion: async () => {
+      throw new Error("Unexpected nonstream request");
+    },
     chatCompletionStream: async (request, onChunk) => {
       requests.push(request);
       onChunk({ type: "reasoning", reasoning_content: "Thinking" });
       onChunk({ type: "content", content: "Answer" });
-      if (hold) { await hold; }
-      onChunk({ type: "usage", usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } });
+      if (hold) {
+        await hold;
+      }
+      onChunk({
+        type: "usage",
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+      });
       onChunk({ type: "done", finish_reason: "stop" });
     },
   };
@@ -62,11 +69,20 @@ suite("chat handler generation pipeline", () => {
     config = { ...DEFAULT_CONFIG, historyEnabled: false };
     settings = {
       load: () => config,
-      save: async (patch) => { Object.assign(config, patch); },
-      reset: async () => { Object.assign(config, DEFAULT_CONFIG); },
+      save: async (patch) => {
+        Object.assign(config, patch);
+      },
+      reset: async () => {
+        Object.assign(config, DEFAULT_CONFIG);
+      },
       getRevision: () => 1,
       waitForPendingWrites: async () => undefined,
-      capturePermissionSnapshot: async () => ({ revision: 1, permissionMode: "default", workspaceTrusted: true, fingerprint: "fixture" }),
+      capturePermissionSnapshot: async () => ({
+        revision: 1,
+        permissionMode: "default",
+        workspaceTrusted: true,
+        fingerprint: "fixture",
+      }),
       getPersistenceError: () => undefined,
       enterDegradedMode: () => undefined,
     };
@@ -79,14 +95,21 @@ suite("chat handler generation pipeline", () => {
     disposed = 0;
     view = {
       webview: {
-        postMessage: async (message: unknown) => { posts.push(message as Record<string, unknown>); return true; },
+        postMessage: async (message: unknown) => {
+          posts.push(message as Record<string, unknown>);
+          return true;
+        },
       },
     } as unknown as vscode.WebviewView;
     history = new HistoryManager(settings);
     handler = new ChatHandler(
       history,
       new ToolRegistry(),
-      { dispose: async () => { disposed++; } } as unknown as ConstructorParameters<typeof ChatHandler>[2],
+      {
+        dispose: async () => {
+          disposed++;
+        },
+      } as unknown as ConstructorParameters<typeof ChatHandler>[2],
       settings,
       {
         getApiKey: readCredential,
@@ -95,15 +118,20 @@ suite("chat handler generation pipeline", () => {
         deleteApiKey: noop,
       } as unknown as SecretStore,
       { create: () => provider },
-      async (conversationId) => { archived.push(conversationId); },
+      async (conversationId) => {
+        archived.push(conversationId);
+      },
     );
   });
 
   teardown(async () => {
     releaseHold();
     await handler.shutdown().catch(() => undefined);
-    if (previousData === undefined) { delete process.env.DEEPSEEK_AGENT_USER_DATA_DIR; }
-    else { process.env.DEEPSEEK_AGENT_USER_DATA_DIR = previousData; }
+    if (previousData === undefined) {
+      delete process.env.DEEPSEEK_AGENT_USER_DATA_DIR;
+    } else {
+      process.env.DEEPSEEK_AGENT_USER_DATA_DIR = previousData;
+    }
     resetVsCodeMock();
     await rm(root, { recursive: true, force: true });
   });
@@ -116,7 +144,9 @@ suite("chat handler generation pipeline", () => {
   }
 
   function holdStreams() {
-    hold = new Promise<void>((resolve) => { release = resolve; });
+    hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
   }
 
   function send(message: Record<string, unknown>) {
@@ -124,11 +154,17 @@ suite("chat handler generation pipeline", () => {
   }
 
   function activities() {
-    return posts.filter((post) => post.type === "generationActivityChanged").map((post) => post.status);
+    return posts
+      .filter((post) => post.type === "generationActivityChanged")
+      .map((post) => post.status);
   }
 
   function acceptedPost(clientRequestId?: string) {
-    return posts.find((post) => post.type === "generationAccepted" && (clientRequestId === undefined || post.clientRequestId === clientRequestId));
+    return posts.find(
+      (post) =>
+        post.type === "generationAccepted" &&
+        (clientRequestId === undefined || post.clientRequestId === clientRequestId),
+    );
   }
 
   function conversationState(): ConversationState {
@@ -136,9 +172,11 @@ suite("chat handler generation pipeline", () => {
   }
 
   function coordinator() {
-    return (handler as unknown as {
-      coordinator: { getActiveGenerations(): unknown[]; getQueuedConversationIds(): string[] };
-    }).coordinator;
+    return (
+      handler as unknown as {
+        coordinator: { getActiveGenerations(): unknown[]; getQueuedConversationIds(): string[] };
+      }
+    ).coordinator;
   }
 
   async function waitFor(predicate: () => boolean, label: string, timeout = 4000) {
@@ -159,7 +197,14 @@ suite("chat handler generation pipeline", () => {
       createdAt: 1,
       updatedAt: 2,
       workspaceUri: "",
-      workspaceBinding: { schemaVersion: 1, uri: "", name: "No workspace", revision: "empty", folders: [], capabilities: { files: false, search: false, git: false, terminal: false } },
+      workspaceBinding: {
+        schemaVersion: 1,
+        uri: "",
+        name: "No workspace",
+        revision: "empty",
+        folders: [],
+        capabilities: { files: false, search: false, git: false, terminal: false },
+      },
       messages: [{ id: "question", role: "user", content: "Hello", createdAt: 1 }],
       ...patch,
     } as unknown as StoredConversation;
@@ -167,7 +212,13 @@ suite("chat handler generation pipeline", () => {
 
   test("streams a submitted message through the coordinator and settles its activity", async () => {
     handler.attachWebview(view);
-    send({ type: "sendMessage", text: "Question", clientRequestId: "request-1", modelId: "deepseek-flash", reasoning: "off" });
+    send({
+      type: "sendMessage",
+      text: "Question",
+      clientRequestId: "request-1",
+      modelId: "deepseek-flash",
+      reasoning: "off",
+    });
     await waitFor(() => posts.some((post) => post.type === "streamDone"), "streamDone");
     const accepted = acceptedPost();
     assert.equal(typeof accepted?.generationId, "string");
@@ -175,7 +226,12 @@ suite("chat handler generation pipeline", () => {
     assert.equal(posts.filter((post) => post.type === "messageQueued").length, 1);
     assert.deepEqual(activities().slice(0, 2), ["queued", "running"]);
     assert.equal(activities().includes("settled"), true);
-    assert.equal(posts.some((post) => post.type === "addMessage" && (post.message as { role?: string }).role === "user"), true);
+    assert.equal(
+      posts.some(
+        (post) => post.type === "addMessage" && (post.message as { role?: string }).role === "user",
+      ),
+      true,
+    );
     assert.equal(requests.length, 1);
     assert.deepEqual(requests[0].thinking, { type: "disabled" });
     assert.equal(posts.find((post) => post.type === "streamDone")?.status, "completed");
@@ -224,7 +280,13 @@ suite("chat handler generation pipeline", () => {
   test("cancels a running generation and reports it as accepted", async () => {
     handler.attachWebview(view);
     holdStreams();
-    send({ type: "sendMessage", text: "Slow question", clientRequestId: "request-3", modelId: "deepseek-flash", reasoning: "off" });
+    send({
+      type: "sendMessage",
+      text: "Slow question",
+      clientRequestId: "request-3",
+      modelId: "deepseek-flash",
+      reasoning: "off",
+    });
     await waitFor(() => acceptedPost() !== undefined, "generationAccepted");
     const accepted = acceptedPost()!;
     assert.throws(() => handler.assertWorkspaceIdle(), /Wait for active or queued generations/);
@@ -234,17 +296,29 @@ suite("chat handler generation pipeline", () => {
       generationId: accepted.generationId,
       conversationId: accepted.conversationId,
     });
-    await waitFor(() => posts.some((post) => post.type === "cancelGenerationResult"), "cancelGenerationResult");
+    await waitFor(
+      () => posts.some((post) => post.type === "cancelGenerationResult"),
+      "cancelGenerationResult",
+    );
     assert.equal(posts.find((post) => post.type === "cancelGenerationResult")?.status, "accepted");
     assert.equal(activities().includes("cancelling"), true);
     releaseHold();
-    await waitFor(() => coordinator().getActiveGenerations().length === 0, "cancelled generation to settle");
+    await waitFor(
+      () => coordinator().getActiveGenerations().length === 0,
+      "cancelled generation to settle",
+    );
   });
 
   test("steering an active generation queues the new prompt and interrupts the original", async () => {
     handler.attachWebview(view);
     holdStreams();
-    send({ type: "sendMessage", text: "Original", clientRequestId: "request-4", modelId: "deepseek-flash", reasoning: "off" });
+    send({
+      type: "sendMessage",
+      text: "Original",
+      clientRequestId: "request-4",
+      modelId: "deepseek-flash",
+      reasoning: "off",
+    });
     await waitFor(() => acceptedPost() !== undefined, "generationAccepted");
     const accepted = acceptedPost()!;
     send({
@@ -256,10 +330,15 @@ suite("chat handler generation pipeline", () => {
       modelId: "deepseek-flash",
       reasoning: "off",
     });
-    await waitFor(() => posts.filter((post) => post.type === "messageQueued").length === 2, "steered prompt to be queued");
+    await waitFor(
+      () => posts.filter((post) => post.type === "messageQueued").length === 2,
+      "steered prompt to be queued",
+    );
     releaseHold();
     await waitFor(
-      () => coordinator().getActiveGenerations().length === 0 && coordinator().getQueuedConversationIds().length === 0,
+      () =>
+        coordinator().getActiveGenerations().length === 0 &&
+        coordinator().getQueuedConversationIds().length === 0,
       "steered work to settle",
     );
     assert.equal(posts.filter((post) => post.type === "generationAccepted").length, 2);
@@ -269,19 +348,34 @@ suite("chat handler generation pipeline", () => {
   test("forgetting a conversation with active work cancels and interrupts it", async () => {
     handler.attachWebview(view);
     holdStreams();
-    send({ type: "sendMessage", text: "Active", clientRequestId: "request-5", modelId: "deepseek-flash", reasoning: "off" });
+    send({
+      type: "sendMessage",
+      text: "Active",
+      clientRequestId: "request-5",
+      modelId: "deepseek-flash",
+      reasoning: "off",
+    });
     await waitFor(() => acceptedPost() !== undefined, "generationAccepted");
     const conversationId = String(acceptedPost()!.conversationId);
     assert.equal(handler.forgetConversation(conversationId), true);
     releaseHold();
-    await waitFor(() => coordinator().getActiveGenerations().length === 0, "forgotten work to settle");
+    await waitFor(
+      () => coordinator().getActiveGenerations().length === 0,
+      "forgotten work to settle",
+    );
     assert.equal(handler.forgetConversation(conversationId), false);
   });
 
   test("deleting a conversation with active work waits for it and drops its checkpoint", async () => {
     handler.attachWebview(view);
     holdStreams();
-    send({ type: "sendMessage", text: "Deleting", clientRequestId: "request-6", modelId: "deepseek-flash", reasoning: "off" });
+    send({
+      type: "sendMessage",
+      text: "Deleting",
+      clientRequestId: "request-6",
+      modelId: "deepseek-flash",
+      reasoning: "off",
+    });
     await waitFor(() => acceptedPost() !== undefined, "generationAccepted");
     const conversationId = String(acceptedPost()!.conversationId);
     const deletion = handler.prepareConversationDeletion(conversationId);
@@ -293,7 +387,13 @@ suite("chat handler generation pipeline", () => {
   test("shutting down interrupts active runs and closes every owned resource", async () => {
     handler.attachWebview(view);
     holdStreams();
-    send({ type: "sendMessage", text: "Shutdown", clientRequestId: "request-7", modelId: "deepseek-flash", reasoning: "off" });
+    send({
+      type: "sendMessage",
+      text: "Shutdown",
+      clientRequestId: "request-7",
+      modelId: "deepseek-flash",
+      reasoning: "off",
+    });
     await waitFor(() => acceptedPost() !== undefined, "generationAccepted");
     const shutdown = handler.shutdown();
     releaseHold();
@@ -309,9 +409,17 @@ suite("chat handler generation pipeline", () => {
       environment: { cwd: root, shell: "/bin/sh", workspaceRoot: root },
       conversationId: "chat-1",
     });
-    send({ type: "stopRunningTask", sessionId: terminal.sessionId, conversationId: "chat-1", requestId: "stop-1" });
+    send({
+      type: "stopRunningTask",
+      sessionId: terminal.sessionId,
+      conversationId: "chat-1",
+      requestId: "stop-1",
+    });
     await waitFor(() => posts.some((post) => post.type === "runningTasks"), "runningTasks");
-    assert.equal(posts.some((post) => post.type === "requestRejected"), false);
+    assert.equal(
+      posts.some((post) => post.type === "requestRejected"),
+      false,
+    );
     send({ type: "openConversationWorkspace", conversationId: "chat-1" });
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
   });

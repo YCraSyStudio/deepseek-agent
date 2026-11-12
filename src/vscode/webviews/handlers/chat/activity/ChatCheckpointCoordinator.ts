@@ -21,9 +21,7 @@ interface ChatCheckpointCoordinatorDependencies {
 }
 
 export class ChatCheckpointCoordinator {
-  constructor(
-    private readonly dependencies: ChatCheckpointCoordinatorDependencies,
-  ) {}
+  constructor(private readonly dependencies: ChatCheckpointCoordinatorDependencies) {}
 
   schedule(record: GenerationRunRecord): void {
     if (!this.dependencies.settings.load().historyEnabled || record.state.isIncognito()) {

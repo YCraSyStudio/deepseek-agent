@@ -73,7 +73,11 @@ function computeInlinePreview(
   const beforeLines = splitLines(before);
   const afterLines = splitLines(after);
   let start = 0;
-  while (start < beforeLines.length && start < afterLines.length && beforeLines[start] === afterLines[start]) {
+  while (
+    start < beforeLines.length &&
+    start < afterLines.length &&
+    beforeLines[start] === afterLines[start]
+  ) {
     start += 1;
   }
   if (start === beforeLines.length && start === afterLines.length) {
@@ -82,7 +86,11 @@ function computeInlinePreview(
 
   let beforeEnd = beforeLines.length - 1;
   let afterEnd = afterLines.length - 1;
-  while (beforeEnd >= start && afterEnd >= start && beforeLines[beforeEnd] === afterLines[afterEnd]) {
+  while (
+    beforeEnd >= start &&
+    afterEnd >= start &&
+    beforeLines[beforeEnd] === afterLines[afterEnd]
+  ) {
     beforeEnd -= 1;
     afterEnd -= 1;
   }
@@ -94,7 +102,11 @@ function computeInlinePreview(
   };
 }
 
-function createRemovalRange(document: vscode.TextDocument, start: number, end: number): vscode.Range | undefined {
+function createRemovalRange(
+  document: vscode.TextDocument,
+  start: number,
+  end: number,
+): vscode.Range | undefined {
   if (end < start || document.lineCount === 0) {
     return undefined;
   }
@@ -103,7 +115,10 @@ function createRemovalRange(document: vscode.TextDocument, start: number, end: n
   return new vscode.Range(firstLine, 0, lastLine, document.lineAt(lastLine).range.end.character);
 }
 
-function createAdditionAnchor(document: vscode.TextDocument, start: number): vscode.Range | undefined {
+function createAdditionAnchor(
+  document: vscode.TextDocument,
+  start: number,
+): vscode.Range | undefined {
   if (document.lineCount === 0) {
     return undefined;
   }
@@ -118,7 +133,9 @@ function clampLine(line: number, document: vscode.TextDocument): number {
 
 function findVisibleEditorFor(uri: vscode.Uri): vscode.TextEditor | undefined {
   const target = uri.toString(true);
-  return vscode.window.visibleTextEditors.find((editor) => editor.document.uri.toString(true) === target);
+  return vscode.window.visibleTextEditors.find(
+    (editor) => editor.document.uri.toString(true) === target,
+  );
 }
 
 function formatAdditionLabel(lines: string[]): string {

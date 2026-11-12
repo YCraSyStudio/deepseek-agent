@@ -1,0 +1,377 @@
+{
+  "src/application/chat/ConversationState.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/application/chat/ConversationValidation.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "src/application/chat/InterruptedContext.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/application/chat/ProviderTranscript.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/application/chat/toolCall/ToolCallCycle.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/application/chat/toolCall/ToolResultFit.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/application/settings/ConfigurationSchema.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/contracts/attachments.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/browser/BrowserTools.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/browser/NetworkPolicy.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/browser/SemanticContent.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/browser/Validation.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/capture/CdpViewport.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/capture/NativeCaptureBackend.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/capture/NativePixelValidation.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/deepseek/client/DeepSeekFetch.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/deepseek/provider/DelegatedVisionAnalyzer.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/deepseek/provider/features/Chat.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/deepseek/provider/features/ChatResponseValidation.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/deepseek/provider/features/CodeCompletion.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/deepseek/provider/features/ProgressReviewer.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/deepseek/provider/features/toolCall/ToolCallStreaming.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "src/infrastructure/deepseek/security/commandReview/CommandSafetyReviewer.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/deepseek/streaming/ReadSSEStream.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/deepseek/web/DeepSeekWebClient.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/images/ImageFormat.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/images/ScreenshotStore.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "src/infrastructure/images/VisionImageSources.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/persistence/ChatDraftStore.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/persistence/MergeLegacyJson.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/persistence/MergeUserData.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/persistence/UserDataMigration.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/ToolWorkspace.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/code/CompleteCode.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/fileSystem/ApplyPatch.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/fileSystem/CreateFile.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/fileSystem/LineEndings.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/fileSystem/ListWorkspace.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/fileSystem/ReadFunction.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/fileSystem/SearchContent.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/terminal/ApplicationSession.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/tools/builtins/vision/CaptureScreenshot.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/infrastructure/workspace/WorkspaceRestoreStore.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/infrastructure/workspace/WorkspaceSnapshot.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/ui/App.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/chatView/fileSelector/FileSelector.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/chatView/messages/EditedFilesSummary.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/chatView/tools/confirmations/ToolCallConfirmationModal.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/chatView/tools/results/FileEditSummary.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/chatView/tools/results/FileToolPresentation.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/chatView/tools/results/TerminalResultRenderer.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/chatView/tools/results/ToolCallResultPreview.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/components/shared/historyTransitionPanel/HistoryTransitionPanel.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/views/chatView/ChatView.tsx": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/ui/views/chatView/hooks/UseChatCommandMessages.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/views/chatView/hooks/UseMessageHandler.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/views/chatView/sections/inputArea/inputCtrl/InputCtrl.tsx": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "src/ui/views/chatView/sections/inputArea/inputFooter/InputFooter.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/views/chatView/utils/FileType.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/views/historyView/HistoryView.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/ui/views/settingsView/SettingsView.tsx": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/vscode/completions/CompletionService.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/vscode/completions/EditorFeatures.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/vscode/editor/diff/UnifiedDiffDocuments.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/storage/GenerationCheckpointStore.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/tools/WorkspacePathResolver.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/webviews/WebviewMessageValidation.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "src/vscode/webviews/handlers/chat/ChatHandler.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/webviews/handlers/chat/context/ManualCompaction.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/webviews/handlers/chat/generation/GenerationContext.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/webviews/handlers/chat/generation/GenerationExecutor.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/vscode/webviews/handlers/chat/generation/GenerationRecovery.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/webviews/handlers/chat/generation/GenerationRun.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/webviews/handlers/chat/streaming/Streaming.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/vscode/webviews/handlers/chat/toolCalls/DeterministicSafety.ts": {
+    "complexity": {
+      "count": 1
+    }
+  }
+}

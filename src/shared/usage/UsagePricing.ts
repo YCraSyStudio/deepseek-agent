@@ -44,10 +44,11 @@ const PRO_OFF_PEAK_RATES: Readonly<Record<UsageCurrency, PriceRate>> = Object.fr
   }),
 });
 
-const MODEL_TIERS: Readonly<Record<string, Readonly<Record<UsageCurrency, PriceTier>>>> = Object.freeze({
-  [FLASH_MODEL_ID]: Object.freeze(createTiers(FLASH_OFF_PEAK_RATES)),
-  [PRO_MODEL_ID]: Object.freeze(createTiers(PRO_OFF_PEAK_RATES)),
-});
+const MODEL_TIERS: Readonly<Record<string, Readonly<Record<UsageCurrency, PriceTier>>>> =
+  Object.freeze({
+    [FLASH_MODEL_ID]: Object.freeze(createTiers(FLASH_OFF_PEAK_RATES)),
+    [PRO_MODEL_ID]: Object.freeze(createTiers(PRO_OFF_PEAK_RATES)),
+  });
 
 export function isOfficialDeepSeekEndpoint(baseUrl: string): boolean {
   return getApiOrigin(baseUrl) === getApiOrigin(OFFICIAL_DEEPSEEK_BASE_URL);
@@ -68,7 +69,9 @@ export function estimateUsageCost(
   if (!tier) {
     return undefined;
   }
-  if ("saturated" in usage && usage.saturated) {return undefined;}
+  if ("saturated" in usage && usage.saturated) {
+    return undefined;
+  }
 
   const isAggregate = "count" in usage;
   const cacheHit = isAggregate ? usage.cacheHitTokens : usage.prompt_cache_hit_tokens;
@@ -77,12 +80,13 @@ export function estimateUsageCost(
   if (cacheHit === undefined || cacheMiss === undefined || output === undefined) {
     return undefined;
   }
-  if (isAggregate && (
-    usage.count === 0 ||
-    usage.reported !== usage.count ||
-    usage.cacheHitReported !== usage.count ||
-    usage.cacheMissReported !== usage.count
-  )) {
+  if (
+    isAggregate &&
+    (usage.count === 0 ||
+      usage.reported !== usage.count ||
+      usage.cacheHitReported !== usage.count ||
+      usage.cacheMissReported !== usage.count)
+  ) {
     return undefined;
   }
 
@@ -95,7 +99,9 @@ export function estimateReportedUsageCost(
   currency: UsageCurrency = "usd",
 ): number | undefined {
   if (usage.byModel) {
-    if (usage.saturated || !usage.officialEndpoint) {return undefined;}
+    if (usage.saturated || !usage.officialEndpoint) {
+      return undefined;
+    }
     const costs = usage.byModel.map((entry) => estimateReportedUsageCost(entry, at, currency));
     return costs.length > 0 && costs.every((cost) => cost !== undefined)
       ? roundUsageCost(costs.reduce((sum, cost) => sum + (cost ?? 0), 0))
@@ -117,7 +123,12 @@ export function estimateReportedUsageCost(
   const instant = resolvePricedInstant(usage, at);
   const tier = resolvePriceTier(usage.model, currency);
   return tier
-    ? calculateUsageCost(selectRate(tier, instant), usage.cacheHitTokens, usage.cacheMissTokens, usage.outputTokens)
+    ? calculateUsageCost(
+        selectRate(tier, instant),
+        usage.cacheHitTokens,
+        usage.cacheMissTokens,
+        usage.outputTokens,
+      )
     : undefined;
 }
 
@@ -126,15 +137,19 @@ export function estimateAggregateCost(
   currency: UsageCurrency = "usd",
   at?: Date,
 ): number | undefined {
-  if (usage.byModel) {return estimateReportedUsageCost(usage, at, currency);}
+  if (usage.byModel) {
+    return estimateReportedUsageCost(usage, at, currency);
+  }
   return currency === "usd"
-    ? usage.costUsd ?? estimateReportedUsageCost(usage, at)
+    ? (usage.costUsd ?? estimateReportedUsageCost(usage, at))
     : estimateReportedUsageCost(usage, at, currency);
 }
 
 export function refreshUsageCost(aggregate: UsageAggregate, at?: Date): void {
   const instant = resolvePricedInstant(aggregate, at);
-  const cost = aggregate.officialEndpoint ? estimateUsageCost(aggregate, aggregate.model, instant) : undefined;
+  const cost = aggregate.officialEndpoint
+    ? estimateUsageCost(aggregate, aggregate.model, instant)
+    : undefined;
   if (cost === undefined) {
     delete aggregate.costUsd;
     delete aggregate.currency;
@@ -147,7 +162,9 @@ export function refreshUsageCost(aggregate: UsageAggregate, at?: Date): void {
 }
 
 function resolvePricedInstant(usage: ProviderUsage | UsageAggregate, at?: Date): Date {
-  if (at) {return at;}
+  if (at) {
+    return at;
+  }
   const stored = "pricedAt" in usage && usage.pricedAt ? new Date(usage.pricedAt) : undefined;
   return stored && !Number.isNaN(stored.getTime()) ? stored : new Date();
 }
@@ -158,12 +175,16 @@ export function roundUsageCost(value: number): number {
 
 function isPeakPricingHour(at: Date): boolean {
   const day = at.getUTCDay();
-  if (day === 0 || day === 6) {return false;}
+  if (day === 0 || day === 6) {
+    return false;
+  }
   const hour = at.getUTCHours();
   return (hour >= 1 && hour < 4) || (hour >= 6 && hour < 10);
 }
 
-function createTiers(rates: Readonly<Record<UsageCurrency, PriceRate>>): Readonly<Record<UsageCurrency, PriceTier>> {
+function createTiers(
+  rates: Readonly<Record<UsageCurrency, PriceRate>>,
+): Readonly<Record<UsageCurrency, PriceTier>> {
   return {
     usd: createPriceTier(rates.usd),
     cny: createPriceTier(rates.cny),
@@ -181,7 +202,10 @@ function createPriceTier(offPeak: PriceRate): PriceTier {
   };
 }
 
-function resolvePriceTier(model: string | undefined, currency: UsageCurrency): PriceTier | undefined {
+function resolvePriceTier(
+  model: string | undefined,
+  currency: UsageCurrency,
+): PriceTier | undefined {
   return model ? MODEL_TIERS[model]?.[currency] : undefined;
 }
 
@@ -189,10 +213,15 @@ function selectRate(tier: PriceTier, at: Date): PriceRate {
   return isPeakPricingHour(at) ? tier.peak : tier.offPeak;
 }
 
-function calculateUsageCost(rate: PriceRate, cacheHit: number, cacheMiss: number, output: number): number {
+function calculateUsageCost(
+  rate: PriceRate,
+  cacheHit: number,
+  cacheMiss: number,
+  output: number,
+): number {
   return roundUsageCost(
-    cacheMiss / 1_000_000 * rate.inputMissPerMillion +
-    cacheHit / 1_000_000 * rate.inputHitPerMillion +
-    output / 1_000_000 * rate.outputPerMillion,
+    (cacheMiss / 1_000_000) * rate.inputMissPerMillion +
+      (cacheHit / 1_000_000) * rate.inputHitPerMillion +
+      (output / 1_000_000) * rate.outputPerMillion,
   );
 }

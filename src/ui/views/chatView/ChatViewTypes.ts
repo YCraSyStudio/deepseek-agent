@@ -1,4 +1,9 @@
-import type { ConversationMessage, HandlerToWebviewMessage, StoredToolCall, DangerConfirmationData } from "@/contracts/messages/Webview";
+import type {
+  ConversationMessage,
+  HandlerToWebviewMessage,
+  StoredToolCall,
+  DangerConfirmationData,
+} from "@/contracts/messages/Webview";
 import type { ContextWindowStatus, PermissionMode } from "@/contracts";
 import type { ConversationUsageSnapshot, UsageCurrency } from "@/shared/usage/Usage";
 import type { GenerationEventScope } from "./hooks/GenerationEventScope";
@@ -21,7 +26,14 @@ export type InitialConfig = {
 };
 
 export type ToolCallAction = "execute" | "reject";
-export type ToolCallStatus = "pending" | "awaiting_confirmation" | "running" | "completed" | "error" | "rejected" | "cancelled";
+export type ToolCallStatus =
+  | "pending"
+  | "awaiting_confirmation"
+  | "running"
+  | "completed"
+  | "error"
+  | "rejected"
+  | "cancelled";
 
 export interface ToolCallState {
   toolCallId: string;
@@ -68,7 +80,9 @@ export type MessagesSectionProps = {
   listRef?: React.RefObject<HTMLDivElement | null>;
   onApiKeyStatusChange?: (status: ApiKeyStatus) => void;
   onConfigLoaded?: (config: InitialConfig) => void;
-  onConfigUpdateResult?: (message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>) => void;
+  onConfigUpdateResult?: (
+    message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>,
+  ) => void;
   permissionUpdatePending?: boolean;
   earlierMessagesLoaded?: number;
   historyCursor?: string;
@@ -76,7 +90,12 @@ export type MessagesSectionProps = {
   onProcessingChange?: (isProcessing: boolean) => void;
   onConversationUsageUpdated?: (usage: ConversationUsageSnapshot) => void;
   onContextWindowUpdated?: (contextWindow: ContextWindowStatus) => void;
-  onContextCompactionResult?: (result: { requestId: string; status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }) => void;
+  onContextCompactionResult?: (result: {
+    requestId: string;
+    status: "compacted" | "empty" | "failed";
+    freedTokens?: number;
+    error?: string;
+  }) => void;
   onFocusInput?: () => void;
   onReferenceImage?: (number: number) => void;
 };

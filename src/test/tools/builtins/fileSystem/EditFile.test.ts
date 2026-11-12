@@ -1,7 +1,15 @@
 import * as assert from "assert";
 import * as path from "path";
-import { editFileHandler, editFileHandlerForced } from "@/infrastructure/tools/builtins/fileSystem/EditFile";
-import { setToolWorkspaceHost, type ToolWorkspaceEntryType, type ToolWorkspaceHost, type ToolWorkspaceStat } from "@/infrastructure/tools/ToolWorkspace";
+import {
+  editFileHandler,
+  editFileHandlerForced,
+} from "@/infrastructure/tools/builtins/fileSystem/EditFile";
+import {
+  setToolWorkspaceHost,
+  type ToolWorkspaceEntryType,
+  type ToolWorkspaceHost,
+  type ToolWorkspaceStat,
+} from "@/infrastructure/tools/ToolWorkspace";
 
 suite("edit_file tool", () => {
   const workspaceRoot = path.resolve("/tmp/deepseek-agent-edit-file");
@@ -108,52 +116,116 @@ suite("edit_file tool", () => {
     setToolWorkspaceHost(createMemoryWorkspaceHost(workspaceRoot, files));
 
     assert.strictEqual(await editFileHandler({}), "Error: path parameter is required");
-    assert.strictEqual(await editFileHandlerForced({ path: " ", search: "alpha", replace: "beta" }), "Error: path parameter is required");
-    assert.strictEqual(await editFileHandler({ path: "README.md", replace: "beta" }), "Error: search parameter is required and cannot be empty");
-    assert.strictEqual(await editFileHandler({ path: "README.md", search: "", replace: "beta" }), "Error: search parameter is required and cannot be empty");
-    assert.strictEqual(await editFileHandler({ path: "README.md", search: "alpha" }), "Error: replace parameter is required");
     assert.strictEqual(
-      await editFileHandlerForced({ path: "README.md", search: "alpha", replace: "beta", replaceAll: "yes" }),
+      await editFileHandlerForced({ path: " ", search: "alpha", replace: "beta" }),
+      "Error: path parameter is required",
+    );
+    assert.strictEqual(
+      await editFileHandler({ path: "README.md", replace: "beta" }),
+      "Error: search parameter is required and cannot be empty",
+    );
+    assert.strictEqual(
+      await editFileHandler({ path: "README.md", search: "", replace: "beta" }),
+      "Error: search parameter is required and cannot be empty",
+    );
+    assert.strictEqual(
+      await editFileHandler({ path: "README.md", search: "alpha" }),
+      "Error: replace parameter is required",
+    );
+    assert.strictEqual(
+      await editFileHandlerForced({
+        path: "README.md",
+        search: "alpha",
+        replace: "beta",
+        replaceAll: "yes",
+      }),
       "Error: replaceAll parameter must be a boolean when provided",
     );
   });
 
   test("rejects binary, oversized, stale and unmatched files", async () => {
-    setToolWorkspaceHost(createMemoryWorkspaceHost(workspaceRoot, new Map<string, string>([["README.md", "\u0000alpha"]])));
-    assert.match(await editFileHandler({ path: "README.md", search: "alpha", replace: "beta" }), /binary files are not supported/);
+    setToolWorkspaceHost(
+      createMemoryWorkspaceHost(
+        workspaceRoot,
+        new Map<string, string>([["README.md", "\u0000alpha"]]),
+      ),
+    );
+    assert.match(
+      await editFileHandler({ path: "README.md", search: "alpha", replace: "beta" }),
+      /binary files are not supported/,
+    );
 
-    const large = createMemoryWorkspaceHost(workspaceRoot, new Map<string, string>([["README.md", "alpha"]]));
+    const large = createMemoryWorkspaceHost(
+      workspaceRoot,
+      new Map<string, string>([["README.md", "alpha"]]),
+    );
     large.stat = async () => ({ type: "file", size: 17 * 1024 * 1024 });
     setToolWorkspaceHost(large);
-    assert.match(await editFileHandler({ path: "README.md", search: "alpha", replace: "beta" }), /larger than 16 MiB are not supported/);
+    assert.match(
+      await editFileHandler({ path: "README.md", search: "alpha", replace: "beta" }),
+      /larger than 16 MiB are not supported/,
+    );
 
-    const stale = createMemoryWorkspaceHost(workspaceRoot, new Map<string, string>([["README.md", "alpha"]]));
+    const stale = createMemoryWorkspaceHost(
+      workspaceRoot,
+      new Map<string, string>([["README.md", "alpha"]]),
+    );
     setToolWorkspaceHost(stale);
     assert.match(
-      await editFileHandlerForced({ path: "README.md", search: "alpha", replace: "beta", expectedBeforeHash: "0".repeat(64) }),
+      await editFileHandlerForced({
+        path: "README.md",
+        search: "alpha",
+        replace: "beta",
+        expectedBeforeHash: "0".repeat(64),
+      }),
       /file changed after confirmation/,
     );
 
-    setToolWorkspaceHost(createMemoryWorkspaceHost(workspaceRoot, new Map<string, string>([["README.md", "alpha"]])));
-    assert.match(await editFileHandler({ path: "README.md", search: "gamma", replace: "beta" }), /search text not found/);
+    setToolWorkspaceHost(
+      createMemoryWorkspaceHost(workspaceRoot, new Map<string, string>([["README.md", "alpha"]])),
+    );
+    assert.match(
+      await editFileHandler({ path: "README.md", search: "gamma", replace: "beta" }),
+      /search text not found/,
+    );
   });
 
   test("replaces every match when replaceAll is set and tolerates preview failures", async () => {
     const files = new Map<string, string>([["README.md", "alpha beta alpha"]]);
     const host = createMemoryWorkspaceHost(workspaceRoot, files);
-    host.prepareFileDiff = async () => { throw new Error("preview unavailable"); };
+    host.prepareFileDiff = async () => {
+      throw new Error("preview unavailable");
+    };
     setToolWorkspaceHost(host);
 
-    const confirmation = JSON.parse(await editFileHandler({ path: "README.md", search: "alpha", replace: "gamma", replaceAll: true })) as { requiresConfirmation: boolean };
+    const confirmation = JSON.parse(
+      await editFileHandler({
+        path: "README.md",
+        search: "alpha",
+        replace: "gamma",
+        replaceAll: true,
+      }),
+    ) as { requiresConfirmation: boolean };
     assert.strictEqual(confirmation.requiresConfirmation, true);
 
-    const applied = JSON.parse(await editFileHandlerForced({ path: "README.md", search: "alpha", replace: "gamma", replaceAll: true })) as { replacementCount: number };
+    const applied = JSON.parse(
+      await editFileHandlerForced({
+        path: "README.md",
+        search: "alpha",
+        replace: "gamma",
+        replaceAll: true,
+      }),
+    ) as { replacementCount: number };
     assert.strictEqual(applied.replacementCount, 2);
     assert.strictEqual(files.get("README.md"), "gamma beta gamma");
   });
 });
 
-function createMemoryWorkspaceHost(workspaceRoot: string, files: Map<string, string>, previews: string[] = []): ToolWorkspaceHost {
+function createMemoryWorkspaceHost(
+  workspaceRoot: string,
+  files: Map<string, string>,
+  previews: string[] = [],
+): ToolWorkspaceHost {
   return {
     getRootPath: () => workspaceRoot,
     readFile: async (filePath: string) => {

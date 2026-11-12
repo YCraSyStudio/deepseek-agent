@@ -12,12 +12,14 @@ Use Node 26 LTS locally and npm 12.2.1. CI currently uses Node 24. Run `npm ci` 
 - `npm run build:extension`: bundle `dist/extension.js`.
 - `npm run build:webview`: bundle `dist/webview`.
 - `npm run dev:webview`: Vite server for UI.
-- `npm run lint`: ESLint over `src`.
+- `npm run lint`: ESLint over `src` with zero warnings allowed.
+- `npm run audit:dead-code`: runs Knip to report unused files, exports and dependencies.
 - `npm run test:unit`: recursively discovers unit tests under `src/test` while excluding `src/test/integration`.
 - `npm run test:unit -- --path chat/context`: run one unit-test directory; a path relative to `src/test` can also name a single `.test.ts` file. An unmatched path fails. Add `--grep 'case name'` to filter Mocha test titles. The runner still executes its small safety and selection checks first.
-- `npm run test:integration`: builds and runs the VS Code Extension Development Host tests from `src/test/integration`.
+- `npm run prepare:integration`: builds the extension and webview, then builds the integration test bundle.
+- `npm run test:integration`: runs `prepare:integration` and the VS Code Extension Development Host tests from `src/test/integration`.
 - `npm test`: unit tests followed by integration tests.
-
+- `npm run test:coverage`: unit coverage.
 - `npm run test:coverage:full`: combined unit and VS Code integration coverage.
 - `npm run test:coverage:check`: optional strict 100% diagnostic; not the essential-regression acceptance gate.
 - `npm run package:vsix`: build the release package under `artifacts/`.

@@ -34,6 +34,7 @@ jobs:
       - run: node scripts/prepare-test-results.mjs
       - run: npm run compile
       - run: npm run lint
+      - run: npm run format:check
       - run: npm run audit:dead-code
       - run: npm run test:coverage
       - name: Validate release tag and changelog
@@ -176,10 +177,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
-          gh release create "$TAG"
-          artifacts/*.vsix
-          artifacts/sha256.txt
-          --title "YCraSy DeepSeek Agent $TAG"
-          --notes-file release-notes.md
-          --prerelease
-          --verify-tag
+          gh release create "$TAG" artifacts/*.vsix artifacts/sha256.txt --title "YCraSy DeepSeek Agent $TAG" --notes-file release-notes.md --prerelease --verify-tag

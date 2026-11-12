@@ -15,12 +15,18 @@ import type { ReferencedFilePayload } from "@/contracts";
 const execFile = promisify(cp.execFile);
 const MAX_REFERENCE_BYTES = 1024 * 1024;
 
-export function registerChatCommands(context: vscode.ExtensionContext, provider: WebviewProvider): void {
+export function registerChatCommands(
+  context: vscode.ExtensionContext,
+  provider: WebviewProvider,
+): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand("deepseek-agent.addFileToChat", async (uri?: vscode.Uri, selectedUris?: vscode.Uri[]) => {
-      const fallbackUri = vscode.window.activeTextEditor?.document.uri;
-      await addFilesToChat(provider, collectCommandUris(uri ?? fallbackUri, selectedUris));
-    }),
+    vscode.commands.registerCommand(
+      "deepseek-agent.addFileToChat",
+      async (uri?: vscode.Uri, selectedUris?: vscode.Uri[]) => {
+        const fallbackUri = vscode.window.activeTextEditor?.document.uri;
+        await addFilesToChat(provider, collectCommandUris(uri ?? fallbackUri, selectedUris));
+      },
+    ),
     vscode.commands.registerCommand("deepseek-agent.addSelectionToChat", async () => {
       await addActiveSelectionToChat(provider);
     }),
@@ -54,13 +60,17 @@ async function addFilesToChat(provider: WebviewProvider, uris: vscode.Uri[]): Pr
 async function addActiveSelectionToChat(provider: WebviewProvider): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor || editor.selection.isEmpty) {
-    vscode.window.showInformationMessage("Select code in an editor to add it to YCraSy DeepSeek Agent chat.");
+    vscode.window.showInformationMessage(
+      "Select code in an editor to add it to YCraSy DeepSeek Agent chat.",
+    );
     return;
   }
 
   const text = editor.document.getText(editor.selection);
   if (!text.trim()) {
-    vscode.window.showInformationMessage("Select code in an editor to add it to YCraSy DeepSeek Agent chat.");
+    vscode.window.showInformationMessage(
+      "Select code in an editor to add it to YCraSy DeepSeek Agent chat.",
+    );
     return;
   }
   if (Buffer.byteLength(text, "utf8") > MAX_REFERENCE_BYTES) {
@@ -107,19 +117,28 @@ async function reviewWorkspaceChanges(provider: WebviewProvider): Promise<void> 
   const snapshot = captureWorkspaceRunSnapshot(captureCurrentWorkspaceBinding());
   const localFolders = snapshot.folders.filter((folder) => folder.localPath);
   if (localFolders.length === 0) {
-    vscode.window.showInformationMessage("Open a workspace to review changes with YCraSy DeepSeek Agent.");
+    vscode.window.showInformationMessage(
+      "Open a workspace to review changes with YCraSy DeepSeek Agent.",
+    );
     return;
   }
 
   try {
-    const sections = await Promise.all(localFolders.map(async (folder) => {
-      const [unstaged, staged] = await Promise.all([
-        runGit(["diff", "--", "."], folder.localPath!),
-        runGit(["diff", "--cached", "--", "."], folder.localPath!),
-      ]);
-      const diff = [formatDiffSection("Staged changes", staged), formatDiffSection("Unstaged changes", unstaged)].filter(Boolean).join("\n\n");
-      return diff ? `# Workspace root: ${folder.alias}\n\n${diff}` : "";
-    }));
+    const sections = await Promise.all(
+      localFolders.map(async (folder) => {
+        const [unstaged, staged] = await Promise.all([
+          runGit(["diff", "--", "."], folder.localPath!),
+          runGit(["diff", "--cached", "--", "."], folder.localPath!),
+        ]);
+        const diff = [
+          formatDiffSection("Staged changes", staged),
+          formatDiffSection("Unstaged changes", unstaged),
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        return diff ? `# Workspace root: ${folder.alias}\n\n${diff}` : "";
+      }),
+    );
     const content = sections.filter(Boolean).join("\n\n");
 
     if (!content.trim()) {
@@ -142,7 +161,9 @@ async function reviewWorkspaceChanges(provider: WebviewProvider): Promise<void> 
     ]);
   } catch (err) {
     logError("[ChatCommands] Error collecting Git changes", err);
-    vscode.window.showErrorMessage("YCraSy DeepSeek Agent could not collect Git changes for review.");
+    vscode.window.showErrorMessage(
+      "YCraSy DeepSeek Agent could not collect Git changes for review.",
+    );
   }
 }
 
@@ -161,7 +182,9 @@ async function createReferenceFromUri(uri: vscode.Uri): Promise<ReferencedFilePa
     const name = getName(uri);
     let metadata = getReferenceMetadata(uri);
     if (metadata.scope === "external-snapshot" && stat.size > MAX_REFERENCE_BYTES) {
-      await vscode.window.showWarningMessage(`"${name}" exceeds the 1 MiB limit for external context snapshots.`);
+      await vscode.window.showWarningMessage(
+        `"${name}" exceeds the 1 MiB limit for external context snapshots.`,
+      );
       return null;
     }
     if (isSensitiveUri(uri)) {
@@ -175,7 +198,8 @@ async function createReferenceFromUri(uri: vscode.Uri): Promise<ReferencedFilePa
       }
       metadata = { scope: "external-snapshot" };
     }
-    const bytes = stat.size <= MAX_REFERENCE_BYTES ? await vscode.workspace.fs.readFile(uri) : undefined;
+    const bytes =
+      stat.size <= MAX_REFERENCE_BYTES ? await vscode.workspace.fs.readFile(uri) : undefined;
     if (bytes && looksBinary(bytes)) {
       await vscode.window.showWarningMessage(`"${name}" appears to be binary and was not added.`);
       return null;
@@ -197,7 +221,12 @@ async function createReferenceFromUri(uri: vscode.Uri): Promise<ReferencedFilePa
 }
 
 async function runGit(args: string[], cwd: string): Promise<string> {
-  const { stdout } = await execFile("git", args, { cwd, maxBuffer: MAX_REFERENCE_BYTES * 2, timeout: 5_000, encoding: "utf8" });
+  const { stdout } = await execFile("git", args, {
+    cwd,
+    maxBuffer: MAX_REFERENCE_BYTES * 2,
+    timeout: 5_000,
+    encoding: "utf8",
+  });
   return stdout;
 }
 
@@ -223,7 +252,9 @@ function getDisplayPath(uri: vscode.Uri): string {
   return formatWorkspacePath(snapshot, uri) ?? getName(uri);
 }
 
-function getReferenceMetadata(uri: vscode.Uri): Pick<ReferencedFilePayload, "scope" | "rootUri" | "bindingRevision"> {
+function getReferenceMetadata(
+  uri: vscode.Uri,
+): Pick<ReferencedFilePayload, "scope" | "rootUri" | "bindingRevision"> {
   const binding = captureCurrentWorkspaceBinding();
   if (binding.folders.length === 0) {
     return { scope: "external-snapshot" };
@@ -240,7 +271,9 @@ function looksBinary(bytes: Uint8Array): boolean {
 }
 
 function isSensitiveUri(uri: vscode.Uri): boolean {
-  return /(^|[/\\.])(env(?:\.[^/\\]+)?|pem|key|p12|pfx|\.ssh|credentials?|secrets?|tokens?)([/\\.]|$)/i.test(uri.path);
+  return /(^|[/\\.])(env(?:\.[^/\\]+)?|pem|key|p12|pfx|\.ssh|credentials?|secrets?|tokens?)([/\\.]|$)/i.test(
+    uri.path,
+  );
 }
 
 function getName(uri: vscode.Uri): string {

@@ -8,7 +8,10 @@ import type { AppConfig } from "@/contracts/Config";
 export interface ModelProvider {
   readonly id: string;
   readonly name: string;
-  chatCompletion(request: ChatCompletionRequest, signal?: AbortSignal): Promise<ChatCompletionResponse>;
+  chatCompletion(
+    request: ChatCompletionRequest,
+    signal?: AbortSignal,
+  ): Promise<ChatCompletionResponse>;
   chatCompletionStream(
     request: ChatCompletionRequest,
     onChunk: (chunk: StreamChunk) => void,

@@ -1,20 +1,27 @@
 import type { GeneralSectionProps } from "../model";
 import { isUsageCurrency, type UsageCurrency } from "@/shared/usage/Usage";
-import { NumberInput, SettingsField, SettingsGroup, SettingsSection, Toggle } from "@webview/components/settingsView";
+import {
+  NumberInput,
+  SettingsField,
+  SettingsGroup,
+  SettingsSection,
+  Toggle,
+} from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
 import PrivacySection from "./PrivacySection";
 
 function GeneralSection({ config, updateConfig, saveOnBlur, children }: GeneralSectionProps) {
   return (
     <SettingsSection title={t("settings.section.extension")}>
-
       <SettingsField htmlFor="interfaceLanguage" label={t("settings.language.label")}>
         <select
           id="interfaceLanguage"
           value={config.interfaceLanguage}
           onChange={(event) => {
             const language = parseInterfaceLanguage(event.target.value);
-            if (!language) {return;}
+            if (!language) {
+              return;
+            }
             updateConfig("interfaceLanguage", language);
             saveOnBlur("interfaceLanguage", language);
           }}
@@ -26,36 +33,76 @@ function GeneralSection({ config, updateConfig, saveOnBlur, children }: GeneralS
         </select>
       </SettingsField>
 
-      <SettingsField htmlFor="historyRetentionDays" label={t("settings.history.retention")} tooltip={t("settings.history.retentionHelp")}>
+      <SettingsField
+        htmlFor="historyRetentionDays"
+        label={t("settings.history.retention")}
+        tooltip={t("settings.history.retentionHelp")}
+      >
         <NumberInput
           id="historyRetentionDays"
           min={0}
           max={3650}
           value={config.historyRetentionDays}
           disabled={!config.historyEnabled}
-          onChange={(event) => updateBoundedInteger(event.currentTarget, 0, 3650, (value) => updateConfig("historyRetentionDays", value))}
-          onBlur={(event) => updateBoundedInteger(event.currentTarget, 0, 3650, (value) => saveOnBlur("historyRetentionDays", value))}
+          onChange={(event) =>
+            updateBoundedInteger(event.currentTarget, 0, 3650, (value) =>
+              updateConfig("historyRetentionDays", value),
+            )
+          }
+          onBlur={(event) =>
+            updateBoundedInteger(event.currentTarget, 0, 3650, (value) =>
+              saveOnBlur("historyRetentionDays", value),
+            )
+          }
         />
       </SettingsField>
 
-      <SettingsField htmlFor="maxConcurrentGenerationsInput" label={t("settings.limits.maxConcurrentGenerations")}>
+      <SettingsField
+        htmlFor="maxConcurrentGenerationsInput"
+        label={t("settings.limits.maxConcurrentGenerations")}
+      >
         <NumberInput
           id="maxConcurrentGenerationsInput"
           min={1}
           max={16}
           value={config.maxConcurrentGenerations}
-          onChange={(event) => updateBoundedInteger(event.currentTarget, 1, 16, (value) => updateConfig("maxConcurrentGenerations", value))}
-          onBlur={(event) => updateBoundedInteger(event.currentTarget, 1, 16, (value) => saveOnBlur("maxConcurrentGenerations", value))}
+          onChange={(event) =>
+            updateBoundedInteger(event.currentTarget, 1, 16, (value) =>
+              updateConfig("maxConcurrentGenerations", value),
+            )
+          }
+          onBlur={(event) =>
+            updateBoundedInteger(event.currentTarget, 1, 16, (value) =>
+              saveOnBlur("maxConcurrentGenerations", value),
+            )
+          }
         />
       </SettingsField>
 
       <SettingsGroup title={t("settings.storage.title")}>
         {children}
 
-        <SettingsField htmlFor="snapshotStorageLimitMb" label={t("settings.snapshots.storageLimit")} tooltip={t("settings.snapshots.storageHint")}>
-          <NumberInput id="snapshotStorageLimitMb" min={64} max={65536} value={config.snapshotStorageLimitMb}
-            onChange={(event) => updateBoundedInteger(event.currentTarget, 64, 65536, (value) => updateConfig("snapshotStorageLimitMb", value))}
-            onBlur={(event) => updateBoundedInteger(event.currentTarget, 64, 65536, (value) => saveOnBlur("snapshotStorageLimitMb", value))} />
+        <SettingsField
+          htmlFor="snapshotStorageLimitMb"
+          label={t("settings.snapshots.storageLimit")}
+          tooltip={t("settings.snapshots.storageHint")}
+        >
+          <NumberInput
+            id="snapshotStorageLimitMb"
+            min={64}
+            max={65536}
+            value={config.snapshotStorageLimitMb}
+            onChange={(event) =>
+              updateBoundedInteger(event.currentTarget, 64, 65536, (value) =>
+                updateConfig("snapshotStorageLimitMb", value),
+              )
+            }
+            onBlur={(event) =>
+              updateBoundedInteger(event.currentTarget, 64, 65536, (value) =>
+                saveOnBlur("snapshotStorageLimitMb", value),
+              )
+            }
+          />
         </SettingsField>
       </SettingsGroup>
       <SettingsGroup title={t("settings.usage.title")}>
@@ -65,7 +112,9 @@ function GeneralSection({ config, updateConfig, saveOnBlur, children }: GeneralS
             value={config.usageCostCurrency}
             onChange={(event) => {
               const currency = parseUsageCurrency(event.target.value);
-              if (!currency) {return;}
+              if (!currency) {
+                return;
+              }
               updateConfig("usageCostCurrency", currency);
               saveOnBlur("usageCostCurrency", currency);
             }}
@@ -92,9 +141,16 @@ function GeneralSection({ config, updateConfig, saveOnBlur, children }: GeneralS
 
 export default GeneralSection;
 
-function updateBoundedInteger(input: HTMLInputElement, min: number, max: number, update: (value: number) => void): void {
+function updateBoundedInteger(
+  input: HTMLInputElement,
+  min: number,
+  max: number,
+  update: (value: number) => void,
+): void {
   const value = input.valueAsNumber;
-  if (Number.isInteger(value) && value >= min && value <= max) {update(value);}
+  if (Number.isInteger(value) && value >= min && value <= max) {
+    update(value);
+  }
 }
 
 function parseInterfaceLanguage(value: string): "auto" | "en" | "es" | "zh" | undefined {

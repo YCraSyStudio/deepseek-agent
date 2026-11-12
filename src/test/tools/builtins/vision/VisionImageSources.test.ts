@@ -9,7 +9,8 @@ suite("vision source confinement", () => {
   const root = path.resolve("/project");
   const workspace = {
     getRootPath: () => root,
-    realPath: async (input: string) => input === path.join(root, "escape.png") ? path.resolve("/private/secret.png") : input,
+    realPath: async (input: string) =>
+      input === path.join(root, "escape.png") ? path.resolve("/private/secret.png") : input,
     stat: async () => ({ size: 6, type: "file" }),
     readFile: async () => Buffer.from("GIF89a"),
   } as unknown as ToolWorkspaceHost;
@@ -19,7 +20,10 @@ suite("vision source confinement", () => {
   });
   test("accepts workspace images but rejects secrets, traversal and symlink escapes", async () => {
     await runWithToolWorkspaceHost(workspace, async () => {
-      const sources = await resolveVisionImageSources({ question: "test", paths: ["design.gif"] }, []);
+      const sources = await resolveVisionImageSources(
+        { question: "test", paths: ["design.gif"] },
+        [],
+      );
       assert.equal(sources.local[0]?.source, "design.gif");
       for (const input of ["../secret.png", ".env", "escape.png"]) {
         await assert.rejects(resolveVisionImageSources({ question: "test", paths: [input] }, []));

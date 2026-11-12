@@ -4,7 +4,11 @@ import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
 import { getErrorMessage } from "@/shared/utils/Errors";
 import { bufferLooksBinary, createStructuredResult, createUnifiedDiff } from "./StructuredResult";
 import { createHash } from "crypto";
-import { findLineEndingInsensitiveRanges, normalizeReplacementLineEndings, type TextRange } from "./LineEndings";
+import {
+  findLineEndingInsensitiveRanges,
+  normalizeReplacementLineEndings,
+  type TextRange,
+} from "./LineEndings";
 
 const MAX_MUTATION_FILE_BYTES = 16 * 1024 * 1024;
 
@@ -96,7 +100,8 @@ async function prepareEdit(
       return `Error editing file '${args.path}': file changed after confirmation. Expected sha256 ${args.expectedBeforeHash}, got ${beforeHash}.`;
     }
     const exactRanges = findExactRanges(before, args.search);
-    const ranges = exactRanges.length > 0 ? exactRanges : findLineEndingInsensitiveRanges(before, args.search);
+    const ranges =
+      exactRanges.length > 0 ? exactRanges : findLineEndingInsensitiveRanges(before, args.search);
     const replacementCount = ranges.length;
     if (replacementCount === 0) {
       return `Error editing file '${args.path}': search text not found`;
@@ -113,8 +118,7 @@ async function prepareEdit(
     if (options.showDiffPreview) {
       try {
         await workspace.prepareFileDiff?.(args.path, before, after);
-      } catch {
-      }
+      } catch {}
     }
 
     return {
@@ -134,7 +138,8 @@ function parseEditFileArgs(args: Record<string, unknown>): EditFileArgs | string
   const search = args.search;
   const replace = args.replace;
   const replaceAll = args.replaceAll ?? false;
-  const expectedBeforeHash = typeof args.expectedBeforeHash === "string" ? args.expectedBeforeHash : undefined;
+  const expectedBeforeHash =
+    typeof args.expectedBeforeHash === "string" ? args.expectedBeforeHash : undefined;
 
   if (typeof filePath !== "string" || filePath.trim() === "") {
     return "Error: path parameter is required";
@@ -192,19 +197,23 @@ export const editFileDefinition: ToolDefinition = {
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path. Use an absolute path only for explicitly requested external access.",
+          description:
+            "Workspace-relative path. Use an absolute path only for explicitly requested external access.",
         },
         search: {
           type: "string",
-          description: "Exact text to find. Must be non-empty. Use normal newlines; matching is line-ending-insensitive.",
+          description:
+            "Exact text to find. Must be non-empty. Use normal newlines; matching is line-ending-insensitive.",
         },
         replace: {
           type: "string",
-          description: "Replacement text. Its newlines are normalized to the file's existing style.",
+          description:
+            "Replacement text. Its newlines are normalized to the file's existing style.",
         },
         replaceAll: {
           type: "boolean",
-          description: "Replace every occurrence. Required when search text appears more than once.",
+          description:
+            "Replace every occurrence. Required when search text appears more than once.",
         },
         expectedBeforeHash: {
           type: "string",

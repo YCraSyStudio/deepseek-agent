@@ -3,12 +3,16 @@ import { randomUUID } from "node:crypto";
 import { GenerationCheckpointStore, HistoryManager } from "@/vscode/storage";
 import { logWarning } from "@/shared/logging/Logger";
 import { getErrorMessage } from "@/shared/utils/Errors";
-import type { ContextWindowStatus, ImageAttachment, QueuedGenerationMessage, ReferencedFile, WebviewToHandlerMessage, WorkspaceContextStatus } from "@/contracts";
+import type {
+  ContextWindowStatus,
+  ImageAttachment,
+  QueuedGenerationMessage,
+  ReferencedFile,
+  WebviewToHandlerMessage,
+  WorkspaceContextStatus,
+} from "@/contracts";
 import type { ToolRegistry } from "@/application/tools";
-import {
-  captureCurrentWorkspaceBinding,
-  resolveWorkspaceContext,
-} from "@/vscode/workspace";
+import { captureCurrentWorkspaceBinding, resolveWorkspaceContext } from "@/vscode/workspace";
 import { ConversationState } from "@/application/chat/ConversationState";
 import { GenerationCoordinator } from "@/application/chat/GenerationCoordinator";
 import { isTerminalGenerationState } from "@/domain/generation/GenerationState";
@@ -39,7 +43,11 @@ import type { ModelProviderFactory, SecretStore, SettingsRepository } from "@/ap
 import { estimatedContextWindow } from "./context/ContextWindow";
 import { ManualCompaction } from "./context/ManualCompaction";
 import { shutdownConversationCommands } from "@/infrastructure/tools/builtins/terminal/ShellExecution";
-import { closeConversationKeepAliveTerminals, onKeepAliveTerminalsChanged, stopKeepAliveTerminal } from "@/infrastructure/tools/builtins/terminal/KeepAliveTerminals";
+import {
+  closeConversationKeepAliveTerminals,
+  onKeepAliveTerminalsChanged,
+  stopKeepAliveTerminal,
+} from "@/infrastructure/tools/builtins/terminal/KeepAliveTerminals";
 import { closeConversationApplications } from "@/infrastructure/tools/builtins/terminal/ManagedApplicationSessions";
 
 export class ChatHandler {
@@ -70,7 +78,10 @@ export class ChatHandler {
     private readonly settings: SettingsRepository,
     private readonly secrets: SecretStore,
     private readonly modelProviderFactory: ModelProviderFactory,
-    private readonly archiveImages: (conversationId: string, attachments: readonly ImageAttachment[]) => Promise<void>,
+    private readonly archiveImages: (
+      conversationId: string,
+      attachments: readonly ImageAttachment[],
+    ) => Promise<void>,
   ) {
     this.checkpointStore = new GenerationCheckpointStore(this.settings);
     this.conversationState = new ConversationState(
@@ -96,7 +107,12 @@ export class ChatHandler {
         this.broadcaster.postHistoryTransitionActivity();
       },
       onQueued: (task, position) => {
-        this.broadcaster.post({ type: "messageQueued", conversationId: task.conversationId, clientRequestId: task.clientRequestId, position });
+        this.broadcaster.post({
+          type: "messageQueued",
+          conversationId: task.conversationId,
+          clientRequestId: task.clientRequestId,
+          position,
+        });
         void this.checkpoints.checkpointQueuedConversation(task.conversationId);
         this.broadcaster.postGenerationActivity(task.conversationId, undefined, "queued");
       },
@@ -170,11 +186,7 @@ export class ChatHandler {
       checkpoint: (record, immediate) => this.checkpoints.checkpoint(record, immediate),
       scheduleCheckpoint: (record) => this.checkpoints.schedule(record),
       syncSelectedConversation: (state) =>
-        syncSelectedConversation(
-          state,
-          this.selectedConversationId,
-          this.conversationState,
-        ),
+        syncSelectedConversation(state, this.selectedConversationId, this.conversationState),
       post: (message) => this.broadcaster.post(message),
       settings: this.settings,
       secrets: this.secrets,
@@ -221,7 +233,10 @@ export class ChatHandler {
     });
 
     this.stopListeningForKeepAliveChanges = onKeepAliveTerminalsChanged((conversationId) => {
-      if (this.selectedConversationId === undefined || this.selectedConversationId === conversationId) {
+      if (
+        this.selectedConversationId === undefined ||
+        this.selectedConversationId === conversationId
+      ) {
         this.broadcaster.postRunningTasks(this.selectedConversationId);
       }
     });
@@ -243,11 +258,8 @@ export class ChatHandler {
         });
         break;
       case "steerGeneration":
-        steerGeneration(
-          message,
-          this.coordinator,
-          this.runs,
-          (payload) => this.acceptMessage(payload, true),
+        steerGeneration(message, this.coordinator, this.runs, (payload) =>
+          this.acceptMessage(payload, true),
         );
         break;
       case "cancelGeneration":
@@ -266,7 +278,11 @@ export class ChatHandler {
             status: accepted ? "accepted" : "stale",
           });
           if (accepted) {
-            this.broadcaster.postGenerationActivity(message.conversationId, message.generationId, "cancelling");
+            this.broadcaster.postGenerationActivity(
+              message.conversationId,
+              message.generationId,
+              "cancelling",
+            );
           }
         }
         break;
@@ -286,7 +302,9 @@ export class ChatHandler {
         break;
       case "consumeRecoveredDraft": {
         const drafts = this.recoveredDrafts.get(message.conversationId) ?? [];
-        const remaining = drafts.filter((draft) => draft.clientRequestId !== message.clientRequestId);
+        const remaining = drafts.filter(
+          (draft) => draft.clientRequestId !== message.clientRequestId,
+        );
         if (remaining.length > 0) {
           this.recoveredDrafts.set(message.conversationId, remaining);
         } else {
@@ -301,7 +319,10 @@ export class ChatHandler {
       case "newConversation":
         this.conversationState.reset();
         this.selectedConversationId = undefined;
-        void webviewView.webview.postMessage({ type: "newConversationReady", requestId: message.requestId });
+        void webviewView.webview.postMessage({
+          type: "newConversationReady",
+          requestId: message.requestId,
+        });
         this.workspaceReferences.postContext(captureCurrentWorkspaceBinding());
         break;
       case "getWorkspaceContext":
@@ -315,7 +336,10 @@ export class ChatHandler {
         });
         break;
       case "rebindConversationWorkspace":
-        void this.workspaceCoordinator.confirmAndRebind(message.conversationId, message.workspaceRevision);
+        void this.workspaceCoordinator.confirmAndRebind(
+          message.conversationId,
+          message.workspaceRevision,
+        );
         break;
       case "openConversationWorkspace":
         void this.workspaceCoordinator.open(message.conversationId);
@@ -326,12 +350,13 @@ export class ChatHandler {
       case "stopRunningTask":
         void stopKeepAliveTerminal(message.sessionId, message.conversationId).then(
           () => this.broadcaster.postRunningTasks(message.conversationId),
-          (error: unknown) => this.broadcaster.post({
-            type: "requestRejected",
-            requestId: message.requestId,
-            action: "stopRunningTask",
-            error: getErrorMessage(error),
-          }),
+          (error: unknown) =>
+            this.broadcaster.post({
+              type: "requestRejected",
+              requestId: message.requestId,
+              action: "stopRunningTask",
+              error: getErrorMessage(error),
+            }),
         );
         break;
       default:
@@ -347,7 +372,11 @@ export class ChatHandler {
     this.selectedConversationId = conversation.id;
     this.workspaceReferences.postContext(conversation.workspaceBinding);
     const config = this.settings.load();
-    return estimatedContextWindow(this.conversationState, conversation.model ?? config.model, config.maxTokens);
+    return estimatedContextWindow(
+      this.conversationState,
+      conversation.model ?? config.model,
+      config.maxTokens,
+    );
   }
 
   async getWorkspaceContext(conversationId?: string): Promise<WorkspaceContextStatus> {
@@ -355,8 +384,13 @@ export class ChatHandler {
   }
 
   assertWorkspaceIdle(): void {
-    if (this.coordinator.getActiveGenerations().length || this.coordinator.getQueuedConversationIds().length) {
-      throw new Error("Wait for active or queued generations to finish before reverting workspace changes");
+    if (
+      this.coordinator.getActiveGenerations().length ||
+      this.coordinator.getQueuedConversationIds().length
+    ) {
+      throw new Error(
+        "Wait for active or queued generations to finish before reverting workspace changes",
+      );
     }
   }
 
@@ -454,7 +488,9 @@ export class ChatHandler {
     this.shuttingDown = true;
     this.stopListeningForKeepAliveChanges();
     this.manualCompaction.dispose();
-    await Promise.allSettled([...this.runs.values()].map((record) => this.checkpoints.checkpoint(record, true)));
+    await Promise.allSettled(
+      [...this.runs.values()].map((record) => this.checkpoints.checkpoint(record, true)),
+    );
     for (const record of this.runs.values()) {
       record.session.cancel();
       if (!isTerminalGenerationState(record.status)) {
@@ -463,7 +499,9 @@ export class ChatHandler {
     }
     await this.coordinator.shutdown();
     await this.headlessWebRuntime.dispose();
-    await Promise.allSettled([...this.runs.values()].map((record) => this.checkpoints.checkpoint(record, true)));
+    await Promise.allSettled(
+      [...this.runs.values()].map((record) => this.checkpoints.checkpoint(record, true)),
+    );
     await this.checkpointStore.flush();
   }
 

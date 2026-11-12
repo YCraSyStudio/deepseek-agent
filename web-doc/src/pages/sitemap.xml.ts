@@ -4,11 +4,7 @@ import { alternateEntries, canonicalPath, languages, pageSlugs, type PageSlug } 
 export const prerender = true;
 
 const escapeXml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export const GET: APIRoute = ({ site }) => {
   const siteRoot = new URL(canonicalPath("en"), site ?? "https://ycrasystudio.github.io/");

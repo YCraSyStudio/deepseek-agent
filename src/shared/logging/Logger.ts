@@ -23,7 +23,10 @@ let sink: DiagnosticSink | undefined;
 let entries: string[] = [];
 let entryBytes = 0;
 
-export function initializeLogger(nextSink: DiagnosticSink, level: LogLevel = "warning"): { dispose(): void } {
+export function initializeLogger(
+  nextSink: DiagnosticSink,
+  level: LogLevel = "warning",
+): { dispose(): void } {
   sink?.dispose();
   sink = nextSink;
   minimumLevel = level;
@@ -37,15 +40,27 @@ export function initializeLogger(nextSink: DiagnosticSink, level: LogLevel = "wa
   };
 }
 
-export function logInfo(message: string, detail?: unknown, correlation?: DiagnosticCorrelation): void {
+export function logInfo(
+  message: string,
+  detail?: unknown,
+  correlation?: DiagnosticCorrelation,
+): void {
   write("info", message, detail, correlation);
 }
 
-export function logWarning(message: string, detail?: unknown, correlation?: DiagnosticCorrelation): void {
+export function logWarning(
+  message: string,
+  detail?: unknown,
+  correlation?: DiagnosticCorrelation,
+): void {
   write("warning", message, detail, correlation);
 }
 
-export function logError(message: string, error?: unknown, correlation?: DiagnosticCorrelation): void {
+export function logError(
+  message: string,
+  error?: unknown,
+  correlation?: DiagnosticCorrelation,
+): void {
   write("error", message, error, correlation);
 }
 
@@ -73,15 +88,22 @@ export function redactDiagnostic(message: string, error?: unknown): string {
   return `${redactSensitiveText(message)}${detail}`;
 }
 
-function write(level: LogLevel, message: string, detail?: unknown, correlation?: DiagnosticCorrelation): void {
+function write(
+  level: LogLevel,
+  message: string,
+  detail?: unknown,
+  correlation?: DiagnosticCorrelation,
+): void {
   if (levelRank(level) < levelRank(minimumLevel)) {
     return;
   }
   const correlationText = correlation
     ? Object.entries(correlation)
-      .filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0)
-      .map(([key, value]) => `${key}=${redactSensitiveText(value)}`)
-      .join(" ")
+        .filter(
+          (entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0,
+        )
+        .map(([key, value]) => `${key}=${redactSensitiveText(value)}`)
+        .join(" ")
     : "";
   const line = `${new Date().toISOString()} ${level.toUpperCase()}${correlationText ? ` [${correlationText}]` : ""} ${redactDiagnostic(message, detail)}`;
   entries.push(line);
@@ -103,17 +125,25 @@ function sanitizeValue(value: unknown, depth = 0): unknown {
     return {
       name: redactSensitiveText(value.name),
       message: redactSensitiveText(value.message),
-      stack: value.stack ? redactSensitiveText(value.stack).split("\n").slice(0, 12).join("\n") : undefined,
+      stack: value.stack
+        ? redactSensitiveText(value.stack).split("\n").slice(0, 12).join("\n")
+        : undefined,
     };
   }
   if (Array.isArray(value)) {
     return value.slice(0, 50).map((entry) => sanitizeValue(entry, depth + 1));
   }
   if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 100).map(([key, nested]) => [
-      key,
-      /authorization|api.?key|token|secret|user.?id/i.test(key) ? "[REDACTED]" : sanitizeValue(nested, depth + 1),
-    ]));
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .slice(0, 100)
+        .map(([key, nested]) => [
+          key,
+          /authorization|api.?key|token|secret|user.?id/i.test(key)
+            ? "[REDACTED]"
+            : sanitizeValue(nested, depth + 1),
+        ]),
+    );
   }
   return typeof value === "string" ? redactSensitiveText(value) : value;
 }

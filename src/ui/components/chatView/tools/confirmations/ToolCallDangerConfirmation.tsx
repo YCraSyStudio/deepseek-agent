@@ -10,15 +10,35 @@ interface DangerConfirmationProps {
   disabled?: boolean;
 }
 
-function DangerConfirmation({ toolCallId, dangerConfirmation, onConfirm, onCancel, disabled = false }: DangerConfirmationProps) {
+function DangerConfirmation({
+  toolCallId,
+  dangerConfirmation,
+  onConfirm,
+  onCancel,
+  disabled = false,
+}: DangerConfirmationProps) {
   const dangerLevel = dangerConfirmation.dangerLevel;
-  const severityClass = dangerLevel === "destructive" ? "severityDestructive" : dangerLevel === "dangerous" ? "severityDangerous" : "severityCaution";
+  const severityClass =
+    dangerLevel === "destructive"
+      ? "severityDestructive"
+      : dangerLevel === "dangerous"
+        ? "severityDangerous"
+        : "severityCaution";
   const isDestructive = dangerLevel === "destructive";
 
   return (
     <div className={`dangerConfirmation ${severityClass}`}>
-      {dangerConfirmation.cwd ? <div className="dangerExecutionContext"><strong>{t("confirmations.workingDirectory")}</strong> <code>{dangerConfirmation.cwd}</code></div> : null}
-      {dangerConfirmation.shell ? <div className="dangerExecutionContext"><strong>{t("confirmations.shell")}</strong> <code>{dangerConfirmation.shell}</code></div> : null}
+      {dangerConfirmation.cwd ? (
+        <div className="dangerExecutionContext">
+          <strong>{t("confirmations.workingDirectory")}</strong>{" "}
+          <code>{dangerConfirmation.cwd}</code>
+        </div>
+      ) : null}
+      {dangerConfirmation.shell ? (
+        <div className="dangerExecutionContext">
+          <strong>{t("confirmations.shell")}</strong> <code>{dangerConfirmation.shell}</code>
+        </div>
+      ) : null}
 
       <p className="dangerTrustExplanation">{t("confirmations.destructiveOnceDescription")}</p>
 

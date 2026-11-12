@@ -16,8 +16,12 @@ export type HistoryListRow =
   | { kind: "conversation"; conversation: ConversationSummary };
 
 export function formatWorkspaceName(workspaceUri: string): string {
-  if (workspaceUri === "workspace:unknown") {return t("history.unknownWorkspace");}
-  if (/^[a-zA-Z]:[\\/]/.test(workspaceUri)) {return lastPathSegment(workspaceUri) || workspaceUri;}
+  if (workspaceUri === "workspace:unknown") {
+    return t("history.unknownWorkspace");
+  }
+  if (/^[a-zA-Z]:[\\/]/.test(workspaceUri)) {
+    return lastPathSegment(workspaceUri) || workspaceUri;
+  }
   try {
     const url = new URL(workspaceUri);
     return lastPathSegment(decodeURIComponent(url.pathname)) || workspaceUri;
@@ -56,7 +60,11 @@ export function buildHistoryRows(
   const groups = new Map<string, ConversationSummary[]>();
   for (const conversation of conversations) {
     const bucket = groups.get(conversation.workspaceUri);
-    if (bucket) {bucket.push(conversation);} else {groups.set(conversation.workspaceUri, [conversation]);}
+    if (bucket) {
+      bucket.push(conversation);
+    } else {
+      groups.set(conversation.workspaceUri, [conversation]);
+    }
   }
 
   return [...groups.entries()]

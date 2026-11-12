@@ -13,17 +13,47 @@ type ChatCommandMessage =
   | { type: "clearChat" }
   | { type: "addMessage"; message: { role: string }; generationId: string }
   | { type: "setDraft"; text: string }
-  | { type: "generationAccepted"; generationId: string; conversationId: string; clientRequestId: string }
+  | {
+      type: "generationAccepted";
+      generationId: string;
+      conversationId: string;
+      clientRequestId: string;
+    }
   | { type: "messageQueued"; conversationId: string; clientRequestId: string; position: number }
   | { type: "requestRejected"; requestId?: string; action?: string; error: string }
   | { type: "protocolError"; supportedVersion: number; error: string }
-  | { type: "streamDone"; generationId?: string; conversationId?: string; status: "completed" | "cancelled" | "interrupted" }
+  | {
+      type: "streamDone";
+      generationId?: string;
+      conversationId?: string;
+      status: "completed" | "cancelled" | "interrupted";
+    }
   | { type: "streamError"; generationId?: string; conversationId?: string }
-  | { type: "workspaceContextChanged"; requestId?: string; conversationId?: string; context: WorkspaceContextStatus }
+  | {
+      type: "workspaceContextChanged";
+      requestId?: string;
+      conversationId?: string;
+      context: WorkspaceContextStatus;
+    }
   | { type: "contextFilesSelected"; files: ReferencedFile[] }
-  | { type: "imageAttachmentsSelected"; requestId: string; attachments: ImageAttachment[]; error?: string }
-  | { type: "imageAttachmentDeleted"; requestId: string; fileId: string; success: boolean; error?: string }
-  | { type: "generationSnapshot"; generations: GenerationSnapshot[]; recoveredDrafts: Array<{ conversationId: string; messages: QueuedGenerationMessage[] }> };
+  | {
+      type: "imageAttachmentsSelected";
+      requestId: string;
+      attachments: ImageAttachment[];
+      error?: string;
+    }
+  | {
+      type: "imageAttachmentDeleted";
+      requestId: string;
+      fileId: string;
+      success: boolean;
+      error?: string;
+    }
+  | {
+      type: "generationSnapshot";
+      generations: GenerationSnapshot[];
+      recoveredDrafts: Array<{ conversationId: string; messages: QueuedGenerationMessage[] }>;
+    };
 
 export interface PendingChatRequest {
   text: string;
@@ -58,7 +88,11 @@ interface ChatCommandSetters {
 }
 
 interface UseChatCommandMessagesOptions {
-  resolveImageUpload: (requestId: string, attachments: ImageAttachment[], error?: string) => ImageAttachment[];
+  resolveImageUpload: (
+    requestId: string,
+    attachments: ImageAttachment[],
+    error?: string,
+  ) => ImageAttachment[];
   appendReferencedFiles: (files: ReferencedFile[]) => void;
   focusInput: () => void;
   onDraftSubmitted?: () => void;
@@ -84,7 +118,11 @@ export function useChatCommandMessages({
         if (message.error) {
           setters.setRequestError(message.error);
         }
-        const attachments = resolveImageUpload(message.requestId, message.attachments, message.error);
+        const attachments = resolveImageUpload(
+          message.requestId,
+          message.attachments,
+          message.error,
+        );
         if (attachments.length > 0) {
           setters.setImageAttachments((current) => [...current, ...attachments].slice(0, 8));
           requestAnimationFrame(focusInput);
@@ -105,14 +143,21 @@ export function useChatCommandMessages({
       }
       if (message.type === "generationAccepted") {
         applyGenerationAccepted(message, refs, setters);
-        if (clearSubmittedDraft(message.clientRequestId, refs, setters)) {onDraftSubmitted?.();}
+        if (clearSubmittedDraft(message.clientRequestId, refs, setters)) {
+          onDraftSubmitted?.();
+        }
       }
       if (message.type === "messageQueued") {
         const submitted = refs.pendingRequests.current.get(message.clientRequestId);
-        if (submitted && (!refs.conversationId.current || refs.conversationId.current === message.conversationId)) {
+        if (
+          submitted &&
+          (!refs.conversationId.current || refs.conversationId.current === message.conversationId)
+        ) {
           refs.conversationId.current = message.conversationId;
           setters.setConversationId(message.conversationId);
-          if (clearSubmittedDraft(message.clientRequestId, refs, setters)) {onDraftSubmitted?.();}
+          if (clearSubmittedDraft(message.clientRequestId, refs, setters)) {
+            onDraftSubmitted?.();
+          }
         }
       }
       if (message.type === "requestRejected") {
@@ -163,12 +208,20 @@ function applyWorkspaceContext(
   if (message.requestId && message.requestId !== refs.workspaceRequestId.current) {
     return;
   }
-  if (message.conversationId !== undefined && message.conversationId !== refs.conversationId.current) {
+  if (
+    message.conversationId !== undefined &&
+    message.conversationId !== refs.conversationId.current
+  ) {
     return;
   }
   setters.setWorkspaceContext((previous) => {
-    if (previous?.binding.revision && previous.binding.revision !== message.context.binding.revision) {
-      setters.setReferencedFiles((files) => files.filter((file) => file.scope === "external-snapshot"));
+    if (
+      previous?.binding.revision &&
+      previous.binding.revision !== message.context.binding.revision
+    ) {
+      setters.setReferencedFiles((files) =>
+        files.filter((file) => file.scope === "external-snapshot"),
+      );
     }
     return message.context;
   });
@@ -189,41 +242,74 @@ function applyGenerationAccepted(
   }
 }
 
-export function clearSubmittedDraft(requestId: string, refs: ChatCommandRefs, setters: ChatCommandSetters): boolean {
+export function clearSubmittedDraft(
+  requestId: string,
+  refs: ChatCommandRefs,
+  setters: ChatCommandSetters,
+): boolean {
   const submitted = refs.pendingRequests.current.get(requestId);
   refs.pendingRequests.current.delete(requestId);
   if (submitted && !submitted.cleared && refs.draft.current.trim() === submitted.text) {
     refs.draft.current = "";
   }
   if (submitted && !submitted.cleared) {
-    setters.setDraft(current => current.trim() === submitted.text ? "" : current);
+    setters.setDraft((current) => (current.trim() === submitted.text ? "" : current));
     const references = new Set(submitted.referenceIds);
-    refs.referencedFiles.current = refs.referencedFiles.current.filter(file => !references.has(referenceIdentity(file)));
-    setters.setReferencedFiles(current => current.filter(file => !references.has(referenceIdentity(file))));
+    refs.referencedFiles.current = refs.referencedFiles.current.filter(
+      (file) => !references.has(referenceIdentity(file)),
+    );
+    setters.setReferencedFiles((current) =>
+      current.filter((file) => !references.has(referenceIdentity(file))),
+    );
     const images = new Set(submitted.imageIds);
-    refs.imageAttachments.current = refs.imageAttachments.current.filter(image => !images.has(image.id));
-    setters.setImageAttachments(current => current.filter(image => !images.has(image.id)));
+    refs.imageAttachments.current = refs.imageAttachments.current.filter(
+      (image) => !images.has(image.id),
+    );
+    setters.setImageAttachments((current) => current.filter((image) => !images.has(image.id)));
   }
   return submitted !== undefined;
 }
 
 /** Clear on dispatch; keep the payload until the host accepts or rejects it. */
-export function submitChatDraft(requestId: string, refs: ChatCommandRefs, setters: ChatCommandSetters): void {
+export function submitChatDraft(
+  requestId: string,
+  refs: ChatCommandRefs,
+  setters: ChatCommandSetters,
+): void {
   const submitted = refs.pendingRequests.current.get(requestId);
-  if (!submitted) {return;}
+  if (!submitted) {
+    return;
+  }
   clearSubmittedDraft(requestId, refs, setters);
   refs.pendingRequests.current.set(requestId, { ...submitted, cleared: true });
 }
 
-export function restoreRejectedDraft(requestId: string, refs: ChatCommandRefs, setters: ChatCommandSetters): void {
+export function restoreRejectedDraft(
+  requestId: string,
+  refs: ChatCommandRefs,
+  setters: ChatCommandSetters,
+): void {
   const submitted = refs.pendingRequests.current.get(requestId);
   refs.pendingRequests.current.delete(requestId);
-  if (!submitted?.cleared) {return;}
-  if (refs.draft.current || refs.imageAttachments.current.length || refs.referencedFiles.current.length) {
-    setters.setRecoveredDrafts(current => [...current, {
-      clientRequestId: requestId, text: submitted.text, queuedAt: Date.now(), reason: "queued",
-      imageAttachments: submitted.images, referencedFiles: submitted.references,
-    }]);
+  if (!submitted?.cleared) {
+    return;
+  }
+  if (
+    refs.draft.current ||
+    refs.imageAttachments.current.length ||
+    refs.referencedFiles.current.length
+  ) {
+    setters.setRecoveredDrafts((current) => [
+      ...current,
+      {
+        clientRequestId: requestId,
+        text: submitted.text,
+        queuedAt: Date.now(),
+        reason: "queued",
+        imageAttachments: submitted.images,
+        referencedFiles: submitted.references,
+      },
+    ]);
     return;
   }
   refs.draft.current = submitted.text;
@@ -249,16 +335,41 @@ function applyGenerationSnapshot(
     setters.setActiveGenerationId(terminal ? undefined : active.generationId);
     setters.setIsProcessing(!terminal);
     setters.setMessages((current) => {
-      const messages = current.filter(item => item.generationId !== active.generationId || item.role === "user" || (terminal && item.role === "error" && !active.error));
-      if (!messages.some(item => item.role === "user" && item.generationId === active.generationId)) {messages.push(active.userMessage);}
+      const messages = current.filter(
+        (item) =>
+          item.generationId !== active.generationId ||
+          item.role === "user" ||
+          (terminal && item.role === "error" && !active.error),
+      );
+      if (
+        !messages.some((item) => item.role === "user" && item.generationId === active.generationId)
+      ) {
+        messages.push(active.userMessage);
+      }
       if (active.content || active.timeline.length || active.toolCalls.length) {
-        messages.push({ id: `active-${active.generationId}`, role: "assistant", content: active.content,
-          timeline: active.timeline, toolCalls: active.toolCalls, generationId: active.generationId,
-          ...(terminal ? { generationStatus: active.status as "completed" | "cancelled" | "interrupted" | "error" } : {}),
+        messages.push({
+          id: `active-${active.generationId}`,
+          role: "assistant",
+          content: active.content,
+          timeline: active.timeline,
+          toolCalls: active.toolCalls,
+          generationId: active.generationId,
+          ...(terminal
+            ? {
+                generationStatus: active.status as
+                  "completed" | "cancelled" | "interrupted" | "error",
+              }
+            : {}),
         });
       }
       if (active.status === "error" && active.error) {
-        messages.push({ id: `error-${active.generationId}`, role: "error", content: active.error, generationId: active.generationId, generationStatus: "error" });
+        messages.push({
+          id: `error-${active.generationId}`,
+          role: "error",
+          content: active.error,
+          generationId: active.generationId,
+          generationStatus: "error",
+        });
       }
       return messages;
     });

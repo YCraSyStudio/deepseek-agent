@@ -6,7 +6,12 @@ import { t } from "@webview/i18n";
 
 type ApiSectionMessage =
   | { type: "connectionTestResult"; success: boolean; error?: string }
-  | { type: "apiKeyDeleteResult"; requestId: string; status: "success" | "error" | "cancelled"; error?: string };
+  | {
+      type: "apiKeyDeleteResult";
+      requestId: string;
+      status: "success" | "error" | "cancelled";
+      error?: string;
+    };
 
 type ApiConnectionStateOptions = Pick<
   ApiSectionProps,
@@ -29,23 +34,40 @@ export function useApiConnectionState({
   const deleteRequestIdRef = useRef<string | undefined>(undefined);
 
   const apiKeyStatus = useMemo(() => {
-    if (isTesting || isDeleting) {return "testing";}
-    if (apiKeyDraft) {return "configured";}
-    if (lastTestResult === "failed") {return "missing";}
+    if (isTesting || isDeleting) {
+      return "testing";
+    }
+    if (apiKeyDraft) {
+      return "configured";
+    }
+    if (lastTestResult === "failed") {
+      return "missing";
+    }
     return credential?.status ?? "loading";
   }, [apiKeyDraft, credential?.status, isDeleting, isTesting, lastTestResult]);
 
-  const apiKeyPlaceholder = credential?.status === "configured" && credential.keyPreview
-    ? credential.keyPreview
-    : "sk-...";
+  const apiKeyPlaceholder =
+    credential?.status === "configured" && credential.keyPreview ? credential.keyPreview : "sk-...";
 
   const apiKeyMessage = useMemo(() => {
-    if (isDeleting) {return t("settings.api.removingCredential");}
-    if (isTesting) {return t("settings.api.testing");}
-    if (deleteFailed) {return t("settings.api.removeCredentialFailed");}
-    if (lastTestResult === "success") {return t("settings.api.connection.ok");}
-    if (lastTestResult === "failed") {return t("settings.api.connection.failed");}
-    if (!apiKeyDraft && credential?.status === "missing") {return t("settings.api.notConfigured");}
+    if (isDeleting) {
+      return t("settings.api.removingCredential");
+    }
+    if (isTesting) {
+      return t("settings.api.testing");
+    }
+    if (deleteFailed) {
+      return t("settings.api.removeCredentialFailed");
+    }
+    if (lastTestResult === "success") {
+      return t("settings.api.connection.ok");
+    }
+    if (lastTestResult === "failed") {
+      return t("settings.api.connection.failed");
+    }
+    if (!apiKeyDraft && credential?.status === "missing") {
+      return t("settings.api.notConfigured");
+    }
     return null;
   }, [apiKeyDraft, credential?.status, deleteFailed, isDeleting, isTesting, lastTestResult]);
 
@@ -114,7 +136,10 @@ export function useApiConnectionState({
         setIsTesting(false);
         setLastTestResult(message.success ? "success" : "failed");
       }
-      if (message.type === "apiKeyDeleteResult" && message.requestId === deleteRequestIdRef.current) {
+      if (
+        message.type === "apiKeyDeleteResult" &&
+        message.requestId === deleteRequestIdRef.current
+      ) {
         deleteRequestIdRef.current = undefined;
         setIsDeleting(false);
         setDeleteFailed(message.status === "error");
@@ -129,7 +154,14 @@ export function useApiConnectionState({
     apiKeyMessage,
     apiKeyPlaceholder,
     apiKeyStatus,
-    apiKeyStatusClass: apiKeyStatus === "configured" ? "statusConfigured" : apiKeyStatus === "testing" ? "statusTesting" : apiKeyStatus === "missing" ? "statusMissing" : "",
+    apiKeyStatusClass:
+      apiKeyStatus === "configured"
+        ? "statusConfigured"
+        : apiKeyStatus === "testing"
+          ? "statusTesting"
+          : apiKeyStatus === "missing"
+            ? "statusMissing"
+            : "",
     handleApiKeyBlur,
     handleApiKeyChange,
     handleDeleteApiKey,

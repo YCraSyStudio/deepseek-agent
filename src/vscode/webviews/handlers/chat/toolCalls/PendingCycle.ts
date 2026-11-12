@@ -1,7 +1,10 @@
 import type { ToolCall } from "@/contracts";
 import type { PendingToolCallCycle, ToolCallAction } from "./Types";
 
-export function createPendingToolCallCycle(toolCalls: ToolCall[], round: number): PendingToolCallCycle {
+export function createPendingToolCallCycle(
+  toolCalls: ToolCall[],
+  round: number,
+): PendingToolCallCycle {
   const individualResolves = new Map<string, (action: ToolCallAction) => void>();
   const individualPromises = new Map<string, Promise<ToolCallAction>>();
   const resolved = new Set<string>();
@@ -29,7 +32,11 @@ export function createPendingToolCallCycle(toolCalls: ToolCall[], round: number)
   };
 }
 
-export function resolveToolCallAction(cycle: PendingToolCallCycle, toolCallId: string, action: ToolCallAction): "resolved" | "missing" | "duplicate" {
+export function resolveToolCallAction(
+  cycle: PendingToolCallCycle,
+  toolCallId: string,
+  action: ToolCallAction,
+): "resolved" | "missing" | "duplicate" {
   const individualResolve = cycle.individualResolves.get(toolCallId);
   if (!individualResolve) {
     return "missing";

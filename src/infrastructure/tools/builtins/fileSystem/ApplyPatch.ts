@@ -4,7 +4,13 @@ import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
 import { getErrorMessage } from "@/shared/utils/Errors";
 import { bufferLooksBinary, createStructuredResult, createUnifiedDiff } from "./StructuredResult";
-import { getPredominantLineEnding, hasTrailingLineEnding, joinTextLines, splitTextLines, type TextLine } from "./LineEndings";
+import {
+  getPredominantLineEnding,
+  hasTrailingLineEnding,
+  joinTextLines,
+  splitTextLines,
+  type TextLine,
+} from "./LineEndings";
 
 const MAX_MUTATION_FILE_BYTES = 16 * 1024 * 1024;
 
@@ -71,7 +77,10 @@ async function handleApplyPatchForced(args: Record<string, unknown>): Promise<st
   }
 }
 
-async function preparePatch(args: ApplyPatchArgs, options: { showDiffPreview: boolean }): Promise<PreparedPatch | string> {
+async function preparePatch(
+  args: ApplyPatchArgs,
+  options: { showDiffPreview: boolean },
+): Promise<PreparedPatch | string> {
   try {
     const workspace = getToolWorkspaceHost();
     const metadata = await workspace.stat(args.path);
@@ -96,8 +105,7 @@ async function preparePatch(args: ApplyPatchArgs, options: { showDiffPreview: bo
     if (options.showDiffPreview) {
       try {
         await workspace.prepareFileDiff?.(args.path, before, after);
-      } catch {
-      }
+      } catch {}
     }
 
     return { before, after, beforeHash, afterHash, diff };
@@ -192,10 +200,18 @@ function applyUnifiedDiff(before: string, diff: string, filePath: string): strin
   }
 
   output.push(...beforeLines.slice(beforeIndex));
-  return joinTextLines(output, { trailingLineEnding: hasTrailingLineEnding(before), fallback: fallbackEnding });
+  return joinTextLines(output, {
+    trailingLineEnding: hasTrailingLineEnding(before),
+    fallback: fallbackEnding,
+  });
 }
 
-function assertBeforeLine(beforeLines: readonly TextLine[], index: number, expected: string, filePath: string): void {
+function assertBeforeLine(
+  beforeLines: readonly TextLine[],
+  index: number,
+  expected: string,
+  filePath: string,
+): void {
   const actual = beforeLines[index]?.text;
   if (actual !== expected) {
     throw new Error(`patch context mismatch in ${filePath} at line ${index + 1}`);
@@ -222,15 +238,18 @@ export const applyPatchDefinition: ToolDefinition = {
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path. Use an absolute path only for explicitly requested external access.",
+          description:
+            "Workspace-relative path. Use an absolute path only for explicitly requested external access.",
         },
         diff: {
           type: "string",
-          description: "Unified diff hunks for this single file. Use normal newlines; the file's existing line-ending style is preserved.",
+          description:
+            "Unified diff hunks for this single file. Use normal newlines; the file's existing line-ending style is preserved.",
         },
         expectedBeforeHash: {
           type: "string",
-          description: "Optional sha256 from the latest read_file result. If provided, the patch fails when the file changed.",
+          description:
+            "Optional sha256 from the latest read_file result. If provided, the patch fails when the file changed.",
         },
       },
       required: ["path", "diff"],

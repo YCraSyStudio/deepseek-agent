@@ -18,7 +18,14 @@ export interface StoredToolCall {
   dangerLevel?: string;
   dangerConfirmed?: boolean;
   dangerConfirmation?: DangerConfirmationData;
-  status: "pending" | "awaiting_confirmation" | "running" | "completed" | "rejected" | "cancelled" | "error";
+  status:
+    | "pending"
+    | "awaiting_confirmation"
+    | "running"
+    | "completed"
+    | "rejected"
+    | "cancelled"
+    | "error";
 }
 
 export type AssistantTimelineEvent =
@@ -50,7 +57,13 @@ export interface ConversationMessage {
   createdAt?: number;
   generationId?: string;
   generationStatus?: "completed" | "cancelled" | "interrupted" | "error";
-  generationStopReason?: "user_cancelled" | "steered" | "workspace_changed" | "shutdown" | "deleted" | "history_transition";
+  generationStopReason?:
+    | "user_cancelled"
+    | "steered"
+    | "workspace_changed"
+    | "shutdown"
+    | "deleted"
+    | "history_transition";
   usage?: UsageAggregate;
   imageAttachments?: ImageAttachment[];
 }
@@ -120,7 +133,17 @@ export interface GenerationSnapshot {
   error?: string;
   generationId: string;
   conversationId: string;
-  status: "starting" | "compacting" | "streaming" | "awaiting_confirmation" | "running_tool" | "cancelling" | "cancelled" | "interrupted" | "completed" | "error";
+  status:
+    | "starting"
+    | "compacting"
+    | "streaming"
+    | "awaiting_confirmation"
+    | "running_tool"
+    | "cancelling"
+    | "cancelled"
+    | "interrupted"
+    | "completed"
+    | "error";
   userMessage: ConversationMessage;
   content: string;
   timeline: AssistantTimelineEvent[];
@@ -170,13 +193,16 @@ export interface AvailableToolInfo {
 export type PathCompletionItem = {
   label: string;
   path: string;
-} & ({ type: "file" | "directory" } | {
-  type: "instruction";
-  instructionId: string;
-  instructionScope: "global" | "workspace";
-  description: string;
-  workspaceName?: string;
-});
+} & (
+  | { type: "file" | "directory" }
+  | {
+      type: "instruction";
+      instructionId: string;
+      instructionScope: "global" | "workspace";
+      description: string;
+      workspaceName?: string;
+    }
+);
 
 export interface ReferencedFile {
   path: string;

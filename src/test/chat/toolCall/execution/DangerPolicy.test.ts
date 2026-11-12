@@ -25,7 +25,11 @@ suite("tool danger policy", () => {
       },
     });
 
-    const review = await reviewDangerousCommandFailClosed(toolCall("run_terminal_command"), confirmation, context);
+    const review = await reviewDangerousCommandFailClosed(
+      toolCall("run_terminal_command"),
+      confirmation,
+      context,
+    );
 
     assert.deepStrictEqual(review, {
       decision: "manual_confirmation",
@@ -39,9 +43,16 @@ suite("tool danger policy", () => {
   test("returns a compact revision result and keeps the explanation in the UI event", () => {
     const { context, publishedResults } = createExecutionContext();
 
-    const result = rejectCommandForRevision(toolCall("run_terminal_command"), "elevated action", context);
+    const result = rejectCommandForRevision(
+      toolCall("run_terminal_command"),
+      "elevated action",
+      context,
+    );
 
-    assert.deepStrictEqual(JSON.parse(result), { code: "security_review_revise", constraint: "elevated action" });
+    assert.deepStrictEqual(JSON.parse(result), {
+      code: "security_review_revise",
+      constraint: "elevated action",
+    });
     assert.match(publishedResults[0] ?? "", /^Security reviewer rejected this command\./);
     assert.ok(!(publishedResults[0] ?? "").includes('"code"'));
   });
@@ -52,12 +63,18 @@ suite("tool danger policy", () => {
     const call = toolCall("edit_file", { path: "src/app.ts", search: "a", replace: "b" });
     recordInitialToolCall(call, context);
 
-    const result = await executeForcedAfterTrust(call, context, { ...confirmation, beforeHash: "before-hash" });
+    const result = await executeForcedAfterTrust(call, context, {
+      ...confirmation,
+      beforeHash: "before-hash",
+    });
 
     assert.strictEqual(result, "applied");
     assert.deepStrictEqual(publishedResults, ["applied"]);
     assert.strictEqual(forcedCalls.length, 1);
-    assert.strictEqual(JSON.parse(forcedCalls[0]!.function.arguments).expectedBeforeHash, "before-hash");
+    assert.strictEqual(
+      JSON.parse(forcedCalls[0]!.function.arguments).expectedBeforeHash,
+      "before-hash",
+    );
     assert.strictEqual(call.function.arguments.includes("expectedBeforeHash"), false);
     assert.strictEqual(context.executedToolCalls.get(call.id)?.dangerConfirmed, true);
   });
@@ -73,7 +90,10 @@ suite("tool danger policy", () => {
 
   test("remembers a positive decision only when a key exists", () => {
     rememberPositiveDecision("conversation:test:workspace:test:decision");
-    assert.strictEqual(positiveDecisionCache.has("conversation:test:workspace:test:decision"), true);
+    assert.strictEqual(
+      positiveDecisionCache.has("conversation:test:workspace:test:decision"),
+      true,
+    );
 
     assert.doesNotThrow(() => rememberPositiveDecision(undefined));
   });

@@ -21,7 +21,10 @@ interface ChangeDiffRequest {
   generationId?: string;
 }
 
-interface ReviewScope { conversationId: string; generationId: string }
+interface ReviewScope {
+  conversationId: string;
+  generationId: string;
+}
 
 export class ChangeDiffViewer implements vscode.Disposable {
   private readonly documents = new Map<string, string>();
@@ -42,14 +45,27 @@ export class ChangeDiffViewer implements vscode.Disposable {
       }),
     ];
     if (revert) {
-      this.disposables.push(vscode.commands.registerCommand("deepseek-agent.revertReviewedTurn", async () => {
-        const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-        const uri = input instanceof vscode.TabInputTextDiff ? input.modified : vscode.window.activeTextEditor?.document.uri;
-        const scope = uri ? this.scopes.get(uri.toString()) : undefined;
-        if (!scope) {await vscode.window.showErrorMessage("This review has no recoverable turn snapshot"); return;}
-        try {await revert(scope);}
-        catch (error) {await vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));}
-      }));
+      this.disposables.push(
+        vscode.commands.registerCommand("deepseek-agent.revertReviewedTurn", async () => {
+          const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+          const uri =
+            input instanceof vscode.TabInputTextDiff
+              ? input.modified
+              : vscode.window.activeTextEditor?.document.uri;
+          const scope = uri ? this.scopes.get(uri.toString()) : undefined;
+          if (!scope) {
+            await vscode.window.showErrorMessage("This review has no recoverable turn snapshot");
+            return;
+          }
+          try {
+            await revert(scope);
+          } catch (error) {
+            await vscode.window.showErrorMessage(
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        }),
+      );
     }
   }
 
@@ -61,22 +77,38 @@ export class ChangeDiffViewer implements vscode.Disposable {
         throw new Error("The saved change is incomplete and cannot be compared.");
       }
 
-      await this.openSaved(request.path, documents, request.conversationId && request.generationId
-        ? { conversationId: request.conversationId, generationId: request.generationId } : undefined, request.preview);
+      await this.openSaved(
+        request.path,
+        documents,
+        request.conversationId && request.generationId
+          ? { conversationId: request.conversationId, generationId: request.generationId }
+          : undefined,
+        request.preview,
+      );
     } catch (err) {
       logError(`[ChangeDiffViewer] Error opening change for '${request.path}'`, err);
-      await vscode.window.showErrorMessage(err instanceof Error ? err.message : "Unable to open the saved change.");
+      await vscode.window.showErrorMessage(
+        err instanceof Error ? err.message : "Unable to open the saved change.",
+      );
     }
   }
 
-  public async openSaved(filePath: string, documents: DiffDocuments, scope?: ReviewScope, preview = true): Promise<void> {
+  public async openSaved(
+    filePath: string,
+    documents: DiffDocuments,
+    scope?: ReviewScope,
+    preview = true,
+  ): Promise<void> {
     const id = randomUUID();
     const filename = sanitizeFilename(path.posix.basename(filePath.replace(/\\/g, "/")));
     const beforeUri = vscode.Uri.from({ scheme: CHANGE_SCHEME, path: `/${id}/before/${filename}` });
     const afterUri = vscode.Uri.from({ scheme: CHANGE_SCHEME, path: `/${id}/after/${filename}` });
     this.retain(beforeUri, documents.before);
     this.retain(afterUri, documents.after);
-    if (scope) {this.scopes.set(beforeUri.toString(), scope); this.scopes.set(afterUri.toString(), scope);}
+    if (scope) {
+      this.scopes.set(beforeUri.toString(), scope);
+      this.scopes.set(afterUri.toString(), scope);
+    }
 
     await vscode.commands.executeCommand(
       "vscode.diff",

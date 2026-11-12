@@ -1,5 +1,10 @@
 import * as assert from "node:assert";
-import type { AppConfig, ChatCompletionRequest, ChatCompletionResponse, ChatMessage } from "@/contracts";
+import type {
+  AppConfig,
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ChatMessage,
+} from "@/contracts";
 import {
   parseCompletionReview,
   reviewCompletion,
@@ -9,9 +14,20 @@ import { createCompletionRecoveryMessage } from "@/application/chat/toolCall/Tur
 
 suite("DeepSeek completion reviewer", () => {
   test("accepts only the bounded completion decision schema", () => {
-    assert.strictEqual(parseCompletionReview('{"decision":"complete","reason":"The result was delivered."}'), "complete");
-    assert.strictEqual(parseCompletionReview('```json\n{"decision":"incomplete","reason":"Another action was announced."}\n```'), "incomplete");
-    assert.strictEqual(parseCompletionReview('{"decision":"complete","reason":"ok","extra":true}'), "unknown");
+    assert.strictEqual(
+      parseCompletionReview('{"decision":"complete","reason":"The result was delivered."}'),
+      "complete",
+    );
+    assert.strictEqual(
+      parseCompletionReview(
+        '```json\n{"decision":"incomplete","reason":"Another action was announced."}\n```',
+      ),
+      "incomplete",
+    );
+    assert.strictEqual(
+      parseCompletionReview('{"decision":"complete","reason":"ok","extra":true}'),
+      "unknown",
+    );
     assert.strictEqual(parseCompletionReview("not json"), "unknown");
   });
 
@@ -20,11 +36,17 @@ suite("DeepSeek completion reviewer", () => {
     const transcript: ChatMessage[] = [
       { role: "system", content: "agent" },
       { role: "user", content: "Crea la aplicación" },
-      { role: "assistant", content: null, tool_calls: [{
-        id: "call-1",
-        type: "function",
-        function: { name: "create_file", arguments: '{"path":"src/App.ts"}' },
-      }] },
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call-1",
+            type: "function",
+            function: { name: "create_file", arguments: '{"path":"src/App.ts"}' },
+          },
+        ],
+      },
       { role: "tool", name: "create_file", tool_call_id: "call-1", content: "created" },
     ];
     const decision = await reviewCompletion({
@@ -36,7 +58,10 @@ suite("DeepSeek completion reviewer", () => {
       prefixCache: { reusable: true },
       complete: async (_signal, request) => {
         captured = request;
-        return response({ decision: "incomplete", reason: "The candidate announces another required action." });
+        return response({
+          decision: "incomplete",
+          reason: "The candidate announces another required action.",
+        });
       },
     });
 
@@ -45,7 +70,10 @@ suite("DeepSeek completion reviewer", () => {
     assert.strictEqual(captured?.tool_choice, "none");
     assert.strictEqual(captured?.temperature, 0);
     assert.deepStrictEqual(captured?.messages.slice(0, transcript.length), transcript);
-    assert.deepStrictEqual(captured?.messages.at(-2), { role: "assistant", content: "现在我会运行测试。" });
+    assert.deepStrictEqual(captured?.messages.at(-2), {
+      role: "assistant",
+      content: "现在我会运行测试。",
+    });
     assert.strictEqual(captured?.messages.at(-1)?.role, "user");
     assert.match(String(captured?.messages.at(-1)?.content), /must come from the user/);
     assert.doesNotMatch(String(captured?.messages.at(-1)?.content), /currentUserRequest/);
@@ -57,11 +85,17 @@ suite("DeepSeek completion reviewer", () => {
       messages: [
         { role: "system", content: "agent" },
         { role: "user", content: "Crea la aplicación" },
-        { role: "assistant", content: null, tool_calls: [{
-          id: "call-1",
-          type: "function",
-          function: { name: "create_file", arguments: '{"path":"src/App.ts"}' },
-        }] },
+        {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id: "call-1",
+              type: "function",
+              function: { name: "create_file", arguments: '{"path":"src/App.ts"}' },
+            },
+          ],
+        },
         { role: "tool", name: "create_file", tool_call_id: "call-1", content: "created" },
         createCompletionRecoveryMessage(),
       ],
@@ -83,21 +117,22 @@ suite("DeepSeek completion reviewer", () => {
   test("stops replaying the transcript once the provider reports a prompt cache miss", async () => {
     const prefixCache: ConversationPrefixCache = { reusable: true };
     const requests: ChatCompletionRequest[] = [];
-    const review = async () => reviewCompletion({
-      messages: [
-        { role: "system", content: "agent" },
-        { role: "user", content: "Construye la aplicación completa ".repeat(400) },
-      ],
-      candidate: { role: "assistant", content: "done" },
-      toolCallsExecuted: 0,
-      recoveryAttempted: false,
-      providerConfig: config(),
-      prefixCache,
-      complete: async (_signal, request) => {
-        requests.push(request);
-        return responseWithCacheHit(requests.length === 1 ? 0 : 3_500);
-      },
-    });
+    const review = async () =>
+      reviewCompletion({
+        messages: [
+          { role: "system", content: "agent" },
+          { role: "user", content: "Construye la aplicación completa ".repeat(400) },
+        ],
+        candidate: { role: "assistant", content: "done" },
+        toolCallsExecuted: 0,
+        recoveryAttempted: false,
+        providerConfig: config(),
+        prefixCache,
+        complete: async (_signal, request) => {
+          requests.push(request);
+          return responseWithCacheHit(requests.length === 1 ? 0 : 3_500);
+        },
+      });
 
     await review();
     assert.strictEqual(prefixCache.reusable, false);

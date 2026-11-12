@@ -14,10 +14,17 @@ suite("tool execution stages", () => {
   for (const fallback of ["", "Fallback output"]) {
     test(`retains the current fallback result after an automatic read returns empty content: ${fallback || "no result"}`, async () => {
       const { executor } = createToolExecutorStub({ metadata: readOnlyMetadata, forcedResult: "" });
-      executor.execute = async call => createExecutionResult(call, { kind: "completed", content: fallback });
-      const { context, publishedResults } = createExecutionContext({ executor, permissionMode: "auto-approve" });
+      executor.execute = async (call) =>
+        createExecutionResult(call, { kind: "completed", content: fallback });
+      const { context, publishedResults } = createExecutionContext({
+        executor,
+        permissionMode: "auto-approve",
+      });
       const call = toolCall("read_file", { path: "empty.txt" });
-      assert.strictEqual(await executeToolCall(call, context), fallback || "Tool execution produced no result");
+      assert.strictEqual(
+        await executeToolCall(call, context),
+        fallback || "Tool execution produced no result",
+      );
       assert.strictEqual(context.executedToolCalls.get(call.id)?.status, "completed");
       assert.strictEqual(publishedResults.at(-1), fallback);
     });
@@ -48,7 +55,11 @@ suite("tool execution stages", () => {
       metadata: readOnlyMetadata,
       forcedResult: "file body",
     });
-    const { context } = createExecutionContext({ executor, permissionMode: "auto-approve", trusted: false });
+    const { context } = createExecutionContext({
+      executor,
+      permissionMode: "auto-approve",
+      trusted: false,
+    });
 
     const result = await executeToolCall(toolCall("read_file", { path: "README.md" }), context);
 
@@ -73,7 +84,10 @@ suite("tool execution stages", () => {
 
   test("runs a mutation with automatic permissions when it needs no confirmation", async () => {
     const { executor, executionCalls, forcedCalls } = createToolExecutorStub();
-    const { context, confirmations, reviews } = createExecutionContext({ executor, permissionMode: "auto-approve" });
+    const { context, confirmations, reviews } = createExecutionContext({
+      executor,
+      permissionMode: "auto-approve",
+    });
     const call = toolCall("run_terminal_command", { command: "npm test" });
 
     const result = await executeToolCall(call, context);

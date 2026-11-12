@@ -4,9 +4,15 @@ import { StreamEventEmitter } from "@/vscode/webviews/handlers/chat/streaming/St
 suite("StreamEventEmitter", () => {
   test("bounds retained reasoning while delivering full deltas and retaining final content", () => {
     const posted: Array<Record<string, unknown>> = [];
-    const emitter = new StreamEventEmitter({ publish: message => { posted.push(message); } });
+    const emitter = new StreamEventEmitter({
+      publish: (message) => {
+        posted.push(message);
+      },
+    });
     const reasoning = "a".repeat(512 * 1024);
-    emitter.reasoning(reasoning); emitter.reasoning("extra"); emitter.chunk("Answer");
+    emitter.reasoning(reasoning);
+    emitter.reasoning("extra");
+    emitter.chunk("Answer");
     const timeline = emitter.getTimeline();
     assert.strictEqual(timeline[0].type, "reasoning");
     if (timeline[0].type === "reasoning") {
@@ -19,7 +25,11 @@ suite("StreamEventEmitter", () => {
 
   test("dispatches provider chunks, ignores empty deltas and keeps timeline snapshots independent", () => {
     const posted: Array<Record<string, unknown>> = [];
-    const emitter = new StreamEventEmitter({ publish: message => { posted.push(message); } });
+    const emitter = new StreamEventEmitter({
+      publish: (message) => {
+        posted.push(message);
+      },
+    });
     emitter.showTyping();
     emitter.fromChunk({ type: "content" });
     emitter.fromChunk({ type: "reasoning" });
@@ -30,10 +40,15 @@ suite("StreamEventEmitter", () => {
     emitter.fromChunk({ type: "content", content: " world" });
     emitter.fromChunk({ type: "reasoning", reasoning_content: "Thought" });
     const ids = ["call"];
-    emitter.toolGroup(2, ids); ids.push("external");
+    emitter.toolGroup(2, ids);
+    ids.push("external");
     const snapshot = emitter.getTimeline();
-    if (snapshot[0].type === "content") { snapshot[0].content = "mutated"; }
-    if (snapshot[2].type === "tool-group") { snapshot[2].toolCallIds.push("mutated"); }
+    if (snapshot[0].type === "content") {
+      snapshot[0].content = "mutated";
+    }
+    if (snapshot[2].type === "tool-group") {
+      snapshot[2].toolCallIds.push("mutated");
+    }
     const fresh = emitter.getTimeline();
     assert.strictEqual(fresh[0].type === "content" && fresh[0].content, "Hello world");
     assert.deepStrictEqual(fresh[2].type === "tool-group" && fresh[2].toolCallIds, ["call"]);
@@ -96,10 +111,12 @@ suite("StreamEventEmitter", () => {
 
     emitter.done({ status: "interrupted", generationStopReason: "steered" });
 
-    assert.deepStrictEqual(posted, [{
-      type: "streamDone",
-      status: "interrupted",
-      generationStopReason: "steered",
-    }]);
+    assert.deepStrictEqual(posted, [
+      {
+        type: "streamDone",
+        status: "interrupted",
+        generationStopReason: "steered",
+      },
+    ]);
   });
 });

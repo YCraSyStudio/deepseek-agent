@@ -4,7 +4,11 @@
   gap: 8px;
   min-width: 0;
 
-  input[type="range"] { flex: 1; min-width: 0; width: 100%; }
+  input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
   .sliderValue {
     flex-shrink: 0;
     width: 40px;

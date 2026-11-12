@@ -24,8 +24,12 @@ type ActiveTooltip = {
 };
 
 function findTooltipAnchor(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof Element)) {return null;}
-  if (document.querySelector("select:open")) {return null;}
+  if (!(target instanceof Element)) {
+    return null;
+  }
+  if (document.querySelector("select:open")) {
+    return null;
+  }
   const anchor = target.closest<HTMLElement>("[data-tooltip]");
   return anchor && anchor.dataset.tooltip?.trim() ? anchor : null;
 }
@@ -36,7 +40,9 @@ function anchorRect(anchor: HTMLElement): TooltipAnchorRect {
 }
 
 function releaseAnchor(anchor: HTMLElement, describedBy: string | null): void {
-  if (anchor.getAttribute("aria-describedby") !== TOOLTIP_LAYER_ID) {return;}
+  if (anchor.getAttribute("aria-describedby") !== TOOLTIP_LAYER_ID) {
+    return;
+  }
   if (describedBy === null) {
     anchor.removeAttribute("aria-describedby");
   } else {
@@ -56,37 +62,51 @@ function TooltipLayer() {
     showTimerRef.current = undefined;
     pendingAnchorRef.current = null;
     const current = activeRef.current;
-    if (!current) {return;}
+    if (!current) {
+      return;
+    }
     activeRef.current = null;
     releaseAnchor(current.anchor, current.describedBy);
     setActive(null);
   }, []);
 
-  const showTooltip = useCallback((anchor: HTMLElement) => {
-    if (document.querySelector("select:open")) {closeTooltip(); return;}
-    window.clearTimeout(showTimerRef.current);
-    showTimerRef.current = undefined;
-    pendingAnchorRef.current = null;
-    const current = activeRef.current;
-    if (current?.anchor === anchor) {return;}
-    if (!anchor.isConnected) {return;}
-    const text = anchor.dataset.tooltip?.trim();
-    if (!text) {return;}
-    if (current) {
-      activeRef.current = null;
-      releaseAnchor(current.anchor, current.describedBy);
-    }
-    const next: ActiveTooltip = {
-      anchor,
-      text,
-      side: parseTooltipSide(anchor.dataset.tooltipPosition),
-      align: parseTooltipAlign(anchor.dataset.tooltipAlign),
-      describedBy: anchor.getAttribute("aria-describedby"),
-    };
-    anchor.setAttribute("aria-describedby", TOOLTIP_LAYER_ID);
-    activeRef.current = next;
-    setActive(next);
-  }, [closeTooltip]);
+  const showTooltip = useCallback(
+    (anchor: HTMLElement) => {
+      if (document.querySelector("select:open")) {
+        closeTooltip();
+        return;
+      }
+      window.clearTimeout(showTimerRef.current);
+      showTimerRef.current = undefined;
+      pendingAnchorRef.current = null;
+      const current = activeRef.current;
+      if (current?.anchor === anchor) {
+        return;
+      }
+      if (!anchor.isConnected) {
+        return;
+      }
+      const text = anchor.dataset.tooltip?.trim();
+      if (!text) {
+        return;
+      }
+      if (current) {
+        activeRef.current = null;
+        releaseAnchor(current.anchor, current.describedBy);
+      }
+      const next: ActiveTooltip = {
+        anchor,
+        text,
+        side: parseTooltipSide(anchor.dataset.tooltipPosition),
+        align: parseTooltipAlign(anchor.dataset.tooltipAlign),
+        describedBy: anchor.getAttribute("aria-describedby"),
+      };
+      anchor.setAttribute("aria-describedby", TOOLTIP_LAYER_ID);
+      activeRef.current = next;
+      setActive(next);
+    },
+    [closeTooltip],
+  );
 
   useEffect(() => {
     const schedule = (anchor: HTMLElement) => {
@@ -96,31 +116,50 @@ function TooltipLayer() {
     };
 
     const handlePointerOver = (event: PointerEvent) => {
-      if (event.pointerType === "touch") {return;}
+      if (event.pointerType === "touch") {
+        return;
+      }
       const anchor = findTooltipAnchor(event.target);
-      if (!anchor || anchor === pendingAnchorRef.current || anchor === activeRef.current?.anchor) {return;}
+      if (!anchor || anchor === pendingAnchorRef.current || anchor === activeRef.current?.anchor) {
+        return;
+      }
       schedule(anchor);
     };
 
     const handlePointerOut = (event: PointerEvent) => {
       const anchor = findTooltipAnchor(event.target);
-      if (!anchor || isWithin(anchor, event.relatedTarget)) {return;}
-      if (anchor === pendingAnchorRef.current || anchor === activeRef.current?.anchor) {closeTooltip();}
+      if (!anchor || isWithin(anchor, event.relatedTarget)) {
+        return;
+      }
+      if (anchor === pendingAnchorRef.current || anchor === activeRef.current?.anchor) {
+        closeTooltip();
+      }
     };
 
     const handleFocusIn = (event: FocusEvent) => {
       const anchor = findTooltipAnchor(event.target);
-      if (anchor?.matches(":focus-visible")) {showTooltip(anchor);}
+      if (anchor?.matches(":focus-visible")) {
+        showTooltip(anchor);
+      }
     };
 
     const handleFocusOut = (event: FocusEvent) => {
       const anchor = findTooltipAnchor(event.target);
-      if (!anchor || isWithin(anchor, event.relatedTarget)) {return;}
-      if (anchor === activeRef.current?.anchor) {closeTooltip();}
+      if (!anchor || isWithin(anchor, event.relatedTarget)) {
+        return;
+      }
+      if (anchor === activeRef.current?.anchor) {
+        closeTooltip();
+      }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" || (event.target instanceof Element && event.target.closest("select"))) {closeTooltip();}
+      if (
+        event.key === "Escape" ||
+        (event.target instanceof Element && event.target.closest("select"))
+      ) {
+        closeTooltip();
+      }
     };
 
     const handleWindowBlur = () => closeTooltip();
@@ -148,14 +187,18 @@ function TooltipLayer() {
 
   const activeAnchor = active?.anchor;
   useEffect(() => {
-    if (!activeAnchor) {return;}
+    if (!activeAnchor) {
+      return;
+    }
     const observer = new MutationObserver(() => {
       const text = activeAnchor.dataset.tooltip?.trim();
       if (!text) {
         closeTooltip();
         return;
       }
-      setActive((current) => current?.anchor === activeAnchor && current.text !== text ? { ...current, text } : current);
+      setActive((current) =>
+        current?.anchor === activeAnchor && current.text !== text ? { ...current, text } : current,
+      );
     });
     observer.observe(activeAnchor, { attributes: true, attributeFilter: ["data-tooltip"] });
     return () => observer.disconnect();
@@ -163,7 +206,9 @@ function TooltipLayer() {
 
   useLayoutEffect(() => {
     const node = tooltipRef.current;
-    if (!active || !node) {return;}
+    if (!active || !node) {
+      return;
+    }
 
     const place = () => {
       if (!active.anchor.isConnected) {
@@ -191,7 +236,9 @@ function TooltipLayer() {
     };
   }, [active, closeTooltip]);
 
-  if (!active) {return null;}
+  if (!active) {
+    return null;
+  }
 
   return createPortal(
     <div className="tooltipLayer" id={TOOLTIP_LAYER_ID} role="tooltip" ref={tooltipRef}>

@@ -20,9 +20,7 @@ interface ChatActivityBroadcasterDependencies {
 }
 
 export class ChatActivityBroadcaster {
-  constructor(
-    private readonly dependencies: ChatActivityBroadcasterDependencies,
-  ) {}
+  constructor(private readonly dependencies: ChatActivityBroadcasterDependencies) {}
 
   post(message: Record<string, unknown>): void {
     void this.dependencies.getWebviewView()?.webview.postMessage(message);
@@ -95,13 +93,8 @@ export class ChatActivityBroadcaster {
   }
 
   replaySelectedGeneration(): void {
-    const {
-      coordinator,
-      getSelectedConversationId,
-      getWebviewView,
-      lastReplayedGeneration,
-      runs,
-    } = this.dependencies;
+    const { coordinator, getSelectedConversationId, getWebviewView, lastReplayedGeneration, runs } =
+      this.dependencies;
     const selectedConversationId = getSelectedConversationId();
     const active = selectedConversationId
       ? coordinator.getActiveForConversation(selectedConversationId)

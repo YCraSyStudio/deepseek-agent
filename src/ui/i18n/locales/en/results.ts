@@ -32,6 +32,6 @@ export const results = {
     retainedOutput: "View retained output",
     commandCompletedWithoutOutput: "Command completed without output.",
     truncatedDiffNotice: "Diff preview is truncated. The file operation still completed.",
-    onlyTheFirstSizeIsShown: "Only the first {size} is shown."
-  }
+    onlyTheFirstSizeIsShown: "Only the first {size} is shown.",
+  },
 } satisfies TranslationCatalog;

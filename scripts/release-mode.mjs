@@ -7,7 +7,11 @@ export function resolveReleaseMode({ eventName, ref, headCommitMessage, version 
   if (tagRef) {
     return { release: true, tag: tagRef, reason: "v-tag" };
   }
-  if (eventName === "push" && ref === RELEASE_BRANCH_REF && RELEASE_SUBJECT.test(commitSubject(headCommitMessage))) {
+  if (
+    eventName === "push" &&
+    ref === RELEASE_BRANCH_REF &&
+    RELEASE_SUBJECT.test(commitSubject(headCommitMessage))
+  ) {
     return { release: true, tag: `v${releaseVersion(version)}`, reason: "release-commit" };
   }
   return { release: false, tag: "", reason: "none" };

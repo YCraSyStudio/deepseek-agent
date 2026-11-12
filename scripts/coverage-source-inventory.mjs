@@ -10,14 +10,14 @@ export function hasExecutableCode(fileName, source) {
     target: "es2022",
     jsx: "automatic",
     legalComments: "none",
-  }).code.replace(/^["']use strict["'];?\s*/, "").trim();
+  })
+    .code.replace(/^["']use strict["'];?\s*/, "")
+    .trim();
   if (!output || /^export\s*\{\s*\}\s*;?$/.test(output)) {
     return false;
   }
   // A named re-export list only re-points existing bindings, so bundlers emit no statement that V8 can count.
-  const remaining = output
-    .replace(/export\s*\{[^}]*\}\s*from\s*["'][^"']*["'];?/g, "")
-    .trim();
+  const remaining = output.replace(/export\s*\{[^}]*\}\s*from\s*["'][^"']*["'];?/g, "").trim();
   return remaining !== "";
 }
 
@@ -27,10 +27,20 @@ export function collectCoverageSources(root = process.cwd()) {
   function visit(current) {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       const file = join(current, entry.name);
-      if (entry.isDirectory()) { if (file !== join(directory, "test")) { visit(file); } continue; }
-      if (!/\.tsx?$/.test(entry.name) || entry.name.endsWith(".d.ts")) { continue; }
+      if (entry.isDirectory()) {
+        if (file !== join(directory, "test")) {
+          visit(file);
+        }
+        continue;
+      }
+      if (!/\.tsx?$/.test(entry.name) || entry.name.endsWith(".d.ts")) {
+        continue;
+      }
       const source = readFileSync(file, "utf8");
-      inventory.push({ path: relative(root, file).replaceAll("\\", "/"), executable: hasExecutableCode(file, source) });
+      inventory.push({
+        path: relative(root, file).replaceAll("\\", "/"),
+        executable: hasExecutableCode(file, source),
+      });
     }
   }
   visit(directory);

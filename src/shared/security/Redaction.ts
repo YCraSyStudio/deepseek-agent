@@ -10,7 +10,10 @@ const SENSITIVE_PATTERNS: RegExp[] = [
   /(^|[\s'"(])\/(?:Users|home|tmp|var|private|workspace)\/[^\s'"<>)]*/g,
 ];
 
-export function redactSensitiveText(value: unknown, sensitiveValues: readonly string[] = []): string {
+export function redactSensitiveText(
+  value: unknown,
+  sensitiveValues: readonly string[] = [],
+): string {
   let redacted = value instanceof Error ? value.message : String(value);
   for (const sensitiveValue of sensitiveValues) {
     if (sensitiveValue) {
@@ -18,7 +21,10 @@ export function redactSensitiveText(value: unknown, sensitiveValues: readonly st
     }
   }
   for (const pattern of SENSITIVE_PATTERNS) {
-    redacted = redacted.replace(pattern, (_match, prefix?: string) => `${prefix && !/^https?:/i.test(prefix) ? prefix : ""}[REDACTED]`);
+    redacted = redacted.replace(
+      pattern,
+      (_match, prefix?: string) => `${prefix && !/^https?:/i.test(prefix) ? prefix : ""}[REDACTED]`,
+    );
   }
   return redacted;
 }
@@ -27,7 +33,10 @@ export function redactSensitiveText(value: unknown, sensitiveValues: readonly st
 export function redactCredentials(value: string): string {
   let redacted = value;
   for (const pattern of SENSITIVE_PATTERNS.slice(0, 6)) {
-    redacted = redacted.replace(pattern, (_match, prefix?: string) => `${prefix && !/^https?:/i.test(prefix) ? prefix : ""}[REDACTED]`);
+    redacted = redacted.replace(
+      pattern,
+      (_match, prefix?: string) => `${prefix && !/^https?:/i.test(prefix) ? prefix : ""}[REDACTED]`,
+    );
   }
   return redacted.replace(/\b(password\s*[:=]\s*)[^\s,;}"']+/gi, "$1[REDACTED]");
 }

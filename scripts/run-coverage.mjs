@@ -21,18 +21,27 @@ if (process.argv.includes("--integration")) {
   };
   const builds = [
     ["esbuild.js", "--production"],
-    [fileURLToPath(new URL("../../bin/vite.js", import.meta.resolve("vite"))), "build", "--config", "src/ui/vite.config.mts"],
+    [
+      fileURLToPath(new URL("../../bin/vite.js", import.meta.resolve("vite"))),
+      "build",
+      "--config",
+      "src/ui/vite.config.mts",
+    ],
     ["scripts/build-integration-tests.mjs"],
   ];
   let buildFailure = 0;
   for (const args of builds) {
     buildFailure = await run(args, env);
-    if (buildFailure) { break; }
+    if (buildFailure) {
+      break;
+    }
   }
   if (buildFailure) {
     tests ||= buildFailure;
   } else {
-    const integrationArgs = process.argv.slice(2).filter((argument) => !["--integration", "--check"].includes(argument));
+    const integrationArgs = process.argv
+      .slice(2)
+      .filter((argument) => !["--integration", "--check"].includes(argument));
     const cli = fileURLToPath(new URL("./bin.mjs", import.meta.resolve("@vscode/test-cli")));
     const integration = await run([cli, ...integrationArgs], env);
     tests ||= integration;
@@ -48,15 +57,27 @@ for (const name of readdirSync(rawDirectory).filter((name) => name.endsWith(".js
   const file = resolve(rawDirectory, name);
   const report = JSON.parse(readFileSync(file, "utf8"));
   for (const [script, cached] of Object.entries(report["source-map-cache"] ?? {})) {
-    if (cached.data?.sources) { normalizeSourceMap(cached.data, fileURLToPath(script)); }
+    if (cached.data?.sources) {
+      normalizeSourceMap(cached.data, fileURLToPath(script));
+    }
   }
   for (const script of report.result ?? []) {
-    if (!script.url.startsWith("file:")) { continue; }
+    if (!script.url.startsWith("file:")) {
+      continue;
+    }
     const scriptPath = fileURLToPath(script.url);
-    if (![resolve(".tmp/unit-tests"), resolve(".tmp/integration-tests"), resolve("dist")]
-      .some((directory) => scriptPath.startsWith(directory + "/") || scriptPath.startsWith(directory + "\\"))) { continue; }
+    if (
+      ![resolve(".tmp/unit-tests"), resolve(".tmp/integration-tests"), resolve("dist")].some(
+        (directory) =>
+          scriptPath.startsWith(directory + "/") || scriptPath.startsWith(directory + "\\"),
+      )
+    ) {
+      continue;
+    }
     const mapPath = `${scriptPath}.map`;
-    if (normalizedMaps.has(mapPath) || !existsSync(mapPath)) { continue; }
+    if (normalizedMaps.has(mapPath) || !existsSync(mapPath)) {
+      continue;
+    }
     const map = JSON.parse(readFileSync(mapPath, "utf8"));
     normalizeSourceMap(map, scriptPath);
     writeFileSync(mapPath, JSON.stringify(map));
@@ -66,23 +87,48 @@ for (const name of readdirSync(rawDirectory).filter((name) => name.endsWith(".js
 }
 
 function normalizeSourceMap(map, scriptPath) {
-  map.sources = map.sources.map((source) => source.startsWith("file:")
-    ? fileURLToPath(source)
-    : resolve(dirname(scriptPath), map.sourceRoot || "", source));
+  map.sources = map.sources.map((source) =>
+    source.startsWith("file:")
+      ? fileURLToPath(source)
+      : resolve(dirname(scriptPath), map.sourceRoot || "", source),
+  );
   map.sourceRoot = "";
 }
 
 const inventory = collectCoverageSources();
 const configuration = JSON.parse(readFileSync(resolve(".c8rc.json"), "utf8"));
-configuration.exclude = [...configuration.exclude, ...inventory.filter((source) => !source.executable).map((source) => source.path)];
+configuration.exclude = [
+  ...configuration.exclude,
+  ...inventory.filter((source) => !source.executable).map((source) => source.path),
+];
 const reportConfiguration = resolve(rawDirectory, "report-config.json");
 writeFileSync(reportConfiguration, JSON.stringify(configuration));
 
 const check = process.argv.includes("--check");
 const c8 = fileURLToPath(import.meta.resolve("c8/bin/c8.js"));
-const coverage = await run([c8, "report", "--config", reportConfiguration, ...(check ? [
-  "--check-coverage", "--per-file", "--lines", "100", "--functions", "100", "--branches", "100", "--statements", "100",
-] : [])], process.env);
+const coverage = await run(
+  [
+    c8,
+    "report",
+    "--config",
+    reportConfiguration,
+    ...(check
+      ? [
+          "--check-coverage",
+          "--per-file",
+          "--lines",
+          "100",
+          "--functions",
+          "100",
+          "--branches",
+          "100",
+          "--statements",
+          "100",
+        ]
+      : []),
+  ],
+  process.env,
+);
 mkdirSync(resolve("coverage"), { recursive: true });
 writeFileSync(resolve("coverage/source-inventory.json"), JSON.stringify(inventory, null, 2));
 let captureFailure = 0;
@@ -90,12 +136,18 @@ const mappedReport = JSON.parse(readFileSync(resolve("coverage/coverage-final.js
 const mappingIssues = findLiteralMappedFunctions(mappedReport);
 writeFileSync(resolve("coverage/mapping-validation.json"), JSON.stringify(mappingIssues, null, 2));
 if (mappingIssues.length) {
-  console.error("Invalid source-map attribution: functions mapped into template literal text", mappingIssues);
+  console.error(
+    "Invalid source-map attribution: functions mapped into template literal text",
+    mappingIssues,
+  );
   captureFailure = 1;
 }
 if (process.argv.includes("--integration") && !tests && !coverage) {
   const summary = JSON.parse(readFileSync(resolve("coverage/coverage-summary.json"), "utf8"));
-  for (const file of ["src/vscode/tools/VsCodeToolWorkspace.ts", "src/vscode/webviews/handlers/chat/generation/GenerationExecutor.ts"]) {
+  for (const file of [
+    "src/vscode/tools/VsCodeToolWorkspace.ts",
+    "src/vscode/webviews/handlers/chat/generation/GenerationExecutor.ts",
+  ]) {
     const measured = summary[resolve(file)];
     if (!measured || measured.functions.total === 0 || measured.functions.covered === 0) {
       console.error(`Missing real extension-host function coverage for ${file}`);
@@ -109,6 +161,6 @@ function run(args, env) {
   return new Promise((resolveRun, reject) => {
     const child = spawn(process.execPath, args, { env, stdio: "inherit" });
     child.once("error", reject);
-    child.once("exit", (code, signal) => resolveRun(signal ? 1 : code ?? 1));
+    child.once("exit", (code, signal) => resolveRun(signal ? 1 : (code ?? 1)));
   });
 }

@@ -27,11 +27,20 @@ export function compactToolCycleContext(
   force = false,
 ): ToolCycleCompactionResult | undefined {
   const before = budgetManager.assessRequest(messages, tools);
-  if (!force && before.status === "within_budget") {return undefined;}
+  if (!force && before.status === "within_budget") {
+    return undefined;
+  }
 
-  const compacted = createToolContinuityMessages(messages, trustedUserRequest, executedToolCalls, nextRound);
+  const compacted = createToolContinuityMessages(
+    messages,
+    trustedUserRequest,
+    executedToolCalls,
+    nextRound,
+  );
   const after = budgetManager.assertRequestFitsContext(compacted, tools);
-  if (after.estimatedTokens >= before.estimatedTokens) {return undefined;}
+  if (after.estimatedTokens >= before.estimatedTokens) {
+    return undefined;
+  }
   return {
     messages: compacted,
     estimatedTokensBefore: before.estimatedTokens,

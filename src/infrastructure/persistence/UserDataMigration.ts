@@ -1,7 +1,22 @@
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { getGenerationCheckpointPath, getHistoryDirectory, getLegacyGenerationCheckpointDirectory } from "./UserDataPaths";
-import { link, copyFile, mkdir, readFile, lstat, readdir, realpath, rm, rmdir, unlink } from "node:fs/promises";
+import {
+  getGenerationCheckpointPath,
+  getHistoryDirectory,
+  getLegacyGenerationCheckpointDirectory,
+} from "./UserDataPaths";
+import {
+  link,
+  copyFile,
+  mkdir,
+  readFile,
+  lstat,
+  readdir,
+  realpath,
+  rm,
+  rmdir,
+  unlink,
+} from "node:fs/promises";
 import * as path from "node:path";
 import { withFileLock } from "./JsonFileStorage";
 import { mergeLegacyData } from "./MergeUserData";
@@ -9,54 +24,96 @@ import { mergeLegacyData } from "./MergeUserData";
 /** Remove the obsolete runtime directories left by older extension versions. */
 export async function removeLegacyRuntimes(directory: string): Promise<void> {
   const root = await lstat(directory).catch((error: unknown) => {
-    if (isMissing(error)) {return undefined;}
+    if (isMissing(error)) {
+      return undefined;
+    }
     throw error;
   });
-  if (!root) {return;}
-  if (!root.isDirectory() || root.isSymbolicLink()) {throw new Error("Refusing to clean runtimes through a redirected data directory");}
+  if (!root) {
+    return;
+  }
+  if (!root.isDirectory() || root.isSymbolicLink()) {
+    throw new Error("Refusing to clean runtimes through a redirected data directory");
+  }
   for (const name of ["runtimes", "runtime-state"]) {
     // rm removes symlinks themselves without following their targets.
-    await rm(path.join(directory, name), { recursive: true, force: true, maxRetries: 2, retryDelay: 100 });
+    await rm(path.join(directory, name), {
+      recursive: true,
+      force: true,
+      maxRetries: 2,
+      retryDelay: 100,
+    });
   }
 }
 
 /** Run only while the old checkpoint folder exists; preserve destination conflicts. */
 export async function migrateGenerationCheckpoints(): Promise<void> {
   const legacy = getLegacyGenerationCheckpointDirectory();
-  if (!await entryExists(legacy)) {return;}
+  if (!(await entryExists(legacy))) {
+    return;
+  }
   const root = await lstat(legacy);
-  if (!root.isDirectory() || root.isSymbolicLink()) {throw new Error("Refusing to migrate redirected generation checkpoints");}
-  const history = await lstat(getHistoryDirectory()).catch((error: unknown) => {if (isMissing(error)) {return undefined;} throw error;});
-  if (history?.isSymbolicLink()) {throw new Error("Refusing redirected checkpoint history");}
+  if (!root.isDirectory() || root.isSymbolicLink()) {
+    throw new Error("Refusing to migrate redirected generation checkpoints");
+  }
+  const history = await lstat(getHistoryDirectory()).catch((error: unknown) => {
+    if (isMissing(error)) {
+      return undefined;
+    }
+    throw error;
+  });
+  if (history?.isSymbolicLink()) {
+    throw new Error("Refusing redirected checkpoint history");
+  }
   await withFileLock(path.join(getHistoryDirectory(), ".checkpoint-migration"), async () => {
     const entries = await readdir(legacy, { withFileTypes: true }).catch((error: unknown) => {
-      if (isMissing(error)) {return [];}
+      if (isMissing(error)) {
+        return [];
+      }
       throw error;
     });
     for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith(".json")) {continue;}
+      if (!entry.isFile() || !entry.name.endsWith(".json")) {
+        continue;
+      }
       const source = path.join(legacy, entry.name);
       const stat = await lstat(source);
-      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024) {throw new Error("Invalid legacy checkpoint file");}
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024) {
+        throw new Error("Invalid legacy checkpoint file");
+      }
       const content = await readFile(source, "utf8");
       const checkpoint: unknown = JSON.parse(content);
-      if (!checkpoint || typeof checkpoint !== "object" || !("conversationId" in checkpoint) ||
+      if (
+        !checkpoint ||
+        typeof checkpoint !== "object" ||
+        !("conversationId" in checkpoint) ||
         typeof checkpoint.conversationId !== "string" ||
-        entry.name !== `${checkpoint.conversationId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 512)}.json`) {
+        entry.name !==
+          `${checkpoint.conversationId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 512)}.json`
+      ) {
         throw new Error("Invalid legacy checkpoint identity; original file was preserved");
       }
       const target = getGenerationCheckpointPath(checkpoint.conversationId);
       await mkdir(path.dirname(target), { recursive: true });
       const parent = await lstat(path.dirname(target));
-      if (!parent.isDirectory() || parent.isSymbolicLink()) {throw new Error("Refusing redirected checkpoint destination");}
+      if (!parent.isDirectory() || parent.isSymbolicLink()) {
+        throw new Error("Refusing redirected checkpoint destination");
+      }
       if (await entryExists(target)) {
         const destination = await lstat(target);
-        if (!destination.isFile() || destination.isSymbolicLink() || destination.size > 16 * 1024 * 1024 ||
-          JSON.stringify(JSON.parse(await readFile(target, "utf8"))) !== JSON.stringify(checkpoint)) {
+        if (
+          !destination.isFile() ||
+          destination.isSymbolicLink() ||
+          destination.size > 16 * 1024 * 1024 ||
+          JSON.stringify(JSON.parse(await readFile(target, "utf8"))) !== JSON.stringify(checkpoint)
+        ) {
           throw new Error("Checkpoint migration conflict; both copies were preserved");
         }
       } else {
-        const temporary = path.join(path.dirname(target), `.checkpoint-migration-${randomUUID()}.tmp`);
+        const temporary = path.join(
+          path.dirname(target),
+          `.checkpoint-migration-${randomUUID()}.tmp`,
+        );
         try {
           await copyFile(source, temporary, constants.COPYFILE_EXCL);
           // Publish the completed copy atomically without replacing a newer file.
@@ -68,38 +125,63 @@ export async function migrateGenerationCheckpoints(): Promise<void> {
       await unlink(source);
     }
     await rmdir(legacy).catch((error: unknown) => {
-      if (isMissing(error) || (error instanceof Error && "code" in error && ["ENOTEMPTY", "EEXIST"].includes(String(error.code)))) {return;}
+      if (
+        isMissing(error) ||
+        (error instanceof Error &&
+          "code" in error &&
+          ["ENOTEMPTY", "EEXIST"].includes(String(error.code)))
+      ) {
+        return;
+      }
       throw error;
     });
   });
 }
 
 /** Merge legacy data on upgrade, preserving differing originals before removing the old root. */
-export async function migrateUserDataDirectory(legacyDirectory: string, directory: string): Promise<void> {
+export async function migrateUserDataDirectory(
+  legacyDirectory: string,
+  directory: string,
+): Promise<void> {
   const legacy = path.resolve(legacyDirectory);
   const destination = path.resolve(directory);
-  if (legacy === destination) {return;}
-  if (destination.startsWith(`${legacy}${path.sep}`) || legacy.startsWith(`${destination}${path.sep}`)) {
+  if (legacy === destination) {
+    return;
+  }
+  if (
+    destination.startsWith(`${legacy}${path.sep}`) ||
+    legacy.startsWith(`${destination}${path.sep}`)
+  ) {
     throw new Error("Agent data directories must not be nested");
   }
-  if (!await entryExists(legacy)) {return;}
+  if (!(await entryExists(legacy))) {
+    return;
+  }
 
   await withFileLock(path.join(destination, ".legacy-migration"), async () => {
     const source = await lstat(legacy).catch((error: unknown) => {
-      if (isMissing(error)) {return undefined;}
+      if (isMissing(error)) {
+        return undefined;
+      }
       throw error;
     });
-    if (!source) {return;}
+    if (!source) {
+      return;
+    }
     if (source.isSymbolicLink()) {
-      if (await realpath(legacy) === await realpath(destination)) {
+      if ((await realpath(legacy)) === (await realpath(destination))) {
         await unlink(legacy);
         return;
       }
       throw new Error("Legacy agent data points to another directory; migration was not performed");
     }
-    if (!source.isDirectory()) {throw new Error("Legacy agent data is not a directory");}
+    if (!source.isDirectory()) {
+      throw new Error("Legacy agent data is not a directory");
+    }
     const target = await lstat(destination);
-    if (!target.isDirectory() || target.isSymbolicLink()) {throw new Error("Agent data destination must be a directory");}
+    if (!target.isDirectory() || target.isSymbolicLink()) {
+      throw new Error("Agent data destination must be a directory");
+    }
 
     await withFileLock(path.join(legacy, "settings.json"), () =>
       withFileLock(path.join(destination, "settings.json"), async () => {
@@ -111,16 +193,31 @@ export async function migrateUserDataDirectory(legacyDirectory: string, director
 }
 
 /** Delete temporary originals only after the extension has loaded the migrated storage. */
-export async function completeUserDataMigration(legacyDirectory: string, directory: string): Promise<void> {
+export async function completeUserDataMigration(
+  legacyDirectory: string,
+  directory: string,
+): Promise<void> {
   const backup = path.join(directory, "migration-backups");
-  if (!await entryExists(backup)) {return;}
+  if (!(await entryExists(backup))) {
+    return;
+  }
   await withFileLock(path.join(directory, ".legacy-migration"), () =>
     withFileLock(path.join(directory, "settings.json"), async () => {
-      if (await entryExists(legacyDirectory) || await entryExists(path.join(directory, "generation-checkpoints")) ||
-        await entryExists(path.join(directory, "settings.json.transaction.json"))) {return;}
+      if (
+        (await entryExists(legacyDirectory)) ||
+        (await entryExists(path.join(directory, "generation-checkpoints"))) ||
+        (await entryExists(path.join(directory, "settings.json.transaction.json")))
+      ) {
+        return;
+      }
       const root = await lstat(directory);
       const originals = await lstat(backup);
-      if (!root.isDirectory() || root.isSymbolicLink() || !originals.isDirectory() || originals.isSymbolicLink()) {
+      if (
+        !root.isDirectory() ||
+        root.isSymbolicLink() ||
+        !originals.isDirectory() ||
+        originals.isSymbolicLink()
+      ) {
         throw new Error("Refusing redirected migration cleanup");
       }
       await rm(backup, { recursive: true, force: true });
@@ -129,8 +226,15 @@ export async function completeUserDataMigration(legacyDirectory: string, directo
 }
 
 async function entryExists(file: string): Promise<boolean> {
-  try {await lstat(file); return true;}
-  catch (error) {if (isMissing(error)) {return false;} throw error;}
+  try {
+    await lstat(file);
+    return true;
+  } catch (error) {
+    if (isMissing(error)) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 function isMissing(error: unknown): boolean {

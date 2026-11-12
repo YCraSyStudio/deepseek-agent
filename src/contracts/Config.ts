@@ -9,18 +9,29 @@ export type ReasoningEffort = (typeof REASONING_EFFORT_VALUES)[number];
 export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "high";
 
 export function isReasoningEffort(value: unknown): value is ReasoningEffort {
-  return typeof value === "string" && (REASONING_EFFORT_VALUES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" && (REASONING_EFFORT_VALUES as readonly string[]).includes(value)
+  );
 }
 
-export function normalizeReasoningEffort(value: unknown, fallback: ReasoningEffort = DEFAULT_REASONING_EFFORT): ReasoningEffort {
+export function normalizeReasoningEffort(
+  value: unknown,
+  fallback: ReasoningEffort = DEFAULT_REASONING_EFFORT,
+): ReasoningEffort {
   return isReasoningEffort(value) ? value : fallback;
 }
 
 /** Maps the picker vocabulary (including legacy aliases) to a supported effort level. */
 export function mapReasoningEffort(reasoning: string | undefined): ReasoningEffort | undefined {
-  if (!reasoning || reasoning === "off") {return undefined;}
-  if (reasoning === "low" || reasoning === "minimal") {return "low";}
-  if (reasoning === "medium" || reasoning === "xhigh") {return "high";}
+  if (!reasoning || reasoning === "off") {
+    return undefined;
+  }
+  if (reasoning === "low" || reasoning === "minimal") {
+    return "low";
+  }
+  if (reasoning === "medium" || reasoning === "xhigh") {
+    return "high";
+  }
   return reasoning === "max" ? "max" : "high";
 }
 

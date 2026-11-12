@@ -1,11 +1,5 @@
 import { orderPathCompletions } from "@webview/components/chatView/fileSelector/CompletionGroups";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type MutableRefObject,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import type { HandlerToWebviewMessage, PathCompletionItem } from "@/contracts";
 import { getPathToken, type PathToken } from "@webview/components/chatView";
 import type { VsCodeApi } from "@webview/VsCodeApi";
@@ -47,9 +41,10 @@ export function usePathCompletions({
         return;
       }
       const uniqueItems = message.items.filter(
-        (item, index, items) => items.findIndex(
-          (candidate) => candidate.path === item.path && candidate.type === item.type,
-        ) === index,
+        (item, index, items) =>
+          items.findIndex(
+            (candidate) => candidate.path === item.path && candidate.type === item.type,
+          ) === index,
       );
       setCompletions(orderPathCompletions(uniqueItems));
       setActiveIndex(0);
@@ -60,11 +55,14 @@ export function usePathCompletions({
     return () => window.removeEventListener("message", handleMessage);
   }, [workspaceRevision]);
 
-  useEffect(() => () => {
-    if (completionTimerRef.current) {
-      clearTimeout(completionTimerRef.current);
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (completionTimerRef.current) {
+        clearTimeout(completionTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const requestPathCompletions = useCallback(
     (value: string, cursor: number, immediate = false) => {
@@ -113,7 +111,10 @@ export function usePathCompletions({
   );
 
   const clearCompletions = useCallback(() => {
-    if (completionTimerRef.current) {clearTimeout(completionTimerRef.current);completionTimerRef.current = null;}
+    if (completionTimerRef.current) {
+      clearTimeout(completionTimerRef.current);
+      completionTimerRef.current = null;
+    }
     activeRequestIdRef.current = ++requestIdRef.current;
     lastCompletionQueryRef.current = null;
     setHasCompletionResponse(false);
@@ -121,7 +122,9 @@ export function usePathCompletions({
     setPathToken(null);
   }, []);
 
-  useEffect(() => {clearCompletions();}, [clearCompletions, conversationId, workspaceRevision]);
+  useEffect(() => {
+    clearCompletions();
+  }, [clearCompletions, conversationId, workspaceRevision]);
 
   const insertCompletion = useCallback(
     (completion: PathCompletionItem) => {
@@ -133,12 +136,7 @@ export function usePathCompletions({
       const nextInput = `${input.slice(0, pathToken.start)}${inserted}${input.slice(pathToken.end)}`;
       const cursor = pathToken.start + inserted.length;
       setInput(nextInput);
-      if (completion.type === "directory") {
-        lastCompletionQueryRef.current = null;
-        requestPathCompletions(nextInput, cursor, true);
-      } else {
-        clearCompletions();
-      }
+      clearCompletions();
 
       requestAnimationFrame(() => {
         if (!textarea) {
@@ -149,7 +147,7 @@ export function usePathCompletions({
         textarea.focus();
       });
     },
-    [clearCompletions, input, pathToken, requestPathCompletions, setInput, textareaRef],
+    [clearCompletions, input, pathToken, setInput, textareaRef],
   );
 
   return {

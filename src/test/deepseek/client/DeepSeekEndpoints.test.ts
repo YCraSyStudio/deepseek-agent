@@ -33,14 +33,14 @@ suite("DeepSeek URLs", () => {
         baseUrl: "https://example.test/v1",
       });
 
-      assert.deepStrictEqual(calls.map((call) => call.url), [
-        "https://example.test/v1/chat/completions",
-        "https://example.test/v1/final",
-      ]);
-      assert.deepStrictEqual(calls.map((call) => call.authorization), [
-        "Bearer sk-redirect-secret",
-        "Bearer sk-redirect-secret",
-      ]);
+      assert.deepStrictEqual(
+        calls.map((call) => call.url),
+        ["https://example.test/v1/chat/completions", "https://example.test/v1/final"],
+      );
+      assert.deepStrictEqual(
+        calls.map((call) => call.authorization),
+        ["Bearer sk-redirect-secret", "Bearer sk-redirect-secret"],
+      );
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -76,13 +76,11 @@ suite("DeepSeek URLs", () => {
     const originalFetch = globalThis.fetch;
     const reflectedCredential = "opaque-credential-reflected-by-server";
     try {
-      globalThis.fetch = async () => new Response(
-        JSON.stringify({ error: { message: reflectedCredential } }),
-        {
+      globalThis.fetch = async () =>
+        new Response(JSON.stringify({ error: { message: reflectedCredential } }), {
           status: 401,
           headers: { "content-type": "application/json" },
-        },
-      );
+        });
 
       await assert.rejects(
         deepseekFetch({
@@ -110,27 +108,39 @@ suite("DeepSeek URLs", () => {
       for (const status of [400, 422]) {
         globalThis.fetch = async () => {
           calls++;
-          return Response.json({ error: {
-            code: "invalid_request_error",
-            message: `Invalid schema for function read_file: unsupported type.\nAuthorization: Bearer ${credential}`,
-          } }, { status });
+          return Response.json(
+            {
+              error: {
+                code: "invalid_request_error",
+                message: `Invalid schema for function read_file: unsupported type.\nAuthorization: Bearer ${credential}`,
+              },
+            },
+            { status },
+          );
         };
-        await assert.rejects(deepseekFetch({
-          pathOrUrl: "chat/completions", apiKey: credential,
-          requestInit: { method: "POST", body: "{}" },
-        }), (error: unknown) => {
-          assert.ok(error instanceof Error);
-          assert.match(error.message, /Invalid schema for function read_file: unsupported type/);
-          assert.ok(!error.message.includes(credential));
-          assert.ok(!error.message.includes("\n"));
-          return true;
-        });
+        await assert.rejects(
+          deepseekFetch({
+            pathOrUrl: "chat/completions",
+            apiKey: credential,
+            requestInit: { method: "POST", body: "{}" },
+          }),
+          (error: unknown) => {
+            assert.ok(error instanceof Error);
+            assert.match(error.message, /Invalid schema for function read_file: unsupported type/);
+            assert.ok(!error.message.includes(credential));
+            assert.ok(!error.message.includes("\n"));
+            return true;
+          },
+        );
       }
       assert.strictEqual(calls, 2);
       for (const body of ["not JSON", JSON.stringify({ error: { message: "x".repeat(2049) } })]) {
-        globalThis.fetch = async () => new Response(body, { status: 400, headers: { "content-type": "application/json" } });
-        await assert.rejects(deepseekFetch({ pathOrUrl: "chat/completions", apiKey: credential }),
-          /^DeepSeekApiError: API request failed with HTTP 400\.$/);
+        globalThis.fetch = async () =>
+          new Response(body, { status: 400, headers: { "content-type": "application/json" } });
+        await assert.rejects(
+          deepseekFetch({ pathOrUrl: "chat/completions", apiKey: credential }),
+          /^DeepSeekApiError: API request failed with HTTP 400\.$/,
+        );
       }
     } finally {
       globalThis.fetch = originalFetch;

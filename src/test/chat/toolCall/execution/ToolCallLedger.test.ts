@@ -35,11 +35,17 @@ suite("tool call ledger", () => {
     const call = toolCall("read_file", { path: "README.md" });
     recordInitialToolCall(call, context);
 
-    updateStoredToolCall(context, call.id, { result: "file body", status: "completed", isError: false });
+    updateStoredToolCall(context, call.id, {
+      result: "file body",
+      status: "completed",
+      isError: false,
+    });
     assert.strictEqual(context.executedToolCalls.get(call.id)?.status, "completed");
     assert.strictEqual(context.executedToolCalls.get(call.id)?.result, "file body");
 
-    assert.doesNotThrow(() => updateStoredToolCall(context, "missing-call", { status: "completed" }));
+    assert.doesNotThrow(() =>
+      updateStoredToolCall(context, "missing-call", { status: "completed" }),
+    );
     assert.strictEqual(context.executedToolCalls.size, 1);
   });
 });

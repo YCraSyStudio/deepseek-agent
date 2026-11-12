@@ -22,8 +22,15 @@
   color: var(--text-primary);
   cursor: pointer;
 }
-.editedFilesRevert:disabled { opacity: 0.6; cursor: default; }
-.editedFilesError { color: var(--error-color, #f48771); padding: 0 10px; overflow-wrap: anywhere; }
+.editedFilesRevert:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.editedFilesError {
+  color: var(--error-color, #f48771);
+  padding: 0 10px;
+  overflow-wrap: anywhere;
+}
 
 .editedFilesHeader {
   align-items: center;

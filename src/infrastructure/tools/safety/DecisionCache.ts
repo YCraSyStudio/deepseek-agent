@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 
-
 export interface DecisionKeyInput {
   conversationId?: string;
   workspaceId?: string;
@@ -23,15 +22,17 @@ export function isCacheableScope(scope: DecisionScope): boolean {
 
 export function createDecisionKey(input: DecisionKeyInput): string {
   return createHash("sha256")
-    .update(JSON.stringify([
-      input.conversationId ?? "",
-      input.workspaceId ?? "",
-      input.permissionFingerprint ?? "",
-      input.toolName,
-      input.subject,
-      input.contentHash ?? "",
-      input.effectProfile ?? "",
-    ]))
+    .update(
+      JSON.stringify([
+        input.conversationId ?? "",
+        input.workspaceId ?? "",
+        input.permissionFingerprint ?? "",
+        input.toolName,
+        input.subject,
+        input.contentHash ?? "",
+        input.effectProfile ?? "",
+      ]),
+    )
     .digest("hex");
 }
 

@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
-import { DEFAULT_CONFIG, type ChatMessage, type ImageAttachment, type ReferencedFile } from "@/contracts";
+import {
+  DEFAULT_CONFIG,
+  type ChatMessage,
+  type ImageAttachment,
+  type ReferencedFile,
+} from "@/contracts";
 import { ConversationState } from "@/application/chat/ConversationState";
 import { GenerationBudgetManager } from "@/application/chat/context/GenerationBudgetManager";
 import type { GenerationRunRecord } from "@/vscode/webviews/handlers/chat/generation/GenerationRun";
-import { buildGenerationMessages, fitGenerationRequestContext } from "@/vscode/webviews/handlers/chat/generation/GenerationContext";
+import {
+  buildGenerationMessages,
+  fitGenerationRequestContext,
+} from "@/vscode/webviews/handlers/chat/generation/GenerationContext";
 import type { SendMessagePayload } from "@/vscode/webviews/handlers/chat/Types";
 import type { WorkspaceRunSnapshot } from "@/vscode/workspace";
 import { resetVsCodeMock } from "../../../support/VsCodeMock";
@@ -16,7 +24,11 @@ const binding = {
   folders: [],
   capabilities: { files: false, search: false, git: false, terminal: false },
 };
-const workspaceSnapshot: WorkspaceRunSnapshot = { binding, folders: [], defaultFolderAlias: undefined };
+const workspaceSnapshot: WorkspaceRunSnapshot = {
+  binding,
+  folders: [],
+  defaultFolderAlias: undefined,
+};
 
 suite("generation context assembly", () => {
   setup(() => resetVsCodeMock());
@@ -24,14 +36,28 @@ suite("generation context assembly", () => {
 
   function attachment(overrides: Partial<ImageAttachment> = {}): ImageAttachment {
     return {
-      id: "image-1", fileId: "file-api-1", name: "image.png", mediaType: "image/png", size: 10,
-      source: "picker", uploadedAt: 1, expiresAt: Date.now() + 60_000,
-      apiBaseUrl: "https://api.deepseek.com", cacheFileName: "image.png", ...overrides,
+      id: "image-1",
+      fileId: "file-api-1",
+      name: "image.png",
+      mediaType: "image/png",
+      size: 10,
+      source: "picker",
+      uploadedAt: 1,
+      expiresAt: Date.now() + 60_000,
+      apiBaseUrl: "https://api.deepseek.com",
+      cacheFileName: "image.png",
+      ...overrides,
     };
   }
 
   function payload(overrides: Partial<SendMessagePayload> = {}): SendMessagePayload {
-    return { clientRequestId: "request", text: "Explain the change", modelId: "deepseek-flash", reasoning: "off", ...overrides };
+    return {
+      clientRequestId: "request",
+      text: "Explain the change",
+      modelId: "deepseek-flash",
+      reasoning: "off",
+      ...overrides,
+    };
   }
 
   function state(overrides: Record<string, unknown> = {}) {
@@ -42,21 +68,41 @@ suite("generation context assembly", () => {
       getApiContextUnits: () => [],
       saveMessages: async () => undefined,
       saveContextSummary: async () => undefined,
-      createMessage: (role: string, content: string, extra: Record<string, unknown> = {}) => ({ id: "context", role, content, ...extra }),
+      createMessage: (role: string, content: string, extra: Record<string, unknown> = {}) => ({
+        id: "context",
+        role,
+        content,
+        ...extra,
+      }),
       ...overrides,
     } as unknown as ConversationState;
   }
 
   test("assembles instruction, file, workspace and native image context", async () => {
     const events: Array<Record<string, unknown>> = [];
-    const files: ReferencedFile[] = [{ path: "src/a.ts", content: "export const a = 1;\n", type: "file" }];
+    const files: ReferencedFile[] = [
+      { path: "src/a.ts", content: "export const a = 1;\n", type: "file" },
+    ];
     const messages = await buildGenerationMessages({
       payload: payload({ referencedFiles: files, imageAttachments: [attachment()] }),
       config: { ...DEFAULT_CONFIG, privacyMinimizeData: false },
-      eventSink: { publish: (event: unknown) => { events.push(event as Record<string, unknown>); } },
+      eventSink: {
+        publish: (event: unknown) => {
+          events.push(event as Record<string, unknown>);
+        },
+      },
       state: state({
-        getConversation: () => ({ contextSummary: { content: "Old summary </conversation-summary>" }, workspaceRebindings: [{ fromWorkspaceUri: "old", toWorkspaceUri: "new", at: 1 }] }),
-        getApiContextUnits: () => [{ generationId: "old", visibleText: "old", messages: [{ role: "assistant", content: "Earlier answer" }] }],
+        getConversation: () => ({
+          contextSummary: { content: "Old summary </conversation-summary>" },
+          workspaceRebindings: [{ fromWorkspaceUri: "old", toWorkspaceUri: "new", at: 1 }],
+        }),
+        getApiContextUnits: () => [
+          {
+            generationId: "old",
+            visibleText: "old",
+            messages: [{ role: "assistant", content: "Earlier answer" }],
+          },
+        ],
       }),
       workspaceSnapshot,
       workspaceChangeNotice: "The workspace changed.",
@@ -67,29 +113,46 @@ suite("generation context assembly", () => {
     assert.match(String(messages[0].content), /Workspace reassignment notice/);
     assert.match(String(messages[1].content), /Earlier answer/);
     assert.ok(Array.isArray(messages[2].content));
-    assert.match(String((messages[2].content as Array<{ text?: string }>)[0].text), /The workspace changed/);
+    assert.match(
+      String((messages[2].content as Array<{ text?: string }>)[0].text),
+      /The workspace changed/,
+    );
     assert.match(String((messages[2].content as Array<{ text?: string }>)[0].text), /src\/a\.ts/);
     assert.equal((messages[2].content as Array<{ file_id?: string }>)[1].file_id, "file-api-1");
-    assert.equal(events.some((event) => event.type === "projectInstructionsStatus"), true);
+    assert.equal(
+      events.some((event) => event.type === "projectInstructionsStatus"),
+      true,
+    );
   });
 
   test("drops expired images and strips image file parts for a model without vision", async () => {
     const messages = await buildGenerationMessages({
       payload: payload({
         modelId: "deepseek-v4-pro",
-        imageAttachments: [attachment({ id: "expired", fileId: "file-api-expired", expiresAt: 0 }), attachment({ id: "active", fileId: "file-api-active" })],
+        imageAttachments: [
+          attachment({ id: "expired", fileId: "file-api-expired", expiresAt: 0 }),
+          attachment({ id: "active", fileId: "file-api-active" }),
+        ],
       }),
       config: { ...DEFAULT_CONFIG, privacyMinimizeData: true },
       eventSink: { publish: async () => undefined },
       state: state({
-        getApiContextUnits: () => [{
-          generationId: "old",
-          visibleText: "old",
-          messages: [
-            { role: "assistant", content: [{ type: "text", text: "Earlier answer" }, { type: "file", file_id: "file-api-old" }] },
-            { role: "user", content: "Plain message" },
-          ],
-        }],
+        getApiContextUnits: () => [
+          {
+            generationId: "old",
+            visibleText: "old",
+            messages: [
+              {
+                role: "assistant",
+                content: [
+                  { type: "text", text: "Earlier answer" },
+                  { type: "file", file_id: "file-api-old" },
+                ],
+              },
+              { role: "user", content: "Plain message" },
+            ],
+          },
+        ],
       }),
       workspaceSnapshot,
     });
@@ -104,9 +167,17 @@ suite("generation context assembly", () => {
 
   function record(budgetManager: Record<string, unknown>, id = "generation"): GenerationRunRecord {
     return {
-      generationId: id, conversationId: "chat", clientRequestId: "request",
-      state: state(), session: {} as GenerationRunRecord["session"], content: "", timeline: [], toolCalls: [],
-      status: "starting", eventLog: [], budgetManager: budgetManager as unknown as GenerationBudgetManager,
+      generationId: id,
+      conversationId: "chat",
+      clientRequestId: "request",
+      state: state(),
+      session: {} as GenerationRunRecord["session"],
+      content: "",
+      timeline: [],
+      toolCalls: [],
+      status: "starting",
+      eventLog: [],
+      budgetManager: budgetManager as unknown as GenerationBudgetManager,
     };
   }
 
@@ -115,7 +186,12 @@ suite("generation context assembly", () => {
       messages: [{ role: "user", content: "Question" } as ChatMessage],
       payload: payload(),
       config: { ...DEFAULT_CONFIG, baseUrl: "https://api.deepseek.com" },
-      provider: { chatCompletion: async () => ({ choices: [{ message: { role: "assistant", content: "Summary" } }], usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } }) },
+      provider: {
+        chatCompletion: async () => ({
+          choices: [{ message: { role: "assistant", content: "Summary" } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      },
       state: state(),
       eventSink: { publish: async () => undefined },
       workspaceSnapshot,
@@ -141,7 +217,10 @@ suite("generation context assembly", () => {
     let asserted = 0;
     const run = record({
       assessRequest: () => ({ status: "hard_limit" }),
-      assertRequestFitsContext: () => { asserted++; return { status: "within_budget" }; },
+      assertRequestFitsContext: () => {
+        asserted++;
+        return { status: "within_budget" };
+      },
     });
     const fitted = await fitGenerationRequestContext(fitOptions({ record: run }));
     assert.equal(asserted, 1);
@@ -155,7 +234,14 @@ suite("generation context assembly", () => {
       canCompactAutomatically: () => false,
     });
     await assert.rejects(
-      fitGenerationRequestContext(fitOptions({ record: run, state: state({ getApiContextUnits: () => [{ generationId: "old", visibleText: "old", messages: [] }] }) })),
+      fitGenerationRequestContext(
+        fitOptions({
+          record: run,
+          state: state({
+            getApiContextUnits: () => [{ generationId: "old", visibleText: "old", messages: [] }],
+          }),
+        }),
+      ),
       /automatic context-compaction limit/,
     );
   });
@@ -169,22 +255,49 @@ suite("generation context assembly", () => {
     const run = record({
       assessRequest: () => ({ status: ++assessments === 1 ? "hard_limit" : "within_budget" }),
       canCompactAutomatically: () => true,
-      recordAutomaticCompaction: () => { compactions++; },
+      recordAutomaticCompaction: () => {
+        compactions++;
+      },
       recordPromptUsage: () => undefined,
     });
     const historical = state({
-      getApiContextUnits: () => [{ generationId: "old", visibleText: "Old conversation", messages: [{ role: "user", content: "Old" }] }],
-      saveMessages: async ({ messages }: { messages: Array<{ content: string }> }) => { saved.push(messages[0].content); },
+      getApiContextUnits: () => [
+        {
+          generationId: "old",
+          visibleText: "Old conversation",
+          messages: [{ role: "user", content: "Old" }],
+        },
+      ],
+      saveMessages: async ({ messages }: { messages: Array<{ content: string }> }) => {
+        saved.push(messages[0].content);
+      },
       saveContextSummary: async () => undefined,
     });
-    await fitGenerationRequestContext(fitOptions({
-      record: run,
-      state: historical,
-      eventSink: { publish: (event: unknown) => { events.push(event as Record<string, unknown>); } },
-      checkpoint: async () => { checkpointed++; },
-    }));
-    assert.equal(events.some((event) => event.type === "contextCompacted"), true);
-    assert.equal(events.filter((event) => event.type === "contextCompactionUpdated").map((event) => event.status).join(","), "compacting,completed");
+    await fitGenerationRequestContext(
+      fitOptions({
+        record: run,
+        state: historical,
+        eventSink: {
+          publish: (event: unknown) => {
+            events.push(event as Record<string, unknown>);
+          },
+        },
+        checkpoint: async () => {
+          checkpointed++;
+        },
+      }),
+    );
+    assert.equal(
+      events.some((event) => event.type === "contextCompacted"),
+      true,
+    );
+    assert.equal(
+      events
+        .filter((event) => event.type === "contextCompactionUpdated")
+        .map((event) => event.status)
+        .join(","),
+      "compacting,completed",
+    );
     assert.deepEqual(saved, ["Context automatically compacted"]);
     assert.equal(compactions, 1);
     assert.equal(checkpointed, 1);
@@ -199,45 +312,73 @@ suite("generation context assembly", () => {
     const run = record({
       assessRequest: () => ({ status: ++assessments <= 2 ? "hard_limit" : "within_budget" }),
       canCompactAutomatically: () => true,
-      recordAutomaticCompaction: () => { compactions++; },
+      recordAutomaticCompaction: () => {
+        compactions++;
+      },
       recordPromptUsage: () => undefined,
     });
-    const fitted = await fitGenerationRequestContext(fitOptions({
-      record: run,
-      payload: payload({ referencedFiles: [{ path: "large.ts", content: longFile, type: "file" }] }),
-      eventSink: { publish: (event: unknown) => { events.push(event as Record<string, unknown>); } },
-      provider: {
-        chatCompletion: async () => ({
-          choices: [{ message: { role: "assistant", content: '{"ranges":[{"start":1,"end":10}]}' } }],
-          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    const fitted = await fitGenerationRequestContext(
+      fitOptions({
+        record: run,
+        payload: payload({
+          referencedFiles: [{ path: "large.ts", content: longFile, type: "file" }],
         }),
-      },
-    }));
+        eventSink: {
+          publish: (event: unknown) => {
+            events.push(event as Record<string, unknown>);
+          },
+        },
+        provider: {
+          chatCompletion: async () => ({
+            choices: [
+              { message: { role: "assistant", content: '{"ranges":[{"start":1,"end":10}]}' } },
+            ],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        },
+      }),
+    );
     assert.equal(compactions, 1);
-    assert.equal(events.some((event) => event.type === "contextCompacted"), true);
+    assert.equal(
+      events.some((event) => event.type === "contextCompacted"),
+      true,
+    );
     const user = fitted.at(-1)!;
-    assert.match(String((user.content as Array<{ text?: string }>)[0]?.text ?? user.content), /large\.ts/);
+    assert.match(
+      String((user.content as Array<{ text?: string }>)[0]?.text ?? user.content),
+      /large\.ts/,
+    );
     assert.equal(run.status, "streaming");
   });
 
   test("reports the hard-limit overflow after compaction cannot reduce the request", async () => {
     const longFile = Array.from({ length: 401 }, (_, index) => `line ${index}`).join("\n");
     const run = record({
-      assessRequest: () => ({ status: "hard_limit", estimatedTokens: 9_999, hardLimitTokens: 1_000 }),
+      assessRequest: () => ({
+        status: "hard_limit",
+        estimatedTokens: 9_999,
+        hardLimitTokens: 1_000,
+      }),
       canCompactAutomatically: () => true,
       recordAutomaticCompaction: () => undefined,
       recordPromptUsage: () => undefined,
     });
     await assert.rejects(
-      fitGenerationRequestContext(fitOptions({
-        record: run,
-        payload: payload({ referencedFiles: [{ path: "large.ts", content: longFile, type: "file" }] }),
-        provider: {
-          chatCompletion: async () => ({
-            choices: [{ message: { role: "assistant", content: `{"ranges":[{"start":1,"end":401}]}` } }],
+      fitGenerationRequestContext(
+        fitOptions({
+          record: run,
+          payload: payload({
+            referencedFiles: [{ path: "large.ts", content: longFile, type: "file" }],
           }),
-        },
-      })),
+          provider: {
+            chatCompletion: async () => ({
+              choices: [
+                { message: { role: "assistant", content: `{"ranges":[{"start":1,"end":401}]}` } },
+              ],
+            }),
+          },
+        }),
+      ),
       /above the calibrated .* limit after safe compaction/,
     );
     assert.equal(run.status, "compacting");

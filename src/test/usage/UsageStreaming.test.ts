@@ -32,7 +32,11 @@ suite("usage streaming", () => {
     try {
       const chunks: StreamChunk[] = [];
       await chatCompletionStream({
-        request: { model: "deepseek-flash", messages: [{ role: "user", content: "hello" }], stream: true },
+        request: {
+          model: "deepseek-flash",
+          messages: [{ role: "user", content: "hello" }],
+          stream: true,
+        },
         apiKey: "test-key",
         baseUrl: "https://api.deepseek.com",
         onChunk: (chunk) => chunks.push(chunk),
@@ -52,70 +56,122 @@ suite("usage streaming", () => {
         prompt_cache_miss_tokens: 2,
         reasoning_tokens: 3,
       });
-      assert.deepStrictEqual((requestBodies[0] as { stream_options?: unknown }).stream_options, { include_usage: true });
-      assert.strictEqual((requestBodies[1] as { stream_options?: unknown }).stream_options, undefined);
+      assert.deepStrictEqual((requestBodies[0] as { stream_options?: unknown }).stream_options, {
+        include_usage: true,
+      });
+      assert.strictEqual(
+        (requestBodies[1] as { stream_options?: unknown }).stream_options,
+        undefined,
+      );
     } finally {
       globalThis.fetch = originalFetch;
     }
   });
 
   for (const [finishReason, diagnostic] of [
-    ["length", /output limit/], ["content_filter", /filtered/],
+    ["length", /output limit/],
+    ["content_filter", /filtered/],
     ["insufficient_system_resource", /resources were insufficient/],
-    [undefined, /without a terminal finish reason/], [null, /without a terminal finish reason/],
+    [undefined, /without a terminal finish reason/],
+    [null, /without a terminal finish reason/],
     ["unsupported", /unsupported finish reason/],
   ] as const) {
     for (const partial of [false, true]) {
       test(`rejects incomplete finish ${String(finishReason)} and retains partial content=${partial}`, async () => {
-        await assert.rejects(sendMessageStreaming({ messages: [], payload: payload(), config: DEFAULT_CONFIG,
-          provider: fakeProvider(async (_request, onChunk) => {
-            if (partial) { onChunk({ type: "content", content: "Incomplete answer" }); }
-            // Exercise a malformed nullable terminal marker at the provider boundary too.
-            onChunk({ type: "done", finish_reason: finishReason as string | undefined });
-          }), eventSink: fakeEventSink(), signal: new AbortController().signal,
-        }), (error: unknown) => {
-          assert.ok(error instanceof Error); assert.match(error.message, diagnostic);
-          assert.strictEqual(error instanceof PartialStreamError, partial);
-          if (error instanceof PartialStreamError) {
-            assert.strictEqual(error.partial.content, "Incomplete answer"); assert.strictEqual(error.reason, "failed");
-          }
-          return true;
-        });
+        await assert.rejects(
+          sendMessageStreaming({
+            messages: [],
+            payload: payload(),
+            config: DEFAULT_CONFIG,
+            provider: fakeProvider(async (_request, onChunk) => {
+              if (partial) {
+                onChunk({ type: "content", content: "Incomplete answer" });
+              }
+              // Exercise a malformed nullable terminal marker at the provider boundary too.
+              onChunk({ type: "done", finish_reason: finishReason as string | undefined });
+            }),
+            eventSink: fakeEventSink(),
+            signal: new AbortController().signal,
+          }),
+          (error: unknown) => {
+            assert.ok(error instanceof Error);
+            assert.match(error.message, diagnostic);
+            assert.strictEqual(error instanceof PartialStreamError, partial);
+            if (error instanceof PartialStreamError) {
+              assert.strictEqual(error.partial.content, "Incomplete answer");
+              assert.strictEqual(error.reason, "failed");
+            }
+            return true;
+          },
+        );
       });
     }
   }
 
   for (const systemContent of [undefined, null, "Project instructions"] as const) {
     test(`recovers once from excessive reasoning with system=${String(systemContent)}`, async () => {
-      const requests: ChatCompletionRequest[] = []; const events: Array<Record<string, unknown>> = [];
+      const requests: ChatCompletionRequest[] = [];
+      const events: Array<Record<string, unknown>> = [];
       const messages: ChatMessage[] = [
-        ...(systemContent === undefined ? [] : [{ role: "system" as const, content: systemContent }]),
+        ...(systemContent === undefined
+          ? []
+          : [{ role: "system" as const, content: systemContent }]),
         { role: "user", content: "Answer concisely" },
       ];
       const original = structuredClone(messages);
-      const result = await sendMessageStreaming({ messages, payload: payload(), config: { ...DEFAULT_CONFIG, maxTokens: 128 },
+      const result = await sendMessageStreaming({
+        messages,
+        payload: payload(),
+        config: { ...DEFAULT_CONFIG, maxTokens: 128 },
         provider: fakeProvider(async (request, onChunk, signal) => {
           requests.push(request);
           onChunk({ type: "reasoning", reasoning_content: "r".repeat(310) });
-          if (requests.length === 1) { signal!.throwIfAborted(); throw new Error("Reasoning guard failed to abort"); }
+          if (requests.length === 1) {
+            signal!.throwIfAborted();
+            throw new Error("Reasoning guard failed to abort");
+          }
           assert.strictEqual(signal!.aborted, false);
-          onChunk({ type: "content", content: "Concise answer" }); onChunk({ type: "done", finish_reason: "stop" });
-        }), eventSink: { publish: event => { events.push(event); } }, signal: new AbortController().signal,
+          onChunk({ type: "content", content: "Concise answer" });
+          onChunk({ type: "done", finish_reason: "stop" });
+        }),
+        eventSink: {
+          publish: (event) => {
+            events.push(event);
+          },
+        },
+        signal: new AbortController().signal,
       });
-      assert.strictEqual(requests.length, 2); assert.strictEqual(result.content, "Concise answer");
-      assert.strictEqual(requests[0].thinking?.type, "enabled"); assert.strictEqual(requests[1].thinking?.type, "disabled");
+      assert.strictEqual(requests.length, 2);
+      assert.strictEqual(result.content, "Concise answer");
+      assert.strictEqual(requests[0].thinking?.type, "enabled");
+      assert.strictEqual(requests[1].thinking?.type, "disabled");
       assert.strictEqual(requests[1].reasoning_effort, undefined);
-      if (systemContent !== undefined) { assert.match(String(requests[1].messages[0].content), /<concise_recovery>/); }
-      assert.strictEqual(events.filter(event => event.type === "generationRecoveryStarted").length, 1);
+      if (systemContent !== undefined) {
+        assert.match(String(requests[1].messages[0].content), /<concise_recovery>/);
+      }
+      assert.strictEqual(
+        events.filter((event) => event.type === "generationRecoveryStarted").length,
+        1,
+      );
       assert.deepStrictEqual(messages, original);
     });
   }
 
   test("propagates a provider failure before any output without disguising it as partial content", async () => {
     const failure = new Error("provider unavailable");
-    await assert.rejects(sendMessageStreaming({ messages: [], payload: payload(), config: DEFAULT_CONFIG,
-      provider: fakeProvider(async () => { throw failure; }), eventSink: fakeEventSink(), signal: new AbortController().signal,
-    }), error => error === failure);
+    await assert.rejects(
+      sendMessageStreaming({
+        messages: [],
+        payload: payload(),
+        config: DEFAULT_CONFIG,
+        provider: fakeProvider(async () => {
+          throw failure;
+        }),
+        eventSink: fakeEventSink(),
+        signal: new AbortController().signal,
+      }),
+      (error) => error === failure,
+    );
   });
 
   test("reports one provider request after duplicate usage chunks", async () => {
@@ -205,7 +261,9 @@ suite("usage streaming", () => {
   });
 });
 
-function fakeProvider(chatCompletionStreamImpl: ModelProvider["chatCompletionStream"]): ModelProvider {
+function fakeProvider(
+  chatCompletionStreamImpl: ModelProvider["chatCompletionStream"],
+): ModelProvider {
   return { chatCompletionStream: chatCompletionStreamImpl } as ModelProvider;
 }
 
@@ -214,7 +272,12 @@ function fakeEventSink() {
 }
 
 function payload() {
-  return { clientRequestId: "request-1", text: "hello", modelId: "deepseek-flash", reasoning: "high" };
+  return {
+    clientRequestId: "request-1",
+    text: "hello",
+    modelId: "deepseek-flash",
+    reasoning: "high",
+  };
 }
 
 function usage(prompt: number, completion: number): ProviderUsage {

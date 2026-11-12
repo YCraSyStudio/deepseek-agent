@@ -3,14 +3,20 @@ import { existsSync } from "fs";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import * as path from "path";
-import { executeWorkspaceCommand, shutdownOwnedProcesses } from "@/infrastructure/tools/builtins/terminal/ShellExecution";
+import {
+  executeWorkspaceCommand,
+  shutdownOwnedProcesses,
+} from "@/infrastructure/tools/builtins/terminal/ShellExecution";
 import { setToolWorkspaceHost, type ToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
 
 suite("shell execution", () => {
   test("returns structured non-zero results and retains the tail of truncated output", async () => {
     setToolWorkspaceHost(createUnusedWorkspaceHost(process.cwd()));
-    const script = "process.stdout.write('H'.repeat(6000)); process.stderr.write('TAIL'); process.exit(7)";
-    const result = await executeWorkspaceCommand(`"${process.execPath}" -e "${script}"`, { maxOutputBytes: 4096 });
+    const script =
+      "process.stdout.write('H'.repeat(6000)); process.stderr.write('TAIL'); process.exit(7)";
+    const result = await executeWorkspaceCommand(`"${process.execPath}" -e "${script}"`, {
+      maxOutputBytes: 4096,
+    });
     assert.strictEqual(result.exitCode, 7);
     assert.strictEqual(result.timedOut, false);
     assert.ok(result.stdout.includes("output truncated"));
@@ -56,20 +62,33 @@ suite("shell execution", () => {
     setToolWorkspaceHost(createUnusedWorkspaceHost(process.cwd()));
     const controller = new AbortController();
     const startedAt = Date.now();
-    const execution = executeWorkspaceCommand(`"${process.execPath}" -e "setInterval(() => {}, 1000)"`, { signal: controller.signal });
+    const execution = executeWorkspaceCommand(
+      `"${process.execPath}" -e "setInterval(() => {}, 1000)"`,
+      { signal: controller.signal },
+    );
     setTimeout(() => controller.abort(), 100);
 
-    await assert.rejects(execution, (error: unknown) =>
-      error instanceof Error && error.name === "AbortError" && (error as Error & { terminationConfirmed?: boolean }).terminationConfirmed === true
+    await assert.rejects(
+      execution,
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "AbortError" &&
+        (error as Error & { terminationConfirmed?: boolean }).terminationConfirmed === true,
     );
-    assert.ok(Date.now() - startedAt < 5_000, "cancelled command should not wait for the normal timeout");
+    assert.ok(
+      Date.now() - startedAt < 5_000,
+      "cancelled command should not wait for the normal timeout",
+    );
   });
 
   test("returns a bounded timeout result after terminating the owned command", async function () {
     this.timeout(5000);
     setToolWorkspaceHost(createUnusedWorkspaceHost(process.cwd()));
     const startedAt = Date.now();
-    const result = await executeWorkspaceCommand(`"${process.execPath}" -e "setInterval(() => {}, 1000)"`, { timeoutMs: 1000 });
+    const result = await executeWorkspaceCommand(
+      `"${process.execPath}" -e "setInterval(() => {}, 1000)"`,
+      { timeoutMs: 1000 },
+    );
     assert.strictEqual(result.timedOut, true);
     assert.strictEqual(result.terminationConfirmed, true);
     assert.ok(Date.now() - startedAt < 4000);
@@ -78,11 +97,16 @@ suite("shell execution", () => {
   test("terminates registered commands during extension shutdown", async () => {
     setToolWorkspaceHost(createUnusedWorkspaceHost(process.cwd()));
     const startedAt = Date.now();
-    const execution = executeWorkspaceCommand(`"${process.execPath}" -e "setInterval(() => {}, 1000)"`);
+    const execution = executeWorkspaceCommand(
+      `"${process.execPath}" -e "setInterval(() => {}, 1000)"`,
+    );
     await new Promise((resolve) => setTimeout(resolve, 100));
     await shutdownOwnedProcesses();
     await execution;
-    assert.ok(Date.now() - startedAt < 5_000, "shutdown should settle an owned command instead of leaving it running");
+    assert.ok(
+      Date.now() - startedAt < 5_000,
+      "shutdown should settle an owned command instead of leaving it running",
+    );
   });
 
   test("terminates descendants when a command is cancelled", async () => {
@@ -93,9 +117,14 @@ suite("shell execution", () => {
     const controller = new AbortController();
 
     try {
-      const execution = executeWorkspaceCommand(`"${process.execPath}" "${fixture}" "${marker}"`, { signal: controller.signal });
+      const execution = executeWorkspaceCommand(`"${process.execPath}" "${fixture}" "${marker}"`, {
+        signal: controller.signal,
+      });
       setTimeout(() => controller.abort(), 200);
-      await assert.rejects(execution, (error: unknown) => error instanceof Error && error.name === "AbortError");
+      await assert.rejects(
+        execution,
+        (error: unknown) => error instanceof Error && error.name === "AbortError",
+      );
       await new Promise((resolve) => setTimeout(resolve, 1_000));
       assert.strictEqual(existsSync(marker), false, "a descendant process survived cancellation");
     } finally {
@@ -112,10 +141,20 @@ suite("shell execution", () => {
     const startedAt = Date.now();
 
     try {
-      const result = await executeWorkspaceCommand(`"${process.execPath}" "${fixture}" "${marker}"`, { timeoutMs: 5_000 });
-      assert.ok(Date.now() - startedAt < 4_000, "inherited output handles should not keep the command running");
+      const result = await executeWorkspaceCommand(
+        `"${process.execPath}" "${fixture}" "${marker}"`,
+        { timeoutMs: 5_000 },
+      );
+      assert.ok(
+        Date.now() - startedAt < 4_000,
+        "inherited output handles should not keep the command running",
+      );
       await new Promise((resolve) => setTimeout(resolve, 5_500));
-      assert.strictEqual(existsSync(marker), false, "an inherited-output descendant survived command settlement");
+      assert.strictEqual(
+        existsSync(marker),
+        false,
+        "an inherited-output descendant survived command settlement",
+      );
       assert.strictEqual(result.timedOut, false);
     } finally {
       await rm(sandbox, { recursive: true, force: true });

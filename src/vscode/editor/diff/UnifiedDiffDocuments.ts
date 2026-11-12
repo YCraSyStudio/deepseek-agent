@@ -76,7 +76,5 @@ export function reconstructDiffDocuments(diff: string): DiffDocuments | null {
     }
   }
 
-  return foundHunk && finishHunk()
-    ? { before: before.join("\n"), after: after.join("\n") }
-    : null;
+  return foundHunk && finishHunk() ? { before: before.join("\n"), after: after.join("\n") } : null;
 }

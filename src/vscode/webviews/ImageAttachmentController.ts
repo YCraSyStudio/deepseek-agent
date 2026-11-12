@@ -3,7 +3,10 @@ import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import type { ImageAttachment } from "@/contracts";
 import type { SecretStore, SettingsRepository } from "@/application/ports";
-import { deleteDeepSeekFile, uploadDeepSeekImage } from "@/infrastructure/deepseek/files/DeepSeekFiles";
+import {
+  deleteDeepSeekFile,
+  uploadDeepSeekImage,
+} from "@/infrastructure/deepseek/files/DeepSeekFiles";
 import { archiveConversationImages } from "@/infrastructure/images/ConversationImageArchive";
 import { ScreenshotStore } from "@/infrastructure/images/ScreenshotStore";
 
@@ -38,7 +41,9 @@ export class ImageAttachmentController {
         }
         if (stat.size > MAX_IMAGE_BYTES) {
           if (looksLikeImageFilename(uri.path)) {
-            throw new Error(`"${uri.path.split("/").at(-1) ?? "image"}" exceeds DeepSeek's 64 MiB image limit.`);
+            throw new Error(
+              `"${uri.path.split("/").at(-1) ?? "image"}" exceeds DeepSeek's 64 MiB image limit.`,
+            );
           }
           contextUris.push(uri);
           continue;
@@ -55,18 +60,22 @@ export class ImageAttachmentController {
           await this.settings.waitForPendingWrites();
           const config = this.settings.load();
           const apiKey = await this.secrets.getApiKey(config.baseUrl);
-          if (!apiKey) {throw new Error("Configure the DeepSeek API key before attaching images.");}
+          if (!apiKey) {
+            throw new Error("Configure the DeepSeek API key before attaching images.");
+          }
           await vscode.workspace.fs.createDirectory(this.cacheRoot);
           uploadConfig = { baseUrl: config.baseUrl, apiKey };
         }
-        attachments.push(await this.uploadBytes(
-          webview,
-          bytes,
-          uri.path.split("/").at(-1) ?? "image",
-          "picker",
-          uploadConfig.baseUrl,
-          uploadConfig.apiKey,
-        ));
+        attachments.push(
+          await this.uploadBytes(
+            webview,
+            bytes,
+            uri.path.split("/").at(-1) ?? "image",
+            "picker",
+            uploadConfig.baseUrl,
+            uploadConfig.apiKey,
+          ),
+        );
       }
       return { attachments, contextUris };
     } catch (error) {
@@ -80,40 +89,70 @@ export class ImageAttachmentController {
     input: { name: string; size: number; dataBase64: string },
   ): Promise<ImageAttachment> {
     const bytes = Buffer.from(input.dataBase64, "base64");
-    if (bytes.byteLength !== input.size) {throw new Error("The pasted image payload is incomplete.");}
+    if (bytes.byteLength !== input.size) {
+      throw new Error("The pasted image payload is incomplete.");
+    }
     await this.settings.waitForPendingWrites();
     const config = this.settings.load();
     const apiKey = await this.secrets.getApiKey(config.baseUrl);
-    if (!apiKey) {throw new Error("Configure the DeepSeek API key before attaching images.");}
+    if (!apiKey) {
+      throw new Error("Configure the DeepSeek API key before attaching images.");
+    }
     await vscode.workspace.fs.createDirectory(this.cacheRoot);
     return this.uploadBytes(webview, bytes, input.name, "clipboard", config.baseUrl, apiKey);
   }
 
   async delete(attachment: ImageAttachment): Promise<void> {
     const cacheUri = this.getCacheUri(attachment.cacheFileName);
-    await vscode.workspace.fs.delete(cacheUri, { recursive: false, useTrash: false }).then(undefined, () => undefined);
+    await vscode.workspace.fs
+      .delete(cacheUri, { recursive: false, useTrash: false })
+      .then(undefined, () => undefined);
     const apiKey = await this.secrets.getApiKey(attachment.apiBaseUrl);
-    if (!apiKey) {throw new Error("The image was removed locally, but its DeepSeek file could not be deleted because the API key is unavailable.");}
+    if (!apiKey) {
+      throw new Error(
+        "The image was removed locally, but its DeepSeek file could not be deleted because the API key is unavailable.",
+      );
+    }
     await deleteDeepSeekFile({ apiKey, baseUrl: attachment.apiBaseUrl, fileId: attachment.fileId });
   }
 
-  async archive(conversationId: string, attachments: readonly ImageAttachment[], webview?: vscode.Webview): Promise<void> {
-    const captures = await archiveConversationImages(conversationId, attachments, async (attachment) =>
-      vscode.workspace.fs.readFile(this.getCacheUri(attachment.cacheFileName)));
-    if (!webview || captures.length === 0) {return;}
+  async archive(
+    conversationId: string,
+    attachments: readonly ImageAttachment[],
+    webview?: vscode.Webview,
+  ): Promise<void> {
+    const captures = await archiveConversationImages(
+      conversationId,
+      attachments,
+      async (attachment) =>
+        vscode.workspace.fs.readFile(this.getCacheUri(attachment.cacheFileName)),
+    );
+    if (!webview || captures.length === 0) {
+      return;
+    }
     const directory = new ScreenshotStore(conversationId).directory;
     this.allowPreviewDirectory(webview, directory);
     for (let index = 0; index < attachments.length; index++) {
-      attachments[index].previewUri = webview.asWebviewUri(vscode.Uri.joinPath(vscode.Uri.file(directory), captures[index].fileName)).toString();
+      attachments[index].previewUri = webview
+        .asWebviewUri(vscode.Uri.joinPath(vscode.Uri.file(directory), captures[index].fileName))
+        .toString();
     }
   }
 
-  async restorePreviews(conversationId: string, attachments: readonly ImageAttachment[], webview: vscode.Webview): Promise<void> {
-    if (attachments.length === 0) {return;}
+  async restorePreviews(
+    conversationId: string,
+    attachments: readonly ImageAttachment[],
+    webview: vscode.Webview,
+  ): Promise<void> {
+    if (attachments.length === 0) {
+      return;
+    }
     const store = new ScreenshotStore(conversationId);
     this.allowPreviewDirectory(webview, store.directory);
     for (const attachment of attachments) {
-      const capture = await store.lookup(attachment.imageNumber ? String(attachment.imageNumber) : attachment.id);
+      const capture = await store.lookup(
+        attachment.imageNumber ? String(attachment.imageNumber) : attachment.id,
+      );
       if (capture) {
         attachment.imageNumber = Number(capture.metadata.id.slice("screenshot-".length));
         attachment.previewUri = webview.asWebviewUri(vscode.Uri.file(capture.path)).toString();
@@ -130,7 +169,9 @@ export class ImageAttachmentController {
   }
 
   getCacheUri(cacheFileName: string): vscode.Uri {
-    if (!/^[A-Za-z0-9._-]+$/.test(cacheFileName)) {throw new Error("Invalid image cache filename.");}
+    if (!/^[A-Za-z0-9._-]+$/.test(cacheFileName)) {
+      throw new Error("Invalid image cache filename.");
+    }
     return vscode.Uri.joinPath(this.cacheRoot, cacheFileName);
   }
 
@@ -142,9 +183,13 @@ export class ImageAttachmentController {
     baseUrl: string,
     apiKey: string,
   ): Promise<ImageAttachment> {
-    if (bytes.byteLength < 1 || bytes.byteLength > MAX_IMAGE_BYTES) {throw new Error("The image exceeds DeepSeek's 64 MiB limit.");}
+    if (bytes.byteLength < 1 || bytes.byteLength > MAX_IMAGE_BYTES) {
+      throw new Error("The image exceeds DeepSeek's 64 MiB limit.");
+    }
     const mediaType = detectImageMediaType(bytes);
-    if (!mediaType) {throw new Error(`"${filename}" is not a supported JPEG, PNG, GIF, or WebP image.`);}
+    if (!mediaType) {
+      throw new Error(`"${filename}" is not a supported JPEG, PNG, GIF, or WebP image.`);
+    }
     const id = randomUUID();
     const name = safeFilename(filename || `image-${id}`);
     const uploaded = await uploadDeepSeekImage({

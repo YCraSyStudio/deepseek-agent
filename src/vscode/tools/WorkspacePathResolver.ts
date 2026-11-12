@@ -2,7 +2,10 @@ import * as path from "node:path";
 import { realpath } from "node:fs/promises";
 import * as vscode from "vscode";
 import type { ToolWorkspaceEntryType } from "@/infrastructure/tools/ToolWorkspace";
-import { isSensitiveWorkspacePath, resolveWorkspacePathSecure } from "@/infrastructure/tools/ToolWorkspace";
+import {
+  isSensitiveWorkspacePath,
+  resolveWorkspacePathSecure,
+} from "@/infrastructure/tools/ToolWorkspace";
 import type { WorkspaceFolderSnapshot, WorkspaceRunSnapshot } from "@/vscode/workspace";
 
 export interface LogicalPath {
@@ -26,7 +29,12 @@ export function resolveAllowedExternalPath(
   rawPath: string,
   allowOutsideWorkspace: boolean,
 ): string | undefined {
-  if (!allowOutsideWorkspace || typeof rawPath !== "string" || !rawPath.trim() || rawPath.includes("\0")) {
+  if (
+    !allowOutsideWorkspace ||
+    typeof rawPath !== "string" ||
+    !rawPath.trim() ||
+    rawPath.includes("\0")
+  ) {
     return undefined;
   }
   if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(rawPath) && !path.win32.isAbsolute(rawPath)) {
@@ -36,7 +44,8 @@ export function resolveAllowedExternalPath(
     return path.resolve(rawPath);
   }
   if (rawPath.replace(/\\/g, "/").split("/").includes("..")) {
-    const defaultLocalRoot = snapshot.folders.find((folder) => folder.alias === snapshot.defaultFolderAlias)?.localPath ??
+    const defaultLocalRoot =
+      snapshot.folders.find((folder) => folder.alias === snapshot.defaultFolderAlias)?.localPath ??
       (snapshot.folders.length === 1 ? snapshot.folders[0]?.localPath : undefined);
     if (!defaultLocalRoot) {
       throw new Error("Use an absolute filesystem path for access outside a multi-root workspace");
@@ -54,7 +63,11 @@ export function resolveLogicalPath(snapshot: WorkspaceRunSnapshot, rawPath: stri
   if (normalized === ".." || normalized.split("/").includes("..")) {
     throw new Error("Workspace path cannot contain '..' traversal");
   }
-  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(normalized) || path.posix.isAbsolute(normalized) || path.win32.isAbsolute(normalized)) {
+  if (
+    /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(normalized) ||
+    path.posix.isAbsolute(normalized) ||
+    path.win32.isAbsolute(normalized)
+  ) {
     throw new Error("Workspace path must be relative to the selected workspace");
   }
   if (snapshot.folders.length === 0) {
@@ -62,18 +75,31 @@ export function resolveLogicalPath(snapshot: WorkspaceRunSnapshot, rawPath: stri
   }
   if (snapshot.folders.length === 1) {
     const folder = snapshot.folders[0]!;
-    const withoutOptionalAlias = normalized === folder.alias
-      ? "."
-      : normalized.startsWith(`${folder.alias}/`) ? normalized.slice(folder.alias.length + 1) : normalized;
-    return { folder, relativePath: withoutOptionalAlias || ".", logicalPath: withoutOptionalAlias || "." };
+    const withoutOptionalAlias =
+      normalized === folder.alias
+        ? "."
+        : normalized.startsWith(`${folder.alias}/`)
+          ? normalized.slice(folder.alias.length + 1)
+          : normalized;
+    return {
+      folder,
+      relativePath: withoutOptionalAlias || ".",
+      logicalPath: withoutOptionalAlias || ".",
+    };
   }
   const [alias, ...segments] = normalized.split("/");
   const folder = snapshot.folders.find((candidate) => candidate.alias === alias);
   if (!folder) {
-    throw new Error(`Multi-root workspace paths must start with one of: ${snapshot.folders.map((item) => item.alias).join(", ")}`);
+    throw new Error(
+      `Multi-root workspace paths must start with one of: ${snapshot.folders.map((item) => item.alias).join(", ")}`,
+    );
   }
   const relativePath = segments.join("/") || ".";
-  return { folder, relativePath, logicalPath: `${folder.alias}${relativePath === "." ? "" : `/${relativePath}`}` };
+  return {
+    folder,
+    relativePath,
+    logicalPath: `${folder.alias}${relativePath === "." ? "" : `/${relativePath}`}`,
+  };
 }
 
 export function isVirtualWorkspaceRoot(snapshot: WorkspaceRunSnapshot, rawPath: string): boolean {
@@ -85,10 +111,15 @@ export function toResolvedUri(snapshot: WorkspaceRunSnapshot, logicalPath: strin
 }
 
 export function toLogicalUri(resolved: LogicalPath): vscode.Uri {
-  return resolved.relativePath === "." ? resolved.folder.rootUri : vscode.Uri.joinPath(resolved.folder.rootUri, resolved.relativePath);
+  return resolved.relativePath === "."
+    ? resolved.folder.rootUri
+    : vscode.Uri.joinPath(resolved.folder.rootUri, resolved.relativePath);
 }
 
-export async function validateResolvedPath(resolved: LogicalPath, allowSensitive: boolean): Promise<void> {
+export async function validateResolvedPath(
+  resolved: LogicalPath,
+  allowSensitive: boolean,
+): Promise<void> {
   if (!allowSensitive && isSensitiveWorkspacePath(resolved.relativePath)) {
     throw new Error("Workspace path points to a sensitive file");
   }
@@ -104,15 +135,22 @@ export async function validateResolvedPath(resolved: LogicalPath, allowSensitive
   await rejectVisibleRemoteSymlink(resolved.folder.rootUri, resolved.relativePath);
 }
 
-export function formatLogicalPath(snapshot: WorkspaceRunSnapshot, folder: WorkspaceFolderSnapshot, relativePath: string): string {
+export function formatLogicalPath(
+  snapshot: WorkspaceRunSnapshot,
+  folder: WorkspaceFolderSnapshot,
+  relativePath: string,
+): string {
   return snapshot.folders.length > 1 ? `${folder.alias}/${relativePath}` : relativePath;
 }
 
 export function resolveDefaultLocalFolder(snapshot: WorkspaceRunSnapshot): LogicalPath {
-  const folder = snapshot.folders.find((candidate) => candidate.alias === snapshot.defaultFolderAlias) ??
+  const folder =
+    snapshot.folders.find((candidate) => candidate.alias === snapshot.defaultFolderAlias) ??
     (snapshot.folders.length === 1 ? snapshot.folders[0] : undefined);
   if (!folder) {
-    throw new Error(`Terminal cwd is required. Choose one of: ${snapshot.folders.map((item) => item.alias).join(", ")}`);
+    throw new Error(
+      `Terminal cwd is required. Choose one of: ${snapshot.folders.map((item) => item.alias).join(", ")}`,
+    );
   }
   return { folder, relativePath: ".", logicalPath: folder.alias };
 }
@@ -122,7 +160,12 @@ export function resolveSearchPatterns(
   rawPattern: string,
 ): Array<{ folder: WorkspaceFolderSnapshot; pattern: string }> {
   const pattern = rawPattern.replace(/\\/g, "/").replace(/^\.\//, "") || "**/*";
-  if (pattern.split("/").includes("..") || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(pattern) || path.posix.isAbsolute(pattern) || path.win32.isAbsolute(pattern)) {
+  if (
+    pattern.split("/").includes("..") ||
+    /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(pattern) ||
+    path.posix.isAbsolute(pattern) ||
+    path.win32.isAbsolute(pattern)
+  ) {
     throw new Error("Search pattern must stay inside the workspace");
   }
   if (snapshot.folders.length > 1) {
@@ -145,7 +188,12 @@ export async function findFilesInRoot(
   const onAbort = () => cancellation.cancel();
   signal?.addEventListener("abort", onAbort, { once: true });
   try {
-    const resources = await vscode.workspace.findFiles(new vscode.RelativePattern(rootUri, pattern), undefined, maxResults, cancellation.token);
+    const resources = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(rootUri, pattern),
+      undefined,
+      maxResults,
+      cancellation.token,
+    );
     if (signal?.aborted) {
       throw createAbortError();
     }
@@ -160,9 +208,10 @@ export function toRelativeWorkspacePath(root: vscode.Uri, resource: vscode.Uri):
   if (root.scheme !== resource.scheme || root.authority !== resource.authority) {
     throw new Error("Workspace search returned a resource outside the selected workspace");
   }
-  const relativePath = root.scheme === "file"
-    ? path.relative(root.fsPath, resource.fsPath)
-    : path.posix.relative(root.path, resource.path);
+  const relativePath =
+    root.scheme === "file"
+      ? path.relative(root.fsPath, resource.fsPath)
+      : path.posix.relative(root.path, resource.path);
   if (
     relativePath === ".." ||
     relativePath.startsWith("../") ||
@@ -191,7 +240,10 @@ export function toEntryType(type: vscode.FileType): ToolWorkspaceEntryType {
   return "unknown";
 }
 
-async function rejectVisibleRemoteSymlink(rootUri: vscode.Uri, relativePath: string): Promise<void> {
+async function rejectVisibleRemoteSymlink(
+  rootUri: vscode.Uri,
+  relativePath: string,
+): Promise<void> {
   let current = rootUri;
   for (const segment of relativePath.split("/").filter((part) => part && part !== ".")) {
     current = vscode.Uri.joinPath(current, segment);
@@ -210,5 +262,8 @@ async function rejectVisibleRemoteSymlink(rootUri: vscode.Uri, relativePath: str
 }
 
 function isMissingWorkspaceResource(error: unknown): boolean {
-  return error instanceof Error && (error.message.includes("FileNotFound") || error.message.includes("Unable to resolve"));
+  return (
+    error instanceof Error &&
+    (error.message.includes("FileNotFound") || error.message.includes("Unable to resolve"))
+  );
 }

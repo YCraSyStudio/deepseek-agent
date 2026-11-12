@@ -12,7 +12,11 @@ import { HistoryHandler } from "./handlers/HistoryHandler";
 import { getDevViewContent } from "./utils/DevViewRenderer";
 import { getHtmlContent } from "./utils/HtmlRenderer";
 import { HistoryManager } from "@/vscode/storage";
-import { getPathCompletionItems, insertCodeIntoActiveEditor, openWorkspaceFile } from "@/vscode/editor/EditorActions";
+import {
+  getPathCompletionItems,
+  insertCodeIntoActiveEditor,
+  openWorkspaceFile,
+} from "@/vscode/editor/EditorActions";
 import { CHAT_VIEW_TYPE, SIDEBAR_VIEW_ID } from "@/shared/constants";
 import { logWarning } from "@/shared/logging/Logger";
 import { getErrorMessage } from "@/shared/utils/Errors";
@@ -31,7 +35,9 @@ import { WorkspaceRestoreStore } from "@/infrastructure/workspace/WorkspaceResto
 import { captureWorkspaceRunSnapshot } from "@/vscode/workspace";
 import { revertWorkspaceTurn, snapshotRoots } from "@/vscode/workspace/WorkspaceChangeTracker";
 
-type ChatCommandMessage = { type: "addReferencedFiles"; files: ReferencedFilePayload[] } | { type: "setDraft"; text: string };
+type ChatCommandMessage =
+  | { type: "addReferencedFiles"; files: ReferencedFilePayload[] }
+  | { type: "setDraft"; text: string };
 const MAX_PENDING_WEBVIEW_MESSAGES = 128;
 const MAX_PENDING_WEBVIEW_BYTES = 8 * 1024 * 1024;
 
@@ -76,7 +82,11 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     this.changeDiffViewer = new ChangeDiffViewer(async (scope) => {
       await this.revertTurn(scope.conversationId, scope.generationId);
     });
-    this.imageAttachments = new ImageAttachmentController(this._context, dependencies.settings, dependencies.secrets);
+    this.imageAttachments = new ImageAttachmentController(
+      this._context,
+      dependencies.settings,
+      dependencies.secrets,
+    );
     this.disposables.push(this.changeDiffViewer);
     this.chatHandler = new ChatHandler(
       this.historyManager,
@@ -85,7 +95,8 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       dependencies.settings,
       dependencies.secrets,
       dependencies.modelProviderFactory,
-      (conversationId, attachments) => this.imageAttachments.archive(conversationId, attachments, this.webviewView?.webview),
+      (conversationId, attachments) =>
+        this.imageAttachments.archive(conversationId, attachments, this.webviewView?.webview),
     );
     this.chatDraftHandler = new ChatDraftHandler(dependencies.settings);
     this.reusableInstructionsHandler = new ReusableInstructionsHandler(dependencies.settings);
@@ -110,17 +121,26 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       },
       (id) => this.chatHandler.prepareConversationDeletion(id),
       async (conversation) => {
-        const attachments = conversation.messages.flatMap((message) => message.imageAttachments ?? []);
-        await Promise.allSettled(attachments.map((attachment) => this.imageAttachments.delete(attachment)));
+        const attachments = conversation.messages.flatMap(
+          (message) => message.imageAttachments ?? [],
+        );
+        await Promise.allSettled(
+          attachments.map((attachment) => this.imageAttachments.delete(attachment)),
+        );
       },
-      (conversation, webview) => this.imageAttachments.restorePreviews(
-        conversation.id, conversation.messages.flatMap((message) => message.imageAttachments ?? []), webview),
+      (conversation, webview) =>
+        this.imageAttachments.restorePreviews(
+          conversation.id,
+          conversation.messages.flatMap((message) => message.imageAttachments ?? []),
+          webview,
+        ),
     );
     this.registerMessageHandlers();
-    this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      void this.chatHandler.handleWorkspaceFoldersChanged();
-    }));
-
+    this.disposables.push(
+      vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        void this.chatHandler.handleWorkspaceFoldersChanged();
+      }),
+    );
   }
 
   public async resolveWebviewView(webviewView: vscode.WebviewView): Promise<void> {
@@ -130,14 +150,27 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     this.webviewView = webviewView;
     this.chatHandler.attachWebview(webviewView);
     const webviewDistUri = vscode.Uri.joinPath(this._extensionUri, "dist", "webview");
-    const codiconsDistUri = vscode.Uri.joinPath(this._extensionUri, "node_modules", "@vscode", "codicons", "dist");
+    const codiconsDistUri = vscode.Uri.joinPath(
+      this._extensionUri,
+      "node_modules",
+      "@vscode",
+      "codicons",
+      "dist",
+    );
     const devServerUrl = process.env.DEEPSEEK_AGENT_WEBVIEW_DEV_SERVER;
-    const codiconFontUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(codiconsDistUri, "codicon.ttf"));
+    const codiconFontUri = webviewView.webview.asWebviewUri(
+      vscode.Uri.joinPath(codiconsDistUri, "codicon.ttf"),
+    );
 
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: devServerUrl
-        ? [webviewDistUri, codiconsDistUri, this.imageAttachments.cacheRoot, vscode.Uri.file(getHistoryDirectory())]
+        ? [
+            webviewDistUri,
+            codiconsDistUri,
+            this.imageAttachments.cacheRoot,
+            vscode.Uri.file(getHistoryDirectory()),
+          ]
         : [webviewDistUri, this.imageAttachments.cacheRoot, vscode.Uri.file(getHistoryDirectory())],
       portMapping: [
         {
@@ -153,15 +186,22 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         ? getDevViewContent({ webview: webviewView.webview, devServerUrl, codiconFontUri })
         : getHtmlContent(webviewView.webview, webviewDistUri);
 
-    this.viewDisposables.push(registerWebviewProtocol(webviewView, (message) => this._routeMessage(message, webviewView)));
-    this.viewDisposables.push(this.settingsHandler.watchWorkspaceInstructions(webviewView), this.reusableInstructionsHandler.watch(webviewView));
-    this.viewDisposables.push(webviewView.onDidDispose(() => {
-      if (this.webviewView === webviewView) {
-        this.webviewView = undefined;
-      }
-      this.chatHandler.detachWebview(webviewView);
-      this.disposeViewRegistrations();
-    }));
+    this.viewDisposables.push(
+      registerWebviewProtocol(webviewView, (message) => this._routeMessage(message, webviewView)),
+    );
+    this.viewDisposables.push(
+      this.settingsHandler.watchWorkspaceInstructions(webviewView),
+      this.reusableInstructionsHandler.watch(webviewView),
+    );
+    this.viewDisposables.push(
+      webviewView.onDidDispose(() => {
+        if (this.webviewView === webviewView) {
+          this.webviewView = undefined;
+        }
+        this.chatHandler.detachWebview(webviewView);
+        this.disposeViewRegistrations();
+      }),
+    );
 
     await this.flushPendingMessages();
   }
@@ -218,7 +258,10 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   public async startNewChat(): Promise<void> {
     await this.revealChat();
     if (this.webviewView) {
-      this.chatHandler.handle({ type: "newConversation", requestId: randomUUID() }, this.webviewView);
+      this.chatHandler.handle(
+        { type: "newConversation", requestId: randomUUID() },
+        this.webviewView,
+      );
       await this.webviewView.webview.postMessage({ type: "clearChat" });
       await this.webviewView.webview.postMessage({ type: "setDraft", text: "" });
     }
@@ -233,7 +276,10 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         0,
       );
       const messageBytes = Buffer.byteLength(JSON.stringify(message), "utf8");
-      if (this.pendingMessages.length >= MAX_PENDING_WEBVIEW_MESSAGES || pendingBytes + messageBytes > MAX_PENDING_WEBVIEW_BYTES) {
+      if (
+        this.pendingMessages.length >= MAX_PENDING_WEBVIEW_MESSAGES ||
+        pendingBytes + messageBytes > MAX_PENDING_WEBVIEW_BYTES
+      ) {
         throw new Error("Webview message queue resource limit reached");
       }
       this.pendingMessages.push(message);
@@ -269,7 +315,9 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         clearTimeout(timeout);
       }
     } catch {
-      logWarning(`[WebviewProvider] Webview dev server unavailable at ${devServerUrl}; falling back to built webview.`);
+      logWarning(
+        `[WebviewProvider] Webview dev server unavailable at ${devServerUrl}; falling back to built webview.`,
+      );
       return false;
     }
   }
@@ -281,56 +329,146 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   }
 
   private registerMessageHandlers(): void {
-    this.commandDispatcher.register("chatDraft", (message, view) => {void this.chatDraftHandler.handle(message, view);});
-    this.commandDispatcher.registerMany(["getReusableInstructions", "createReusableInstruction", "openReusableInstruction"] as const,
-      (message, view) => {void this.reusableInstructionsHandler.handle(message, view);});
-
-    this.commandDispatcher.registerMany(["getChatSuggestion", "cancelChatSuggestion"] as const,
-      (message, view) => this.chatSuggestions.handle(message, view));
-    this.commandDispatcher.registerMany(["getWorkspaceTurn", "revertWorkspaceTurn", "reviewWorkspaceTurn"] as const, (message, view) => {
-      void this.handleWorkspaceTurn(message, view);
+    this.commandDispatcher.register("chatDraft", (message, view) => {
+      void this.chatDraftHandler.handle(message, view);
     });
-    this.commandDispatcher.registerMany([
-      "sendMessage", "steerGeneration", "cancelGeneration", "getGenerationSnapshot",
-      "consumeRecoveredDraft", "getAvailableTools", "executeToolCall",
-      "newConversation", "getWorkspaceContext", "rebindConversationWorkspace", "openConversationWorkspace",
-      "getRunningTasks", "stopRunningTask",
-    ] as const, (message, view) => this.chatHandler.handle(message, view));
-    this.commandDispatcher.registerMany([
-      "getWorkspaceInstructions", "openWorkspaceInstructions", "openGlobalAgents", "selectStorageDirectory", "setStorageDirectory", "reloadStorage", "getConfig", "saveConfig", "resetConfig", "resolveHistoryTransition", "deleteApiKey", "testConnection",
-    ] as const, (message, view) => this.settingsHandler.handle(message, view));
-    this.commandDispatcher.registerMany([
-      "getHistory", "deleteConversation", "deleteConversations", "loadConversation", "loadConversationPage",
-    ] as const, (message, view) => this.historyHandler.handle(message, view));
+    this.commandDispatcher.registerMany(
+      ["getReusableInstructions", "createReusableInstruction", "openReusableInstruction"] as const,
+      (message, view) => {
+        void this.reusableInstructionsHandler.handle(message, view);
+      },
+    );
 
-    this.commandDispatcher.registerMany(["getScreenshotPreview", "openScreenshot"] as const, (message, view) => {
-      void (async () => {
-        try {
-          if (!await this.historyManager.getById(message.conversationId)) {throw new Error("Conversation unavailable");}
-          const capture = await new ScreenshotStore(message.conversationId).lookup(message.screenshotId);
-          if (!capture) {throw new Error("Screenshot was deleted or is unavailable");}
-          const uri = vscode.Uri.file(capture.path);
-          if (message.type === "openScreenshot") {await vscode.commands.executeCommand("vscode.open", uri);}
-          else {await view.webview.postMessage({ type: "screenshotPreview", requestId: message.requestId,
-            conversationId: message.conversationId, uri: view.webview.asWebviewUri(uri).toString(), metadata: capture.metadata });}
-        } catch (error) {
-          await view.webview.postMessage({ type: "screenshotPreview", requestId: message.requestId, conversationId: message.conversationId, error: getErrorMessage(error) });
-        }
-      })();
-    });
+    this.commandDispatcher.registerMany(
+      ["getChatSuggestion", "cancelChatSuggestion"] as const,
+      (message, view) => this.chatSuggestions.handle(message, view),
+    );
+    this.commandDispatcher.registerMany(
+      ["getWorkspaceTurn", "revertWorkspaceTurn", "reviewWorkspaceTurn"] as const,
+      (message, view) => {
+        void this.handleWorkspaceTurn(message, view);
+      },
+    );
+    this.commandDispatcher.registerMany(
+      [
+        "sendMessage",
+        "steerGeneration",
+        "cancelGeneration",
+        "getGenerationSnapshot",
+        "consumeRecoveredDraft",
+        "getAvailableTools",
+        "executeToolCall",
+        "newConversation",
+        "getWorkspaceContext",
+        "rebindConversationWorkspace",
+        "openConversationWorkspace",
+        "getRunningTasks",
+        "stopRunningTask",
+      ] as const,
+      (message, view) => this.chatHandler.handle(message, view),
+    );
+    this.commandDispatcher.registerMany(
+      [
+        "getWorkspaceInstructions",
+        "openWorkspaceInstructions",
+        "openGlobalAgents",
+        "selectStorageDirectory",
+        "setStorageDirectory",
+        "reloadStorage",
+        "getConfig",
+        "saveConfig",
+        "resetConfig",
+        "resolveHistoryTransition",
+        "deleteApiKey",
+        "testConnection",
+      ] as const,
+      (message, view) => this.settingsHandler.handle(message, view),
+    );
+    this.commandDispatcher.registerMany(
+      [
+        "getHistory",
+        "deleteConversation",
+        "deleteConversations",
+        "loadConversation",
+        "loadConversationPage",
+      ] as const,
+      (message, view) => this.historyHandler.handle(message, view),
+    );
+
+    this.commandDispatcher.registerMany(
+      ["getScreenshotPreview", "openScreenshot"] as const,
+      (message, view) => {
+        void (async () => {
+          try {
+            if (!(await this.historyManager.getById(message.conversationId))) {
+              throw new Error("Conversation unavailable");
+            }
+            const capture = await new ScreenshotStore(message.conversationId).lookup(
+              message.screenshotId,
+            );
+            if (!capture) {
+              throw new Error("Screenshot was deleted or is unavailable");
+            }
+            const uri = vscode.Uri.file(capture.path);
+            if (message.type === "openScreenshot") {
+              await vscode.commands.executeCommand("vscode.open", uri);
+            } else {
+              await view.webview.postMessage({
+                type: "screenshotPreview",
+                requestId: message.requestId,
+                conversationId: message.conversationId,
+                uri: view.webview.asWebviewUri(uri).toString(),
+                metadata: capture.metadata,
+              });
+            }
+          } catch (error) {
+            await view.webview.postMessage({
+              type: "screenshotPreview",
+              requestId: message.requestId,
+              conversationId: message.conversationId,
+              error: getErrorMessage(error),
+            });
+          }
+        })();
+      },
+    );
     this.commandDispatcher.register("selectAttachments", (message, view) => {
       void this.attachmentSelection.select(message.requestId, message.conversationId, view);
     });
     this.commandDispatcher.register("uploadClipboardImage", (message, view) => {
       void this.imageAttachments.uploadClipboard(view.webview, message).then(
-        (attachment) => view.webview.postMessage({ type: "imageAttachmentsSelected", requestId: message.requestId, attachments: [attachment] }),
-        (error: unknown) => view.webview.postMessage({ type: "imageAttachmentsSelected", requestId: message.requestId, attachments: [], error: getErrorMessage(error) }),
+        (attachment) =>
+          view.webview.postMessage({
+            type: "imageAttachmentsSelected",
+            requestId: message.requestId,
+            attachments: [attachment],
+          }),
+        (error: unknown) =>
+          view.webview.postMessage({
+            type: "imageAttachmentsSelected",
+            requestId: message.requestId,
+            attachments: [],
+            error: getErrorMessage(error),
+          }),
       );
     });
     this.commandDispatcher.register("deleteImageAttachment", (message, view) => {
       void this.imageAttachments.delete(message.attachment).then(
-        () => view.webview.postMessage({ type: "imageAttachmentDeleted", requestId: message.requestId, fileId: message.attachment.fileId, success: true }),
-        (error: unknown) => view.webview.postMessage({ type: "imageAttachmentDeleted", requestId: message.requestId, fileId: message.attachment.fileId, success: false, error: getErrorMessage(error) }),
+        () =>
+          view.webview.postMessage({
+            type: "imageAttachmentDeleted",
+            requestId: message.requestId,
+            fileId: message.attachment.fileId,
+            success: true,
+          }),
+        (error: unknown) =>
+          view.webview.postMessage({
+            type: "imageAttachmentDeleted",
+            requestId: message.requestId,
+            fileId: message.attachment.fileId,
+            success: false,
+            error: getErrorMessage(error),
+          }),
       );
     });
     this.commandDispatcher.register("getPathCompletions", (message, view) => {
@@ -341,14 +479,16 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     });
     this.commandDispatcher.register("insertCode", (message) => {
       void this.withWorkspaceBinding(message.conversationId, message.workspaceRevision, (binding) =>
-        insertCodeIntoActiveEditor(message.code, binding));
+        insertCodeIntoActiveEditor(message.code, binding),
+      );
     });
     this.commandDispatcher.register("selectModel", (message, view) => {
       void view.webview.postMessage({ type: "modelChanged", modelId: message.modelId });
     });
     this.commandDispatcher.register("openFile", (message) => {
       void this.withWorkspaceBinding(message.conversationId, message.workspaceRevision, (binding) =>
-        openWorkspaceFile(message.path, binding, message.line));
+        openWorkspaceFile(message.path, binding, message.line),
+      );
     });
     this.commandDispatcher.register("openFileDiff", (message) => {
       void this.withWorkspaceBinding(message.conversationId, message.workspaceRevision, (binding) =>
@@ -363,46 +503,92 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
             generationId: message.generationId,
           },
           binding,
-        ));
+        ),
+      );
     });
   }
 
   private async recoveryWorkspace(conversationId: string, generationId: string) {
     const conversation = await this.historyManager.getById(conversationId);
-    if (!conversation?.messages.some((message) => message.generationId === generationId)) {throw new Error("This chat turn is unavailable or was deleted");}
+    if (!conversation?.messages.some((message) => message.generationId === generationId)) {
+      throw new Error("This chat turn is unavailable or was deleted");
+    }
     const context = await this.chatHandler.getWorkspaceContext(conversationId);
-    if (context.state !== "connected") {throw new Error("Reconnect the original workspace before reviewing or reverting its changes");}
+    if (context.state !== "connected") {
+      throw new Error("Reconnect the original workspace before reviewing or reverting its changes");
+    }
     return captureWorkspaceRunSnapshot(context.binding);
   }
 
   private async revertTurn(conversationId: string, generationId: string): Promise<void> {
     this.chatHandler.assertWorkspaceIdle();
     const workspace = await this.recoveryWorkspace(conversationId, generationId);
-    await revertWorkspaceTurn(conversationId, workspace, generationId, () => this.chatHandler.assertWorkspaceIdle());
-    const review = await new WorkspaceRestoreStore(conversationId).review(snapshotRoots(workspace), generationId);
-    await this.webviewView?.webview.postMessage({ type: "workspaceTurn", requestId: "native-review", conversationId, ...review });
+    await revertWorkspaceTurn(conversationId, workspace, generationId, () =>
+      this.chatHandler.assertWorkspaceIdle(),
+    );
+    const review = await new WorkspaceRestoreStore(conversationId).review(
+      snapshotRoots(workspace),
+      generationId,
+    );
+    await this.webviewView?.webview.postMessage({
+      type: "workspaceTurn",
+      requestId: "native-review",
+      conversationId,
+      ...review,
+    });
   }
 
-  private async handleWorkspaceTurn(message: Extract<WebviewToHandlerMessage, { type: "getWorkspaceTurn" | "revertWorkspaceTurn" | "reviewWorkspaceTurn" }>, view: vscode.WebviewView): Promise<void> {
+  private async handleWorkspaceTurn(
+    message: Extract<
+      WebviewToHandlerMessage,
+      { type: "getWorkspaceTurn" | "revertWorkspaceTurn" | "reviewWorkspaceTurn" }
+    >,
+    view: vscode.WebviewView,
+  ): Promise<void> {
     try {
       const workspace = await this.recoveryWorkspace(message.conversationId, message.generationId);
       const store = new WorkspaceRestoreStore(message.conversationId);
       const roots = snapshotRoots(workspace);
-      if (message.type === "revertWorkspaceTurn") {await this.revertTurn(message.conversationId, message.generationId);}
+      if (message.type === "revertWorkspaceTurn") {
+        await this.revertTurn(message.conversationId, message.generationId);
+      }
       const review = await store.review(roots, message.generationId);
       if (message.type === "reviewWorkspaceTurn") {
-        const file = message.path ?? await vscode.window.showQuickPick(review.paths, { placeHolder: "Review files changed during this turn" });
-        if (file && !review.paths.includes(file)) {throw new Error("This file is not part of the selected turn");}
+        const file =
+          message.path ??
+          (await vscode.window.showQuickPick(review.paths, {
+            placeHolder: "Review files changed during this turn",
+          }));
+        if (file && !review.paths.includes(file)) {
+          throw new Error("This file is not part of the selected turn");
+        }
         if (file) {
-          await this.changeDiffViewer.openSaved(file, await store.diff(roots, message.generationId, file), {
-            conversationId: message.conversationId, generationId: message.generationId,
-          });
+          await this.changeDiffViewer.openSaved(
+            file,
+            await store.diff(roots, message.generationId, file),
+            {
+              conversationId: message.conversationId,
+              generationId: message.generationId,
+            },
+          );
         }
       }
-      await view.webview.postMessage({ type: "workspaceTurn", requestId: message.requestId, conversationId: message.conversationId, ...review });
+      await view.webview.postMessage({
+        type: "workspaceTurn",
+        requestId: message.requestId,
+        conversationId: message.conversationId,
+        ...review,
+      });
     } catch (error) {
-      await view.webview.postMessage({ type: "workspaceTurn", requestId: message.requestId, conversationId: message.conversationId,
-        generationId: message.generationId, paths: [], reverted: false, error: getErrorMessage(error) });
+      await view.webview.postMessage({
+        type: "workspaceTurn",
+        requestId: message.requestId,
+        conversationId: message.conversationId,
+        generationId: message.generationId,
+        paths: [],
+        reverted: false,
+        error: getErrorMessage(error),
+      });
     }
   }
 
@@ -411,12 +597,19 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     webviewView: vscode.WebviewView,
   ): Promise<void> {
     const context = await this.chatHandler.getWorkspaceContext(message.conversationId);
-    const allowed = (context.state === "connected" || context.state === "empty") &&
+    const allowed =
+      (context.state === "connected" || context.state === "empty") &&
       (!message.workspaceRevision || message.workspaceRevision === context.binding.revision);
-    const [files, instructions] = allowed ? await Promise.all([
-      context.state === "connected" ? getPathCompletionItems(message.query, context.binding) : Promise.resolve([]),
-      reusableInstructionCatalog(captureWorkspaceRunSnapshot(context.binding)).then((entries) => instructionCompletionItems(message.query, entries)),
-    ]) : [[], []];
+    const [files, instructions] = allowed
+      ? await Promise.all([
+          context.state === "connected"
+            ? getPathCompletionItems(message.query, context.binding)
+            : Promise.resolve([]),
+          reusableInstructionCatalog(captureWorkspaceRunSnapshot(context.binding)).then((entries) =>
+            instructionCompletionItems(message.query, entries),
+          ),
+        ])
+      : [[], []];
     const items = [...files, ...instructions];
     await webviewView.webview.postMessage({
       type: "pathCompletions",
@@ -430,15 +623,20 @@ export class WebviewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   private async withWorkspaceBinding(
     conversationId: string | undefined,
     workspaceRevision: string | undefined,
-    operation: (binding: Awaited<ReturnType<ChatHandler["getWorkspaceContext"]>>["binding"]) => Promise<void>,
+    operation: (
+      binding: Awaited<ReturnType<ChatHandler["getWorkspaceContext"]>>["binding"],
+    ) => Promise<void>,
   ): Promise<void> {
     const context = await this.chatHandler.getWorkspaceContext(conversationId);
-    if (context.state !== "connected" || (workspaceRevision && workspaceRevision !== context.binding.revision)) {
-      await vscode.window.showErrorMessage("The chat workspace is no longer connected or has changed.");
+    if (
+      context.state !== "connected" ||
+      (workspaceRevision && workspaceRevision !== context.binding.revision)
+    ) {
+      await vscode.window.showErrorMessage(
+        "The chat workspace is no longer connected or has changed.",
+      );
       return;
     }
     await operation(context.binding);
   }
-
 }
-

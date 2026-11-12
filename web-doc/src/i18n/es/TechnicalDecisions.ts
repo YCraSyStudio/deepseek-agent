@@ -4,7 +4,8 @@ export const technicalDecisions: PageContent = {
   navTitle: "Decisiones técnicas",
   title: "Decisiones técnicas",
   seoTitle: "Arquitectura y decisiones técnicas",
-  description: "Cómo se estructura la extensión por capas, cómo se asignan y recuperan las generaciones y cómo se diseñan el streaming, las herramientas y la persistencia.",
+  description:
+    "Cómo se estructura la extensión por capas, cómo se asignan y recuperan las generaciones y cómo se diseñan el streaming, las herramientas y la persistencia.",
   lead: "La extensión separa el estado de dominio, el transporte de DeepSeek, las capacidades de VS Code y el renderizado React para que las reglas de seguridad sean autoritativas en el host.",
   sections: [
     {

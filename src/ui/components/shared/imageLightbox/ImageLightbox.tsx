@@ -45,9 +45,13 @@ export default function ImageLightbox({ image, onClose }: Props) {
   }, [image?.id]);
 
   useEffect(() => {
-    if (!isOpen) {return;}
+    if (!isOpen) {
+      return;
+    }
     const viewport = viewportRef.current;
-    if (!viewport) {return;}
+    if (!viewport) {
+      return;
+    }
     const measure = () => {
       const next = contentSize(viewport);
       setViewportSize((current) =>
@@ -55,7 +59,9 @@ export default function ImageLightbox({ image, onClose }: Props) {
       );
     };
     measure();
-    if (typeof ResizeObserver === "undefined") {return;}
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
     const observer = new ResizeObserver(measure);
     observer.observe(viewport);
     return () => observer.disconnect();
@@ -70,13 +76,20 @@ export default function ImageLightbox({ image, onClose }: Props) {
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
-    if (!viewport || !isOpen) {return;}
+    if (!viewport || !isOpen) {
+      return;
+    }
     const content = { width: viewport.scrollWidth, height: viewport.scrollHeight };
     const size = { width: viewport.clientWidth, height: viewport.clientHeight };
     const isNewImage = renderedImageId.current !== (image?.id ?? null);
     const previous = isNewImage ? null : previousContentSize.current;
     const offset = previous
-      ? rescaledScrollOffset({ left: viewport.scrollLeft, top: viewport.scrollTop }, previous, content, size)
+      ? rescaledScrollOffset(
+          { left: viewport.scrollLeft, top: viewport.scrollTop },
+          previous,
+          content,
+          size,
+        )
       : centeredScrollOffset(content, size);
     viewport.scrollLeft = offset.left;
     viewport.scrollTop = offset.top;
@@ -106,14 +119,20 @@ export default function ImageLightbox({ image, onClose }: Props) {
 
   const handleViewportClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      if (pan.didDrag()) {return;}
-      if (event.target instanceof HTMLImageElement) {return;}
+      if (pan.didDrag()) {
+        return;
+      }
+      if (event.target instanceof HTMLImageElement) {
+        return;
+      }
       onClose();
     },
     [onClose, pan],
   );
 
-  if (!image) {return null;}
+  if (!image) {
+    return null;
+  }
 
   return (
     <div className="imageLightboxBackdrop" role="presentation">
@@ -126,7 +145,9 @@ export default function ImageLightbox({ image, onClose }: Props) {
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
-        <div className="imageLightboxHeader" id={labelId} title={image.name}>{image.name}</div>
+        <div className="imageLightboxHeader" id={labelId} title={image.name}>
+          {image.name}
+        </div>
         <div
           className={`imageLightboxViewport${pannable ? " isPannable" : ""}${pan.isPanning ? " isPanning" : ""}`}
           ref={viewportRef}
@@ -139,13 +160,17 @@ export default function ImageLightbox({ image, onClose }: Props) {
               src={image.src}
               alt={image.name}
               draggable={false}
-              style={renderedSize
-                ? { width: renderedSize.width, height: renderedSize.height }
-                : { maxWidth: "100%", maxHeight: "100%" }}
-              onLoad={(event) => setNaturalSize({
-                width: event.currentTarget.naturalWidth,
-                height: event.currentTarget.naturalHeight,
-              })}
+              style={
+                renderedSize
+                  ? { width: renderedSize.width, height: renderedSize.height }
+                  : { maxWidth: "100%", maxHeight: "100%" }
+              }
+              onLoad={(event) =>
+                setNaturalSize({
+                  width: event.currentTarget.naturalWidth,
+                  height: event.currentTarget.naturalHeight,
+                })
+              }
             />
           </div>
         </div>
@@ -209,6 +234,8 @@ function contentSize(element: HTMLElement): ImageSize {
 }
 
 function isPannable(rendered: ImageSize | null, viewport: ImageSize | null): boolean {
-  if (!rendered || !viewport) {return false;}
+  if (!rendered || !viewport) {
+    return false;
+  }
   return rendered.width > viewport.width || rendered.height > viewport.height;
 }

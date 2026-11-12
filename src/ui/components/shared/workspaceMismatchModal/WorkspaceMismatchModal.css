@@ -14,7 +14,11 @@
   min-width: 0;
   border: 1px solid var(--vscode-widget-border, var(--border-color));
   background: var(--vscode-editorWidget-background, var(--bg-primary));
-  background: color-mix(in srgb, var(--vscode-editorWidget-background, var(--bg-primary)) var(--floating-surface-opacity), transparent);
+  background: color-mix(
+    in srgb,
+    var(--vscode-editorWidget-background, var(--bg-primary)) var(--floating-surface-opacity),
+    transparent
+  );
   backdrop-filter: var(--floating-surface-filter);
   border-radius: 6px;
   padding: 16px;

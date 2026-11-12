@@ -32,13 +32,25 @@ suite("workspace path validation", () => {
   test("rejects traversal and absolute paths outside the workspace", () => {
     assert.throws(() => resolveWorkspacePath("../outside.txt", workspaceRoot), /traversal/);
     assert.throws(() => resolveWorkspacePath("src/../../outside.txt", workspaceRoot), /traversal/);
-    assert.throws(() => resolveWorkspacePath(path.resolve("/tmp/outside.txt"), workspaceRoot), /inside the workspace/);
+    assert.throws(
+      () => resolveWorkspacePath(path.resolve("/tmp/outside.txt"), workspaceRoot),
+      /inside the workspace/,
+    );
   });
 
   test("rejects URI-like paths", () => {
-    assert.throws(() => resolveWorkspacePath("file:///tmp/workspace/README.md", workspaceRoot), /not a URI/);
-    assert.throws(() => resolveWorkspacePath("vscode://file/tmp/workspace/README.md", workspaceRoot), /not a URI/);
-    assert.throws(() => resolveWorkspacePath("https://example.com/file.txt", workspaceRoot), /not a URI/);
+    assert.throws(
+      () => resolveWorkspacePath("file:///tmp/workspace/README.md", workspaceRoot),
+      /not a URI/,
+    );
+    assert.throws(
+      () => resolveWorkspacePath("vscode://file/tmp/workspace/README.md", workspaceRoot),
+      /not a URI/,
+    );
+    assert.throws(
+      () => resolveWorkspacePath("https://example.com/file.txt", workspaceRoot),
+      /not a URI/,
+    );
   });
 
   test("rejects sensitive file paths by default", () => {
@@ -86,7 +98,11 @@ suite("workspace path validation", () => {
     await assert.rejects(() => getToolWorkspaceHost().readFile("../outside.txt"), /traversal/);
     await assert.rejects(() => getToolWorkspaceHost().readFile(".env"), /sensitive/);
     await getToolWorkspaceHost().writeFile(".env", Buffer.from("secret"));
-    assert.strictEqual(calls.at(-1), ".env", "writes use a separate path policy and may update legitimate sensitive-named files");
+    assert.strictEqual(
+      calls.at(-1),
+      ".env",
+      "writes use a separate path policy and may update legitimate sensitive-named files",
+    );
   });
 
   test("rejects symbolic links and junctions that resolve outside the workspace", async () => {
@@ -113,7 +129,10 @@ suite("workspace path validation", () => {
           return Buffer.from("outside");
         },
       });
-      await assert.rejects(() => getToolWorkspaceHost().readFile("escape/data.txt"), /outside the workspace/);
+      await assert.rejects(
+        () => getToolWorkspaceHost().readFile("escape/data.txt"),
+        /outside the workspace/,
+      );
       assert.strictEqual(readAttempted, false);
     } finally {
       await rm(sandbox, { recursive: true, force: true });
@@ -136,7 +155,10 @@ suite("workspace path validation", () => {
       findFiles: async () => ["frontend/src/App.tsx", "backend/src/server.ts", "../outside.ts"],
     });
 
-    const files = await getToolWorkspaceHost().findFiles!({ includePattern: "**/*", maxResults: 10 });
+    const files = await getToolWorkspaceHost().findFiles!({
+      includePattern: "**/*",
+      maxResults: 10,
+    });
     assert.deepStrictEqual(files, ["frontend/src/App.tsx", "backend/src/server.ts"]);
     assert.deepStrictEqual(validated, ["frontend/src/App.tsx", "backend/src/server.ts"]);
   });

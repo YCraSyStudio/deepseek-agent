@@ -1,7 +1,11 @@
 import { mkdir, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from "@vscode/test-electron";
+import {
+  downloadAndUnzipVSCode,
+  resolveCliArgsFromVSCodeExecutablePath,
+  runTests,
+} from "@vscode/test-electron";
 
 const vsixPath = resolve(process.argv[2] ?? "");
 const version = process.argv[3] ?? "stable";
@@ -16,19 +20,29 @@ await mkdir(extensionsDir, { recursive: true });
 await mkdir(workspaceDir, { recursive: true });
 
 const executable = await downloadAndUnzipVSCode({ version, cachePath: vscodeCache });
-const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(executable, { reuseMachineInstall: true });
-const installation = spawnSync(cli, [
-  ...cliArgs,
-  "--install-extension", vsixPath,
-  "--force",
-  "--user-data-dir", userDataDir,
-  "--extensions-dir", extensionsDir,
-], { encoding: "utf8", stdio: "inherit", shell: process.platform === "win32" });
+const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(executable, {
+  reuseMachineInstall: true,
+});
+const installation = spawnSync(
+  cli,
+  [
+    ...cliArgs,
+    "--install-extension",
+    vsixPath,
+    "--force",
+    "--user-data-dir",
+    userDataDir,
+    "--extensions-dir",
+    extensionsDir,
+  ],
+  { encoding: "utf8", stdio: "inherit", shell: process.platform === "win32" },
+);
 if (installation.status !== 0) {
   throw new Error(`VSIX installation failed with exit code ${installation.status}`);
 }
-const installedDirectory = (await readdir(extensionsDir, { withFileTypes: true }))
-  .find((entry) => entry.isDirectory() && entry.name.startsWith("yarcrasy.deepseek-agent-"));
+const installedDirectory = (await readdir(extensionsDir, { withFileTypes: true })).find(
+  (entry) => entry.isDirectory() && entry.name.startsWith("yarcrasy.deepseek-agent-"),
+);
 if (!installedDirectory) {
   throw new Error("The installed extension directory could not be located.");
 }

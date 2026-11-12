@@ -5,7 +5,9 @@ import { ToolRegistry } from "@/application/tools/ToolRegistry";
 
 suite("tool executor result classification", () => {
   test("marks plain handler errors as failed", async () => {
-    const executor = createExecutor(async () => "Error editing file 'src/app.ts': search text not found");
+    const executor = createExecutor(
+      async () => "Error editing file 'src/app.ts': search text not found",
+    );
 
     const result = await executor.execute(createToolCall());
 
@@ -23,13 +25,15 @@ suite("tool executor result classification", () => {
   });
 
   test("preserves the analyzed workspace root in confirmation results", async () => {
-    const executor = createExecutor(async () => JSON.stringify({
-      requiresConfirmation: true,
-      dangerLevel: "caution",
-      warningMessage: "Review command",
-      cwd: "C:\\workspace\\frontend",
-      workspaceRoot: "C:\\workspace",
-    }));
+    const executor = createExecutor(async () =>
+      JSON.stringify({
+        requiresConfirmation: true,
+        dangerLevel: "caution",
+        warningMessage: "Review command",
+        cwd: "C:\\workspace\\frontend",
+        workspaceRoot: "C:\\workspace",
+      }),
+    );
 
     const result = await executor.execute(createToolCall());
     const confirmation = ToolExecutor.isConfirmationRequired(result.outcome.content);
@@ -41,12 +45,19 @@ suite("tool executor result classification", () => {
   test("never executes a mutation cancelled while waiting for the workspace lock", async () => {
     let releaseFirst!: () => void;
     let firstStarted!: () => void;
-    const blocker = new Promise<void>((resolve) => {releaseFirst = resolve;});
-    const started = new Promise<void>((resolve) => {firstStarted = resolve;});
+    const blocker = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      firstStarted = resolve;
+    });
     let invocations = 0;
     const registry = new ToolRegistry();
     registry.register({
-      definition: { ...testToolDefinition, function: { ...testToolDefinition.function, name: "edit_file" } },
+      definition: {
+        ...testToolDefinition,
+        function: { ...testToolDefinition.function, name: "edit_file" },
+      },
       handler: async () => {
         invocations += 1;
         if (invocations === 1) {
@@ -61,13 +72,18 @@ suite("tool executor result classification", () => {
     const first = executor.execute(createToolCall("first", "edit_file"));
     await started;
     const controller = new AbortController();
-    const second = executor.execute(createToolCall("second", "edit_file"), { signal: controller.signal });
+    const second = executor.execute(createToolCall("second", "edit_file"), {
+      signal: controller.signal,
+    });
 
     controller.abort();
     releaseFirst();
     await first;
 
-    await assert.rejects(second, (error: unknown) => error instanceof Error && error.name === "AbortError");
+    await assert.rejects(
+      second,
+      (error: unknown) => error instanceof Error && error.name === "AbortError",
+    );
     assert.strictEqual(invocations, 1);
   });
 });

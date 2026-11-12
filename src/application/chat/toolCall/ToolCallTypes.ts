@@ -1,4 +1,10 @@
-import type { ChatCompletionResponse, ChatMessage, ReasoningEffort, ToolCall, ToolDefinition } from "@/contracts";
+import type {
+  ChatCompletionResponse,
+  ChatMessage,
+  ReasoningEffort,
+  ToolCall,
+  ToolDefinition,
+} from "@/contracts";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import type { GenerationBudgetManager } from "@/application/chat/context/GenerationBudgetManager";
 
@@ -10,7 +16,10 @@ export interface ToolCallResult {
 }
 
 export interface ToolCallCycleOptions {
-  getToolsForRound?: (phase: "reasoning" | "tools", round: number) => Promise<ToolDefinition[]> | ToolDefinition[];
+  getToolsForRound?: (
+    phase: "reasoning" | "tools",
+    round: number,
+  ) => Promise<ToolDefinition[]> | ToolDefinition[];
   onRoundStart?: (round: number, toolCalls: ToolCall[]) => Promise<void> | void;
   onToolResult?: (toolCallId: string, result: string) => void;
   afterToolRound?: (round: number) => Promise<ChatMessage[] | undefined>;

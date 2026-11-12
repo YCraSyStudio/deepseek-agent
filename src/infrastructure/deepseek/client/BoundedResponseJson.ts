@@ -7,16 +7,22 @@ export async function readBoundedJson(response: Response, maxBytes: number): Pro
     await response.body?.cancel().catch(() => undefined);
     throw new Error(`API response exceeded ${maxBytes} bytes`);
   }
-  if (!response.body) {return null;}
+  if (!response.body) {
+    return null;
+  }
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) {break;}
+      if (done) {
+        break;
+      }
       total += value.byteLength;
-      if (total > maxBytes) {throw new Error(`API response exceeded ${maxBytes} bytes`);}
+      if (total > maxBytes) {
+        throw new Error(`API response exceeded ${maxBytes} bytes`);
+      }
       chunks.push(value);
     }
   } catch (error) {

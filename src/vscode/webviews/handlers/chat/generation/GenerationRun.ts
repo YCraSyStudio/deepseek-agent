@@ -1,4 +1,9 @@
-import type { AssistantTimelineEvent, ConversationMessage, PermissionSnapshot, StoredToolCall } from "@/contracts";
+import type {
+  AssistantTimelineEvent,
+  ConversationMessage,
+  PermissionSnapshot,
+  StoredToolCall,
+} from "@/contracts";
 import type { ConversationState } from "@/application/chat/ConversationState";
 import type { ProviderTranscript } from "@/application/chat/ProviderTranscript";
 import type { ToolCallSession } from "../toolCalls/ToolCallSession";
@@ -106,30 +111,47 @@ function handleGenerationEvent(
   if (type === "streamDone" || type === "streamError") {
     captureGenerationTerminal(record, message);
     if (type === "streamError" && record.status !== "cancelling" && record.status !== "cancelled") {
-      record.error = appendBoundedUtf8("", String(message.error ?? "Generation failed"), 512 * 1024);
+      record.error = appendBoundedUtf8(
+        "",
+        String(message.error ?? "Generation failed"),
+        512 * 1024,
+      );
       callbacks.checkpointImmediately(record);
     }
     return;
   }
-  if (type === "streamTimelineDelta" && typeof message.content === "string" && typeof message.eventId === "string") {
+  if (
+    type === "streamTimelineDelta" &&
+    typeof message.content === "string" &&
+    typeof message.eventId === "string"
+  ) {
     record.content += message.eventType === "content" ? message.content : "";
     const existing = record.timeline.find((event) => event.id === message.eventId);
     if (existing && (existing.type === "content" || existing.type === "reasoning")) {
-      existing.content = existing.type === "reasoning"
-        ? appendBoundedUtf8(existing.content, message.content, MAX_RETAINED_REASONING_BYTES)
-        : existing.content + message.content;
+      existing.content =
+        existing.type === "reasoning"
+          ? appendBoundedUtf8(existing.content, message.content, MAX_RETAINED_REASONING_BYTES)
+          : existing.content + message.content;
     } else if (message.eventType === "content" || message.eventType === "reasoning") {
-      record.timeline.push({ id: message.eventId, type: message.eventType, content: message.content });
+      record.timeline.push({
+        id: message.eventId,
+        type: message.eventType,
+        content: message.content,
+      });
     }
     transitionGenerationRun(record, "streaming");
     callbacks.scheduleCheckpoint(record);
-  } else if (type === "streamTimelineToolGroup" && message.event && typeof message.event === "object") {
+  } else if (
+    type === "streamTimelineToolGroup" &&
+    message.event &&
+    typeof message.event === "object"
+  ) {
     record.timeline.push(structuredClone(message.event) as AssistantTimelineEvent);
     transitionGenerationRun(record, "running_tool");
     callbacks.checkpointImmediately(record);
   } else if (type === "toolCallConfirmationRequired") {
     const toolCalls = Array.isArray(message.toolCalls)
-      ? message.toolCalls as Array<{ id: string; function: { name: string; arguments: string } }>
+      ? (message.toolCalls as Array<{ id: string; function: { name: string; arguments: string } }>)
       : [];
     const dangerConfirmation = isDangerConfirmationData(message.dangerConfirmation)
       ? structuredClone(message.dangerConfirmation)
@@ -150,7 +172,7 @@ function handleGenerationEvent(
     callbacks.checkpointImmediately(record);
   } else if (type === "toolCallStarted") {
     const toolCalls = Array.isArray(message.toolCalls)
-      ? message.toolCalls as Array<{ id: string; function: { name: string; arguments: string } }>
+      ? (message.toolCalls as Array<{ id: string; function: { name: string; arguments: string } }>)
       : [];
     for (const toolCall of toolCalls) {
       upsertStoredToolCall(record.toolCalls, {

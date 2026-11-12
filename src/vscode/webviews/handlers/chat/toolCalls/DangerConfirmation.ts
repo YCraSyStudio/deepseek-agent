@@ -12,8 +12,17 @@ interface DangerConfirmationOptions {
   round?: number;
 }
 
-export async function requestDangerConfirmation(options: DangerConfirmationOptions): Promise<DangerConfirmationDecision> {
-  const { eventSink, toolCall, confirmationResult, setPendingDangerConfirmation, announceStarted = false, round = 0 } = options;
+export async function requestDangerConfirmation(
+  options: DangerConfirmationOptions,
+): Promise<DangerConfirmationDecision> {
+  const {
+    eventSink,
+    toolCall,
+    confirmationResult,
+    setPendingDangerConfirmation,
+    announceStarted = false,
+    round = 0,
+  } = options;
 
   const decision = await new Promise<DangerConfirmationDecision>((resolve) => {
     setPendingDangerConfirmation({ toolCall, resolve, confirmationResult });

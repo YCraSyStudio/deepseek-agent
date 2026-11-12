@@ -8,7 +8,15 @@ const allowedDependencies: Record<string, ReadonlySet<string>> = {
   application: new Set(["application", "contracts", "domain", "shared"]),
   contracts: new Set(["contracts", "shared"]),
   domain: new Set(["domain", "shared"]),
-  extension: new Set(["application", "contracts", "domain", "extension", "infrastructure", "shared", "vscode"]),
+  extension: new Set([
+    "application",
+    "contracts",
+    "domain",
+    "extension",
+    "infrastructure",
+    "shared",
+    "vscode",
+  ]),
   infrastructure: new Set(["application", "contracts", "domain", "infrastructure", "shared"]),
   shared: new Set(["shared"]),
   ui: new Set(["assets", "contracts", "shared", "ui"]),
@@ -50,19 +58,27 @@ suite("architecture boundaries", () => {
     const visit = (file: string, stack: string[]): void => {
       if (visiting.has(file)) {
         const start = stack.indexOf(file);
-        cycles.push([...stack.slice(start), file].map((entry) => relative(sourceRoot, entry)).join(" -> "));
+        cycles.push(
+          [...stack.slice(start), file].map((entry) => relative(sourceRoot, entry)).join(" -> "),
+        );
         return;
       }
-      if (visited.has(file)) {return;}
+      if (visited.has(file)) {
+        return;
+      }
       visiting.add(file);
       for (const dependency of graph.get(file) ?? []) {
-        if (graph.has(dependency)) {visit(dependency, [...stack, file]);}
+        if (graph.has(dependency)) {
+          visit(dependency, [...stack, file]);
+        }
       }
       visiting.delete(file);
       visited.add(file);
     };
 
-    for (const file of files) {visit(file, []);}
+    for (const file of files) {
+      visit(file, []);
+    }
     assert.deepStrictEqual([...new Set(cycles)].sort(), []);
   });
 
@@ -71,7 +87,10 @@ suite("architecture boundaries", () => {
     for (const file of collectSourceFiles(sourceRoot)) {
       const owner = getLayer(file);
       for (const specifier of getImportSpecifiers(readFileSync(file, "utf8"), file)) {
-        if ((owner === "domain" || owner === "application") && (specifier.startsWith("node:") || specifier === "path")) {
+        if (
+          (owner === "domain" || owner === "application") &&
+          (specifier.startsWith("node:") || specifier === "path")
+        ) {
           violations.push(`${relative(sourceRoot, file)} imports ${specifier}`);
         }
         if (specifier === "vscode" && owner !== "vscode" && owner !== "extension") {
@@ -100,9 +119,7 @@ function collectSourceFiles(directory: string): string[] {
     if (entry.isDirectory()) {
       return entry.name === "test" ? [] : collectSourceFiles(path);
     }
-    return entry.isFile() && [".ts", ".tsx"].includes(extname(entry.name))
-      ? [path]
-      : [];
+    return entry.isFile() && [".ts", ".tsx"].includes(extname(entry.name)) ? [path] : [];
   });
 }
 
@@ -117,7 +134,11 @@ function getImportSpecifiers(source: string, fileName: string): string[] {
   const specifiers: string[] = [];
 
   const visit = (node: ts.Node): void => {
-    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteralLike(node.moduleSpecifier)) {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteralLike(node.moduleSpecifier)
+    ) {
       specifiers.push(node.moduleSpecifier.text);
     } else if (
       ts.isCallExpression(node) &&
@@ -156,11 +177,18 @@ function resolveInternalImport(ownerFile: string, specifier: string): string | u
 }
 
 function resolveSourceFile(basePath: string): string | undefined {
-  for (const candidate of [basePath, `${basePath}.ts`, `${basePath}.tsx`, resolve(basePath, "index.ts"), resolve(basePath, "index.tsx")]) {
+  for (const candidate of [
+    basePath,
+    `${basePath}.ts`,
+    `${basePath}.tsx`,
+    resolve(basePath, "index.ts"),
+    resolve(basePath, "index.tsx"),
+  ]) {
     try {
-      if (readFileSync(candidate)) {return candidate;}
-    } catch {
-    }
+      if (readFileSync(candidate)) {
+        return candidate;
+      }
+    } catch {}
   }
   return undefined;
 }

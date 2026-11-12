@@ -14,21 +14,40 @@ type HeaderProps = {
   onIncognitoToggle: (enabled: boolean) => void;
 };
 
-function Header({ currentView, ViewChangeHandler, onNewConversation, incognitoEnabled, incognitoUpdatePending, onIncognitoToggle }: HeaderProps) {
+function Header({
+  currentView,
+  ViewChangeHandler,
+  onNewConversation,
+  incognitoEnabled,
+  incognitoUpdatePending,
+  onIncognitoToggle,
+}: HeaderProps) {
   const handleLeftButton = () => {
     switch (currentView) {
       case "chat":
         return (
           <>
-            <button type="button" className="historyBtn" onClick={() => ViewChangeHandler("history")} aria-label={t("navigation.history")} data-tooltip={t("navigation.history")} data-tooltip-position="bottom" data-tooltip-align="start">
+            <button
+              type="button"
+              className="historyBtn"
+              onClick={() => ViewChangeHandler("history")}
+              aria-label={t("navigation.history")}
+              data-tooltip={t("navigation.history")}
+              data-tooltip-position="bottom"
+              data-tooltip-align="start"
+            >
               <span className="codicon codicon-history" />
             </button>
             <button
               type="button"
               className={`incognitoBtn${incognitoEnabled ? " active" : ""}`}
               aria-pressed={incognitoEnabled}
-              aria-label={t(incognitoEnabled ? "navigation.disableIncognito" : "navigation.enableIncognito")}
-              data-tooltip={t(incognitoEnabled ? "navigation.disableIncognito" : "navigation.enableIncognito")}
+              aria-label={t(
+                incognitoEnabled ? "navigation.disableIncognito" : "navigation.enableIncognito",
+              )}
+              data-tooltip={t(
+                incognitoEnabled ? "navigation.disableIncognito" : "navigation.enableIncognito",
+              )}
               data-tooltip-position="bottom"
               data-tooltip-align="start"
               disabled={incognitoUpdatePending}
@@ -40,7 +59,15 @@ function Header({ currentView, ViewChangeHandler, onNewConversation, incognitoEn
         );
       default:
         return (
-          <button type="button" className="backBtn" onClick={() => ViewChangeHandler("chat")} aria-label={t("navigation.back")} data-tooltip={t("navigation.back")} data-tooltip-position="bottom" data-tooltip-align="start">
+          <button
+            type="button"
+            className="backBtn"
+            onClick={() => ViewChangeHandler("chat")}
+            aria-label={t("navigation.back")}
+            data-tooltip={t("navigation.back")}
+            data-tooltip-position="bottom"
+            data-tooltip-align="start"
+          >
             <span className="codicon codicon-arrow-left" />
           </button>
         );
@@ -56,7 +83,15 @@ function Header({ currentView, ViewChangeHandler, onNewConversation, incognitoEn
       <div className="rightTooling">
         {currentView === "chat" ? (
           <>
-            <button type="button" className="newChatBtn" onClick={onNewConversation} aria-label={t("navigation.newChat")} data-tooltip={t("navigation.newChat")} data-tooltip-position="bottom" data-tooltip-align="end">
+            <button
+              type="button"
+              className="newChatBtn"
+              onClick={onNewConversation}
+              aria-label={t("navigation.newChat")}
+              data-tooltip={t("navigation.newChat")}
+              data-tooltip-position="bottom"
+              data-tooltip-align="end"
+            >
               <span className="codicon codicon-add" />
             </button>
           </>

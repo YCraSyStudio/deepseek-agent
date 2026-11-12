@@ -29,9 +29,10 @@ async function handleDeletePath(args: Record<string, unknown>): Promise<string> 
   }
 
   const action = parsed.permanent ? "Permanently delete" : "Move to the trash";
-  const contents = preview.entryCount === undefined
-    ? ""
-    : ` and its ${preview.entryCount} entr${preview.entryCount === 1 ? "y" : "ies"}`;
+  const contents =
+    preview.entryCount === undefined
+      ? ""
+      : ` and its ${preview.entryCount} entr${preview.entryCount === 1 ? "y" : "ies"}`;
   return JSON.stringify({
     requiresConfirmation: true,
     dangerLevel: parsed.permanent ? "destructive" : "dangerous",
@@ -56,7 +57,10 @@ async function handleDeletePathForced(args: Record<string, unknown>): Promise<st
     if (!workspace.deletePath) {
       return `Error deleting '${parsed.path}': the active workspace host does not support deleting paths`;
     }
-    await workspace.deletePath(parsed.path, { recursive: parsed.recursive, useTrash: !parsed.permanent });
+    await workspace.deletePath(parsed.path, {
+      recursive: parsed.recursive,
+      useTrash: !parsed.permanent,
+    });
     return createStructuredResult("fileDelete", {
       path: parsed.path,
       entryType: preview.entryType,
@@ -134,15 +138,18 @@ export const deletePathDefinition: ToolDefinition = {
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path of the file or directory to delete. Use an absolute path only for explicitly requested external access.",
+          description:
+            "Workspace-relative path of the file or directory to delete. Use an absolute path only for explicitly requested external access.",
         },
         recursive: {
           type: "boolean",
-          description: "Required when the path is a directory. Never inferred: without it a directory deletion fails.",
+          description:
+            "Required when the path is a directory. Never inferred: without it a directory deletion fails.",
         },
         permanent: {
           type: "boolean",
-          description: "Delete permanently instead of sending the path to the trash. Defaults to false.",
+          description:
+            "Delete permanently instead of sending the path to the trash. Defaults to false.",
         },
       },
       required: ["path"],

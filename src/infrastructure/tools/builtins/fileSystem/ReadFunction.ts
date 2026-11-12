@@ -94,7 +94,9 @@ async function handleReadFunction(args: Record<string, unknown>): Promise<string
       if (selected.length > 1) {
         ambiguous.push({
           name,
-          candidates: selected.slice(0, MAX_AMBIGUOUS_CANDIDATES).map((symbol) => symbol.qualifiedName),
+          candidates: selected
+            .slice(0, MAX_AMBIGUOUS_CANDIDATES)
+            .map((symbol) => symbol.qualifiedName),
         });
         truncated ||= selected.length > MAX_AMBIGUOUS_CANDIDATES;
         continue;
@@ -127,7 +129,8 @@ async function handleReadFunction(args: Record<string, unknown>): Promise<string
 
       const code = symbolCode(lines, symbol);
       if (codeCharacters > 0 && codeCharacters + code.length > MAX_TOTAL_CODE_CHARS) {
-        entry.note = "Body omitted: this call already returned its content budget. Request this symbol in a separate read_func call.";
+        entry.note =
+          "Body omitted: this call already returned its content budget. Request this symbol in a separate read_func call.";
         truncated = true;
       } else {
         entry.code = code.length > MAX_SYMBOL_CHARS ? code.slice(0, MAX_SYMBOL_CHARS) : code;
@@ -146,7 +149,14 @@ async function handleReadFunction(args: Record<string, unknown>): Promise<string
       mode: outline ? "outline" : "body",
       matched,
       ...(ambiguous.length > 0 ? { ambiguous } : {}),
-      ...(missing.length > 0 ? { missing, availableNames: symbols.slice(0, MAX_AVAILABLE_NAMES).map((symbol) => symbol.qualifiedName) } : {}),
+      ...(missing.length > 0
+        ? {
+            missing,
+            availableNames: symbols
+              .slice(0, MAX_AVAILABLE_NAMES)
+              .map((symbol) => symbol.qualifiedName),
+          }
+        : {}),
       ...(truncated ? { truncated: true } : {}),
     });
   } catch (err: unknown) {
@@ -202,24 +212,27 @@ export const readFunctionDefinition: ToolDefinition = {
   function: {
     name: "read_func",
     description:
-      "Read only the named functions, methods, or types of one source file instead of its whole content: this is the preferred read whenever a declaration is the target. Names come from the editor's symbol provider and may be chained with the enclosing declaration, for example \"run\", \"ToolCallCycle.run\", or \"Widget.render\"; use [\"*\"] for every top-level declaration. Members of an object literal are not declarations and cannot be named, so an unresolved name is reached with search_content plus a read_file line range (offset, limit). Each match returns its exact source, its line range, and the file sha256 for a later edit. Use mode \"outline\" to inspect structure without bodies.",
+      'Read only the named functions, methods, or types of one source file instead of its whole content: this is the preferred read whenever a declaration is the target. Names come from the editor\'s symbol provider and may be chained with the enclosing declaration, for example "run", "ToolCallCycle.run", or "Widget.render"; use ["*"] for every top-level declaration. Members of an object literal are not declarations and cannot be named, so an unresolved name is reached with search_content plus a read_file line range (offset, limit). Each match returns its exact source, its line range, and the file sha256 for a later edit. Use mode "outline" to inspect structure without bodies.',
     strict: true,
     parameters: {
       type: "object",
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path, for example src/Chat.ts. Use an absolute path only when the user explicitly requests access outside the workspace and the active permission mode allows it.",
+          description:
+            "Workspace-relative path, for example src/Chat.ts. Use an absolute path only when the user explicitly requests access outside the workspace and the active permission mode allows it.",
         },
         names: {
           type: "array",
           items: { type: "string" },
-          description: "Symbol names to return, either bare or chained through their containers. Prefer one call with several names over one call per symbol.",
+          description:
+            "Symbol names to return, either bare or chained through their containers. Prefer one call with several names over one call per symbol.",
         },
         mode: {
           type: "string",
           enum: ["body", "outline"],
-          description: "body (default) returns the source of each match; outline returns only signatures, line ranges, and the members of a class or interface.",
+          description:
+            "body (default) returns the source of each match; outline returns only signatures, line ranges, and the members of a class or interface.",
         },
       },
       required: ["path", "names"],

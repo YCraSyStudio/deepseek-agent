@@ -10,11 +10,30 @@ suite("turn file edit summary", () => {
   test("lists each edited file once and adds up every change in the turn", () => {
     const edits = collectTurnFileEdits([
       group(1, [
-        toolCall("edit_file", editResult({ diffStats: { additions: 2, deletions: 1 }, beforeHash: HASH_A, afterHash: HASH_B })),
-        toolCall("read_file", JSON.stringify({ toolResultVersion: 1, type: "file", path: "src/App.ts", content: "text", size: 4 })),
+        toolCall(
+          "edit_file",
+          editResult({
+            diffStats: { additions: 2, deletions: 1 },
+            beforeHash: HASH_A,
+            afterHash: HASH_B,
+          }),
+        ),
+        toolCall(
+          "read_file",
+          JSON.stringify({
+            toolResultVersion: 1,
+            type: "file",
+            path: "src/App.ts",
+            content: "text",
+            size: 4,
+          }),
+        ),
       ]),
       group(2, [
-        toolCall("apply_patch", patchResult({ diffStats: { additions: 3, deletions: 0 }, afterHash: HASH_C })),
+        toolCall(
+          "apply_patch",
+          patchResult({ diffStats: { additions: 3, deletions: 0 }, afterHash: HASH_C }),
+        ),
         toolCall("create_file", writeResult()),
       ]),
     ]);
@@ -41,7 +60,15 @@ suite("turn file edit summary", () => {
 
   test("keeps large edits that only expose document hashes", () => {
     const edits = collectTurnFileEdits([
-      group(1, [toolCall("edit_file", editResult({ diff: "--- a/src/App.ts\n+++ b/src/App.ts\n@@ -1,1 +1,1 @@\n-old\n+new", diffTruncated: true }))]),
+      group(1, [
+        toolCall(
+          "edit_file",
+          editResult({
+            diff: "--- a/src/App.ts\n+++ b/src/App.ts\n@@ -1,1 +1,1 @@\n-old\n+new",
+            diffTruncated: true,
+          }),
+        ),
+      ]),
     ]);
 
     assert.strictEqual(edits.length, 1);
@@ -55,8 +82,26 @@ suite("turn file edit summary", () => {
         toolCall("edit_file", editResult(), "error"),
         toolCall("edit_file", editResult(), "rejected"),
         toolCall("create_file", editResult()),
-        toolCall("run_terminal_command", JSON.stringify({ toolResultVersion: 1, type: "fileEdit", path: "src/App.ts", diff: "@@ -1,1 +1,1 @@\n-a\n+b", afterHash: HASH_B })),
-        toolCall("edit_file", JSON.stringify({ toolResultVersion: 1, type: "fileEdit", path: "", diff: "@@ -1,1 +1,1 @@\n-a\n+b", afterHash: HASH_B })),
+        toolCall(
+          "run_terminal_command",
+          JSON.stringify({
+            toolResultVersion: 1,
+            type: "fileEdit",
+            path: "src/App.ts",
+            diff: "@@ -1,1 +1,1 @@\n-a\n+b",
+            afterHash: HASH_B,
+          }),
+        ),
+        toolCall(
+          "edit_file",
+          JSON.stringify({
+            toolResultVersion: 1,
+            type: "fileEdit",
+            path: "",
+            diff: "@@ -1,1 +1,1 @@\n-a\n+b",
+            afterHash: HASH_B,
+          }),
+        ),
       ]),
     ]);
 
@@ -68,7 +113,11 @@ function group(round: number, toolCalls: ToolCallState[]): ToolCallGroup {
   return { id: `group-${round}`, round, expanded: false, toolCalls };
 }
 
-function toolCall(toolName: string, result: string, status: ToolCallState["status"] = "completed"): ToolCallState {
+function toolCall(
+  toolName: string,
+  result: string,
+  status: ToolCallState["status"] = "completed",
+): ToolCallState {
   return {
     toolCallId: `${toolName}-${status}-${result.length}`,
     toolName,

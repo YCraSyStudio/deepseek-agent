@@ -35,11 +35,14 @@ suite("incognito session lifecycle", () => {
     const runs = new Map<string, GenerationRunRecord>([
       ["generation-1", { status: "streaming", session } as unknown as GenerationRunRecord],
     ]);
-    const harness = createHarness({
-      active: [{ generationId: "generation-1", conversationId: "conversation-1" }],
-      queuedConversationIds: ["conversation-1"],
-      runs,
-    }, events);
+    const harness = createHarness(
+      {
+        active: [{ generationId: "generation-1", conversationId: "conversation-1" }],
+        queuedConversationIds: ["conversation-1"],
+        runs,
+      },
+      events,
+    );
 
     harness.lifecycle.beginHistoryTransition("request-1", "enter-incognito");
     await harness.lifecycle.enterIncognito("request-1");
@@ -130,7 +133,7 @@ function createHarness(options: HarnessOptions = {}, events: string[] = []) {
         queuedMessages: options.queuedConversationIds?.length ?? 0,
       }),
     } as unknown as ChatActivityBroadcaster,
-    captureBinding: () => ({ uri: "file:///workspace" } as unknown as WorkspaceBinding),
+    captureBinding: () => ({ uri: "file:///workspace" }) as unknown as WorkspaceBinding,
     checkpointStore: {
       clearAll: async () => {
         events.push("checkpoints:clear");

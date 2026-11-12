@@ -36,15 +36,15 @@ export function getToolCallFilePath(
       return undefined;
     }
     const filePath = (args as { path?: unknown }).path;
-    return typeof filePath === "string" && filePath.trim()
-      ? filePath
-      : undefined;
+    return typeof filePath === "string" && filePath.trim() ? filePath : undefined;
   } catch {
     return undefined;
   }
 }
 
-export function hidesSuccessfulFileResult(toolCall: Pick<ToolCallState, "toolName" | "status">): boolean {
+export function hidesSuccessfulFileResult(
+  toolCall: Pick<ToolCallState, "toolName" | "status">,
+): boolean {
   return toolCall.status === "completed" && isEditorFileTool(toolCall.toolName);
 }
 

@@ -12,6 +12,6 @@ Dependencies point inward. `domain` contains pure rules and `application` owns u
 
 ## Consequences
 
-New code imports the owning module directly. Temporary compatibility re-exports can remain during migration. ESLint enforces import restrictions, and `LayerBoundaries.test.ts` checks layer boundaries and rejects dependency cycles. See the [dependency rules](dependency-rules.md) for the allowed directions.
+New code imports the owning module directly. Temporary compatibility re-exports can remain during migration. ESLint enforces import restrictions, and `LayerBoundaries.test.ts` checks layer boundaries and rejects dependency cycles. See the [dependency rules](../../../architecture/dependency-rules.md) for the allowed directions.
 
 [Back](2.INDEX.MD)

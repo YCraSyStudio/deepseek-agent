@@ -64,7 +64,9 @@
       gap: 5px;
       min-width: 0;
       padding: 7px 9px;
-      transition: border-color .16s, box-shadow .16s;
+      transition:
+        border-color 0.16s,
+        box-shadow 0.16s;
       &:focus {
         border-color: var(--input-focus-border);
         box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus-border) 22%, transparent);

@@ -12,11 +12,22 @@ import {
 
 suite("managed diagnostics", () => {
   test("shows only the active diagnostic sink and tolerates sinks without a show method", () => {
-    let shown = 0; const registration = initializeLogger({ appendLine: () => undefined, show: () => { shown++; }, dispose: () => undefined });
-    showDiagnostics(); assert.strictEqual(shown, 1); registration.dispose();
-    showDiagnostics(); assert.strictEqual(shown, 1);
+    let shown = 0;
+    const registration = initializeLogger({
+      appendLine: () => undefined,
+      show: () => {
+        shown++;
+      },
+      dispose: () => undefined,
+    });
+    showDiagnostics();
+    assert.strictEqual(shown, 1);
+    registration.dispose();
+    showDiagnostics();
+    assert.strictEqual(shown, 1);
     const quiet = initializeLogger({ appendLine: () => undefined, dispose: () => undefined });
-    assert.doesNotThrow(() => showDiagnostics()); quiet.dispose();
+    assert.doesNotThrow(() => showDiagnostics());
+    quiet.dispose();
   });
   teardown(() => clearDiagnostics());
 
@@ -46,7 +57,10 @@ suite("managed diagnostics", () => {
     const report = createSanitizedSupportReport({ model: "deepseek-flash" });
     registration.dispose();
 
-    assert.strictEqual(captured.some((line) => line.includes("not retained")), false);
+    assert.strictEqual(
+      captured.some((line) => line.includes("not retained")),
+      false,
+    );
     assert.strictEqual(report.includes("event-0\n"), false);
     assert.strictEqual(report.includes("event-599"), true);
   });
@@ -54,8 +68,18 @@ suite("managed diagnostics", () => {
   test("reinitialization disposes the prior sink exactly once", () => {
     let firstDisposals = 0;
     let secondDisposals = 0;
-    const first = initializeLogger({ ...createSink([]), dispose: () => { firstDisposals += 1; } });
-    const second = initializeLogger({ ...createSink([]), dispose: () => { secondDisposals += 1; } });
+    const first = initializeLogger({
+      ...createSink([]),
+      dispose: () => {
+        firstDisposals += 1;
+      },
+    });
+    const second = initializeLogger({
+      ...createSink([]),
+      dispose: () => {
+        secondDisposals += 1;
+      },
+    });
     first.dispose();
     second.dispose();
     assert.strictEqual(firstDisposals, 1);

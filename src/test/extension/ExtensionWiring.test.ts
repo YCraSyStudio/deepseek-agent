@@ -10,16 +10,16 @@ const vscodeMock = [
   'import * as path from "node:path";',
   "const state = globalThis.__vscode = { commands: new Map(), executed: [], contentProviders: new Map(), inlineProviders: [], closeListeners: [], folderListeners: [], statusBar: undefined, progress: [], messages: [], errors: [], opened: [], clipboard: [], executedCommands: [] };",
   'export const version = "1.99.0-test";',
-  'export const UIKind = { Desktop: 1, Web: 2 };',
-  'export const StatusBarAlignment = { Left: 1, Right: 2 };',
-  'export const ProgressLocation = { Notification: 15, Window: 10 };',
-  'export const InlineCompletionTriggerKind = { Invoke: 0, Automatic: 1 };',
-  'export const EndOfLine = { LF: 1, CRLF: 2 };',
+  "export const UIKind = { Desktop: 1, Web: 2 };",
+  "export const StatusBarAlignment = { Left: 1, Right: 2 };",
+  "export const ProgressLocation = { Notification: 15, Window: 10 };",
+  "export const InlineCompletionTriggerKind = { Invoke: 0, Automatic: 1 };",
+  "export const EndOfLine = { LF: 1, CRLF: 2 };",
   "export class Position { constructor(line, character) { this.line = line; this.character = character; } isEqual(other) { return other.line === this.line && other.character === this.character; } }",
   "export class Range { constructor(start, end) { this.start = start; this.end = end; } contains(other) { const start = other.start || other; const end = other.end || other; return this.start.line <= start.line && (this.start.line < start.line || this.start.character <= start.character) && this.end.line >= end.line && (this.end.line > end.line || this.end.character >= end.character); } isEqual(other) { return other.start.line === this.start.line && other.start.character === this.start.character && other.end.line === this.end.line && other.end.character === this.end.character; } }",
   "export class InlineCompletionItem { constructor(insertText, range) { this.insertText = insertText; this.range = range; } }",
-  "const uri = (scheme, uriPath) => ({ scheme, path: uriPath, fsPath: uriPath, toString: () => scheme + \":\" + uriPath });",
-  "export const Uri = { from: (value) => uri(value.scheme, value.path), file: (filePath) => uri(\"file\", filePath), joinPath: (base, ...parts) => uri(base.scheme, path.join(base.path, ...parts)), parse: (value) => uri(value.split(\":\")[0], value.split(\":\").slice(1).join(\":\")) };",
+  'const uri = (scheme, uriPath) => ({ scheme, path: uriPath, fsPath: uriPath, toString: () => scheme + ":" + uriPath });',
+  'export const Uri = { from: (value) => uri(value.scheme, value.path), file: (filePath) => uri("file", filePath), joinPath: (base, ...parts) => uri(base.scheme, path.join(base.path, ...parts)), parse: (value) => uri(value.split(":")[0], value.split(":").slice(1).join(":")) };',
   "export const workspace = {",
   "  isTrusted: true,",
   "  registerTextDocumentContentProvider(scheme, provider) { state.contentProviders.set(scheme, provider); return { dispose() { state.contentProviders.delete(scheme); } }; },",
@@ -34,11 +34,11 @@ const vscodeMock = [
   "};",
   "export const window = {",
   "  activeTextEditor: undefined,",
-  "  createStatusBarItem(alignment, priority) { const item = { alignment, priority, text: \"\", command: \"\", tooltip: \"\", shown: 0, hidden: 0, disposed: 0, show() { item.shown += 1; }, hide() { item.hidden += 1; }, dispose() { item.disposed += 1; } }; state.statusBar = item; return item; },",
+  '  createStatusBarItem(alignment, priority) { const item = { alignment, priority, text: "", command: "", tooltip: "", shown: 0, hidden: 0, disposed: 0, show() { item.shown += 1; }, hide() { item.hidden += 1; }, dispose() { item.disposed += 1; } }; state.statusBar = item; return item; },',
   "  async withProgress(options, task) { state.progress.push(options); return task({ report() {} }, globalThis.__progressToken || { onCancellationRequested() { return { dispose() {} }; } }); },",
   "  async showInformationMessage(...args) { state.messages.push(args); return globalThis.__messageResponse; },",
   "  async showErrorMessage(...args) { state.errors.push(args); },",
-  "  async showTextDocument(document) { state.opened.push(document); if (!globalThis.__shownEditor) { throw new Error(\"No editor fixture\"); } return globalThis.__shownEditor; },",
+  '  async showTextDocument(document) { state.opened.push(document); if (!globalThis.__shownEditor) { throw new Error("No editor fixture"); } return globalThis.__shownEditor; },',
   "  registerWebviewViewProvider(id, provider) { globalThis.__viewProvider = { id, provider }; return { dispose() {} }; },",
   "};",
   'export const env = { language: "en", remoteName: undefined, uiKind: 1, clipboard: { async writeText(text) { state.clipboard.push(text); } } };',
@@ -46,30 +46,54 @@ const vscodeMock = [
 
 const mocks: Record<string, string> = {
   vscode: vscodeMock,
-  "@/infrastructure/browser/ChromiumProvider": "export class ChromiumProvider { constructor(directory, progress) { globalThis.__chromiumPath = directory; globalThis.__chromiumProgress = progress; } }",
-  "@/infrastructure/capture/SystemBrowserCapture": "export class SystemBrowserCapture { constructor(browsers) { globalThis.__browserSource = browsers; } }",
-  "@/infrastructure/capture/NativeCaptureBackend": "export class NativeCaptureBackend { constructor(pid, one, two, three, portalOptions) { this.timeoutMs = 4321; globalThis.__nativeCaptureArgs = [pid, one, two, three, portalOptions]; } capture(request) { globalThis.__nativeRequest = request; return \"captured\"; } }",
-  "@/vscode/tools/capture/NativeDebugAnchor": "export class NativeDebugAnchor { pid() { return 4242; } dispose() { globalThis.__debugAnchorDisposed = (globalThis.__debugAnchorDisposed || 0) + 1; } }",
-  "@/infrastructure/capture/CaptureService": "export function registerCaptureBackend(target, backend) { globalThis.__backends.push({ target, backend }); }",
-  "@/infrastructure/capture/CapturePermissions": "export class CapturePermissions { constructor(options) { globalThis.__captureOptions = options; } wrap(backend) { return { ...backend, wrapped: true }; } portalOptions(request) { return { portal: true, request }; } }",
-  "@/infrastructure/capture/WaylandPortalCapture": "export function usesWaylandPortal() { return globalThis.__wayland === true; }",
-  "@/application/tools": "export class ToolRegistry { constructor() { this.tools = []; } register(tool) { this.tools.push(tool); } }",
-  "@/infrastructure/browser/BrowserTools": "export function createHeadlessWebTools(runtime, options) { globalThis.__webToolRuntime = runtime; globalThis.__webToolOptions = options; return [{ name: \"web_search\" }]; }",
-  "@/infrastructure/browser/HeadlessWebRuntime": "export class HeadlessWebRuntime { constructor(browsers, ensure) { globalThis.__webRuntimeEnsure = ensure; globalThis.__webRuntimeBrowsers = browsers; } }",
-  "@/infrastructure/tools/builtins": "export const BUILT_IN_TOOLS = [{ name: \"read_file\" }, { name: \"edit_file\" }];",
-  "@/vscode/tools/browser/Diagnostics": "export function configureWebRuntimeDiagnostics(runtime) { globalThis.__diagnosticsRuntime = runtime; }",
-  "@/infrastructure/deepseek/web/DeepSeekWebClient": "export class DeepSeekWebClient { constructor(config) { globalThis.__webClientConfig = config; } async search(query, limit, signal, options) { globalThis.__webSearchArgs = [query, limit, signal, options]; return []; } dispose() { globalThis.__webClientDisposed = true; } }",
-  "@/vscode/storage": "export class HistoryManager { constructor(settings) { globalThis.__historySettings = settings; } }",
-  "@/vscode/storage/RepositoryAdapters": "export class VsCodeSecretStore { constructor(context) { globalThis.__secretContext = context; } async getApiKey() { return \"secret-key\"; } } export class VsCodeSettingsRepository { constructor() { globalThis.__settingsInstance = this; } load() { return globalThis.__settings.value; } }",
-  "@/vscode/webviews/WebviewProvider": "export class WebviewProvider { static viewType = \"deepseek-agent.chatView\"; constructor(uri, context, dependencies) { globalThis.__webviewDeps = dependencies; globalThis.__webviewUri = uri; } async initialize() { globalThis.__webviewInitialized = true; } dispose() { globalThis.__webviewDisposed = true; } }",
-  "@/infrastructure/deepseek/provider/DeepSeekModelProviderFactory": "export class DeepSeekModelProviderFactory { constructor() { globalThis.__modelFactory = (globalThis.__modelFactory || 0) + 1; } }",
-  "@/vscode/completions/ChatSuggestionContext": "export function captureChatSuggestionContext(workspace, signal) { globalThis.__suggestionSignal = signal; return { signal }; }",
-  "@/vscode/completions/CompletionService": "export class CompletionService { constructor(...args) { globalThis.__completionArgs = args; globalThis.__completionInstance = this; this.invalidations = 0; } invalidate() { this.invalidations += 1; globalThis.__invalidated = (globalThis.__invalidated || 0) + 1; } }",
-  "@/vscode/completions/EditorFeatures": "export function registerEditorFeatures(context, service) { globalThis.__editorFeaturesService = service; }",
-  "@/vscode/storage/SettingsManager": "export const SettingsManager = { onDidChange(listener) { globalThis.__settingsListener = listener; return () => { globalThis.__settingsUnsubscribed = true; }; } };",
-  "@/vscode/commands/ChatCommands": "export function registerChatCommands(context, provider) { globalThis.__chatCommands = [context, provider]; }",
-  "@/vscode/tools/browser": "export function getWebRuntimeDiagnostics() { return { chromium: \"ready\" }; }",
-  "@/shared/logging/Logger": "export function logWarning() { globalThis.__warnings = (globalThis.__warnings || 0) + 1; } export function showDiagnostics() { globalThis.__diagnosticsShown = (globalThis.__diagnosticsShown || 0) + 1; } export function clearDiagnostics() { globalThis.__diagnosticsCleared = (globalThis.__diagnosticsCleared || 0) + 1; } export function createSanitizedSupportReport(facts) { globalThis.__supportFacts = facts; return JSON.stringify(facts); }",
+  "@/infrastructure/browser/ChromiumProvider":
+    "export class ChromiumProvider { constructor(directory, progress) { globalThis.__chromiumPath = directory; globalThis.__chromiumProgress = progress; } }",
+  "@/infrastructure/capture/SystemBrowserCapture":
+    "export class SystemBrowserCapture { constructor(browsers) { globalThis.__browserSource = browsers; } }",
+  "@/infrastructure/capture/NativeCaptureBackend":
+    'export class NativeCaptureBackend { constructor(pid, one, two, three, portalOptions) { this.timeoutMs = 4321; globalThis.__nativeCaptureArgs = [pid, one, two, three, portalOptions]; } capture(request) { globalThis.__nativeRequest = request; return "captured"; } }',
+  "@/vscode/tools/capture/NativeDebugAnchor":
+    "export class NativeDebugAnchor { pid() { return 4242; } dispose() { globalThis.__debugAnchorDisposed = (globalThis.__debugAnchorDisposed || 0) + 1; } }",
+  "@/infrastructure/capture/CaptureService":
+    "export function registerCaptureBackend(target, backend) { globalThis.__backends.push({ target, backend }); }",
+  "@/infrastructure/capture/CapturePermissions":
+    "export class CapturePermissions { constructor(options) { globalThis.__captureOptions = options; } wrap(backend) { return { ...backend, wrapped: true }; } portalOptions(request) { return { portal: true, request }; } }",
+  "@/infrastructure/capture/WaylandPortalCapture":
+    "export function usesWaylandPortal() { return globalThis.__wayland === true; }",
+  "@/application/tools":
+    "export class ToolRegistry { constructor() { this.tools = []; } register(tool) { this.tools.push(tool); } }",
+  "@/infrastructure/browser/BrowserTools":
+    'export function createHeadlessWebTools(runtime, options) { globalThis.__webToolRuntime = runtime; globalThis.__webToolOptions = options; return [{ name: "web_search" }]; }',
+  "@/infrastructure/browser/HeadlessWebRuntime":
+    "export class HeadlessWebRuntime { constructor(browsers, ensure) { globalThis.__webRuntimeEnsure = ensure; globalThis.__webRuntimeBrowsers = browsers; } }",
+  "@/infrastructure/tools/builtins":
+    'export const BUILT_IN_TOOLS = [{ name: "read_file" }, { name: "edit_file" }];',
+  "@/vscode/tools/browser/Diagnostics":
+    "export function configureWebRuntimeDiagnostics(runtime) { globalThis.__diagnosticsRuntime = runtime; }",
+  "@/infrastructure/deepseek/web/DeepSeekWebClient":
+    "export class DeepSeekWebClient { constructor(config) { globalThis.__webClientConfig = config; } async search(query, limit, signal, options) { globalThis.__webSearchArgs = [query, limit, signal, options]; return []; } dispose() { globalThis.__webClientDisposed = true; } }",
+  "@/vscode/storage":
+    "export class HistoryManager { constructor(settings) { globalThis.__historySettings = settings; } }",
+  "@/vscode/storage/RepositoryAdapters":
+    'export class VsCodeSecretStore { constructor(context) { globalThis.__secretContext = context; } async getApiKey() { return "secret-key"; } } export class VsCodeSettingsRepository { constructor() { globalThis.__settingsInstance = this; } load() { return globalThis.__settings.value; } }',
+  "@/vscode/webviews/WebviewProvider":
+    'export class WebviewProvider { static viewType = "deepseek-agent.chatView"; constructor(uri, context, dependencies) { globalThis.__webviewDeps = dependencies; globalThis.__webviewUri = uri; } async initialize() { globalThis.__webviewInitialized = true; } dispose() { globalThis.__webviewDisposed = true; } }',
+  "@/infrastructure/deepseek/provider/DeepSeekModelProviderFactory":
+    "export class DeepSeekModelProviderFactory { constructor() { globalThis.__modelFactory = (globalThis.__modelFactory || 0) + 1; } }",
+  "@/vscode/completions/ChatSuggestionContext":
+    "export function captureChatSuggestionContext(workspace, signal) { globalThis.__suggestionSignal = signal; return { signal }; }",
+  "@/vscode/completions/CompletionService":
+    "export class CompletionService { constructor(...args) { globalThis.__completionArgs = args; globalThis.__completionInstance = this; this.invalidations = 0; } invalidate() { this.invalidations += 1; globalThis.__invalidated = (globalThis.__invalidated || 0) + 1; } }",
+  "@/vscode/completions/EditorFeatures":
+    "export function registerEditorFeatures(context, service) { globalThis.__editorFeaturesService = service; }",
+  "@/vscode/storage/SettingsManager":
+    "export const SettingsManager = { onDidChange(listener) { globalThis.__settingsListener = listener; return () => { globalThis.__settingsUnsubscribed = true; }; } };",
+  "@/vscode/commands/ChatCommands":
+    "export function registerChatCommands(context, provider) { globalThis.__chatCommands = [context, provider]; }",
+  "@/vscode/tools/browser":
+    'export function getWebRuntimeDiagnostics() { return { chromium: "ready" }; }',
+  "@/shared/logging/Logger":
+    "export function logWarning() { globalThis.__warnings = (globalThis.__warnings || 0) + 1; } export function showDiagnostics() { globalThis.__diagnosticsShown = (globalThis.__diagnosticsShown || 0) + 1; } export function clearDiagnostics() { globalThis.__diagnosticsCleared = (globalThis.__diagnosticsCleared || 0) + 1; } export function createSanitizedSupportReport(facts) { globalThis.__supportFacts = facts; return JSON.stringify(facts); }",
   "./CompletionService": "export class CompletionService {}",
 };
 
@@ -492,20 +516,39 @@ suite("extension composition wiring", () => {
     const entry = path.join(directory, "wiring.mjs");
     try {
       await build({
-        stdin: { contents: child, resolveDir: process.cwd(), sourcefile: "wiring.ts", loader: "ts" },
-        bundle: true, platform: "node", format: "esm", outfile: entry, sourcemap: "inline",
-        plugins: [{
-          name: "extension-wiring-dependencies",
-          setup(plugin) {
-            plugin.onResolve({ filter: /.*/ }, (args) => {
-              if (args.path in mocks && !args.importer.includes("EditorFeatures.test")) { return { path: args.path, namespace: "mock" }; }
-              return undefined;
-            });
-            plugin.onLoad({ filter: /.*/, namespace: "mock" }, (args) => ({ contents: mocks[args.path], loader: "js" }));
+        stdin: {
+          contents: child,
+          resolveDir: process.cwd(),
+          sourcefile: "wiring.ts",
+          loader: "ts",
+        },
+        bundle: true,
+        platform: "node",
+        format: "esm",
+        outfile: entry,
+        sourcemap: "inline",
+        plugins: [
+          {
+            name: "extension-wiring-dependencies",
+            setup(plugin) {
+              plugin.onResolve({ filter: /.*/ }, (args) => {
+                if (args.path in mocks && !args.importer.includes("EditorFeatures.test")) {
+                  return { path: args.path, namespace: "mock" };
+                }
+                return undefined;
+              });
+              plugin.onLoad({ filter: /.*/, namespace: "mock" }, (args) => ({
+                contents: mocks[args.path],
+                loader: "js",
+              }));
+            },
           },
-        }],
+        ],
       });
-      const result = await promisify(execFile)(process.execPath, ["--enable-source-maps", entry], { env: { ...process.env }, maxBuffer: 10 * 1024 * 1024 });
+      const result = await promisify(execFile)(process.execPath, ["--enable-source-maps", entry], {
+        env: { ...process.env },
+        maxBuffer: 10 * 1024 * 1024,
+      });
       assert.deepEqual(JSON.parse(result.stdout), { ok: true });
     } finally {
       await rm(directory, { recursive: true, force: true });

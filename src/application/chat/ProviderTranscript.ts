@@ -9,7 +9,8 @@ export interface ProviderTranscript {
   schemaVersion: 1;
   provider: "deepseek";
   status: "complete" | "incomplete";
-  finishReason?: "stop" | "length" | "tool_calls" | "content_filter" | "insufficient_system_resource" | null;
+  finishReason?:
+    "stop" | "length" | "tool_calls" | "content_filter" | "insufficient_system_resource" | null;
   messages: ChatMessage[];
 }
 
@@ -47,19 +48,26 @@ export function toPresentationConversation(conversation: StoredConversation): Co
   const { contextSummary: _contextSummary, messages, ...presentation } = conversation;
   return {
     ...presentation,
-    messages: messages.map(({
-      providerTranscript: _providerTranscript,
-      contextContent: _contextContent,
-      ...message
-    }) => message),
+    messages: messages.map(
+      ({ providerTranscript: _providerTranscript, contextContent: _contextContent, ...message }) =>
+        message,
+    ),
   };
 }
 
-export function getFinalAssistantContent(transcript: ProviderTranscript | undefined): string | undefined {
-  if (transcript?.status !== "complete") {return undefined;}
+export function getFinalAssistantContent(
+  transcript: ProviderTranscript | undefined,
+): string | undefined {
+  if (transcript?.status !== "complete") {
+    return undefined;
+  }
   for (let index = transcript.messages.length - 1; index >= 0; index -= 1) {
     const message = transcript.messages[index];
-    if (message?.role === "assistant" && typeof message.content === "string" && message.content.trim()) {
+    if (
+      message?.role === "assistant" &&
+      typeof message.content === "string" &&
+      message.content.trim()
+    ) {
       return message.content;
     }
   }
@@ -67,8 +75,12 @@ export function getFinalAssistantContent(transcript: ProviderTranscript | undefi
 }
 
 /** Retain final-answer reasoning without replaying completed tool payloads. */
-export function compactCompletedProviderTranscript(transcript: ProviderTranscript | undefined): ProviderTranscript | undefined {
-  if (transcript?.status !== "complete") {return transcript;}
+export function compactCompletedProviderTranscript(
+  transcript: ProviderTranscript | undefined,
+): ProviderTranscript | undefined {
+  if (transcript?.status !== "complete") {
+    return transcript;
+  }
   for (let index = transcript.messages.length - 1; index >= 0; index--) {
     const message = transcript.messages[index];
     if (message.role === "assistant" && !message.tool_calls?.length) {
@@ -102,53 +114,61 @@ export function isProviderTranscript(value: unknown): value is ProviderTranscrip
   if (!isRecord(value)) {
     return false;
   }
-  return value.schemaVersion === 1 &&
+  return (
+    value.schemaVersion === 1 &&
     value.provider === "deepseek" &&
     (value.status === "complete" || value.status === "incomplete") &&
-    (value.finishReason === undefined || value.finishReason === null || [
-      "stop",
-      "length",
-      "tool_calls",
-      "content_filter",
-      "insufficient_system_resource",
-    ].includes(String(value.finishReason))) &&
+    (value.finishReason === undefined ||
+      value.finishReason === null ||
+      ["stop", "length", "tool_calls", "content_filter", "insufficient_system_resource"].includes(
+        String(value.finishReason),
+      )) &&
     Array.isArray(value.messages) &&
     value.messages.length <= MAX_TRANSCRIPT_MESSAGES &&
     value.messages.every(isProviderMessage) &&
-    isProtocolOrdered(value.messages, value.status === "complete");
+    isProtocolOrdered(value.messages, value.status === "complete")
+  );
 }
 
 export function isConversationContextSummary(value: unknown): value is ConversationContextSummary {
   if (!isRecord(value)) {
     return false;
   }
-  return value.schemaVersion === 2 &&
+  return (
+    value.schemaVersion === 2 &&
     (value.provider === "deepseek" || value.provider === "local") &&
     isBoundedString(value.content, MAX_TRANSCRIPT_FIELD_CHARACTERS) &&
     Array.isArray(value.coveredGenerationIds) &&
     value.coveredGenerationIds.length <= 10_000 &&
     value.coveredGenerationIds.every((id) => isBoundedString(id, 512)) &&
     isBoundedString(value.sourceDigest, 256) &&
-    (value.boundaries === undefined || (
-      Array.isArray(value.boundaries) &&
-      value.boundaries.length <= 1_000 &&
-      value.boundaries.every(isCompactionBoundary)
-    )) &&
+    (value.boundaries === undefined ||
+      (Array.isArray(value.boundaries) &&
+        value.boundaries.length <= 1_000 &&
+        value.boundaries.every(isCompactionBoundary))) &&
     Number.isSafeInteger(value.updatedAt) &&
-    (value.updatedAt as number) >= 0;
+    (value.updatedAt as number) >= 0
+  );
 }
 
 function isCompactionBoundary(value: unknown): value is CompactionBoundary {
-  if (!isRecord(value)) {return false;}
-  return isBoundedString(value.id, 512) &&
-    Number.isSafeInteger(value.createdAt) && (value.createdAt as number) >= 0 &&
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    isBoundedString(value.id, 512) &&
+    Number.isSafeInteger(value.createdAt) &&
+    (value.createdAt as number) >= 0 &&
     ["input_soft_limit", "tool_cycle_rollover", "manual_recovery"].includes(String(value.reason)) &&
-    Number.isSafeInteger(value.estimatedTokensBefore) && (value.estimatedTokensBefore as number) >= 0 &&
-    Number.isSafeInteger(value.estimatedTokensAfter) && (value.estimatedTokensAfter as number) >= 0 &&
+    Number.isSafeInteger(value.estimatedTokensBefore) &&
+    (value.estimatedTokensBefore as number) >= 0 &&
+    Number.isSafeInteger(value.estimatedTokensAfter) &&
+    (value.estimatedTokensAfter as number) >= 0 &&
     Array.isArray(value.coveredGenerationIds) &&
     value.coveredGenerationIds.length <= 10_000 &&
     value.coveredGenerationIds.every((id) => isBoundedString(id, 512)) &&
-    isBoundedString(value.sourceDigest, 256);
+    isBoundedString(value.sourceDigest, 256)
+  );
 }
 
 export function sanitizeStoredTranscript(value: unknown): ProviderTranscript | undefined {
@@ -162,8 +182,11 @@ function isProviderMessage(value: unknown): value is ChatMessage {
   if (value.content !== null && !isBoundedString(value.content, MAX_TRANSCRIPT_FIELD_CHARACTERS)) {
     return false;
   }
-  if (value.reasoning_content !== undefined && value.reasoning_content !== null &&
-    !isBoundedString(value.reasoning_content, MAX_TRANSCRIPT_FIELD_CHARACTERS)) {
+  if (
+    value.reasoning_content !== undefined &&
+    value.reasoning_content !== null &&
+    !isBoundedString(value.reasoning_content, MAX_TRANSCRIPT_FIELD_CHARACTERS)
+  ) {
     return false;
   }
   if (value.tool_call_id !== undefined && !isBoundedString(value.tool_call_id, 512)) {
@@ -172,16 +195,27 @@ function isProviderMessage(value: unknown): value is ChatMessage {
   if (value.name !== undefined && !isBoundedString(value.name, 256)) {
     return false;
   }
-  return value.tool_calls === undefined ||
-    (Array.isArray(value.tool_calls) && value.tool_calls.length <= 1_000 && value.tool_calls.every(isToolCall));
+  return (
+    value.tool_calls === undefined ||
+    (Array.isArray(value.tool_calls) &&
+      value.tool_calls.length <= 1_000 &&
+      value.tool_calls.every(isToolCall))
+  );
 }
 
 function isToolCall(value: unknown): value is ToolCall {
-  if (!isRecord(value) || !isBoundedString(value.id, 512) || value.type !== "function" || !isRecord(value.function)) {
+  if (
+    !isRecord(value) ||
+    !isBoundedString(value.id, 512) ||
+    value.type !== "function" ||
+    !isRecord(value.function)
+  ) {
     return false;
   }
-  if (!isBoundedString(value.function.name, 256) ||
-    !isBoundedString(value.function.arguments, MAX_TRANSCRIPT_FIELD_CHARACTERS)) {
+  if (
+    !isBoundedString(value.function.name, 256) ||
+    !isBoundedString(value.function.arguments, MAX_TRANSCRIPT_FIELD_CHARACTERS)
+  ) {
     return false;
   }
   try {
@@ -236,4 +270,3 @@ function isProtocolOrdered(messages: ChatMessage[], requireFinalAssistant: boole
 function isMessageRole(value: unknown): value is ChatMessage["role"] {
   return value === "assistant" || value === "tool";
 }
-

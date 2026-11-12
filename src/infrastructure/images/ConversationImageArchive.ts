@@ -8,12 +8,16 @@ export async function archiveConversationImages(
   readCachedImage: (attachment: ImageAttachment) => Promise<Uint8Array>,
   historyRoot = getHistoryDirectory(),
 ): Promise<ScreenshotMetadata[]> {
-  if (attachments.length === 0) {return [];}
+  if (attachments.length === 0) {
+    return [];
+  }
   const store = new ScreenshotStore(conversationId, historyRoot);
   const captures: ScreenshotMetadata[] = [];
   for (const attachment of attachments) {
     const bytes = await readCachedImage(attachment);
-    if (bytes.length !== attachment.size) {throw new Error("Incomplete image attachment");}
+    if (bytes.length !== attachment.size) {
+      throw new Error("Incomplete image attachment");
+    }
     const capture = await store.save(Buffer.from(bytes), {
       kind: "attachment",
       target: attachment.id,

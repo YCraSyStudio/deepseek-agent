@@ -5,11 +5,24 @@ import type { ImageAttachment, ReferencedFile } from "./WebviewModels";
 export type WebviewToHandlerMessage =
   | import("../ChatDraft").ChatDraftRequest
   | { type: "initializeProtocol"; protocolVersion: 5 }
-  | { type: "getScreenshotPreview" | "openScreenshot"; requestId: string; conversationId: string; screenshotId: string }
+  | {
+      type: "getScreenshotPreview" | "openScreenshot";
+      requestId: string;
+      conversationId: string;
+      screenshotId: string;
+    }
   | { type: "getConfig" }
   | { type: "openGlobalAgents"; requestId: string }
   | { type: "getReusableInstructions" }
-  | { type: "createReusableInstruction"; requestId: string; scope: "global" | "workspace"; rootUri?: string; name: string; description: string; template?: InstructionTemplateId }
+  | {
+      type: "createReusableInstruction";
+      requestId: string;
+      scope: "global" | "workspace";
+      rootUri?: string;
+      name: string;
+      description: string;
+      template?: InstructionTemplateId;
+    }
   | { type: "openReusableInstruction"; requestId: string; id: string }
   | { type: "getWorkspaceInstructions" }
   | { type: "openWorkspaceInstructions"; requestId: string; rootUri: string }
@@ -19,7 +32,11 @@ export type WebviewToHandlerMessage =
   | { type: "setStorageDirectory"; directory: string }
   | { type: "saveConfig"; requestId: string; config: Partial<AppConfig> }
   | { type: "resetConfig"; requestId: string }
-  | { type: "resolveHistoryTransition"; requestId: string; decision: "stop" | "save" | "discard" | "cancel" }
+  | {
+      type: "resolveHistoryTransition";
+      requestId: string;
+      decision: "stop" | "save" | "discard" | "cancel";
+    }
   | { type: "deleteApiKey"; requestId: string }
   | { type: "testConnection"; apiKey?: string; baseUrl: string; model: string }
   | {
@@ -58,18 +75,63 @@ export type WebviewToHandlerMessage =
   | { type: "loadConversationPage"; requestId: string; id: string; cursor: string }
   | { type: "deleteConversation"; id: string }
   | { type: "deleteConversations"; ids: string[] }
-  | { type: "executeToolCall"; generationId: string; toolCallId: string; action: "execute" | "reject" }
+  | {
+      type: "executeToolCall";
+      generationId: string;
+      toolCallId: string;
+      action: "execute" | "reject";
+    }
   | { type: "getWorkspaceContext"; requestId: string; conversationId?: string }
   | { type: "rebindConversationWorkspace"; conversationId: string; workspaceRevision?: string }
   | { type: "openConversationWorkspace"; conversationId: string }
   | { type: "getRunningTasks"; conversationId?: string }
   | { type: "stopRunningTask"; requestId: string; conversationId?: string; sessionId: string }
   | { type: "selectAttachments"; requestId: string; conversationId?: string }
-  | { type: "getPathCompletions"; requestId: number; query: string; conversationId?: string; workspaceRevision?: string }
+  | {
+      type: "getPathCompletions";
+      requestId: number;
+      query: string;
+      conversationId?: string;
+      workspaceRevision?: string;
+    }
   | { type: "getAvailableTools" }
-  | { type: "uploadClipboardImage"; requestId: string; name: string; mediaType: string; size: number; dataBase64: string }
+  | {
+      type: "uploadClipboardImage";
+      requestId: string;
+      name: string;
+      mediaType: string;
+      size: number;
+      dataBase64: string;
+    }
   | { type: "deleteImageAttachment"; requestId: string; attachment: ImageAttachment }
-  | { type: "openFile"; path: string; line?: number; conversationId?: string; workspaceRevision?: string }
-  | { type: "openFileDiff"; path: string; diff?: string; beforeHash?: string; afterHash?: string; preview?: boolean; conversationId?: string; generationId?: string; workspaceRevision?: string }
-  | { type: "reviewWorkspaceTurn"; requestId: string; conversationId: string; generationId: string; path?: string }
-  | { type: "getWorkspaceTurn" | "revertWorkspaceTurn"; requestId: string; conversationId: string; generationId: string };
+  | {
+      type: "openFile";
+      path: string;
+      line?: number;
+      conversationId?: string;
+      workspaceRevision?: string;
+    }
+  | {
+      type: "openFileDiff";
+      path: string;
+      diff?: string;
+      beforeHash?: string;
+      afterHash?: string;
+      preview?: boolean;
+      conversationId?: string;
+      generationId?: string;
+      workspaceRevision?: string;
+    }
+  | {
+      type: "reviewWorkspaceTurn";
+      requestId: string;
+      conversationId: string;
+      generationId: string;
+      path?: string;
+    }
+  | {
+      type: "getWorkspaceTurn" | "revertWorkspaceTurn";
+      requestId: string;
+      conversationId: string;
+      generationId: string;
+    };

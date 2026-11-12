@@ -147,9 +147,7 @@ export const changelog: PageContent = {
     },
     {
       title: "0.1.5 打包热修复",
-      items: [
-        "在 VSIX 打包规则中显式排除 *.log，避免分发 debug.log 等本地文件。",
-      ],
+      items: ["在 VSIX 打包规则中显式排除 *.log，避免分发 debug.log 等本地文件。"],
     },
     {
       title: "0.1.4 预览版：凭据安全、命令审查和聚焦的工具界面",

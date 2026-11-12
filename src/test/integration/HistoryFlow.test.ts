@@ -38,7 +38,11 @@ suite("History flow", () => {
     chat.transport.respond({ text: "Incognito answer." });
     const generationId = await chat.runTurn(PRIVATE_QUESTION);
     assert.equal((await chat.waitForTerminal(generationId)).status, "completed");
-    assert.deepEqual(await chat.history.getSummaries(), [], "incognito work must not be listed in history");
+    assert.deepEqual(
+      await chat.history.getSummaries(),
+      [],
+      "incognito work must not be listed in history",
+    );
 
     await controller.request({
       requestId: "exit-1",
@@ -50,12 +54,19 @@ suite("History flow", () => {
     const required = lastPost(chat.posts, "historyTransitionRequired");
     assert.equal(required?.phase, "exit-incognito");
     assert.equal(required?.direction, "exit-incognito");
-    assert.equal(chat.settings.load().historyEnabled, false, "history stays off until the decision is applied");
+    assert.equal(
+      chat.settings.load().historyEnabled,
+      false,
+      "history stays off until the decision is applied",
+    );
 
     await controller.resolve("exit-1", "save", chat.view);
 
     assert.equal(chat.settings.load().historyEnabled, true);
-    assert.deepEqual(results.map((result) => result.status), ["success", "success"]);
+    assert.deepEqual(
+      results.map((result) => result.status),
+      ["success", "success"],
+    );
     const summaries = await chat.history.getSummaries();
     assert.equal(summaries.length, 1);
     assert.equal(summaries[0]?.id, chat.conversationIdFor(generationId));

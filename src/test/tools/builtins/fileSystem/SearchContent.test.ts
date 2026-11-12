@@ -22,19 +22,21 @@ interface SearchPayload {
 suite("search content", () => {
   test("searches literal text without interpreting shell or regex metacharacters", async () => {
     const workspace = createMemoryWorkspace({
-      "src/with space/á.ts": "const marker = \"[literal] & echo\";\n",
-      "src/other.ts": "const marker = \"different\";\n",
+      "src/with space/á.ts": 'const marker = "[literal] & echo";\n',
+      "src/other.ts": 'const marker = "different";\n',
     });
 
     const result = await searchContentHandler({ query: "[literal] & echo", filePattern: "*.ts" });
     const payload = parsePayload(result);
 
     assert.strictEqual(workspace.lastFindOptions?.includePattern, "**/*.ts");
-    assert.deepStrictEqual(payload.results, [{
-      file: "src/with space/á.ts",
-      line: 1,
-      text: "const marker = \"[literal] & echo\";",
-    }]);
+    assert.deepStrictEqual(payload.results, [
+      {
+        file: "src/with space/á.ts",
+        line: 1,
+        text: 'const marker = "[literal] & echo";',
+      },
+    ]);
     assert.strictEqual(payload.truncated, false);
   });
 
@@ -48,7 +50,10 @@ suite("search content", () => {
 
     const payload = parsePayload(await searchContentHandler({ query: "needle" }));
 
-    assert.deepStrictEqual(payload.results.map((result) => result.file), ["src/app.ts"]);
+    assert.deepStrictEqual(
+      payload.results.map((result) => result.file),
+      ["src/app.ts"],
+    );
     assert.deepStrictEqual(workspace.readPaths, ["src/app.ts"]);
   });
 
@@ -81,7 +86,10 @@ suite("search content", () => {
 
     const payload = parsePayload(await searchContentHandler({ query: "needle" }));
 
-    assert.deepStrictEqual(payload.results.map((result) => result.file), ["src/safe.txt"]);
+    assert.deepStrictEqual(
+      payload.results.map((result) => result.file),
+      ["src/safe.txt"],
+    );
     assert.strictEqual(payload.skippedFiles, 3);
     assert.strictEqual(payload.truncated, true);
     assert.ok(!workspace.readPaths.includes("generated/large.txt"));
@@ -118,7 +126,10 @@ suite("search content", () => {
   });
 
   test("scans concurrently while retaining deterministic file order", async () => {
-    const paths = Array.from({ length: 40 }, (_, index) => `src/file-${String(index).padStart(2, "0")}.txt`);
+    const paths = Array.from(
+      { length: 40 },
+      (_, index) => `src/file-${String(index).padStart(2, "0")}.txt`,
+    );
     let activeReads = 0;
     let maximumActiveReads = 0;
     setToolWorkspaceHost({
@@ -139,20 +150,32 @@ suite("search content", () => {
 
     assert.ok(maximumActiveReads > 1);
     assert.ok(maximumActiveReads <= 16);
-    assert.deepStrictEqual(payload.results.map((result) => result.file), paths);
+    assert.deepStrictEqual(
+      payload.results.map((result) => result.file),
+      paths,
+    );
   });
 
   test("returns a structured partial result when the internal timeout fires", async () => {
     const originalSetTimeout = globalThis.setTimeout;
-    globalThis.setTimeout = ((callback: (...args: unknown[]) => void, _delay?: number, ...args: unknown[]) =>
-      originalSetTimeout(callback, 0, ...args)) as typeof setTimeout;
+    globalThis.setTimeout = ((
+      callback: (...args: unknown[]) => void,
+      _delay?: number,
+      ...args: unknown[]
+    ) => originalSetTimeout(callback, 0, ...args)) as typeof setTimeout;
     try {
       setToolWorkspaceHost({
         ...createBaseHost(path.resolve("C:/workspace")),
-        findFiles: async (options) => new Promise<string[]>((_resolve, reject) => {
-          if (options.signal?.aborted) {reject(createAbortError()); return;}
-          options.signal?.addEventListener("abort", () => reject(createAbortError()), { once: true });
-        }),
+        findFiles: async (options) =>
+          new Promise<string[]>((_resolve, reject) => {
+            if (options.signal?.aborted) {
+              reject(createAbortError());
+              return;
+            }
+            options.signal?.addEventListener("abort", () => reject(createAbortError()), {
+              once: true,
+            });
+          }),
       });
 
       const payload = parsePayload(await searchContentHandler({ query: "needle" }));
@@ -172,9 +195,14 @@ function createMemoryWorkspace(
 ): { readPaths: string[]; lastFindOptions?: ToolWorkspaceFindOptions } {
   const rootPath = path.resolve("C:/workspace");
   const files = new Map(
-    Object.entries(contents).map(([filePath, content]) => [normalizePath(filePath), Buffer.isBuffer(content) ? content : Buffer.from(content)]),
+    Object.entries(contents).map(([filePath, content]) => [
+      normalizePath(filePath),
+      Buffer.isBuffer(content) ? content : Buffer.from(content),
+    ]),
   );
-  const state: { readPaths: string[]; lastFindOptions?: ToolWorkspaceFindOptions } = { readPaths: [] };
+  const state: { readPaths: string[]; lastFindOptions?: ToolWorkspaceFindOptions } = {
+    readPaths: [],
+  };
 
   setToolWorkspaceHost({
     ...createBaseHost(rootPath),

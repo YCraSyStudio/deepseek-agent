@@ -15,7 +15,13 @@ export interface SaveAssistantResultOptions {
   state: ConversationState;
   generationId: string;
   status: "completed" | "cancelled" | "interrupted" | "error";
-  stopReason?: "user_cancelled" | "steered" | "workspace_changed" | "shutdown" | "deleted" | "history_transition";
+  stopReason?:
+    | "user_cancelled"
+    | "steered"
+    | "workspace_changed"
+    | "shutdown"
+    | "deleted"
+    | "history_transition";
   providerTranscript?: ProviderTranscript;
   usage?: UsageAggregate;
   error?: string;
@@ -44,17 +50,26 @@ export class GenerationResultStore {
   }: SaveAssistantResultOptions): Promise<void> {
     await state.saveMessages({
       messages: [
-        ...(content || timeline.length || toolCalls?.length || !error ? [state.createMessage("assistant", content, {
-          timeline,
-          toolCalls,
-          generationId,
-          generationStatus: status,
-          generationStopReason: stopReason,
-          contextContent: status === "completed" ? content : buildInterruptedContextContent(content, toolCalls),
-          providerTranscript,
-          ...(usage !== undefined ? { usage } : {}),
-        })] : []),
-        ...(error ? [state.createMessage("error", error, { generationId, generationStatus: "error" })] : []),
+        ...(content || timeline.length || toolCalls?.length || !error
+          ? [
+              state.createMessage("assistant", content, {
+                timeline,
+                toolCalls,
+                generationId,
+                generationStatus: status,
+                generationStopReason: stopReason,
+                contextContent:
+                  status === "completed"
+                    ? content
+                    : buildInterruptedContextContent(content, toolCalls),
+                providerTranscript,
+                ...(usage !== undefined ? { usage } : {}),
+              }),
+            ]
+          : []),
+        ...(error
+          ? [state.createMessage("error", error, { generationId, generationStatus: "error" })]
+          : []),
       ],
       model,
     });
@@ -78,10 +93,14 @@ export class GenerationResultStore {
     status: "cancelled" | "interrupted",
     stopReason: ReturnType<typeof getGenerationStopReason>,
   ): Promise<void> {
-    const existing = record.state.getConversation()?.messages.some(
-      (message) => message.role === "assistant" && message.generationId === record.generationId,
-    );
-    if (existing) {return;}
+    const existing = record.state
+      .getConversation()
+      ?.messages.some(
+        (message) => message.role === "assistant" && message.generationId === record.generationId,
+      );
+    if (existing) {
+      return;
+    }
 
     await this.save({
       content: record.content,
@@ -108,13 +127,18 @@ export class GenerationResultStore {
       return;
     }
     record.cancellationEffectsLogged = true;
-    const completedToolCount = record.toolCalls
-      .filter((toolCall) => toolCall.status === "completed").length;
+    const completedToolCount = record.toolCalls.filter(
+      (toolCall) => toolCall.status === "completed",
+    ).length;
     if (completedToolCount > 0) {
-      logInfo(`[cancel] ${completedToolCount} completed tool effect(s) were not rolled back.`, undefined, {
-        generationId: record.generationId,
-        conversationId: record.conversationId,
-      });
+      logInfo(
+        `[cancel] ${completedToolCount} completed tool effect(s) were not rolled back.`,
+        undefined,
+        {
+          generationId: record.generationId,
+          conversationId: record.conversationId,
+        },
+      );
     }
   }
 }

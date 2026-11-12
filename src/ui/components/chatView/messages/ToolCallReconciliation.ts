@@ -47,9 +47,7 @@ export function mergeToolCallGroups(
       groups.set(activeGroup.round, activeGroup);
       continue;
     }
-    const calls = new Map(
-      storedGroup.toolCalls.map((toolCall) => [toolCall.toolCallId, toolCall]),
-    );
+    const calls = new Map(storedGroup.toolCalls.map((toolCall) => [toolCall.toolCallId, toolCall]));
     for (const toolCall of activeGroup.toolCalls) {
       calls.set(toolCall.toolCallId, toolCall);
     }
@@ -69,19 +67,25 @@ export function reconcileLatestAssistantToolCalls(
       break;
     }
   }
-  if (messageIndex < 0) {return messages;}
+  if (messageIndex < 0) {
+    return messages;
+  }
 
   const message = messages[messageIndex];
   const timelineToolCallIds = (message.timeline ?? []).flatMap((event) =>
     event.type === "tool-group" ? event.toolCallIds : [],
   );
-  if (timelineToolCallIds.length === 0) {return messages;}
+  if (timelineToolCallIds.length === 0) {
+    return messages;
+  }
 
   const allowedIds = new Set(timelineToolCallIds);
   const calls = new Map(message.toolCalls?.map((toolCall) => [toolCall.toolCallId, toolCall]));
   for (const group of liveGroups) {
     for (const toolCall of group.toolCalls) {
-      if (!allowedIds.has(toolCall.toolCallId)) {continue;}
+      if (!allowedIds.has(toolCall.toolCallId)) {
+        continue;
+      }
       calls.set(toolCall.toolCallId, {
         ...calls.get(toolCall.toolCallId),
         ...toolCall,
@@ -94,7 +98,9 @@ export function reconcileLatestAssistantToolCalls(
     const toolCall = calls.get(toolCallId);
     return toolCall ? [toolCall] : [];
   });
-  if (JSON.stringify(nextToolCalls) === JSON.stringify(message.toolCalls ?? [])) {return messages;}
+  if (JSON.stringify(nextToolCalls) === JSON.stringify(message.toolCalls ?? [])) {
+    return messages;
+  }
 
   const nextMessages = [...messages];
   nextMessages[messageIndex] = { ...message, toolCalls: nextToolCalls };

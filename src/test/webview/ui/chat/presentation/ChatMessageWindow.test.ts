@@ -14,8 +14,14 @@ suite("chat message render window", () => {
     const messages = range(10);
 
     assert.strictEqual(initialChatWindowSize(messages.length), 10);
-    assert.strictEqual(hiddenChatMessageCount(messages.length, initialChatWindowSize(messages.length)), 0);
-    assert.strictEqual(visibleChatMessages(messages, initialChatWindowSize(messages.length)), messages);
+    assert.strictEqual(
+      hiddenChatMessageCount(messages.length, initialChatWindowSize(messages.length)),
+      0,
+    );
+    assert.strictEqual(
+      visibleChatMessages(messages, initialChatWindowSize(messages.length)),
+      messages,
+    );
   });
 
   test("keeps only the newest messages of a long transcript", () => {
@@ -31,8 +37,14 @@ suite("chat message render window", () => {
     const total = 200 + 200;
 
     assert.strictEqual(initialChatWindowSize(total, 200), CHAT_MESSAGE_WINDOW + 200);
-    assert.strictEqual(hiddenChatMessageCount(total, initialChatWindowSize(total, 200)), 200 - CHAT_MESSAGE_WINDOW);
-    assert.strictEqual(hiddenChatMessageCount(600, initialChatWindowSize(600, 400)), 200 - CHAT_MESSAGE_WINDOW);
+    assert.strictEqual(
+      hiddenChatMessageCount(total, initialChatWindowSize(total, 200)),
+      200 - CHAT_MESSAGE_WINDOW,
+    );
+    assert.strictEqual(
+      hiddenChatMessageCount(600, initialChatWindowSize(600, 400)),
+      200 - CHAT_MESSAGE_WINDOW,
+    );
   });
 
   test("reveals one page per request and never overshoots the transcript", () => {
@@ -41,7 +53,10 @@ suite("chat message render window", () => {
     const second = growChatWindow(first, total);
 
     assert.strictEqual(second, CHAT_MESSAGE_WINDOW + CHAT_MESSAGE_WINDOW_PAGE);
-    assert.strictEqual(hiddenChatMessageCount(total, second), 90 - CHAT_MESSAGE_WINDOW - CHAT_MESSAGE_WINDOW_PAGE);
+    assert.strictEqual(
+      hiddenChatMessageCount(total, second),
+      90 - CHAT_MESSAGE_WINDOW - CHAT_MESSAGE_WINDOW_PAGE,
+    );
     assert.strictEqual(hiddenChatMessageCount(total, growChatWindow(second, total)), 0);
     assert.strictEqual(growChatWindow(999, total), total);
   });

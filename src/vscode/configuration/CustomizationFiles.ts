@@ -18,22 +18,47 @@ export function watchCustomizationFiles(
     watchers.forEach((watcher) => watcher.dispose());
     watchers = [];
     for (const target of targets()) {
-      const files = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(target.directory, target.pattern));
-      watchers.push(files, files.onDidCreate(refresh), files.onDidChange(refresh), files.onDidDelete(refresh));
+      const files = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(target.directory, target.pattern),
+      );
+      watchers.push(
+        files,
+        files.onDidCreate(refresh),
+        files.onDidChange(refresh),
+        files.onDidDelete(refresh),
+      );
       if (target.parent) {
-        const parent = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(target.parent.directory, target.parent.name));
-        const changed = () => {bind();refresh();};
+        const parent = vscode.workspace.createFileSystemWatcher(
+          new vscode.RelativePattern(target.parent.directory, target.parent.name),
+        );
+        const changed = () => {
+          bind();
+          refresh();
+        };
         watchers.push(parent, parent.onDidCreate(changed), parent.onDidDelete(changed));
       }
     }
   };
-  const rebind = () => {bind();refresh();};
+  const rebind = () => {
+    bind();
+    refresh();
+  };
   bind();
   return vscode.Disposable.from(
-    new vscode.Disposable(() => {watchers.forEach((watcher) => watcher.dispose());}),
+    new vscode.Disposable(() => {
+      watchers.forEach((watcher) => watcher.dispose());
+    }),
     vscode.workspace.onDidChangeWorkspaceFolders(rebind),
-    vscode.window.onDidChangeWindowState((state) => {if (state.focused) {rebind();}}),
-    view.onDidChangeVisibility(() => {if (view.visible) {refresh();}}),
+    vscode.window.onDidChangeWindowState((state) => {
+      if (state.focused) {
+        rebind();
+      }
+    }),
+    view.onDidChangeVisibility(() => {
+      if (view.visible) {
+        refresh();
+      }
+    }),
   );
 }
 

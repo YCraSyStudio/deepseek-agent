@@ -19,7 +19,10 @@ function RunningTasks({ tasks, stopping, onStop }: Props) {
         const pending = stopping?.has(task.id) ?? false;
         return (
           <div className="runningTask" key={task.id}>
-            <span className="runningTaskLabel" title={[task.command, task.cwd].filter(Boolean).join("\n")}>
+            <span
+              className="runningTaskLabel"
+              title={[task.command, task.cwd].filter(Boolean).join("\n")}
+            >
               <span className="runningTaskName">{task.name}</span>
               {task.pid === undefined ? null : <span className="runningTaskPid">({task.pid})</span>}
             </span>

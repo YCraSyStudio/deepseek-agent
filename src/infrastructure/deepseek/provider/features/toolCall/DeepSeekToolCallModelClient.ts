@@ -16,7 +16,10 @@ export function createDeepSeekToolCallModelClient(
   return {
     async completeRound(options) {
       let usage: ProviderUsage | undefined;
-      const strictEnabled = options.tools.length > 0 && options.cycleOptions.strictToolCallsEnabled === true && (options.cycleOptions.isStrictToolCallsEnabled?.() ?? true);
+      const strictEnabled =
+        options.tools.length > 0 &&
+        options.cycleOptions.strictToolCallsEnabled === true &&
+        (options.cycleOptions.isStrictToolCallsEnabled?.() ?? true);
       try {
         const response = await chatCompletion(
           buildToolCallRequest({
@@ -33,13 +36,26 @@ export function createDeepSeekToolCallModelClient(
           historicalFiles,
         );
         usage = response.usage;
-        return !strictEnabled ? response : {
-          ...response,
-          choices: response.choices.map((choice) => ({ ...choice, message: normalizeBetaToolMessages([choice.message], options.tools)[0] })),
-        };
+        return !strictEnabled
+          ? response
+          : {
+              ...response,
+              choices: response.choices.map((choice) => ({
+                ...choice,
+                message: normalizeBetaToolMessages([choice.message], options.tools)[0],
+              })),
+            };
       } finally {
-        options.cycleOptions.budgetManager?.recordPromptUsage(options.messages, options.tools, usage);
-        options.cycleOptions.budgetManager?.recordRequestContext(options.messages, options.tools, usage);
+        options.cycleOptions.budgetManager?.recordPromptUsage(
+          options.messages,
+          options.tools,
+          usage,
+        );
+        options.cycleOptions.budgetManager?.recordRequestContext(
+          options.messages,
+          options.tools,
+          usage,
+        );
         options.cycleOptions.onUsage?.(usage);
       }
     },

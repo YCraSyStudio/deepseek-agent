@@ -18,7 +18,13 @@ interface FileSelectorProps {
   listboxId: string;
 }
 
-export function FileSelector({ activeIndex, completions, isOpen, onSelect, listboxId }: FileSelectorProps) {
+export function FileSelector({
+  activeIndex,
+  completions,
+  isOpen,
+  onSelect,
+  listboxId,
+}: FileSelectorProps) {
   const completionItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
@@ -34,41 +40,73 @@ export function FileSelector({ activeIndex, completions, isOpen, onSelect, listb
   const files = options.filter(({ completion }) => completion.type !== "instruction");
   const instructions = options.filter(({ completion }) => completion.type === "instruction");
   const renderOption = ({ completion, index }: (typeof options)[number]) => (
-    <button key={`${completion.type}:${completion.path}`}
-      ref={(element) => {completionItemRefs.current[index] = element;}}
-      type="button" className={`pathCompletionItem${index === activeIndex ? " active" : ""}`}
-      onMouseDown={(event) => {event.preventDefault();onSelect(completion);}}
-      role="option" tabIndex={-1} id={`path-completion-option-${index}`} aria-selected={index === activeIndex}
-      aria-posinset={index + 1} aria-setsize={completions.length}
-      data-tooltip={completion.type === "instruction" ? completion.description : completion.path}>
+    <button
+      key={`${completion.type}:${completion.path}`}
+      ref={(element) => {
+        completionItemRefs.current[index] = element;
+      }}
+      type="button"
+      className={`pathCompletionItem${index === activeIndex ? " active" : ""}`}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onSelect(completion);
+      }}
+      role="option"
+      tabIndex={-1}
+      id={`path-completion-option-${index}`}
+      aria-selected={index === activeIndex}
+      aria-posinset={index + 1}
+      aria-setsize={completions.length}
+      data-tooltip={completion.type === "instruction" ? completion.description : completion.path}
+    >
       <CompletionIcon completion={completion} />
-      <span className="pathCompletionLabel">{completion.label}
-        {completion.type === "instruction" && completion.workspaceName ? <small>{completion.workspaceName}</small> : null}
+      <span className="pathCompletionLabel">
+        {completion.label}
+        {completion.type === "instruction" && completion.workspaceName ? (
+          <small>{completion.workspaceName}</small>
+        ) : null}
       </span>
     </button>
   );
 
   return (
-    <div className="pathCompletionPopup" id={listboxId} role={completions.length > 0 ? "listbox" : "status"}
-      aria-label={t("chat.workspacePathSuggestions")}>
+    <div
+      className="pathCompletionPopup"
+      id={listboxId}
+      role={completions.length > 0 ? "listbox" : "status"}
+      aria-label={t("chat.workspacePathSuggestions")}
+    >
       {completions.length > 0 ? (
         <>
           {files.length > 0 ? (
             <div role="group" aria-label={t("chat.completionFiles")}>
-              <div className="pathCompletionHeading" role="presentation">{t("chat.completionFiles")}</div>
+              <div className="pathCompletionHeading" role="presentation">
+                {t("chat.completionFiles")}
+              </div>
               {files.map(renderOption)}
             </div>
           ) : null}
           {instructions.length > 0 ? (
             <div role="group" aria-label={t("chat.completionInstructions")}>
-              <div className="pathCompletionHeading" role="presentation">{t("chat.completionInstructions")}</div>
+              <div className="pathCompletionHeading" role="presentation">
+                {t("chat.completionInstructions")}
+              </div>
               {(["workspace", "global"] as const).map((scope) => {
-                const entries = instructions.filter(({ completion }) => completion.type === "instruction" && completion.instructionScope === scope);
-                const label = t(scope === "workspace" ? "chat.completionWorkspace" : "chat.completionGlobal");
-                return entries.length ? <div key={scope} role="group" aria-label={label}>
-                  <div className="pathCompletionSubheading" role="presentation">{label}</div>
-                  {entries.map(renderOption)}
-                </div> : null;
+                const entries = instructions.filter(
+                  ({ completion }) =>
+                    completion.type === "instruction" && completion.instructionScope === scope,
+                );
+                const label = t(
+                  scope === "workspace" ? "chat.completionWorkspace" : "chat.completionGlobal",
+                );
+                return entries.length ? (
+                  <div key={scope} role="group" aria-label={label}>
+                    <div className="pathCompletionSubheading" role="presentation">
+                      {label}
+                    </div>
+                    {entries.map(renderOption)}
+                  </div>
+                ) : null;
               })}
             </div>
           ) : null}
@@ -93,7 +131,9 @@ function CompletionIcon({ completion }: { completion: PathCompletionItem }) {
 }
 
 function getCompletionVisual(completion: PathCompletionItem): CompletionVisual {
-  if (completion.type === "instruction") {return { className: "codicon codicon-book" };}
+  if (completion.type === "instruction") {
+    return { className: "codicon codicon-book" };
+  }
   if (completion.type === "directory") {
     return { className: "codicon codicon-folder folder" };
   }

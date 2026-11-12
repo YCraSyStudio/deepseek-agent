@@ -5,16 +5,30 @@ import { SecretsManager } from "./SecretsManager";
 import { SettingsManager } from "./SettingsManager";
 
 export class VsCodeSettingsRepository implements SettingsRepository {
-  load(): AppConfig {return SettingsManager.load();}
-  save(patch: Partial<AppConfig>): Promise<void> {return SettingsManager.save(patch);}
-  reset(): Promise<void> {return SettingsManager.reset();}
-  getRevision(): number {return SettingsManager.getRevision();}
-  waitForPendingWrites(): Promise<void> {return SettingsManager.waitForPendingWrites();}
+  load(): AppConfig {
+    return SettingsManager.load();
+  }
+  save(patch: Partial<AppConfig>): Promise<void> {
+    return SettingsManager.save(patch);
+  }
+  reset(): Promise<void> {
+    return SettingsManager.reset();
+  }
+  getRevision(): number {
+    return SettingsManager.getRevision();
+  }
+  waitForPendingWrites(): Promise<void> {
+    return SettingsManager.waitForPendingWrites();
+  }
   capturePermissionSnapshot(workspaceTrusted: boolean): Promise<PermissionSnapshot> {
     return SettingsManager.capturePermissionSnapshot(workspaceTrusted);
   }
-  getPersistenceError(): string | undefined {return SettingsManager.getPersistenceError();}
-  enterDegradedMode(error: unknown): void {SettingsManager.enterDegradedMode(error);}
+  getPersistenceError(): string | undefined {
+    return SettingsManager.getPersistenceError();
+  }
+  enterDegradedMode(error: unknown): void {
+    SettingsManager.enterDegradedMode(error);
+  }
 }
 
 export class VsCodeSecretStore implements SecretStore {

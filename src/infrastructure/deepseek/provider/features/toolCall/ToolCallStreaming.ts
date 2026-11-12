@@ -20,13 +20,29 @@ interface StreamToolCallRoundOptions {
 
 const MAX_TOOL_ARGUMENT_BYTES = 2 * 1024 * 1024;
 
-export async function streamToolCallRound(options: StreamToolCallRoundOptions): Promise<ChatResponse> {
+export async function streamToolCallRound(
+  options: StreamToolCallRoundOptions,
+): Promise<ChatResponse> {
   return streamToolCallRoundAttempt(options, false);
 }
 
-async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, conciseRecovery: boolean): Promise<ChatResponse> {
-  const { messages, tools, model, apiKey, baseUrl, cycleOptions, emitStreamEvents = true } = options;
-  const strictEnabled = tools.length > 0 && cycleOptions.strictToolCallsEnabled === true && (cycleOptions.isStrictToolCallsEnabled?.() ?? true);
+async function streamToolCallRoundAttempt(
+  options: StreamToolCallRoundOptions,
+  conciseRecovery: boolean,
+): Promise<ChatResponse> {
+  const {
+    messages,
+    tools,
+    model,
+    apiKey,
+    baseUrl,
+    cycleOptions,
+    emitStreamEvents = true,
+  } = options;
+  const strictEnabled =
+    tools.length > 0 &&
+    cycleOptions.strictToolCallsEnabled === true &&
+    (cycleOptions.isStrictToolCallsEnabled?.() ?? true);
   const effectiveMessages = conciseRecovery ? withConciseRecoveryInstruction(messages) : messages;
   const effectiveCycleOptions = conciseRecovery
     ? { ...cycleOptions, thinkingMode: false, reasoningEffort: undefined }
@@ -60,14 +76,23 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
         if (chunk.type === "usage" && chunk.usage) {
           usage = chunk.usage;
         }
-        const state = { finalContent, finalReasoning, hasToolCallsInStream, streamingToolCalls, finishReason };
+        const state = {
+          finalContent,
+          finalReasoning,
+          hasToolCallsInStream,
+          streamingToolCalls,
+          finishReason,
+        };
         const nextState = applyStreamChunk({ chunk, state, cycleOptions, emitStreamEvents });
         finalContent = nextState.finalContent;
         finalReasoning = nextState.finalReasoning;
         hasToolCallsInStream = nextState.hasToolCallsInStream;
         finishReason = nextState.finishReason;
         if (chunk.type === "content" || chunk.type === "reasoning") {
-          const assessment = cycleOptions.budgetManager?.observeOutput(chunk.reasoning_content, chunk.content);
+          const assessment = cycleOptions.budgetManager?.observeOutput(
+            chunk.reasoning_content,
+            chunk.content,
+          );
           if (
             assessment?.status === "output_reasoning_limit" &&
             !conciseRecovery &&
@@ -83,7 +108,11 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
       historicalFiles: options.historicalFiles,
     });
   } catch (error) {
-    if (stoppedForExcessiveReasoning && !cycleOptions.signal?.aborted && cycleOptions.budgetManager) {
+    if (
+      stoppedForExcessiveReasoning &&
+      !cycleOptions.signal?.aborted &&
+      cycleOptions.budgetManager
+    ) {
       cycleOptions.budgetManager.recordConciseRecovery();
       await cycleOptions.onRecoveryStarted?.();
       return streamToolCallRoundAttempt(options, true);
@@ -96,7 +125,9 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
   }
 
   const toolCalls = hasToolCallsInStream ? sortedToolCalls(streamingToolCalls) : undefined;
-  if (toolCalls) {assertUniqueToolCallIds(toolCalls);}
+  if (toolCalls) {
+    assertUniqueToolCallIds(toolCalls);
+  }
   const message: ChatMessage = {
     role: "assistant",
     content: finalContent || null,
@@ -114,17 +145,29 @@ async function streamToolCallRoundAttempt(options: StreamToolCallRoundOptions, c
       {
         index: 0,
         message: strictEnabled ? normalizeBetaToolMessages([message], tools)[0] : message,
-        finish_reason: finishReason as "stop" | "length" | "tool_calls" | "content_filter" | "insufficient_system_resource" | null,
+        finish_reason: finishReason as
+          | "stop"
+          | "length"
+          | "tool_calls"
+          | "content_filter"
+          | "insufficient_system_resource"
+          | null,
       },
     ],
   };
 }
 
 function withConciseRecoveryInstruction(messages: ChatMessage[]): ChatMessage[] {
-  const instruction = "The previous attempt approached its output budget while reasoning. Reasoning further is unnecessary. Trust successful results already present, avoid additional verification, and return the required answer or one essential valid tool call concisely.";
-  return messages.map((message, index) => index === 0 && message.role === "system"
-    ? { ...message, content: `${message.content ?? ""}\n\n<concise_recovery>${instruction}</concise_recovery>` }
-    : message);
+  const instruction =
+    "The previous attempt approached its output budget while reasoning. Reasoning further is unnecessary. Trust successful results already present, avoid additional verification, and return the required answer or one essential valid tool call concisely.";
+  return messages.map((message, index) =>
+    index === 0 && message.role === "system"
+      ? {
+          ...message,
+          content: `${message.content ?? ""}\n\n<concise_recovery>${instruction}</concise_recovery>`,
+        }
+      : message,
+  );
 }
 
 interface StreamState {
@@ -135,7 +178,12 @@ interface StreamState {
   finishReason: string | null;
 }
 
-function applyStreamChunk(options: { chunk: StreamChunk; state: StreamState; cycleOptions: ToolCallCycleOptions; emitStreamEvents: boolean }): StreamState {
+function applyStreamChunk(options: {
+  chunk: StreamChunk;
+  state: StreamState;
+  cycleOptions: ToolCallCycleOptions;
+  emitStreamEvents: boolean;
+}): StreamState {
   const { chunk, state, cycleOptions, emitStreamEvents } = options;
 
   switch (chunk.type) {
@@ -168,7 +216,10 @@ function applyStreamChunk(options: { chunk: StreamChunk; state: StreamState; cyc
   }
 }
 
-function mergeStreamingToolCalls(streamingToolCalls: Map<number, ToolCall>, partialToolCalls: ToolCall[] | undefined): void {
+function mergeStreamingToolCalls(
+  streamingToolCalls: Map<number, ToolCall>,
+  partialToolCalls: ToolCall[] | undefined,
+): void {
   if (!partialToolCalls) {
     return;
   }
@@ -177,7 +228,9 @@ function mergeStreamingToolCalls(streamingToolCalls: Map<number, ToolCall>, part
     const idx = partialTc.index ?? 0;
     const existing = streamingToolCalls.get(idx);
     if (!existing) {
-      if (Buffer.byteLength(partialTc.function?.arguments ?? "", "utf8") > MAX_TOOL_ARGUMENT_BYTES) {
+      if (
+        Buffer.byteLength(partialTc.function?.arguments ?? "", "utf8") > MAX_TOOL_ARGUMENT_BYTES
+      ) {
         throw new Error("DeepSeek tool arguments exceeded their size limit");
       }
       streamingToolCalls.set(idx, {

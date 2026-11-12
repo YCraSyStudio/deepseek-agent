@@ -16,7 +16,7 @@ suite("history workspace grouping", () => {
     const rows = buildHistoryRows(conversations, "none", labelFor);
 
     assert.deepStrictEqual(
-      rows.map((row) => row.kind === "conversation" ? row.conversation.id : row.key),
+      rows.map((row) => (row.kind === "conversation" ? row.conversation.id : row.key)),
       ["1", "2"],
     );
   });
@@ -30,10 +30,14 @@ suite("history workspace grouping", () => {
 
     const rows = buildHistoryRows(conversations, "workspace", labelFor);
 
-    assert.deepStrictEqual(rows.map((row) => row.kind), ["group", "conversation", "group", "conversation", "conversation"]);
-    assert.deepStrictEqual(rows.map((row) => row.kind === "group" ? row.label : row.conversation.id), [
-      "alpha", "2", "beta", "1", "3",
-    ]);
+    assert.deepStrictEqual(
+      rows.map((row) => row.kind),
+      ["group", "conversation", "group", "conversation", "conversation"],
+    );
+    assert.deepStrictEqual(
+      rows.map((row) => (row.kind === "group" ? row.label : row.conversation.id)),
+      ["alpha", "2", "beta", "1", "3"],
+    );
     assert.strictEqual(rows[0]?.kind === "group" && rows[0].count, 1);
     assert.strictEqual(rows[2]?.kind === "group" && rows[2].count, 2);
   });

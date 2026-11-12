@@ -8,7 +8,10 @@ import {
   terminalCommandHandlerForced,
 } from "@/infrastructure/tools/builtins/terminal/TerminalCommand";
 import { setToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
-import { listKeepAliveTasks, onKeepAliveTerminalsChanged } from "@/infrastructure/tools/builtins/terminal/KeepAliveTerminals";
+import {
+  listKeepAliveTasks,
+  onKeepAliveTerminalsChanged,
+} from "@/infrastructure/tools/builtins/terminal/KeepAliveTerminals";
 
 suite("terminal command confirmation", () => {
   test("includes the exact command and resolved execution environment", async () => {
@@ -35,10 +38,10 @@ suite("terminal command confirmation", () => {
   });
 
   test("moves a leading cd into the structured cwd argument", () => {
-    assert.deepStrictEqual(
-      normalizeLeadingDirectoryChange("cd frontend && npm install"),
-      { command: "npm install", cwd: "frontend" },
-    );
+    assert.deepStrictEqual(normalizeLeadingDirectoryChange("cd frontend && npm install"), {
+      command: "npm install",
+      cwd: "frontend",
+    });
     assert.deepStrictEqual(
       normalizeLeadingDirectoryChange('cd /d "apps/frontend" && npm run build', "project"),
       { command: "npm run build", cwd: path.join("project", "apps/frontend") },
@@ -58,9 +61,15 @@ suite("terminal command confirmation", () => {
 
     assert.match(getTerminalRoutingError("dir src", context) ?? "", /Use list_directory/);
     assert.match(getTerminalRoutingError("type package.json", context) ?? "", /Use read_file/);
-    assert.match(getTerminalRoutingError("findstr DeepSeek README.md", context) ?? "", /Use search_content/);
     assert.match(
-      getTerminalRoutingError('powershell -Command "$bytes=[IO.File]::ReadAllBytes(\'App.css\'); $crlf=0"', context) ?? "",
+      getTerminalRoutingError("findstr DeepSeek README.md", context) ?? "",
+      /Use search_content/,
+    );
+    assert.match(
+      getTerminalRoutingError(
+        "powershell -Command \"$bytes=[IO.File]::ReadAllBytes('App.css'); $crlf=0\"",
+        context,
+      ) ?? "",
       /without line-ending probes/,
     );
   });
@@ -69,24 +78,45 @@ suite("terminal command confirmation", () => {
     const availableToolNames = ["list_directory", "read_file", "search_content"];
 
     assert.strictEqual(getTerminalRoutingError("npm run build", { availableToolNames }), undefined);
-    assert.strictEqual(getTerminalRoutingError("git status --short", { availableToolNames }), undefined);
-    assert.strictEqual(getTerminalRoutingError("dir src", {
-      availableToolNames,
-      trustedUserRequest: "usa la terminal para listar src",
-    }), undefined);
-    assert.match(getTerminalRoutingError("dir src", {
-      availableToolNames,
-      trustedUserRequest: "sin terminal, revisa src",
-    }) ?? "", /Use list_directory/);
+    assert.strictEqual(
+      getTerminalRoutingError("git status --short", { availableToolNames }),
+      undefined,
+    );
+    assert.strictEqual(
+      getTerminalRoutingError("dir src", {
+        availableToolNames,
+        trustedUserRequest: "usa la terminal para listar src",
+      }),
+      undefined,
+    );
+    assert.match(
+      getTerminalRoutingError("dir src", {
+        availableToolNames,
+        trustedUserRequest: "sin terminal, revisa src",
+      }) ?? "",
+      /Use list_directory/,
+    );
   });
 
   test("rejects process launchers that can escape the owned terminal lifecycle", () => {
-    assert.match(getTerminalLifecycleError(
-      "powershell -NoProfile -Command \"$p = Start-Process dotnet -PassThru\"",
-    ) ?? "", /background process launch rejected/);
-    assert.match(getTerminalLifecycleError("start /b dotnet run") ?? "", /background process launch rejected/);
-    assert.match(getTerminalLifecycleError("nohup npm run dev &") ?? "", /background process launch rejected/);
-    assert.match(getTerminalLifecycleError("dotnet run 2>&1 &\nsleep 8\ncurl http://localhost:5014") ?? "", /background process launch rejected/);
+    assert.match(
+      getTerminalLifecycleError(
+        'powershell -NoProfile -Command "$p = Start-Process dotnet -PassThru"',
+      ) ?? "",
+      /background process launch rejected/,
+    );
+    assert.match(
+      getTerminalLifecycleError("start /b dotnet run") ?? "",
+      /background process launch rejected/,
+    );
+    assert.match(
+      getTerminalLifecycleError("nohup npm run dev &") ?? "",
+      /background process launch rejected/,
+    );
+    assert.match(
+      getTerminalLifecycleError("dotnet run 2>&1 &\nsleep 8\ncurl http://localhost:5014") ?? "",
+      /background process launch rejected/,
+    );
     assert.strictEqual(getTerminalLifecycleError("dotnet build && dotnet test"), undefined);
     assert.strictEqual(getTerminalLifecycleError("dotnet build"), undefined);
     assert.strictEqual(getTerminalLifecycleError("npm start"), undefined);
@@ -109,17 +139,26 @@ suite("terminal command confirmation", () => {
       "deja las herramientas activas",
       "keep these tools alive",
     ]) {
-      const confirmation = JSON.parse(await terminalCommandHandler(
-        { command: "npm run dev", keepAlive: true },
-        { trustedUserRequest: request },
-      )) as Record<string, unknown>;
+      const confirmation = JSON.parse(
+        await terminalCommandHandler(
+          { command: "npm run dev", keepAlive: true },
+          { trustedUserRequest: request },
+        ),
+      ) as Record<string, unknown>;
       assert.strictEqual(confirmation.requiresConfirmation, true);
       assert.strictEqual(confirmation.keepAlive, true);
     }
 
-    assert.match(await terminalCommandHandler({ command: "npm run dev", keepAlive: "yes" }), /keepAlive must be a boolean/);
     assert.match(
-      await terminalCommandHandler({ command: "npm run dev", keepAlive: true, keepAliveAction: "stop" }),
+      await terminalCommandHandler({ command: "npm run dev", keepAlive: "yes" }),
+      /keepAlive must be a boolean/,
+    );
+    assert.match(
+      await terminalCommandHandler({
+        command: "npm run dev",
+        keepAlive: true,
+        keepAliveAction: "stop",
+      }),
       /mutually exclusive/,
     );
   });
@@ -128,7 +167,10 @@ suite("terminal command confirmation", () => {
     const missingId = await terminalCommandHandler({ keepAliveAction: "stop" });
     assert.match(missingId, /requires the keepAliveSessionId/);
 
-    await assert.rejects(async () => terminalCommandHandler({ keepAliveAction: "restart" }), /status.*stop/);
+    await assert.rejects(
+      async () => terminalCommandHandler({ keepAliveAction: "restart" }),
+      /status.*stop/,
+    );
   });
 
   test("starts and stops an isolated keep-alive terminal", async () => {
@@ -141,13 +183,20 @@ suite("terminal command confirmation", () => {
       createParentDirectory: async () => undefined,
       readDirectory: async () => [],
     });
-    const context = { conversationId: `keep-alive-${process.pid}`, trustedUserRequest: "keep it running" };
+    const context = {
+      conversationId: `keep-alive-${process.pid}`,
+      trustedUserRequest: "keep it running",
+    };
     const notifications: string[] = [];
-    const unsubscribe = onKeepAliveTerminalsChanged((conversationId) => notifications.push(conversationId));
-    const started = JSON.parse(await terminalCommandHandlerForced(
-      { command: 'node -e "setInterval(()=>{}, 1000)"', keepAlive: true },
-      context,
-    )) as { kind: string; sessionId: string; status: string };
+    const unsubscribe = onKeepAliveTerminalsChanged((conversationId) =>
+      notifications.push(conversationId),
+    );
+    const started = JSON.parse(
+      await terminalCommandHandlerForced(
+        { command: 'node -e "setInterval(()=>{}, 1000)"', keepAlive: true },
+        context,
+      ),
+    ) as { kind: string; sessionId: string; status: string };
     assert.strictEqual(started.kind, "keep_alive_terminal");
     assert.strictEqual(started.status, "running");
     assert.strictEqual(typeof started.sessionId, "string");
@@ -159,10 +208,12 @@ suite("terminal command confirmation", () => {
     assert.match(running[0].name, /node/);
     assert.deepStrictEqual(listKeepAliveTasks("another-conversation"), []);
 
-    const stopped = JSON.parse(await terminalCommandHandlerForced(
-      { keepAliveAction: "stop", keepAliveSessionId: started.sessionId },
-      context,
-    )) as { status: string; terminationConfirmed: boolean };
+    const stopped = JSON.parse(
+      await terminalCommandHandlerForced(
+        { keepAliveAction: "stop", keepAliveSessionId: started.sessionId },
+        context,
+      ),
+    ) as { status: string; terminationConfirmed: boolean };
     unsubscribe();
 
     assert.strictEqual(stopped.status, "stopped");

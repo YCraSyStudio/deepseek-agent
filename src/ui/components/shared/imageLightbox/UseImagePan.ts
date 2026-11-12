@@ -29,9 +29,13 @@ export function useImagePan(viewportRef: RefObject<HTMLDivElement | null>): Imag
   const onPointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
       moved.current = false;
-      if (event.button !== 0 || event.pointerType === "touch") {return;}
+      if (event.button !== 0 || event.pointerType === "touch") {
+        return;
+      }
       const viewport = viewportRef.current;
-      if (!viewport || !isScrollable(viewport)) {return;}
+      if (!viewport || !isScrollable(viewport)) {
+        return;
+      }
       drag.current = {
         pointerId: event.pointerId,
         x: event.clientX,
@@ -50,10 +54,14 @@ export function useImagePan(viewportRef: RefObject<HTMLDivElement | null>): Imag
     (event: PointerEvent<HTMLDivElement>) => {
       const state = drag.current;
       const viewport = viewportRef.current;
-      if (!state || !viewport || event.pointerId !== state.pointerId) {return;}
+      if (!state || !viewport || event.pointerId !== state.pointerId) {
+        return;
+      }
       const deltaX = event.clientX - state.x;
       const deltaY = event.clientY - state.y;
-      if (!moved.current && Math.abs(deltaX) + Math.abs(deltaY) < DRAG_THRESHOLD_PX) {return;}
+      if (!moved.current && Math.abs(deltaX) + Math.abs(deltaY) < DRAG_THRESHOLD_PX) {
+        return;
+      }
       moved.current = true;
       viewport.scrollLeft = state.left - deltaX;
       viewport.scrollTop = state.top - deltaY;
@@ -61,18 +69,17 @@ export function useImagePan(viewportRef: RefObject<HTMLDivElement | null>): Imag
     [viewportRef],
   );
 
-  const endDrag = useCallback(
-    (event: PointerEvent<HTMLDivElement>) => {
-      const state = drag.current;
-      if (!state || event.pointerId !== state.pointerId) {return;}
-      drag.current = null;
-      setIsPanning(false);
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-    },
-    [],
-  );
+  const endDrag = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    const state = drag.current;
+    if (!state || event.pointerId !== state.pointerId) {
+      return;
+    }
+    drag.current = null;
+    setIsPanning(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
 
   return {
     isPanning,

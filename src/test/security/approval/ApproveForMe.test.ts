@@ -4,7 +4,10 @@ import type { ToolExecutor } from "@/application/tools/ToolExecutor";
 import { executeToolCall } from "@/vscode/webviews/handlers/chat/toolCalls/ToolExecution";
 import type { ToolExecutionContext } from "@/vscode/webviews/handlers/chat/toolCalls/Types";
 import type { CommandSafetyRisk } from "@/infrastructure/deepseek/security/commandReview";
-import { runWithToolWorkspaceHost, type ToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
+import {
+  runWithToolWorkspaceHost,
+  type ToolWorkspaceHost,
+} from "@/infrastructure/tools/ToolWorkspace";
 import { fileChangeRegistry } from "@/vscode/editor/diff/FileChangeRegistry";
 
 type PermissionMode = "auto-approve" | "full-access" | "default";
@@ -26,7 +29,10 @@ const SAFE_SMOKE_TEST = [
 suite("remote permission decisions", () => {
   test("auto-approve runs routine mutations after DeepSeek review", async () => {
     const harness = createHarness("routine", "auto-approve");
-    assert.strictEqual(await executeToolCall(call("run_terminal_command"), harness.context), "completed");
+    assert.strictEqual(
+      await executeToolCall(call("run_terminal_command"), harness.context),
+      "completed",
+    );
     assert.strictEqual(harness.forced(), 1);
     assert.strictEqual(harness.confirmations(), 0);
   });
@@ -40,7 +46,10 @@ suite("remote permission decisions", () => {
 
   test("full-access runs elevated mutations automatically", async () => {
     const harness = createHarness("elevated", "full-access");
-    assert.strictEqual(await executeToolCall(call("run_terminal_command"), harness.context), "completed");
+    assert.strictEqual(
+      await executeToolCall(call("run_terminal_command"), harness.context),
+      "completed",
+    );
     assert.strictEqual(harness.forced(), 1);
     assert.strictEqual(harness.confirmations(), 0);
   });
@@ -61,7 +70,10 @@ suite("remote permission decisions", () => {
 
   test("auto-approve runs chained version diagnostics without a review call", async () => {
     const harness = createHarness("critical", "auto-approve", { command: DIAGNOSTIC_COMMAND });
-    assert.strictEqual(await executeToolCall(call("run_terminal_command"), harness.context), "completed");
+    assert.strictEqual(
+      await executeToolCall(call("run_terminal_command"), harness.context),
+      "completed",
+    );
     assert.strictEqual(harness.reviews(), 0);
     assert.strictEqual(harness.confirmations(), 0);
     assert.strictEqual(harness.forced(), 1);
@@ -81,11 +93,13 @@ suite("remote permission decisions", () => {
   });
 
   test("auto-approve runs a contained file edit without a review call", async () => {
-    const harness = createHarness("routine", "auto-approve", { toolName: "edit_file", fileMutation: true });
+    const harness = createHarness("routine", "auto-approve", {
+      toolName: "edit_file",
+      fileMutation: true,
+    });
     const host = createWorkspaceHost(true);
-    const result = await runWithToolWorkspaceHost(
-      host,
-      () => executeToolCall(call("edit_file"), harness.context),
+    const result = await runWithToolWorkspaceHost(host, () =>
+      executeToolCall(call("edit_file"), harness.context),
     );
     assert.strictEqual(result, "completed");
     assert.strictEqual(harness.reviews(), 0);
@@ -94,12 +108,12 @@ suite("remote permission decisions", () => {
   });
 
   test("auto-approve keeps a file edit outside the workspace in review", async () => {
-    const harness = createHarness("elevated", "auto-approve", { toolName: "edit_file", fileMutation: true });
+    const harness = createHarness("elevated", "auto-approve", {
+      toolName: "edit_file",
+      fileMutation: true,
+    });
     const host = createWorkspaceHost(false);
-    await runWithToolWorkspaceHost(
-      host,
-      () => executeToolCall(call("edit_file"), harness.context),
-    );
+    await runWithToolWorkspaceHost(host, () => executeToolCall(call("edit_file"), harness.context));
     assert.strictEqual(harness.forced(), 0);
     assert.strictEqual(harness.confirmations(), 1);
   });
@@ -116,9 +130,15 @@ suite("remote permission decisions", () => {
   });
 
   test("redacts credentials before UI publication, stored results, and model delivery", async () => {
-    const harness = createHarness("routine", "auto-approve", { result: '{"kind":"command_result","exitCode":1,"stdout":"token=private-value","stderr":""}' });
+    const harness = createHarness("routine", "auto-approve", {
+      result: '{"kind":"command_result","exitCode":1,"stdout":"token=private-value","stderr":""}',
+    });
     const result = await executeToolCall(call("run_terminal_command"), harness.context);
-    for (const value of [result, harness.publishedResults()[0], harness.context.executedToolCalls.get("call")?.result]) {
+    for (const value of [
+      result,
+      harness.publishedResults()[0],
+      harness.context.executedToolCalls.get("call")?.result,
+    ]) {
       assert.ok(value && !value.includes("private-value"));
       assert.strictEqual(JSON.parse(value).exitCode, 1);
     }
@@ -133,13 +153,19 @@ suite("remote permission decisions", () => {
         expectedConfirmations: 0,
       },
       {
-        content: SAFE_SMOKE_TEST.replace("http://localhost:5000/health", "https://api.example.com/health"),
+        content: SAFE_SMOKE_TEST.replace(
+          "http://localhost:5000/health",
+          "https://api.example.com/health",
+        ),
         expectedForced: 0,
         expectedReviews: 1,
         expectedConfirmations: 1,
       },
       {
-        content: SAFE_SMOKE_TEST.replace("Stop-Process -Id $proc.Id -Force", "Stop-Process -Name dotnet -Force"),
+        content: SAFE_SMOKE_TEST.replace(
+          "Stop-Process -Id $proc.Id -Force",
+          "Stop-Process -Name dotnet -Force",
+        ),
         expectedForced: 0,
         expectedReviews: 1,
         expectedConfirmations: 1,
@@ -150,7 +176,9 @@ suite("remote permission decisions", () => {
       fileChangeRegistry.record("test-api.ps1", undefined, bytes);
       const harness = createHarness("elevated", "auto-approve", { command: SCRIPT_COMMAND });
       const host = createWorkspaceHost(true, bytes);
-      await runWithToolWorkspaceHost(host, () => executeToolCall(call("run_terminal_command"), harness.context));
+      await runWithToolWorkspaceHost(host, () =>
+        executeToolCall(call("run_terminal_command"), harness.context),
+      );
       assert.strictEqual(harness.forced(), fixture.expectedForced);
       assert.strictEqual(harness.reviews(), fixture.expectedReviews);
       assert.strictEqual(harness.confirmations(), fixture.expectedConfirmations);
@@ -167,7 +195,11 @@ interface HarnessOptions {
   reviewDecision?: "approve" | "revise" | "manual_confirmation";
 }
 
-function createHarness(risk: CommandSafetyRisk, mode: PermissionMode, options: HarnessOptions = {}) {
+function createHarness(
+  risk: CommandSafetyRisk,
+  mode: PermissionMode,
+  options: HarnessOptions = {},
+) {
   const toolName = options.toolName ?? "run_terminal_command";
   let forced = 0;
   let confirmations = 0;
@@ -204,17 +236,20 @@ function createHarness(risk: CommandSafetyRisk, mode: PermissionMode, options: H
         status: "completed",
       };
     },
-    getMetadata: (name: string) => name === "read_file"
-      ? { dangerLevel: "safe", requiresConfirmation: false, effect: "read-only" }
-      : { dangerLevel: "caution", requiresConfirmation: true, effect: "workspace-mutation" },
+    getMetadata: (name: string) =>
+      name === "read_file"
+        ? { dangerLevel: "safe", requiresConfirmation: false, effect: "read-only" }
+        : { dangerLevel: "caution", requiresConfirmation: true, effect: "workspace-mutation" },
   } as unknown as ToolExecutor;
   const context: ToolExecutionContext = {
     toolExecutor,
-    eventSink: { publish: (event) => {
-      if (event.type === "toolCallResult" && typeof event.result === "string") {
-        publishedResults.push(event.result);
-      }
-    } },
+    eventSink: {
+      publish: (event) => {
+        if (event.type === "toolCallResult" && typeof event.result === "string") {
+          publishedResults.push(event.result);
+        }
+      },
+    },
     executedToolCalls: new Map(),
     autoApproveMode: mode === "auto-approve",
     fullAccessMode: mode === "full-access",
@@ -227,7 +262,12 @@ function createHarness(risk: CommandSafetyRisk, mode: PermissionMode, options: H
     },
     reviewDangerousCommand: async () => {
       reviews += 1;
-      return { decision: options.reviewDecision ?? "approve", risk, confidence: "very_high", reason: `${risk} action` };
+      return {
+        decision: options.reviewDecision ?? "approve",
+        risk,
+        confidence: "very_high",
+        reason: `${risk} action`,
+      };
     },
   };
   return {
@@ -258,11 +298,13 @@ function call(name: string): ToolCall {
     type: "function",
     function: {
       name,
-      arguments: JSON.stringify(name === "run_terminal_command"
-        ? { command: "npm test" }
-        : name === "edit_file"
-          ? { path: "src/app.ts", search: "a", replace: "b" }
-          : { path: "README.md" }),
+      arguments: JSON.stringify(
+        name === "run_terminal_command"
+          ? { command: "npm test" }
+          : name === "edit_file"
+            ? { path: "src/app.ts", search: "a", replace: "b" }
+            : { path: "README.md" },
+      ),
     },
   };
 }

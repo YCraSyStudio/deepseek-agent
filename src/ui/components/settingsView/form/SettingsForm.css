@@ -39,8 +39,18 @@
   gap: 12px;
   min-width: 0;
 
-  > .sectionTitle { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
-  > input[type="checkbox"] { flex-shrink: 0; width: 18px; height: 18px; margin: 0; }
+  > .sectionTitle {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  > input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+  }
 }
 
 .settingsDisclosure {
@@ -53,10 +63,23 @@
     cursor: pointer;
     list-style: none;
 
-    > input[type="checkbox"] { flex-shrink: 0; width: 18px; height: 18px; margin: 0; }
-    > .codicon { flex-shrink: 0; }
-    > .sectionTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-    &::-webkit-details-marker { display: none; }
+    > input[type="checkbox"] {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+    }
+    > .codicon {
+      flex-shrink: 0;
+    }
+    > .sectionTitle {
+      flex: 1;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    &::-webkit-details-marker {
+      display: none;
+    }
     &:focus-visible {
       outline: 1px solid var(--vscode-focusBorder);
       outline-offset: 4px;
@@ -64,8 +87,12 @@
     }
   }
 
-  &:not([open]) > summary > .codicon { transform: rotate(-90deg); }
-  > .settingsGroupContent { padding-top: var(--settings-field-gap); }
+  &:not([open]) > summary > .codicon {
+    transform: rotate(-90deg);
+  }
+  > .settingsGroupContent {
+    padding-top: var(--settings-field-gap);
+  }
 }
 
 .settingsDisclosureCount {
@@ -85,8 +112,13 @@
   > summary {
     padding: 10px;
 
-    > .sectionTitle { font-size: 13px; }
-    &:focus-visible { outline-offset: -2px; border-radius: 8px; }
+    > .sectionTitle {
+      font-size: 13px;
+    }
+    &:focus-visible {
+      outline-offset: -2px;
+      border-radius: 8px;
+    }
   }
 
   > .settingsGroupContent {
@@ -117,7 +149,10 @@
   min-width: 0;
 
   > input:not([type="checkbox"]),
-  > select { width: 100%; min-width: 0; }
+  > select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .settingsFieldDescription {
@@ -134,8 +169,12 @@
   align-items: center;
   gap: 10px;
 
-  > .settingsFieldControl { align-items: flex-end; }
-  > .settingsFieldDescription { grid-column: 1 / -1; }
+  > .settingsFieldControl {
+    align-items: flex-end;
+  }
+  > .settingsFieldDescription {
+    grid-column: 1 / -1;
+  }
 }
 
 .settingsInputAction {
@@ -143,7 +182,11 @@
   flex: 1;
   min-width: 0;
 
-  > input:not([type="checkbox"]) { width: 100%; min-width: 0; padding-right: 40px; }
+  > input:not([type="checkbox"]) {
+    width: 100%;
+    min-width: 0;
+    padding-right: 40px;
+  }
 }
 
 .settingsInputActionButton {
@@ -169,6 +212,8 @@
     align-items: center;
     column-gap: 20px;
 
-    > .settingsFieldDescription { grid-column: 1 / -1; }
+    > .settingsFieldDescription {
+      grid-column: 1 / -1;
+    }
   }
 }

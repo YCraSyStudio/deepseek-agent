@@ -1,20 +1,44 @@
 import { useMemo } from "react";
 import type { PermissionMode } from "@/contracts";
-import { SettingsField, SettingsGroup, SettingsSection, Toggle } from "@webview/components/settingsView";
+import {
+  SettingsField,
+  SettingsGroup,
+  SettingsSection,
+  Toggle,
+} from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
 import type { TranslationKey } from "@webview/i18n/I18n";
 import type { ToolsSectionProps } from "../model";
 import "./ToolsSection.css";
 
-const PERMISSION_MODE_OPTIONS: Array<{ value: PermissionMode; label: TranslationKey; description: TranslationKey }> = [
+const PERMISSION_MODE_OPTIONS: Array<{
+  value: PermissionMode;
+  label: TranslationKey;
+  description: TranslationKey;
+}> = [
   { value: "default", label: "tools.default", description: "tools.defaultDescription" },
-  { value: "auto-approve", label: "tools.autoApprove", description: "tools.autoApproveModeDescription" },
+  {
+    value: "auto-approve",
+    label: "tools.autoApprove",
+    description: "tools.autoApproveModeDescription",
+  },
   { value: "full-access", label: "tools.fullAccess", description: "tools.fullAccessDescription" },
 ];
 
-function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permissionUpdatePending = false }: ToolsSectionProps) {
-  const tools = useMemo(() => availableTools?.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [], [availableTools]);
-  const permissionTooltip = PERMISSION_MODE_OPTIONS.map((option) => `**${t(option.label)}:** ${t(option.description)}`).join("\n\n");
+function ToolsSection({
+  config,
+  availableTools,
+  updateConfig,
+  saveOnBlur,
+  permissionUpdatePending = false,
+}: ToolsSectionProps) {
+  const tools = useMemo(
+    () => availableTools?.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [],
+    [availableTools],
+  );
+  const permissionTooltip = PERMISSION_MODE_OPTIONS.map(
+    (option) => `**${t(option.label)}:** ${t(option.description)}`,
+  ).join("\n\n");
   const updatePermissionMode = (permissionMode: PermissionMode) => {
     updateConfig("permissionMode", permissionMode);
     saveOnBlur("permissionMode", permissionMode);
@@ -22,23 +46,39 @@ function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permis
 
   return (
     <SettingsSection title={t("settings.tab.tools")} className="toolsSection">
-      <SettingsGroup title={t("settings.toolCatalog.label")} collapsible defaultOpen={false}
-        variant="panel" count={tools.length} busy={availableTools === null}>
+      <SettingsGroup
+        title={t("settings.toolCatalog.label")}
+        collapsible
+        defaultOpen={false}
+        variant="panel"
+        count={tools.length}
+        busy={availableTools === null}
+      >
         {availableTools === null || tools.length === 0 ? (
           <p className="settingsHint" role="status">
-            {t(availableTools === null ? "settings.toolCatalog.loading" : "settings.toolCatalog.empty")}
+            {t(
+              availableTools === null
+                ? "settings.toolCatalog.loading"
+                : "settings.toolCatalog.empty",
+            )}
           </p>
         ) : (
           <ul className="toolCatalogList">
             {tools.map((tool) => {
-              const searchDisabled = !config.webSearchEnabled && (tool.name === "search_web" || tool.name === "read_web");
+              const searchDisabled =
+                !config.webSearchEnabled &&
+                (tool.name === "search_web" || tool.name === "read_web");
               const description = tool.description || t("settings.toolCatalog.noDescription");
               return (
                 <li key={tool.name}>
                   <span
                     className={`toolCatalogItem${searchDisabled ? " toolCatalogUnavailable" : ""}`}
                     tabIndex={0}
-                    data-tooltip={searchDisabled ? `${description}\n\n${t("settings.toolCatalog.searchDisabled")}` : description}
+                    data-tooltip={
+                      searchDisabled
+                        ? `${description}\n\n${t("settings.toolCatalog.searchDisabled")}`
+                        : description
+                    }
                     data-tooltip-position="bottom"
                     data-tooltip-align="start"
                   >
@@ -52,8 +92,11 @@ function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permis
         )}
       </SettingsGroup>
 
-      <SettingsField htmlFor="permissionMode" label={t("tools.permissionMode")}
-        tooltip={permissionTooltip}>
+      <SettingsField
+        htmlFor="permissionMode"
+        label={t("tools.permissionMode")}
+        tooltip={permissionTooltip}
+      >
         <select
           id="permissionMode"
           aria-label={t("tools.permissionMode")}
@@ -62,20 +105,33 @@ function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permis
           aria-busy={permissionUpdatePending}
           onChange={(event) => {
             const permissionMode = parsePermissionMode(event.target.value);
-            if (permissionMode) {updatePermissionMode(permissionMode);}
+            if (permissionMode) {
+              updatePermissionMode(permissionMode);
+            }
           }}
         >
           {PERMISSION_MODE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{t(option.label)}</option>
+            <option key={option.value} value={option.value}>
+              {t(option.label)}
+            </option>
           ))}
         </select>
       </SettingsField>
 
-      <SettingsField htmlFor="capturePermission" label={t("settings.browser.access")} tooltip={t("settings.browser.help")}>
-        <select id="capturePermission" value={config.capturePermission} onChange={(event) => {
-          const value = event.currentTarget.value as "ask" | "first-use" | "always";
-          updateConfig("capturePermission", value); saveOnBlur("capturePermission", value);
-        }}>
+      <SettingsField
+        htmlFor="capturePermission"
+        label={t("settings.browser.access")}
+        tooltip={t("settings.browser.help")}
+      >
+        <select
+          id="capturePermission"
+          value={config.capturePermission}
+          onChange={(event) => {
+            const value = event.currentTarget.value as "ask" | "first-use" | "always";
+            updateConfig("capturePermission", value);
+            saveOnBlur("capturePermission", value);
+          }}
+        >
           <option value="ask">{t("settings.browser.ask")}</option>
           <option value="first-use">{t("settings.browser.firstUse")}</option>
           <option value="always">{t("settings.browser.always")}</option>
@@ -91,14 +147,22 @@ function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permis
           saveOnBlur("webSearchEnabled", enabled);
         }}
       />
-        <SettingsField htmlFor="webSearchRegion" label={t("settings.webSearch.region")} tooltip={t("settings.webSearch.regionHint")}>
+      <SettingsField
+        htmlFor="webSearchRegion"
+        label={t("settings.webSearch.region")}
+        tooltip={t("settings.webSearch.regionHint")}
+      >
         <select
           id="webSearchRegion"
-          value={["global", "auto"].includes(config.webSearchRegion) ? config.webSearchRegion : "custom"}
+          value={
+            ["global", "auto"].includes(config.webSearchRegion) ? config.webSearchRegion : "custom"
+          }
           onChange={(event) => {
             const value = event.currentTarget.value === "custom" ? "" : event.currentTarget.value;
             updateConfig("webSearchRegion", value);
-            if (value) {saveOnBlur("webSearchRegion", value);}
+            if (value) {
+              saveOnBlur("webSearchRegion", value);
+            }
           }}
         >
           <option value="global">{t("settings.webSearch.global")}</option>
@@ -114,11 +178,15 @@ function ToolsSection({ config, availableTools, updateConfig, saveOnBlur, permis
             spellCheck={false}
             value={config.webSearchRegion}
             maxLength={2}
-            onChange={(event) => updateConfig("webSearchRegion", event.currentTarget.value.toUpperCase())}
-            onBlur={(event) => saveOnBlur("webSearchRegion", event.currentTarget.value.trim() || "global")}
+            onChange={(event) =>
+              updateConfig("webSearchRegion", event.currentTarget.value.toUpperCase())
+            }
+            onBlur={(event) =>
+              saveOnBlur("webSearchRegion", event.currentTarget.value.trim() || "global")
+            }
           />
         ) : null}
-        </SettingsField>
+      </SettingsField>
     </SettingsSection>
   );
 }

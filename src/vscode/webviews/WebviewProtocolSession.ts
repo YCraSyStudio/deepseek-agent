@@ -15,16 +15,23 @@ export function registerWebviewProtocol(
         type: "requestRejected",
         requestId: getUnknownRequestId(message),
         action: getUnknownMessageType(message),
-        error: "The request was rejected because its payload is invalid or exceeds a supported limit.",
+        error:
+          "The request was rejected because its payload is invalid or exceeds a supported limit.",
       });
       return;
     }
 
     if (message.type === "initializeProtocol") {
       protocolReady = message.protocolVersion === WEBVIEW_PROTOCOL_VERSION;
-      void webviewView.webview.postMessage(protocolReady
-        ? { type: "protocolReady", protocolVersion: WEBVIEW_PROTOCOL_VERSION }
-        : { type: "protocolError", supportedVersion: WEBVIEW_PROTOCOL_VERSION, error: "Unsupported webview protocol version." });
+      void webviewView.webview.postMessage(
+        protocolReady
+          ? { type: "protocolReady", protocolVersion: WEBVIEW_PROTOCOL_VERSION }
+          : {
+              type: "protocolError",
+              supportedVersion: WEBVIEW_PROTOCOL_VERSION,
+              error: "Unsupported webview protocol version.",
+            },
+      );
       return;
     }
     if (!protocolReady) {

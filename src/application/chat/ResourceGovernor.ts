@@ -8,7 +8,11 @@ export class ResourceGovernor {
 
   tryReserve(id: string, requestedBytes: number): boolean {
     const bytes = Math.max(0, Math.trunc(requestedBytes));
-    if (!Number.isSafeInteger(bytes) || this.reservations.has(id) || this.reservedBytes + bytes > this.maxBytes) {
+    if (
+      !Number.isSafeInteger(bytes) ||
+      this.reservations.has(id) ||
+      this.reservedBytes + bytes > this.maxBytes
+    ) {
       return false;
     }
     this.reservations.set(id, bytes);
@@ -18,7 +22,9 @@ export class ResourceGovernor {
 
   release(id: string): void {
     const bytes = this.reservations.get(id);
-    if (bytes === undefined) {return;}
+    if (bytes === undefined) {
+      return;
+    }
     this.reservations.delete(id);
     this.reservedBytes = Math.max(0, this.reservedBytes - bytes);
   }

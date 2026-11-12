@@ -37,7 +37,10 @@ interface RepositoryLocation {
   relativePath: string;
 }
 
-export async function probeGitRecovery(target: string, options: GitRecoveryOptions = {}): Promise<GitRecoveryReport> {
+export async function probeGitRecovery(
+  target: string,
+  options: GitRecoveryOptions = {},
+): Promise<GitRecoveryReport> {
   const absolutePath = resolveTargetPath(target, options.workspaceRoot);
   if (!absolutePath) {
     return { insideRepository: false, recoverable: false, reason: "untracked-path" };
@@ -48,7 +51,11 @@ export async function probeGitRecovery(target: string, options: GitRecoveryOptio
     return { insideRepository: false, recoverable: false, reason: location };
   }
 
-  const ignored = await runGit(location.root, ["check-ignore", "-q", "--", location.relativePath], options.signal);
+  const ignored = await runGit(
+    location.root,
+    ["check-ignore", "-q", "--", location.relativePath],
+    options.signal,
+  );
   if (ignored.unavailable) {
     return { insideRepository: true, recoverable: false, reason: "git-unavailable" };
   }
@@ -56,7 +63,11 @@ export async function probeGitRecovery(target: string, options: GitRecoveryOptio
     return { insideRepository: true, recoverable: false, reason: "ignored-path" };
   }
 
-  const tracked = await runGit(location.root, ["ls-files", "--error-unmatch", "--", location.relativePath], options.signal);
+  const tracked = await runGit(
+    location.root,
+    ["ls-files", "--error-unmatch", "--", location.relativePath],
+    options.signal,
+  );
   if (tracked.unavailable) {
     return { insideRepository: true, recoverable: false, reason: "git-unavailable" };
   }
@@ -64,7 +75,11 @@ export async function probeGitRecovery(target: string, options: GitRecoveryOptio
     return { insideRepository: true, recoverable: false, reason: "untracked-path" };
   }
 
-  const status = await runGit(location.root, ["status", "--porcelain", "--", location.relativePath], options.signal);
+  const status = await runGit(
+    location.root,
+    ["status", "--porcelain", "--", location.relativePath],
+    options.signal,
+  );
   if (status.unavailable || status.exitCode !== 0) {
     return { insideRepository: true, recoverable: false, reason: "git-unavailable" };
   }
@@ -75,7 +90,10 @@ export async function probeGitRecovery(target: string, options: GitRecoveryOptio
   return { insideRepository: true, recoverable: true, reason: "recoverable" };
 }
 
-async function locateRepository(absolutePath: string, signal?: AbortSignal): Promise<RepositoryLocation | GitRecoveryReason> {
+async function locateRepository(
+  absolutePath: string,
+  signal?: AbortSignal,
+): Promise<RepositoryLocation | GitRecoveryReason> {
   const cwd = path.dirname(absolutePath);
   const workTree = await runGit(cwd, ["rev-parse", "--is-inside-work-tree"], signal);
   if (workTree.unavailable) {
@@ -95,7 +113,9 @@ async function locateRepository(absolutePath: string, signal?: AbortSignal): Pro
 
   const root = path.resolve(topLevel.stdout.trim());
   const canonicalParent = await realpath(cwd).catch(() => cwd);
-  const relative = path.relative(root, path.join(canonicalParent, path.basename(absolutePath))).replace(/\\/g, "/");
+  const relative = path
+    .relative(root, path.join(canonicalParent, path.basename(absolutePath)))
+    .replace(/\\/g, "/");
   if (relative.startsWith("../") || relative === ".." || path.isAbsolute(relative)) {
     return "not-a-repository";
   }
@@ -103,7 +123,12 @@ async function locateRepository(absolutePath: string, signal?: AbortSignal): Pro
 }
 
 function resolveTargetPath(target: string, workspaceRoot: string | undefined): string | undefined {
-  if (typeof target !== "string" || target.trim() === "" || target.includes("\0") || target.includes("\n")) {
+  if (
+    typeof target !== "string" ||
+    target.trim() === "" ||
+    target.includes("\0") ||
+    target.includes("\n")
+  ) {
     return undefined;
   }
   if (path.isAbsolute(target) || path.win32.isAbsolute(target)) {
@@ -129,9 +154,10 @@ async function runGit(cwd: string, args: string[], signal?: AbortSignal): Promis
     });
     return { exitCode: 0, stdout, unavailable: false };
   } catch (err: unknown) {
-    const record = err && typeof err === "object"
-      ? err as { code?: unknown; stdout?: unknown; killed?: unknown }
-      : {};
+    const record =
+      err && typeof err === "object"
+        ? (err as { code?: unknown; stdout?: unknown; killed?: unknown })
+        : {};
     if (record.code === "ENOENT" || record.killed === true) {
       return { exitCode: 1, stdout: "", unavailable: true };
     }

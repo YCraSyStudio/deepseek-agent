@@ -5,7 +5,12 @@ import { redactToolOutput } from "@/shared/security/ToolOutputRedaction";
 import type { HandleExecutionResultOptions, ToolExecutionContext } from "../Types";
 import { executeForcedAfterTrust } from "./DangerPolicy";
 import { handlerContext } from "./PipelineContext";
-import { clearFileDiffPreview, createErrorResult, createRejectedResult, postToolCallResult } from "./ResultChannel";
+import {
+  clearFileDiffPreview,
+  createErrorResult,
+  createRejectedResult,
+  postToolCallResult,
+} from "./ResultChannel";
 import { updateStoredToolCall } from "./ToolCallLedger";
 
 const DANGER_CANCELLED = "Tool call cancelled by user (dangerous operation)";
@@ -31,7 +36,10 @@ export async function handleExecutionResult(
   }
 
   updateStoredToolCall(ctx, toolCall.id, { status: "awaiting_confirmation" });
-  const decision = await ctx.requestDangerConfirmation(toolCall, dangerInfo, { announceStarted, round });
+  const decision = await ctx.requestDangerConfirmation(toolCall, dangerInfo, {
+    announceStarted,
+    round,
+  });
   if (!decision.confirmed) {
     clearFileDiffPreview();
     postToolCallResult(ctx, createRejectedResult(toolCall, DANGER_CANCELLED));
@@ -42,7 +50,10 @@ export async function handleExecutionResult(
   return executeForcedAfterTrust(toolCall, ctx, dangerInfo);
 }
 
-export async function executeManualToolCall(toolCall: ToolCall, ctx: ToolExecutionContext): Promise<string> {
+export async function executeManualToolCall(
+  toolCall: ToolCall,
+  ctx: ToolExecutionContext,
+): Promise<string> {
   const individualPromise = ctx.getPendingCycle()?.individualPromises.get(toolCall.id);
   if (!individualPromise) {
     const result = createErrorResult(toolCall, CYCLE_UNAVAILABLE);

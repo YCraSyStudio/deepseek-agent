@@ -184,7 +184,10 @@ function encodePng(width, height, rgba) {
     output.writeUInt32BE(data.length, 0);
     output.write(type, 4, "latin1");
     data.copy(output, 8);
-    output.writeUInt32BE(crc32(Buffer.concat([Buffer.from(type, "latin1"), data])) >>> 0, 8 + data.length);
+    output.writeUInt32BE(
+      crc32(Buffer.concat([Buffer.from(type, "latin1"), data])) >>> 0,
+      8 + data.length,
+    );
     return output;
   };
 

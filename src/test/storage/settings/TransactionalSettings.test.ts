@@ -17,12 +17,23 @@ suite("transactional settings", () => {
   suiteSetup(async () => {
     process.env.NODE_ENV = "test";
     process.env.DEEPSEEK_AGENT_USER_DATA_DIR = testRoot;
-    await SettingsManager.initialize({ permissionMode: "auto-approve", toolExecutionModes: { read_file: "auto_approve" } });
+    await SettingsManager.initialize({
+      permissionMode: "auto-approve",
+      toolExecutionModes: { read_file: "auto_approve" },
+    });
   });
 
   suiteTeardown(() => {
-    if (previousNodeEnv === undefined) {delete process.env.NODE_ENV;} else {process.env.NODE_ENV = previousNodeEnv;}
-    if (previousUserDataDir === undefined) {delete process.env.DEEPSEEK_AGENT_USER_DATA_DIR;} else {process.env.DEEPSEEK_AGENT_USER_DATA_DIR = previousUserDataDir;}
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
+    if (previousUserDataDir === undefined) {
+      delete process.env.DEEPSEEK_AGENT_USER_DATA_DIR;
+    } else {
+      process.env.DEEPSEEK_AGENT_USER_DATA_DIR = previousUserDataDir;
+    }
     rmSync(testRoot, { recursive: true, force: true });
   });
 
@@ -30,7 +41,10 @@ suite("transactional settings", () => {
     await SettingsManager.save({ permissionMode: "default" });
     const revision = SettingsManager.getRevision();
     const disk = JSON.parse(readFileSync(getSettingsFilePath(), "utf8")) as Record<string, unknown>;
-    writeFileSync(getSettingsFilePath(), JSON.stringify({ ...disk, permissionMode: "auto-approve" }));
+    writeFileSync(
+      getSettingsFilePath(),
+      JSON.stringify({ ...disk, permissionMode: "auto-approve" }),
+    );
 
     assert.strictEqual(SettingsManager.load().permissionMode, "default");
     assert.strictEqual(SettingsManager.getRevision(), revision);
@@ -42,7 +56,13 @@ suite("transactional settings", () => {
     assert.strictEqual(SettingsManager.load().webSearchEnabled, false);
     const disk = JSON.parse(readFileSync(getSettingsFilePath(), "utf8")) as Record<string, unknown>;
     assert.strictEqual(disk.webSearchEnabled, false);
-    for (const key of ["webSearchEngine", "searxngUrl", "searxngEngines", "searxngFallbackEngines", "searxngEngineCatalog"]) {
+    for (const key of [
+      "webSearchEngine",
+      "searxngUrl",
+      "searxngEngines",
+      "searxngFallbackEngines",
+      "searxngEngineCatalog",
+    ]) {
       assert.strictEqual(Object.prototype.hasOwnProperty.call(disk, key), false, key);
     }
     await SettingsManager.save({ webSearchEnabled: true });
@@ -63,8 +83,15 @@ suite("transactional settings", () => {
   });
 
   test("drops retired fields when loading old settings", () => {
-    const retired = { syncSettingsWithVscode: true, syncGlobalAgentsWithVscode: true, webSearchEngine: "searxng", searxngUrl: "https://old.example.com",
-      searxngEngines: ["g"], searxngFallbackEngines: ["ddg"], searxngEngineCatalog: [{ name: "Old" }] };
+    const retired = {
+      syncSettingsWithVscode: true,
+      syncGlobalAgentsWithVscode: true,
+      webSearchEngine: "searxng",
+      searxngUrl: "https://old.example.com",
+      searxngEngines: ["g"],
+      searxngFallbackEngines: ["ddg"],
+      searxngEngineCatalog: [{ name: "Old" }],
+    };
     const normalized = normalizeConfig({ ...retired, webSearchEnabled: false });
     assert.strictEqual(normalized.webSearchEnabled, false);
     for (const key of Object.keys(retired)) {
@@ -78,7 +105,10 @@ suite("transactional settings", () => {
     assert.strictEqual(normalizeConfig({ betaFeaturesEnabled: "true" }).betaFeaturesEnabled, false);
     await SettingsManager.save({ betaFeaturesEnabled: true });
     assert.strictEqual(SettingsManager.load().betaFeaturesEnabled, true);
-    assert.strictEqual(JSON.parse(readFileSync(getSettingsFilePath(), "utf8")).betaFeaturesEnabled, true);
+    assert.strictEqual(
+      JSON.parse(readFileSync(getSettingsFilePath(), "utf8")).betaFeaturesEnabled,
+      true,
+    );
     await SettingsManager.save({ betaFeaturesEnabled: false });
     assert.strictEqual(SettingsManager.load().betaFeaturesEnabled, false);
   });
@@ -91,7 +121,10 @@ suite("transactional settings", () => {
     await SettingsManager.save({ betaFeaturesEnabled: false, strictToolCallsEnabled: true });
     assert.equal(SettingsManager.load().betaFeaturesEnabled, false);
     assert.equal(SettingsManager.load().strictToolCallsEnabled, true);
-    assert.equal(JSON.parse(readFileSync(getSettingsFilePath(), "utf8")).strictToolCallsEnabled, true);
+    assert.equal(
+      JSON.parse(readFileSync(getSettingsFilePath(), "utf8")).strictToolCallsEnabled,
+      true,
+    );
     await SettingsManager.save({ strictToolCallsEnabled: false });
   });
 
@@ -121,13 +154,17 @@ suite("transactional settings", () => {
   test("holds the next permission snapshot behind a delayed durable write", async () => {
     await SettingsManager.save({ permissionMode: "auto-approve" });
     let releaseWrite: (() => void) | undefined;
-    const writeGate = new Promise<void>((resolve) => {releaseWrite = resolve;});
+    const writeGate = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
     SettingsManager.setPersistenceForTests(() => writeGate);
 
     const save = SettingsManager.save({ permissionMode: "default" });
     const capture = SettingsManager.capturePermissionSnapshot(true);
     let captured = false;
-    void capture.then(() => {captured = true;});
+    void capture.then(() => {
+      captured = true;
+    });
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     assert.strictEqual(SettingsManager.isPermissionUpdatePending(), true);
@@ -185,13 +222,21 @@ suite("transactional settings", () => {
     });
     const filePath = getGenerationCheckpointPath("legacy-budget-checkpoint");
     const persisted = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
-    writeFileSync(filePath, JSON.stringify({
-      ...persisted,
-      schemaVersion: 2,
-      budget: { model: "legacy", effectiveMaxTokens: 1, automaticCompactions: 1, conciseRecoveries: 0 },
-      conciseRecoveryUsed: false,
-      compactionBoundary: { id: "legacy" },
-    }));
+    writeFileSync(
+      filePath,
+      JSON.stringify({
+        ...persisted,
+        schemaVersion: 2,
+        budget: {
+          model: "legacy",
+          effectiveMaxTokens: 1,
+          automaticCompactions: 1,
+          conciseRecoveries: 0,
+        },
+        conciseRecoveryUsed: false,
+        compactionBoundary: { id: "legacy" },
+      }),
+    );
 
     const recovered = await new GenerationCheckpointStore(new VsCodeSettingsRepository()).recover();
     assert.strictEqual(recovered.length, 0);

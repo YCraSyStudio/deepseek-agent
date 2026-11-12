@@ -56,9 +56,8 @@ export function splitTextLines(content: string): TextLine[] {
       continue;
     }
 
-    const ending: LineEnding = character === "\r" && content[index + 1] === "\n"
-      ? "\r\n"
-      : character;
+    const ending: LineEnding =
+      character === "\r" && content[index + 1] === "\n" ? "\r\n" : character;
     lines.push({ text: content.slice(start, index), ending });
     index += ending.length;
     start = index;
@@ -70,17 +69,22 @@ export function splitTextLines(content: string): TextLine[] {
   return lines;
 }
 
-export function joinTextLines(lines: readonly TextLine[], options: { trailingLineEnding: boolean; fallback: LineEnding }): string {
+export function joinTextLines(
+  lines: readonly TextLine[],
+  options: { trailingLineEnding: boolean; fallback: LineEnding },
+): string {
   if (lines.length === 0) {
     return "";
   }
 
-  return lines.map((line, index) => {
-    if (index !== lines.length - 1) {
-      return `${line.text}${line.ending || options.fallback}`;
-    }
-    return `${line.text}${options.trailingLineEnding ? line.ending || options.fallback : ""}`;
-  }).join("");
+  return lines
+    .map((line, index) => {
+      if (index !== lines.length - 1) {
+        return `${line.text}${line.ending || options.fallback}`;
+      }
+      return `${line.text}${options.trailingLineEnding ? line.ending || options.fallback : ""}`;
+    })
+    .join("");
 }
 
 export function getPredominantLineEnding(content: string): LineEnding {
@@ -106,7 +110,12 @@ export function getPredominantLineEnding(content: string): LineEnding {
   if (maximum === 0) {
     return process.platform === "win32" ? "\r\n" : "\n";
   }
-  if (first && ((first === "\r\n" && crlf === maximum) || (first === "\n" && lf === maximum) || (first === "\r" && cr === maximum))) {
+  if (
+    first &&
+    ((first === "\r\n" && crlf === maximum) ||
+      (first === "\n" && lf === maximum) ||
+      (first === "\r" && cr === maximum))
+  ) {
     return first;
   }
   return crlf === maximum ? "\r\n" : lf === maximum ? "\n" : "\r";

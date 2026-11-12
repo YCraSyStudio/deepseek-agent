@@ -15,6 +15,8 @@ npm run test:integration
 git diff --check
 ```
 
+`npm run lint` enforces a cyclomatic complexity limit of 15. Existing violations are recorded in `eslint-suppressions.json`; do not add new entries, and prune the baseline when refactoring removes a violation.
+
 ## Dependency updates
 
 Use Node 26 LTS locally. npm 12.2.1 is pinned in package.json and installed explicitly in CI; the workflow currently uses Node 24. Run `npm ci` at the repository root to install both the extension and the `web-doc` workspace from the single package-lock.json. Update this lockfile with `npm install` when changing dependencies. Run `npm audit` from the root to audit the complete workspace.
@@ -73,7 +75,7 @@ In Extension Development Host:
 - reload or recreate the webview during a run and verify the generation snapshot restores visible state.
 - close VS Code with active and queued work, then verify partial output and queued prompts recover on activation.
 - use history.
-- type `./` in the chat input and select a suggested path; verify `../` never opens autocomplete and is rejected if sent manually.
+- type `./` in the chat input and select a suggested file or folder; verify folders are inserted without a trailing slash and their contents appear only after typing `/`; verify `../` never opens autocomplete and is rejected if sent manually.
 - attach an ordinary file and an image through the same `+` picker; verify signature-based routing, preview, removal, and a maximum of eight images.
 - paste JPEG, PNG, GIF, and WebP images with `Ctrl+V`/`Cmd+V`; verify the bounded Base64 IPC value is discarded after upload and never appears in history or provider messages.
 - verify image file IDs are sent directly to `deepseek-flash` as `{ type: "file", file_id }` content blocks.

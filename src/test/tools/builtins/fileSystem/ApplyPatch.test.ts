@@ -1,8 +1,16 @@
 import * as assert from "assert";
 import { createHash } from "crypto";
 import * as path from "path";
-import { applyPatchHandler, applyPatchHandlerForced } from "@/infrastructure/tools/builtins/fileSystem/ApplyPatch";
-import { setToolWorkspaceHost, type ToolWorkspaceEntryType, type ToolWorkspaceHost, type ToolWorkspaceStat } from "@/infrastructure/tools/ToolWorkspace";
+import {
+  applyPatchHandler,
+  applyPatchHandlerForced,
+} from "@/infrastructure/tools/builtins/fileSystem/ApplyPatch";
+import {
+  setToolWorkspaceHost,
+  type ToolWorkspaceEntryType,
+  type ToolWorkspaceHost,
+  type ToolWorkspaceStat,
+} from "@/infrastructure/tools/ToolWorkspace";
 
 suite("apply_patch tool", () => {
   const workspaceRoot = path.resolve("/tmp/deepseek-agent-apply-patch");
@@ -38,7 +46,11 @@ suite("apply_patch tool", () => {
       diff,
       expectedBeforeHash: hashText("alpha\nbeta\n"),
     });
-    const appliedParsed = JSON.parse(applied) as { type: string; beforeHash: string; afterHash: string };
+    const appliedParsed = JSON.parse(applied) as {
+      type: string;
+      beforeHash: string;
+      afterHash: string;
+    };
 
     assert.strictEqual(appliedParsed.type, "filePatch");
     assert.strictEqual(appliedParsed.beforeHash, hashText("alpha\nbeta\n"));
@@ -52,7 +64,9 @@ suite("apply_patch tool", () => {
 
     const result = await applyPatchHandlerForced({
       path: "README.md",
-      diff: ["--- a/README.md", "+++ b/README.md", "@@ -1,1 +1,1 @@", "-changed", "+next"].join("\n"),
+      diff: ["--- a/README.md", "+++ b/README.md", "@@ -1,1 +1,1 @@", "-changed", "+next"].join(
+        "\n",
+      ),
       expectedBeforeHash: hashText("old\n"),
     });
 
@@ -66,7 +80,9 @@ suite("apply_patch tool", () => {
 
     const result = await applyPatchHandlerForced({
       path: "README.md",
-      diff: ["--- a/README.md", "+++ b/README.md", "@@ -1,1 +1,1 @@", "-missing", "+next"].join("\n"),
+      diff: ["--- a/README.md", "+++ b/README.md", "@@ -1,1 +1,1 @@", "-missing", "+next"].join(
+        "\n",
+      ),
     });
 
     assert.match(result, /context mismatch/);
@@ -114,10 +130,20 @@ suite("apply_patch tool", () => {
     setToolWorkspaceHost(createMemoryWorkspaceHost(workspaceRoot, files));
 
     assert.strictEqual(await applyPatchHandler({}), "Error: path parameter is required");
-    assert.strictEqual(await applyPatchHandlerForced({ path: "  ", diff: "@@ -1,1 +1,1 @@" }), "Error: path parameter is required");
-    assert.strictEqual(await applyPatchHandler({ path: "README.md" }), "Error: diff parameter is required");
     assert.strictEqual(
-      await applyPatchHandlerForced({ path: "README.md", diff: "@@ -1,1 +1,1 @@", expectedBeforeHash: 4 }),
+      await applyPatchHandlerForced({ path: "  ", diff: "@@ -1,1 +1,1 @@" }),
+      "Error: path parameter is required",
+    );
+    assert.strictEqual(
+      await applyPatchHandler({ path: "README.md" }),
+      "Error: diff parameter is required",
+    );
+    assert.strictEqual(
+      await applyPatchHandlerForced({
+        path: "README.md",
+        diff: "@@ -1,1 +1,1 @@",
+        expectedBeforeHash: 4,
+      }),
       "Error: expectedBeforeHash must be a string when provided",
     );
   });
@@ -126,20 +152,31 @@ suite("apply_patch tool", () => {
     const files = new Map<string, string>([["README.md", "alpha\nbeta\n"]]);
     setToolWorkspaceHost(createMemoryWorkspaceHost(workspaceRoot, files));
 
-    assert.match(await applyPatchHandler({ path: "README.md", diff: "not a diff" }), /invalid unified diff/);
     assert.match(
-      await applyPatchHandler({ path: "README.md", diff: ["--- a/README.md", "+++ b/README.md"].join("\n") }),
+      await applyPatchHandler({ path: "README.md", diff: "not a diff" }),
+      /invalid unified diff/,
+    );
+    assert.match(
+      await applyPatchHandler({
+        path: "README.md",
+        diff: ["--- a/README.md", "+++ b/README.md"].join("\n"),
+      }),
       /does not contain any hunks/,
     );
     assert.match(
       await applyPatchHandlerForced({
         path: "README.md",
-        diff: ["@@ -2,1 +2,1 @@", "-beta", "+changed", "@@ -1,1 +1,1 @@", "-alpha", "+first"].join("\n"),
+        diff: ["@@ -2,1 +2,1 @@", "-beta", "+changed", "@@ -1,1 +1,1 @@", "-alpha", "+first"].join(
+          "\n",
+        ),
       }),
       /overlapping hunk/,
     );
     assert.match(
-      await applyPatchHandlerForced({ path: "README.md", diff: ["@@ -1,1 +1,1 @@", "-alpha", "+first", ""].join("\n") }),
+      await applyPatchHandlerForced({
+        path: "README.md",
+        diff: ["@@ -1,1 +1,1 @@", "-alpha", "+first", ""].join("\n"),
+      }),
       /invalid empty hunk line/,
     );
   });
@@ -150,7 +187,13 @@ suite("apply_patch tool", () => {
 
     const result = await applyPatchHandlerForced({
       path: "README.md",
-      diff: ["@@ -1,1 +1,1 @@", "-alpha", "\\ No newline at end of file", "+beta", "\\ No newline at end of file"].join("\n"),
+      diff: [
+        "@@ -1,1 +1,1 @@",
+        "-alpha",
+        "\\ No newline at end of file",
+        "+beta",
+        "\\ No newline at end of file",
+      ].join("\n"),
     });
 
     assert.strictEqual(JSON.parse(result).type, "filePatch");
@@ -160,25 +203,43 @@ suite("apply_patch tool", () => {
   test("rejects binary and oversized files", async () => {
     const files = new Map<string, string>([["README.md", "\u0000alpha"]]);
     setToolWorkspaceHost(createMemoryWorkspaceHost(workspaceRoot, files));
-    assert.match(await applyPatchHandler({ path: "README.md", diff: "@@ -1,1 +1,1 @@\n-alpha" }), /binary files are not supported/);
+    assert.match(
+      await applyPatchHandler({ path: "README.md", diff: "@@ -1,1 +1,1 @@\n-alpha" }),
+      /binary files are not supported/,
+    );
 
-    const large = createMemoryWorkspaceHost(workspaceRoot, new Map<string, string>([["README.md", "alpha\n"]]));
+    const large = createMemoryWorkspaceHost(
+      workspaceRoot,
+      new Map<string, string>([["README.md", "alpha\n"]]),
+    );
     large.stat = async () => ({ type: "file", size: 17 * 1024 * 1024 });
     setToolWorkspaceHost(large);
-    assert.match(await applyPatchHandler({ path: "README.md", diff: "@@ -1,1 +1,1 @@\n-alpha" }), /larger than 16 MiB are not supported/);
+    assert.match(
+      await applyPatchHandler({ path: "README.md", diff: "@@ -1,1 +1,1 @@\n-alpha" }),
+      /larger than 16 MiB are not supported/,
+    );
   });
 
   test("returns diff preparation and write failures without claiming success", async () => {
     const files = new Map<string, string>([["README.md", "alpha\n"]]);
     const host = createMemoryWorkspaceHost(workspaceRoot, files);
-    host.prepareFileDiff = async () => { throw new Error("preview unavailable"); };
+    host.prepareFileDiff = async () => {
+      throw new Error("preview unavailable");
+    };
     setToolWorkspaceHost(host);
 
-    const confirmation = JSON.parse(await applyPatchHandler({ path: "README.md", diff: "@@ -1,1 +1,1 @@\n-alpha\n+beta" })) as { requiresConfirmation: boolean };
+    const confirmation = JSON.parse(
+      await applyPatchHandler({ path: "README.md", diff: "@@ -1,1 +1,1 @@\n-alpha\n+beta" }),
+    ) as { requiresConfirmation: boolean };
     assert.strictEqual(confirmation.requiresConfirmation, true);
 
-    host.writeFile = async () => { throw new Error("disk full"); };
-    const failure = await applyPatchHandlerForced({ path: "README.md", diff: "@@ -1,1 +1,1 @@\n-alpha\n+beta" });
+    host.writeFile = async () => {
+      throw new Error("disk full");
+    };
+    const failure = await applyPatchHandlerForced({
+      path: "README.md",
+      diff: "@@ -1,1 +1,1 @@\n-alpha\n+beta",
+    });
     assert.match(failure, /Error applying patch to 'README.md': disk full/);
   });
 });
@@ -187,7 +248,11 @@ function hashText(content: string): string {
   return createHash("sha256").update(content, "utf-8").digest("hex");
 }
 
-function createMemoryWorkspaceHost(workspaceRoot: string, files: Map<string, string>, previews: string[] = []): ToolWorkspaceHost {
+function createMemoryWorkspaceHost(
+  workspaceRoot: string,
+  files: Map<string, string>,
+  previews: string[] = [],
+): ToolWorkspaceHost {
   return {
     getRootPath: () => workspaceRoot,
     readFile: async (filePath: string) => {

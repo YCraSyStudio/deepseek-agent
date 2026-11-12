@@ -4,7 +4,9 @@ import type { StructuredToolResult, TerminalCommandResult } from "./FilePreviewT
 export function parseStructuredToolResult(content: string): StructuredToolResult | null {
   try {
     const parsed = JSON.parse(content) as Partial<StructuredToolResult>;
-    return typeof parsed.toolResultVersion === "number" && typeof parsed.type === "string" ? (parsed as StructuredToolResult) : null;
+    return typeof parsed.toolResultVersion === "number" && typeof parsed.type === "string"
+      ? (parsed as StructuredToolResult)
+      : null;
   } catch {
     return null;
   }
@@ -13,39 +15,49 @@ export function parseStructuredToolResult(content: string): StructuredToolResult
 function parseTerminalCommandResult(content: string): TerminalCommandResult | null {
   try {
     const parsed = JSON.parse(content) as Partial<TerminalCommandResult>;
-    return parsed.kind === "command_result"
-      && typeof parsed.command === "string"
-      && typeof parsed.cwd === "string"
-      && typeof parsed.shell === "string"
-      && typeof parsed.stdout === "string"
-      && typeof parsed.stderr === "string"
-      && (typeof parsed.exitCode === "number" || parsed.exitCode === null)
-      && typeof parsed.durationMs === "number"
-      && typeof parsed.timedOut === "boolean"
-      && typeof parsed.cancelled === "boolean"
-      && Boolean(parsed.truncated)
-      ? parsed as TerminalCommandResult
+    return parsed.kind === "command_result" &&
+      typeof parsed.command === "string" &&
+      typeof parsed.cwd === "string" &&
+      typeof parsed.shell === "string" &&
+      typeof parsed.stdout === "string" &&
+      typeof parsed.stderr === "string" &&
+      (typeof parsed.exitCode === "number" || parsed.exitCode === null) &&
+      typeof parsed.durationMs === "number" &&
+      typeof parsed.timedOut === "boolean" &&
+      typeof parsed.cancelled === "boolean" &&
+      Boolean(parsed.truncated)
+      ? (parsed as TerminalCommandResult)
       : null;
   } catch {
     return null;
   }
 }
 
-export function parseTerminalResult(content: string): TerminalCommandResult | ApplicationSessionResult | null {
+export function parseTerminalResult(
+  content: string,
+): TerminalCommandResult | ApplicationSessionResult | null {
   const command = parseTerminalCommandResult(content);
-  if (command) {return command;}
+  if (command) {
+    return command;
+  }
   try {
     const value = JSON.parse(content) as Partial<ApplicationSessionResult> | null;
-    return value?.kind === "application_session"
-      && typeof value.sessionId === "string"
-      && ["running", "exited", "stopped"].includes(value.status ?? "")
-      && typeof value.command === "string" && typeof value.cwd === "string"
-      && typeof value.stdout === "string" && typeof value.stderr === "string"
-      && (typeof value.exitCode === "number" || value.exitCode === null)
-      && typeof value.timedOut === "boolean"
-      && typeof value.truncated?.stdout === "boolean" && typeof value.truncated?.stderr === "boolean"
-      ? value as ApplicationSessionResult : null;
-  } catch {return null;}
+    return value?.kind === "application_session" &&
+      typeof value.sessionId === "string" &&
+      ["running", "exited", "stopped"].includes(value.status ?? "") &&
+      typeof value.command === "string" &&
+      typeof value.cwd === "string" &&
+      typeof value.stdout === "string" &&
+      typeof value.stderr === "string" &&
+      (typeof value.exitCode === "number" || value.exitCode === null) &&
+      typeof value.timedOut === "boolean" &&
+      typeof value.truncated?.stdout === "boolean" &&
+      typeof value.truncated?.stderr === "boolean"
+      ? (value as ApplicationSessionResult)
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function detectLanguage(filename: string): string | undefined {
@@ -56,7 +68,9 @@ export function detectLanguage(filename: string): string | undefined {
     "package.json": "json",
     "tsconfig.json": "json",
   };
-  if (filenameMap[basename]) {return filenameMap[basename];}
+  if (filenameMap[basename]) {
+    return filenameMap[basename];
+  }
 
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   const langMap: Record<string, string> = {

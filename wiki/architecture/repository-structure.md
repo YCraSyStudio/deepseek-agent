@@ -20,6 +20,15 @@ Place a change in the module that owns the behavior. Group related files by feat
 
 For example, a new workspace tool puts its application policy in `src/application/tools/` and its concrete built-in implementation in `src/infrastructure/tools/builtins/`. VS Code-specific access belongs in `src/vscode/tools/`. Its tests go under the corresponding area in `src/test/`.
 
+Feature-specific locations that are easy to miss:
+
+| Path | Responsibility |
+| --- | --- |
+| `src/infrastructure/workspace/` | Recovery snapshot capture, capacity checks, and restore storage. |
+| `src/vscode/workspace/` | Workspace bindings, root aliases, context capture, and change tracking. |
+| `src/vscode/completions/` | `CompletionService`, editor context, chat suggestion context, and registered editor features. |
+| `src/vscode/editor/` | Editor actions and the `ycrasy-change` diff viewer. |
+
 ## Build and documentation
 
 | Path | Responsibility |
@@ -35,12 +44,12 @@ Start at the [wiki index](../2.INDEX.MD). Each section owns the following topics
 
 | Section | Topics |
 | --- | --- |
-| [Architecture](2.INDEX.MD) | Repository layout, layers, dependency rules, and design decisions. |
+| [Architecture](2.INDEX.MD) | Repository layout, layers, and dependency rules. |
 | [Chat and Models](../chat-and-models/2.INDEX.MD) | Message lifecycle, streaming, context limits, and DeepSeek models. |
 | [Tools and Permissions](../tools-and-permissions/2.INDEX.MD) | Tool calls, execution, approval, and browser captures. |
 | [Extension and Interface](../extension-and-interface/2.INDEX.MD) | VS Code integration, React webview, and the message contract. |
 | [Settings and Data](../settings-and-data/2.INDEX.MD) | Settings, credentials, history, storage migration, and recovery. |
-| [Development and Releases](../development-and-releases/2.INDEX.MD) | Conventions, builds, tests, diagnostics, and publishing. |
+| [Development and Releases](../development-and-releases/2.INDEX.MD) | Design and development decisions, conventions, builds, tests, diagnostics, and publishing. |
 
 Use the [wiki conventions](../development-and-releases/conventions.md#wiki-structure-and-navigation) when adding or moving a page.
 

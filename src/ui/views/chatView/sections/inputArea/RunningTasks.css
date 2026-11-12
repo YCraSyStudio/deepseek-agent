@@ -30,7 +30,7 @@
   overflow: hidden;
 }
 .runningTaskPid {
-  opacity: .65;
+  opacity: 0.65;
   flex: none;
   margin-left: 4px;
 }
@@ -49,7 +49,7 @@
   display: inline-flex;
   cursor: pointer;
   &:hover:not(:disabled) {
-    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31));
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
   }
   &:focus-visible {
     outline: 1px solid var(--vscode-focusBorder, #007fd4);
@@ -57,7 +57,7 @@
   }
   &:disabled {
     cursor: default;
-    opacity: .7;
+    opacity: 0.7;
   }
   .codicon {
     font-size: 12px;

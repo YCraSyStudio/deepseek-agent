@@ -7,7 +7,9 @@ import {
 suite("ToolExecutionPipeline", () => {
   test("runs policies in architectural order", async () => {
     const visited: string[] = [];
-    const stage = (name: ToolExecutionStage<number, string>["name"]): ToolExecutionStage<number, string> => ({
+    const stage = (
+      name: ToolExecutionStage<number, string>["name"],
+    ): ToolExecutionStage<number, string> => ({
       name,
       async handle(context) {
         visited.push(name);
@@ -64,10 +66,18 @@ suite("ToolExecutionPipeline", () => {
   test("rejects duplicated or inverted stages", () => {
     const stage = (name: ToolExecutionStageName): ToolExecutionStage<unknown, unknown> => ({
       name,
-      async handle(context) {return { kind: "continue", context };},
+      async handle(context) {
+        return { kind: "continue", context };
+      },
     });
-    assert.throws(() => new ToolExecutionPipeline([stage("execution"), stage("workspace_trust")]), /out of order/);
-    assert.throws(() => new ToolExecutionPipeline([stage("execution"), stage("execution")]), /more than once/);
+    assert.throws(
+      () => new ToolExecutionPipeline([stage("execution"), stage("workspace_trust")]),
+      /out of order/,
+    );
+    assert.throws(
+      () => new ToolExecutionPipeline([stage("execution"), stage("execution")]),
+      /more than once/,
+    );
   });
 });
 

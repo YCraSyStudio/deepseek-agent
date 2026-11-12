@@ -18,8 +18,10 @@ export function acceptMessageForScope(
   if (!("conversationId" in message) || !("generationId" in message)) {
     return true;
   }
-  return typeof message.conversationId === "string" &&
+  return (
+    typeof message.conversationId === "string" &&
     typeof message.generationId === "string" &&
     message.conversationId === scope.conversationId &&
-    message.generationId === scope.activeGenerationId;
+    message.generationId === scope.activeGenerationId
+  );
 }

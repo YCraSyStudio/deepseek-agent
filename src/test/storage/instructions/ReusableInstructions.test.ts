@@ -1,9 +1,19 @@
-import { instructionReference, resolveSelectedInstructions } from "@/application/chat/context/InstructionReferences";
+import {
+  instructionReference,
+  resolveSelectedInstructions,
+} from "@/application/chat/context/InstructionReferences";
 import assert from "node:assert/strict";
 import { realpath, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { createReusableInstruction, formatReusableInstructionCatalog, instructionName, listReusableInstructions, openReusableInstruction, type InstructionRoot } from "@/infrastructure/persistence/ReusableInstructions";
+import {
+  createReusableInstruction,
+  formatReusableInstructionCatalog,
+  instructionName,
+  listReusableInstructions,
+  openReusableInstruction,
+  type InstructionRoot,
+} from "@/infrastructure/persistence/ReusableInstructions";
 
 suite("reusable task instructions", () => {
   let directory: string;
@@ -11,18 +21,34 @@ suite("reusable task instructions", () => {
   let workspace: InstructionRoot;
   setup(async () => {
     directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "deepseek-instructions-")));
-    global = { id: "global", scope: "global", boundary: path.join(directory, "data"), relativeDirectory: "instructions" };
-    workspace = { id: "workspace:project", scope: "workspace", rootUri: "file:///project", boundary: path.join(directory, "project"), relativeDirectory: "instructions" };
+    global = {
+      id: "global",
+      scope: "global",
+      boundary: path.join(directory, "data"),
+      relativeDirectory: "instructions",
+    };
+    workspace = {
+      id: "workspace:project",
+      scope: "workspace",
+      rootUri: "file:///project",
+      boundary: path.join(directory, "project"),
+      relativeDirectory: "instructions",
+    };
     await mkdir(workspace.boundary);
   });
-  teardown(async () => {await rm(directory, { recursive: true, force: true });});
+  teardown(async () => {
+    await rm(directory, { recursive: true, force: true });
+  });
 
   test("removes deleted files and directories from both catalogs", async () => {
     const globalFile = await createReusableInstruction(global, "git", "Global Git rules");
     const workspaceFile = await createReusableInstruction(workspace, "git", "Project Git rules");
     assert.equal((await listReusableInstructions([global, workspace])).length, 2);
     await rm(globalFile);
-    assert.deepEqual((await listReusableInstructions([global, workspace])).map((entry) => entry.id), ["workspace:project:git"]);
+    assert.deepEqual(
+      (await listReusableInstructions([global, workspace])).map((entry) => entry.id),
+      ["workspace:project:git"],
+    );
     await rm(path.dirname(workspaceFile), { recursive: true });
     assert.deepEqual(await listReusableInstructions([global, workspace]), []);
     await createReusableInstruction(global, "git", "Recreated global rules");
@@ -34,14 +60,23 @@ suite("reusable task instructions", () => {
   });
 
   test("creates an editable localized commit template with its activation description", async () => {
-    const file = await createReusableInstruction(global, "Commit", "Al crear un commit", "es", "commit");
+    const file = await createReusableInstruction(
+      global,
+      "Commit",
+      "Al crear un commit",
+      "es",
+      "commit",
+    );
     assert.equal(file, path.join(global.boundary, "instructions", "commit.md"));
     const text = await readFile(file, "utf8");
     assert.ok(text.includes('description: "Al crear un commit"'));
     assert.ok(text.includes("## Convenciones del mensaje"));
     assert.ok(text.includes("[ticket]"));
     const entries = await listReusableInstructions([global]);
-    assert.deepEqual(entries.map(({id, name, description}) => ({id, name, description})), [{ id: "global:commit", name: "commit", description: "Al crear un commit" }]);
+    assert.deepEqual(
+      entries.map(({ id, name, description }) => ({ id, name, description })),
+      [{ id: "global:commit", name: "commit", description: "Al crear un commit" }],
+    );
   });
 
   test("keeps user-entered extensions in the base name and always adds Markdown", async () => {
@@ -52,13 +87,24 @@ suite("reusable task instructions", () => {
       assert.equal(opened, file);
     }
     const entries = await listReusableInstructions([global]);
-    assert.deepEqual(entries.map((entry) => entry.name).sort(), ["commit.txt", "multi.part.name", "notes.md", "review.json"]);
+    assert.deepEqual(entries.map((entry) => entry.name).sort(), [
+      "commit.txt",
+      "multi.part.name",
+      "notes.md",
+      "review.json",
+    ]);
     assert.ok(formatReusableInstructionCatalog(entries).includes("global:commit.txt"));
   });
 
   test("selected template controls the body independently of the file name", async () => {
     const git = await createReusableInstruction(global, "workflow", "Git tasks", "en", "git");
-    const commit = await createReusableInstruction(global, "messages", "Commit tasks", "en", "commit");
+    const commit = await createReusableInstruction(
+      global,
+      "messages",
+      "Commit tasks",
+      "en",
+      "commit",
+    );
     const blank = await createReusableInstruction(global, "commit", "Custom task", "en", "blank");
     const gitText = await readFile(git, "utf8");
     const commitText = await readFile(commit, "utf8");
@@ -76,7 +122,8 @@ suite("reusable task instructions", () => {
 
   test("opening an existing instruction preserves all its content and metadata", async () => {
     const file = await createReusableInstruction(global, "commit", "Original");
-    const existing = "---\r\ndescription: Existing rules\r\n---\r\n\r\n# Commit\r\nUse Spanish and [ticket].\r\n";
+    const existing =
+      "---\r\ndescription: Existing rules\r\n---\r\n\r\n# Commit\r\nUse Spanish and [ticket].\r\n";
     await writeFile(file, existing);
     await createReusableInstruction(global, "commit", "Replacement", "zh");
     assert.equal(await readFile(file, "utf8"), existing);
@@ -88,7 +135,10 @@ suite("reusable task instructions", () => {
     const workspaceFile = await createReusableInstruction(workspace, "commit", "Project commits");
     assert.equal(workspaceFile, path.join(workspace.boundary, "instructions", "commit.md"));
     const entries = await listReusableInstructions([global, workspace]);
-    assert.deepEqual(entries.map((entry) => entry.id), ["global:commit", "workspace:project:commit"]);
+    assert.deepEqual(
+      entries.map((entry) => entry.id),
+      ["global:commit", "workspace:project:commit"],
+    );
     assert.equal(entries[1].rootUri, "file:///project");
     const content = await openReusableInstruction([global, workspace], "workspace:project:commit");
     assert.ok(content.file.startsWith(workspace.boundary));
@@ -101,33 +151,60 @@ suite("reusable task instructions", () => {
     const entries = await listReusableInstructions(roots);
     const selected = entries.find((entry) => entry.scope === "workspace")!;
     await writeFile(file, "# Updated project commit rules\nUse Spanish and [ticket].\n");
-    const context = await resolveSelectedInstructions(`Follow ${instructionReference(selected)}`, entries,
-      async (id) => (await openReusableInstruction(roots, id)).content);
+    const context = await resolveSelectedInstructions(
+      `Follow ${instructionReference(selected)}`,
+      entries,
+      async (id) => (await openReusableInstruction(roots, id)).content,
+    );
     assert.ok(context.includes("Updated project commit rules"));
     assert.ok(context.includes("Use Spanish and [ticket]"));
     assert.ok(!context.includes("Global rules"));
     await rm(file);
-    await assert.rejects(resolveSelectedInstructions(instructionReference(selected), entries,
-      async (id) => (await openReusableInstruction(roots, id)).content));
+    await assert.rejects(
+      resolveSelectedInstructions(
+        instructionReference(selected),
+        entries,
+        async (id) => (await openReusableInstruction(roots, id)).content,
+      ),
+    );
   });
 
   test("catalog includes only names and descriptions, while the tool can read the full rules", async () => {
     const file = await createReusableInstruction(global, "commit", "When preparing commits");
-    await writeFile(file, (await readFile(file, "utf8")) + "\nPRIVATE BODY NOT FOR EVERY MESSAGE\n");
+    await writeFile(
+      file,
+      (await readFile(file, "utf8")) + "\nPRIVATE BODY NOT FOR EVERY MESSAGE\n",
+    );
     const catalog = formatReusableInstructionCatalog(await listReusableInstructions([global]));
     assert.ok(catalog.includes("When preparing commits"));
     assert.ok(catalog.includes("read_instruction"));
     assert.ok(!catalog.includes("PRIVATE BODY"));
     assert.ok(!catalog.includes(directory));
-    assert.ok((await openReusableInstruction([global], "global:commit")).content.includes("PRIVATE BODY"));
+    assert.ok(
+      (await openReusableInstruction([global], "global:commit")).content.includes("PRIVATE BODY"),
+    );
   });
 
   test("rejects traversal, absolute paths and nonexistent scope ids", async () => {
-    for (const name of ["../outside", "/tmp/other", "a/b", "a\\b", ".hidden", "a:other", "", "x".repeat(65)]) {
+    for (const name of [
+      "../outside",
+      "/tmp/other",
+      "a/b",
+      "a\\b",
+      ".hidden",
+      "a:other",
+      "",
+      "x".repeat(65),
+    ]) {
       assert.throws(() => instructionName(name));
     }
     await createReusableInstruction(global, "commit", "When committing");
-    for (const id of ["global:../outside", "global:/tmp/other", "global:commit.md", "workspace:other:commit"]) {
+    for (const id of [
+      "global:../outside",
+      "global:/tmp/other",
+      "global:commit.md",
+      "workspace:other:commit",
+    ]) {
       await assert.rejects(openReusableInstruction([global], id));
     }
   });
@@ -143,7 +220,10 @@ suite("reusable task instructions", () => {
     assert.deepEqual(await listReusableInstructions([global]), []);
     await mkdir(path.join(directory, "outside"));
     await symlink(path.join(directory, "outside"), path.join(workspace.boundary, "instructions"));
-    await assert.rejects(createReusableInstruction(workspace, "commit", "When committing"), /ordinary directories/);
+    await assert.rejects(
+      createReusableInstruction(workspace, "commit", "When committing"),
+      /ordinary directories/,
+    );
     assert.equal(await readFile(unrelated, "utf8"), "keep");
   });
 

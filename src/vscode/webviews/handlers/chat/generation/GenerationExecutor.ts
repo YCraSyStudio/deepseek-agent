@@ -14,7 +14,10 @@ import {
   type StoredToolCall,
 } from "@/contracts";
 import { ConversationState } from "@/application/chat/ConversationState";
-import { getGenerationStopReason, type GenerationTask } from "@/application/chat/GenerationCoordinator";
+import {
+  getGenerationStopReason,
+  type GenerationTask,
+} from "@/application/chat/GenerationCoordinator";
 import { selectGenerationTools } from "@/application/chat/GenerationToolSelection";
 import { createDelegatedVisionAnalyzer } from "@/infrastructure/deepseek/provider/DelegatedVisionAnalyzer";
 import { createBetaCodeCompleter } from "@/infrastructure/deepseek/provider/features/CodeCompletion";
@@ -29,27 +32,21 @@ import {
   recordUsage,
   type ProviderUsage,
 } from "@/shared/usage/Usage";
-import type {
-  GenerationCheckpointStore,
-  HistoryManager,
-} from "@/vscode/storage";
+import type { GenerationCheckpointStore, HistoryManager } from "@/vscode/storage";
 import { createVsCodeToolWorkspace } from "@/vscode/tools/VsCodeToolWorkspace";
 import { extractHttpsUrls } from "@/infrastructure/browser/NetworkPolicy";
 import { isCancellationError } from "@/shared/utils/Cancellation";
-import { WorkspaceChangeTracker, revertWorkspaceTurn } from "@/vscode/workspace/WorkspaceChangeTracker";
 import {
-  captureWorkspaceRunSnapshot,
-  type WorkspaceRunSnapshot,
-} from "@/vscode/workspace";
+  WorkspaceChangeTracker,
+  revertWorkspaceTurn,
+} from "@/vscode/workspace/WorkspaceChangeTracker";
+import { captureWorkspaceRunSnapshot, type WorkspaceRunSnapshot } from "@/vscode/workspace";
 import { StreamEventEmitter } from "../streaming/StreamEventEmitter";
 import { sendMessageStreaming } from "../streaming/Streaming";
 import type { SendMessagePayload } from "../Types";
 import { appendToolAvailabilityContext } from "../prompt/RuntimeContext";
 import { getErrorMessage } from "../ChatErrors";
-import {
-  buildGenerationMessages,
-  fitGenerationRequestContext,
-} from "./GenerationContext";
+import { buildGenerationMessages, fitGenerationRequestContext } from "./GenerationContext";
 import { recordToolCycleCompaction } from "./GenerationCompactionRecorder";
 import { GenerationResultStore } from "./GenerationResultStore";
 import { createGenerationRunRecord, createGenerationState } from "./GenerationRunFactory";
@@ -104,12 +101,11 @@ export class GenerationExecutor {
     signal: AbortSignal,
   ): Promise<void> {
     const { activeConversationState, historyManager } = this.dependencies;
-    const conversation = await historyManager.getById(task.conversationId) ??
-      (
-        activeConversationState.getActiveConversationId() === task.conversationId
-          ? activeConversationState.getConversation()
-          : undefined
-    );
+    const conversation =
+      (await historyManager.getById(task.conversationId)) ??
+      (activeConversationState.getActiveConversationId() === task.conversationId
+        ? activeConversationState.getConversation()
+        : undefined);
 
     if (signal.aborted) {
       const generationStopReason = getGenerationStopReason(signal);
@@ -136,17 +132,26 @@ export class GenerationExecutor {
         allowOutsideWorkspace: true,
         unrestricted: permissionSnapshot.permissionMode === "full-access",
       });
-      await runWithToolWorkspaceHost(
-        workspace,
-        () => this.execute(generationId, task, signal, workspaceSnapshot, permissionSnapshot, applications),
+      await runWithToolWorkspaceHost(workspace, () =>
+        this.execute(
+          generationId,
+          task,
+          signal,
+          workspaceSnapshot,
+          permissionSnapshot,
+          applications,
+        ),
       );
     } catch (error: unknown) {
       const record = this.dependencies.runs.get(generationId);
       if (record) {
         const aborted = signal.aborted || isCancellationError(error);
-        const status = getGenerationStopReason(signal) === "user_cancelled" ? "cancelled" : "interrupted";
+        const status =
+          getGenerationStopReason(signal) === "user_cancelled" ? "cancelled" : "interrupted";
         if (aborted) {
-          if (status === "cancelled") {this.resultStore.logCompletedToolsNotRolledBack(record);}
+          if (status === "cancelled") {
+            this.resultStore.logCompletedToolsNotRolledBack(record);
+          }
           await this.resultStore.persistTerminalAssistant(
             record,
             task.payload.modelId,
@@ -157,7 +162,9 @@ export class GenerationExecutor {
         } else {
           transitionGenerationRun(record, "error");
         }
-        await this.dependencies.checkpointStore.delete(record.conversationId).catch(() => undefined);
+        await this.dependencies.checkpointStore
+          .delete(record.conversationId)
+          .catch(() => undefined);
         publishGenerationTerminal(
           record,
           this.dependencies.generationEventCallbacks,
@@ -173,13 +180,18 @@ export class GenerationExecutor {
           conversationId: task.conversationId,
           ...(signal.aborted
             ? {
-                status: getGenerationStopReason(signal) === "user_cancelled" ? "cancelled" : "interrupted",
+                status:
+                  getGenerationStopReason(signal) === "user_cancelled"
+                    ? "cancelled"
+                    : "interrupted",
                 generationStopReason: getGenerationStopReason(signal),
               }
             : { error: getErrorMessage(error) }),
         });
       }
-    } finally {await applications.dispose();}
+    } finally {
+      await applications.dispose();
+    }
   }
 
   private async execute(
@@ -190,12 +202,7 @@ export class GenerationExecutor {
     initialPermissionSnapshot: PermissionSnapshot,
     applications: ManagedApplicationSessions,
   ): Promise<void> {
-    const {
-      activeConversationState,
-      historyManager,
-      runs,
-      toolRegistry,
-    } = this.dependencies;
+    const { activeConversationState, historyManager, runs, toolRegistry } = this.dependencies;
     const payload = task.payload;
     const config = this.dependencies.settings.load();
     const runState = await createGenerationState({
@@ -217,10 +224,7 @@ export class GenerationExecutor {
     });
     const session = record.session;
     runs.set(generationId, record);
-    const eventSink = createGenerationEventSink(
-      record,
-      this.dependencies.generationEventCallbacks,
-    );
+    const eventSink = createGenerationEventSink(record, this.dependencies.generationEventCallbacks);
     const requestedThinkingMode = payload.reasoning !== "off";
     const requestedModel = payload.modelId || config.model;
     const apiKey = await this.dependencies.secrets.getApiKey(config.baseUrl);
@@ -238,7 +242,10 @@ export class GenerationExecutor {
       reasoningEffort: mapReasoningEffort(payload.reasoning),
     };
     const provider = this.dependencies.modelProviderFactory.create(providerConfig);
-    const usageAggregate = createUsageAggregate(isOfficialDeepSeekEndpoint(providerConfig.baseUrl), providerConfig.model);
+    const usageAggregate = createUsageAggregate(
+      isOfficialDeepSeekEndpoint(providerConfig.baseUrl),
+      providerConfig.model,
+    );
     const recordPrimaryUsage = (usage: ProviderUsage | undefined): void => {
       recordUsage(usageAggregate, "primary", usage, providerConfig.model);
     };
@@ -258,14 +265,28 @@ export class GenerationExecutor {
     this.dependencies.syncSelectedConversation(runState);
     await eventSink.publish({
       type: "addMessage",
-      message: { role: "user", content: userMessage.content, imageAttachments: userMessage.imageAttachments },
+      message: {
+        role: "user",
+        content: userMessage.content,
+        imageAttachments: userMessage.imageAttachments,
+      },
     });
-    const workspaceTracking = await this.workspaceChanges.begin(task.conversationId, generationId, runState.isIncognito(), workspaceSnapshot, signal, config.snapshotStorageLimitMb);
+    const workspaceTracking = await this.workspaceChanges.begin(
+      task.conversationId,
+      generationId,
+      runState.isIncognito(),
+      workspaceSnapshot,
+      signal,
+      config.snapshotStorageLimitMb,
+    );
     let visionAnalyzer: ReturnType<typeof createDelegatedVisionAnalyzer>;
     let nativeCaptureImages: ReturnType<typeof createNativeCaptureImages>;
     try {
       if (workspaceTracking.notice) {
-        await runState.updateMessageContext(userMessage.id, `${workspaceTracking.notice}\n\n---\n\n${payload.text}`);
+        await runState.updateMessageContext(
+          userMessage.id,
+          `${workspaceTracking.notice}\n\n---\n\n${payload.text}`,
+        );
       }
       let messages = await buildGenerationMessages({
         payload,
@@ -283,15 +304,19 @@ export class GenerationExecutor {
 
       stream.showTyping();
 
-      const imageAttachments = (payload.imageAttachments ?? []).filter((attachment) => attachment.expiresAt > Date.now());
-      visionAnalyzer = createDelegatedVisionAnalyzer({ attachments: imageAttachments, providerConfig,
-        modelProviderFactory: this.dependencies.modelProviderFactory, usageAggregate,
+      const imageAttachments = (payload.imageAttachments ?? []).filter(
+        (attachment) => attachment.expiresAt > Date.now(),
+      );
+      visionAnalyzer = createDelegatedVisionAnalyzer({
+        attachments: imageAttachments,
+        providerConfig,
+        modelProviderFactory: this.dependencies.modelProviderFactory,
+        usageAggregate,
         screenshots: runState.isIncognito() ? undefined : new ScreenshotStore(task.conversationId),
       });
       if (!runState.isIncognito()) {
         const screenshots = new ScreenshotStore(task.conversationId);
         nativeCaptureImages = createNativeCaptureImages({ config: providerConfig, screenshots });
-
       }
       const tools = selectGenerationTools(toolRegistry, {
         files: workspaceSnapshot.binding.capabilities.files,
@@ -308,9 +333,13 @@ export class GenerationExecutor {
         providerConfig.privacyMinimizeData,
       );
       if (visionAnalyzer && !runState.isIncognito()) {
-        const latest = await new ScreenshotStore(task.conversationId).lookup().catch(() => undefined);
+        const latest = await new ScreenshotStore(task.conversationId)
+          .lookup()
+          .catch(() => undefined);
         const system = messages.find((message) => message.role === "system");
-        if (latest && system) {system.content = `${system.content ?? ""}\nLocal UI screenshot available: ${JSON.stringify({ id: latest.metadata.id, width: latest.metadata.width, height: latest.metadata.height })}. Use analyze_images to inspect it when relevant.`;}
+        if (latest && system) {
+          system.content = `${system.content ?? ""}\nLocal UI screenshot available: ${JSON.stringify({ id: latest.metadata.id, width: latest.metadata.width, height: latest.metadata.height })}. Use analyze_images to inspect it when relevant.`;
+        }
       }
       messages = await fitGenerationRequestContext({
         workspaceChangeNotice: workspaceTracking.notice,
@@ -335,11 +364,25 @@ export class GenerationExecutor {
         const captureStore = new ScreenshotStore(task.conversationId);
         const prepareAutomaticCapture = createAutomaticCaptureSession({
           screenshots: captureStore,
-          unavailable: runState.isIncognito() ? "Automatic capture is unavailable in incognito conversations" : vscode.env.remoteName ? "Automatic capture is unavailable in remote workspaces" : undefined,
-          capture: request => new CaptureService(captureStore).capture(request, signal, { limit: 10 }),
-          inspect: async capture => {
-            if (nativeCaptureImages) {await nativeCaptureImages.add(capture.id, signal);}
-            return visionAnalyzer?.({ question: "Inspect this automatically captured UI after the completed edits. Describe the visible result and any rendering problems. Do not infer missing details.", screenshotIds: [capture.id] }, signal);
+          unavailable: runState.isIncognito()
+            ? "Automatic capture is unavailable in incognito conversations"
+            : vscode.env.remoteName
+              ? "Automatic capture is unavailable in remote workspaces"
+              : undefined,
+          capture: (request) =>
+            new CaptureService(captureStore).capture(request, signal, { limit: 10 }),
+          inspect: async (capture) => {
+            if (nativeCaptureImages) {
+              await nativeCaptureImages.add(capture.id, signal);
+            }
+            return visionAnalyzer?.(
+              {
+                question:
+                  "Inspect this automatically captured UI after the completed edits. Describe the visible result and any rendering problems. Do not infer missing details.",
+                screenshotIds: [capture.id],
+              },
+              signal,
+            );
           },
         });
         const result = await session.run({
@@ -370,29 +413,62 @@ export class GenerationExecutor {
           budgetManager: record.budgetManager,
           prepareNativeImages: nativeCaptureImages?.prepare,
           prepareAutomaticCapture,
-          captureScreenshot: runState.isIncognito() ? undefined : async (request, captureSignal) => {
-            const capture = await new CaptureService(new ScreenshotStore(task.conversationId)).capture(request, captureSignal);
-            try {await nativeCaptureImages?.add(capture.id, captureSignal);}
-            catch (error) {throw new Error(`Screenshot ${capture.id} was saved, but its native visual upload failed: ${getErrorMessage(error)}`);}
-            return capture;
-          },
+          captureScreenshot: runState.isIncognito()
+            ? undefined
+            : async (request, captureSignal) => {
+                const capture = await new CaptureService(
+                  new ScreenshotStore(task.conversationId),
+                ).capture(request, captureSignal);
+                try {
+                  await nativeCaptureImages?.add(capture.id, captureSignal);
+                } catch (error) {
+                  throw new Error(
+                    `Screenshot ${capture.id} was saved, but its native visual upload failed: ${getErrorMessage(error)}`,
+                  );
+                }
+                return capture;
+              },
           applicationSession: (request) => applications.execute(request),
-          analyzeImages: nativeCaptureImages ? async (request, imageSignal) => {
-            const ids = request.screenshotIds ?? [];
-            if (!ids.length) {throw new Error("Specify the saved conversation image numbers to reopen.");}
-            for (const id of ids) {await nativeCaptureImages!.add(id, imageSignal);}
-            return JSON.stringify({ images: ids, status: "loaded", message: "Inspect the native visual file parts supplied in the next round. These are the original stored images, not new captures." });
-          } : visionAnalyzer,
-          completeCode: createBetaCodeCompleter(providerConfig, () => this.dependencies.settings.load().betaFeaturesEnabled,
-            (usage, model) => recordUsage(usageAggregate, "code_completion", usage, model)),
+          analyzeImages: nativeCaptureImages
+            ? async (request, imageSignal) => {
+                const ids = request.screenshotIds ?? [];
+                if (!ids.length) {
+                  throw new Error("Specify the saved conversation image numbers to reopen.");
+                }
+                for (const id of ids) {
+                  await nativeCaptureImages!.add(id, imageSignal);
+                }
+                return JSON.stringify({
+                  images: ids,
+                  status: "loaded",
+                  message:
+                    "Inspect the native visual file parts supplied in the next round. These are the original stored images, not new captures.",
+                });
+              }
+            : visionAnalyzer,
+          completeCode: createBetaCodeCompleter(
+            providerConfig,
+            () => this.dependencies.settings.load().betaFeaturesEnabled,
+            (usage, model) => recordUsage(usageAggregate, "code_completion", usage, model),
+          ),
           isBetaFeaturesEnabled: () => this.dependencies.settings.load().betaFeaturesEnabled,
           isStrictToolCallsEnabled: () => this.dependencies.settings.load().strictToolCallsEnabled,
-          readInstruction: (id, instructionSignal) => readReusableInstruction(id, workspaceSnapshot, instructionSignal),
+          readInstruction: (id, instructionSignal) =>
+            readReusableInstruction(id, workspaceSnapshot, instructionSignal),
           revertWorkspace: async (targetGenerationId) => {
-            if (runState.isIncognito()) {throw new Error("Persistent recovery snapshots are unavailable in incognito mode");}
-            return revertWorkspaceTurn(task.conversationId, workspaceSnapshot, targetGenerationId, () => {
-              if ([...runs.keys()].some((id) => id !== generationId)) {throw new Error("Wait for other active generations to finish before reverting");}
-            });
+            if (runState.isIncognito()) {
+              throw new Error("Persistent recovery snapshots are unavailable in incognito mode");
+            }
+            return revertWorkspaceTurn(
+              task.conversationId,
+              workspaceSnapshot,
+              targetGenerationId,
+              () => {
+                if ([...runs.keys()].some((id) => id !== generationId)) {
+                  throw new Error("Wait for other active generations to finish before reverting");
+                }
+              },
+            );
           },
           onContextCompacted: ({ estimatedTokensBefore, estimatedTokensAfter }) =>
             recordToolCycleCompaction({
@@ -413,8 +489,14 @@ export class GenerationExecutor {
             state: runState,
             generationId,
             status: signal.aborted
-              ? (getGenerationStopReason(signal) === "user_cancelled" ? "cancelled" : "interrupted")
-              : result.error ? "error" : result.partial ? "interrupted" : "completed",
+              ? getGenerationStopReason(signal) === "user_cancelled"
+                ? "cancelled"
+                : "interrupted"
+              : result.error
+                ? "error"
+                : result.partial
+                  ? "interrupted"
+                  : "completed",
             error: signal.aborted ? undefined : result.error,
             providerTranscript: result.providerTranscript,
             usage: usageAggregate,
@@ -439,18 +521,27 @@ export class GenerationExecutor {
           generationId,
           status: "completed",
           usage: usageAggregate,
-          providerTranscript: createProviderTranscript([{
-            role: "assistant",
-            content: result.content,
-            reasoning_content: result.reasoning,
-          }], "complete"),
+          providerTranscript: createProviderTranscript(
+            [
+              {
+                role: "assistant",
+                content: result.content,
+                reasoning_content: result.reasoning,
+              },
+            ],
+            "complete",
+          ),
         });
       }
     } catch (error: unknown) {
       if (error instanceof PartialStreamError) {
         const stopReason = getGenerationStopReason(signal);
         const failed = error.reason === "failed" && !signal.aborted;
-        const status = failed ? "error" : stopReason === "user_cancelled" ? "cancelled" : "interrupted";
+        const status = failed
+          ? "error"
+          : stopReason === "user_cancelled"
+            ? "cancelled"
+            : "interrupted";
         await this.resultStore.save({
           error: failed ? error.message : undefined,
           content: error.partial.content,
@@ -462,14 +553,19 @@ export class GenerationExecutor {
           stopReason,
           usage: usageAggregate,
         });
-        if (status === "error") {stream.error(error.message);}
-        else {stream.done({ status, generationStopReason: stopReason });}
+        if (status === "error") {
+          stream.error(error.message);
+        } else {
+          stream.done({ status, generationStopReason: stopReason });
+        }
         return;
       }
 
       const cancelled = signal.aborted || isCancellationError(error);
       this.handleSendError(error, stream, signal);
-      if (!cancelled) {transitionGenerationRun(record, "error");}
+      if (!cancelled) {
+        transitionGenerationRun(record, "error");
+      }
       if (!cancelled) {
         await runState.saveMessages({
           messages: [

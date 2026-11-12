@@ -4,7 +4,8 @@ export const userManual: PageContent = {
   navTitle: "User manual",
   title: "User manual",
   seoTitle: "User manual: chat, tools, permissions",
-  description: "Install the extension, add an API key, and use chat, images, permissions, workspace tools, terminal, context, and global history.",
+  description:
+    "Install the extension, add an API key, and use chat, images, permissions, workspace tools, terminal, context, and global history.",
   lead: "Configure the API key, choose a permission mode, then use DeepSeek from the sidebar with explicit control over every workspace operation.",
   sections: [
     {

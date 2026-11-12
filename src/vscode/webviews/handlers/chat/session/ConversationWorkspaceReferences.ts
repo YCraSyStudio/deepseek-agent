@@ -17,17 +17,11 @@ interface ConversationWorkspaceReferencesDependencies {
 export class ConversationWorkspaceReferences {
   private readonly externalSnapshots = new Map<string, ReferencedFile>();
 
-  constructor(
-    private readonly dependencies: ConversationWorkspaceReferencesDependencies,
-  ) {}
+  constructor(private readonly dependencies: ConversationWorkspaceReferencesDependencies) {}
 
   registerExternalContextFiles(files: ReferencedFile[]): void {
     for (const file of files) {
-      if (
-        file.scope === "external-snapshot" &&
-        file.referenceId &&
-        file.content !== undefined
-      ) {
+      if (file.scope === "external-snapshot" && file.referenceId && file.content !== undefined) {
         this.externalSnapshots.set(file.referenceId, structuredClone(file));
       }
     }

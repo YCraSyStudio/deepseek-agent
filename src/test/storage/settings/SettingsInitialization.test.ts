@@ -21,7 +21,10 @@ suite("settings initialization with legacy data", () => {
     entry = path.join(root, "initialize.mjs");
     await mkdir(legacy);
     await mkdir(current);
-    await writeFile(path.join(legacy, "settings.json"), '{"historyEnabled":false,"model":"legacy"}');
+    await writeFile(
+      path.join(legacy, "settings.json"),
+      '{"historyEnabled":false,"model":"legacy"}',
+    );
     await build({
       stdin: {
         contents: `
@@ -47,19 +50,39 @@ suite("settings initialization with legacy data", () => {
     });
   });
 
-  teardown(async () => {await rm(root, { recursive: true, force: true });});
+  teardown(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
 
   async function initialize(complete = false) {
     const result = await run(process.execPath, [entry], {
-      env: { ...process.env, NODE_ENV: "production", HOME: root, USERPROFILE: root, COMPLETE_MIGRATION: complete ? "1" : "" },
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        HOME: root,
+        USERPROFILE: root,
+        COMPLETE_MIGRATION: complete ? "1" : "",
+      },
     });
-    return JSON.parse(result.stdout) as { config: { historyEnabled: boolean; model: string; permissionMode: string; betaFeaturesEnabled: boolean; webSearchEnabled: boolean }; error?: string };
+    return JSON.parse(result.stdout) as {
+      config: {
+        historyEnabled: boolean;
+        model: string;
+        permissionMode: string;
+        betaFeaturesEnabled: boolean;
+        webSearchEnabled: boolean;
+      };
+      error?: string;
+    };
   }
 
   test("keeps current settings and history writable when legacy settings conflict", async () => {
     await mkdir(path.join(current, "deepseek"));
     await mkdir(path.join(current, "history"));
-    await writeFile(path.join(current, "settings.json"), '{"historyEnabled":true,"betaFeaturesEnabled":true,"privacyMinimizeData":false,"maxConcurrentGenerations":4}');
+    await writeFile(
+      path.join(current, "settings.json"),
+      '{"historyEnabled":true,"betaFeaturesEnabled":true,"privacyMinimizeData":false,"maxConcurrentGenerations":4}',
+    );
     await writeFile(path.join(current, "deepseek", "settings.json"), '{"model":"deepseek-flash"}');
     const history = path.join(current, "history", "preserved.json");
     await writeFile(history, '{"preserved":true}');
@@ -69,15 +92,18 @@ suite("settings initialization with legacy data", () => {
     assert.equal(result.error, undefined);
     assert.equal(result.config.historyEnabled, true);
     assert.equal(result.config.model, "deepseek-flash");
-    assert.equal(JSON.parse(await readFile(path.join(current, "settings.json"), "utf8")).webSearchEnabled, false);
+    assert.equal(
+      JSON.parse(await readFile(path.join(current, "settings.json"), "utf8")).webSearchEnabled,
+      false,
+    );
     assert.equal(await readFile(history, "utf8"), '{"preserved":true}');
     await assert.rejects(readFile(path.join(legacy, "settings.json")), { code: "ENOENT" });
     const backups = await readdir(path.join(current, "migration-backups", "legacy"));
-    assert.ok(backups.some(name => name.startsWith("settings.json.")));
+    assert.ok(backups.some((name) => name.startsWith("settings.json.")));
   });
 
   test("recovers valid legacy settings when current JSON is invalid and cleans backups automatically", async () => {
-    await writeFile(path.join(current, "settings.json"), '{invalid');
+    await writeFile(path.join(current, "settings.json"), "{invalid");
 
     const result = await initialize(true);
 
@@ -108,7 +134,10 @@ suite("settings initialization with legacy data", () => {
 
     assert.equal(result.error, undefined);
     assert.equal(result.config.historyEnabled, false);
-    assert.equal(JSON.parse(await readFile(path.join(current, "settings.json"), "utf8")).webSearchEnabled, false);
+    assert.equal(
+      JSON.parse(await readFile(path.join(current, "settings.json"), "utf8")).webSearchEnabled,
+      false,
+    );
     await assert.rejects(readFile(path.join(legacy, "settings.json")), { code: "ENOENT" });
   });
 });

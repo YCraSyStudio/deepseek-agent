@@ -23,82 +23,193 @@ let failWrites = false;
 const requests: Record<string, unknown>[] = [];
 const errors: string[] = [];
 const receivers = new Set<(event: { data: unknown }) => void>();
-const reply = (data: unknown) => {for (const receive of receivers) {receive({ data });}};
+const reply = (data: unknown) => {
+  for (const receive of receivers) {
+    receive({ data });
+  }
+};
 
 suite("persistent chat state", () => {
   suiteSetup(() => {
     (globalThis as { window?: unknown }).window = {
-      addEventListener: (type: string, receive: (event: { data: unknown }) => void) => {if (type === "message") {receivers.add(receive);}},
-      removeEventListener: (type: string, receive: (event: { data: unknown }) => void) => {if (type === "message") {receivers.delete(receive);}},
-      dispatchEvent: (event: CustomEvent) => { errors.push(String(event.detail)); return true; },
+      addEventListener: (type: string, receive: (event: { data: unknown }) => void) => {
+        if (type === "message") {
+          receivers.add(receive);
+        }
+      },
+      removeEventListener: (type: string, receive: (event: { data: unknown }) => void) => {
+        if (type === "message") {
+          receivers.delete(receive);
+        }
+      },
+      dispatchEvent: (event: CustomEvent) => {
+        errors.push(String(event.detail));
+        return true;
+      },
       acquireVsCodeApi: () => ({
         postMessage: (message: Record<string, unknown>) => {
-          if (message.type !== "chatDraft") {return;}
+          if (message.type !== "chatDraft") {
+            return;
+          }
           requests.push(message);
-          if (holdReads && message.operation === "read") {heldRead = message;return;}
-          queueMicrotask(() => reply({ type: "chatDraftResult", requestId: message.requestId,
-            ...(message.operation === "read" ? readResponse : {}),
-            ...(failWrites && message.operation === "write" ? { error: "Draft disk unavailable" } : {}),
-          }));
+          if (holdReads && message.operation === "read") {
+            heldRead = message;
+            return;
+          }
+          queueMicrotask(() =>
+            reply({
+              type: "chatDraftResult",
+              requestId: message.requestId,
+              ...(message.operation === "read" ? readResponse : {}),
+              ...(failWrites && message.operation === "write"
+                ? { error: "Draft disk unavailable" }
+                : {}),
+            }),
+          );
         },
         getState: () => savedState,
-        setState: (state: Record<string, unknown>) => { savedState = state; return state; },
+        setState: (state: Record<string, unknown>) => {
+          savedState = state;
+          return state;
+        },
       }),
     };
   });
 
-  setup(() => { readResponse = undefined; failWrites = false; requests.length = 0; errors.length = 0; savedState = undefined; clearSavedChatState(); });
+  setup(() => {
+    readResponse = undefined;
+    failWrites = false;
+    requests.length = 0;
+    errors.length = 0;
+    savedState = undefined;
+    clearSavedChatState();
+  });
 
   test("restores host draft metadata, external references and fresh image previews", async () => {
-    readResponse = { draft: { draft: "Restored draft", referencedFiles: [], imageAttachments: [] },
-      attachments: { references: [{ ...file("external.ts"), scope: "external-snapshot", referenceId: "external-1", content: "External text" }],
-        images: [{ name: "restored.png", mediaType: "image/png", dataBase64: "cmVzdG9yZWQ=" }] } };
+    readResponse = {
+      draft: { draft: "Restored draft", referencedFiles: [], imageAttachments: [] },
+      attachments: {
+        references: [
+          {
+            ...file("external.ts"),
+            scope: "external-snapshot",
+            referenceId: "external-1",
+            content: "External text",
+          },
+        ],
+        images: [{ name: "restored.png", mediaType: "image/png", dataBase64: "cmVzdG9yZWQ=" }],
+      },
+    };
     await hydrateDraftAttachments("restored");
     assert.equal(getChatDraft("restored")?.draft, "Restored draft");
     assert.equal(getChatDraft("restored")?.referencedFiles[0].content, "External text");
     const images = restorePendingDraftImages("restored");
-    try { assert.equal(images.length, 1); assert.equal(images[0].name, "restored.png"); assert.equal(await images[0].file!.text(), "restored"); }
-    finally { images.forEach(image => URL.revokeObjectURL(image.previewUri)); }
+    try {
+      assert.equal(images.length, 1);
+      assert.equal(images[0].name, "restored.png");
+      assert.equal(await images[0].file!.text(), "restored");
+    } finally {
+      images.forEach((image) => URL.revokeObjectURL(image.previewUri));
+    }
   });
   test("does not replace an inactive draft with a late host response", async () => {
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "inactive", draft: "Keep resident", referencedFiles: [], imageAttachments: [] }, undefined, false);
-    readResponse = { draft: { draft: "Late disk draft", referencedFiles: [], imageAttachments: [] } };
+    saveChatDraft(
+      {
+        schemaVersion: 5,
+        mode: "persistent",
+        conversationId: "inactive",
+        draft: "Keep resident",
+        referencedFiles: [],
+        imageAttachments: [],
+      },
+      undefined,
+      false,
+    );
+    readResponse = {
+      draft: { draft: "Late disk draft", referencedFiles: [], imageAttachments: [] },
+    };
     await hydrateDraftAttachments("inactive", () => false);
     assert.equal(getChatDraft("inactive")?.draft, "Keep resident");
   });
   test("upgrades resident metadata even when the legacy attachment database is unavailable", async () => {
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "legacy-upgrade", draft: "Resident legacy draft", referencedFiles: [], imageAttachments: [] }, undefined, false);
+    saveChatDraft(
+      {
+        schemaVersion: 5,
+        mode: "persistent",
+        conversationId: "legacy-upgrade",
+        draft: "Resident legacy draft",
+        referencedFiles: [],
+        imageAttachments: [],
+      },
+      undefined,
+      false,
+    );
     await hydrateDraftAttachments("legacy-upgrade");
-    const write = requests.find(request => request.operation === "write" && request.conversationId === "legacy-upgrade");
+    const write = requests.find(
+      (request) => request.operation === "write" && request.conversationId === "legacy-upgrade",
+    );
     assert.equal((write?.draft as { draft?: string })?.draft, "Resident legacy draft");
     assert.equal(getChatDraft("legacy-upgrade")?.draft, "Resident legacy draft");
   });
   test("reports asynchronous draft-write failures through the storage-error event", async () => {
     failWrites = true;
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "failed-write", draft: "Unsaved", referencedFiles: [], imageAttachments: [] });
-    await new Promise(resolve => setTimeout(resolve, 0));
-    assert.ok(errors.some(error => error.includes("Draft disk unavailable")));
-    assert.equal(getChatDraft("failed-write")?.draft, "Unsaved"); failWrites = false;
+    saveChatDraft({
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "failed-write",
+      draft: "Unsaved",
+      referencedFiles: [],
+      imageAttachments: [],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.ok(errors.some((error) => error.includes("Draft disk unavailable")));
+    assert.equal(getChatDraft("failed-write")?.draft, "Unsaved");
+    failWrites = false;
   });
   test("rejects null and primitive file references", () => {
-    for (const value of [null, undefined, 1, "file"]) { assert.equal(isReferencedFile(value), false); }
+    for (const value of [null, undefined, 1, "file"]) {
+      assert.equal(isReferencedFile(value), false);
+    }
   });
 
   test("ignores a stale disk restore after the submitted draft was cleared", async () => {
     const attached = image(Date.now() + 60_000);
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "race", draft: "sent", referencedFiles: [], imageAttachments: [attached] });
-    await new Promise(resolve => setTimeout(resolve, 0));
-    holdReads = true; heldRead = undefined;
+    saveChatDraft({
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "race",
+      draft: "sent",
+      referencedFiles: [],
+      imageAttachments: [attached],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    holdReads = true;
+    heldRead = undefined;
     const hydration = hydrateDraftAttachments("race");
-    for (let n = 0; !heldRead && n < 20; n++) {await new Promise(resolve => setTimeout(resolve, 0));}
+    for (let n = 0; !heldRead && n < 20; n++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
     const read = heldRead as Record<string, unknown> | undefined;
     assert.ok(read);
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "race", draft: "next message", referencedFiles: [], imageAttachments: [] });
+    saveChatDraft({
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "race",
+      draft: "next message",
+      referencedFiles: [],
+      imageAttachments: [],
+    });
     savePendingDraftImages("race", []);
     holdReads = false;
-    reply({ type: "chatDraftResult", requestId: read.requestId,
+    reply({
+      type: "chatDraftResult",
+      requestId: read.requestId,
       draft: { draft: "sent", referencedFiles: [], imageAttachments: [attached] },
-      attachments: { references: [], images: [{ name: "paste.png", mediaType: "image/png", dataBase64: "aW1hZ2U=" }] } });
+      attachments: {
+        references: [],
+        images: [{ name: "paste.png", mediaType: "image/png", dataBase64: "aW1hZ2U=" }],
+      },
+    });
     await hydration;
     assert.equal(getChatDraft("race")?.draft, "next message");
     assert.deepEqual(getChatDraft("race")?.imageAttachments, []);
@@ -107,9 +218,32 @@ suite("persistent chat state", () => {
 
   test("keeps independent drafts, files and images for new and existing chats", () => {
     const attached = image(Date.now() + 60_000);
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", draft: "hola", referencedFiles: [file("new.ts"), { ...file("external.ts"), scope: "external-snapshot", content: "private-external-content" }], imageAttachments: [attached] });
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "one", draft: "chat uno", referencedFiles: [file("one.ts")], imageAttachments: [] });
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "two", draft: "chat dos", referencedFiles: [], imageAttachments: [] });
+    saveChatDraft({
+      schemaVersion: 5,
+      mode: "persistent",
+      draft: "hola",
+      referencedFiles: [
+        file("new.ts"),
+        { ...file("external.ts"), scope: "external-snapshot", content: "private-external-content" },
+      ],
+      imageAttachments: [attached],
+    });
+    saveChatDraft({
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "one",
+      draft: "chat uno",
+      referencedFiles: [file("one.ts")],
+      imageAttachments: [],
+    });
+    saveChatDraft({
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "two",
+      draft: "chat dos",
+      referencedFiles: [],
+      imageAttachments: [],
+    });
     selectNewChatDraft();
     assert.equal(getSavedChatState()?.draft, "hola");
     assert.equal(getChatDraft("one")?.draft, "chat uno");
@@ -128,8 +262,24 @@ suite("persistent chat state", () => {
   });
 
   test("moves an accepted new-chat draft to its assigned conversation without reviving sent text", () => {
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", draft: "send me", referencedFiles: [], imageAttachments: [] });
-    saveChatDraft({ schemaVersion: 5, mode: "persistent", conversationId: "accepted", draft: "", referencedFiles: [], imageAttachments: [] }, { conversationId: undefined });
+    saveChatDraft({
+      schemaVersion: 5,
+      mode: "persistent",
+      draft: "send me",
+      referencedFiles: [],
+      imageAttachments: [],
+    });
+    saveChatDraft(
+      {
+        schemaVersion: 5,
+        mode: "persistent",
+        conversationId: "accepted",
+        draft: "",
+        referencedFiles: [],
+        imageAttachments: [],
+      },
+      { conversationId: undefined },
+    );
     selectNewChatDraft();
     assert.equal(getSavedChatState()?.draft, "");
     assert.equal(getChatDraft("accepted")?.draft, "");
@@ -137,7 +287,9 @@ suite("persistent chat state", () => {
 
   test("restores local pasted files with fresh previews and clears them per chat", () => {
     const file = new File(["image bytes"], "paste.png", { type: "image/png" });
-    savePendingDraftImages(undefined, [{ requestId: "old", name: file.name, file, previewUri: "blob:revoked" }]);
+    savePendingDraftImages(undefined, [
+      { requestId: "old", name: file.name, file, previewUri: "blob:revoked" },
+    ]);
     const first = restorePendingDraftImages();
     const second = restorePendingDraftImages();
     try {
@@ -148,19 +300,29 @@ suite("persistent chat state", () => {
       clearSavedChatState();
       assert.deepEqual(restorePendingDraftImages(), []);
     } finally {
-      URL.revokeObjectURL(first[0].previewUri); URL.revokeObjectURL(second[0].previewUri);
+      URL.revokeObjectURL(first[0].previewUri);
+      URL.revokeObjectURL(second[0].previewUri);
     }
   });
 
   test("drops duplicate referenced paths while keeping the first occurrence", () => {
-    const merged = mergeReferencedFiles([file("src/a.ts"), file("src/b.ts")], [file("src/b.ts"), file("src/c.ts")]);
+    const merged = mergeReferencedFiles(
+      [file("src/a.ts"), file("src/b.ts")],
+      [file("src/b.ts"), file("src/c.ts")],
+    );
 
-    assert.deepStrictEqual(merged.map((entry) => entry.path), ["src/a.ts", "src/b.ts", "src/c.ts"]);
+    assert.deepStrictEqual(
+      merged.map((entry) => entry.path),
+      ["src/a.ts", "src/b.ts", "src/c.ts"],
+    );
   });
 
   test("prefers an explicit reference id over the scope and path", () => {
     assert.strictEqual(referenceIdentity({ ...file("src/a.ts"), referenceId: "ref-1" }), "ref-1");
-    assert.strictEqual(referenceIdentity({ ...file("src/a.ts"), scope: "external-snapshot" }), "external-snapshot:src/a.ts");
+    assert.strictEqual(
+      referenceIdentity({ ...file("src/a.ts"), scope: "external-snapshot" }),
+      "external-snapshot:src/a.ts",
+    );
     assert.strictEqual(referenceIdentity(file("src/a.ts")), "workspace:src/a.ts");
   });
 
@@ -191,7 +353,10 @@ suite("persistent chat state", () => {
 
     const state = getSavedChatState();
     assert.strictEqual(state?.draft, "draft text");
-    assert.deepStrictEqual(state?.referencedFiles.map((entry) => entry.path), ["src/a.ts"]);
+    assert.deepStrictEqual(
+      state?.referencedFiles.map((entry) => entry.path),
+      ["src/a.ts"],
+    );
     assert.strictEqual(state?.imageAttachments.length, 1);
     assert.strictEqual(state?.conversationId, undefined);
 
@@ -225,7 +390,12 @@ suite("persistent chat state", () => {
   });
 
   test("keeps the current conversation when another conversation is deleted", () => {
-    savedState = { schemaVersion: 5, mode: "persistent", conversationId: "current-chat", draft: "keep me" };
+    savedState = {
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "current-chat",
+      draft: "keep me",
+    };
     const original = savedState;
 
     clearSavedChatState("other-chat");
@@ -234,7 +404,12 @@ suite("persistent chat state", () => {
   });
 
   test("clears restoration data before resetting the chat", () => {
-    savedState = { schemaVersion: 5, mode: "persistent", conversationId: "old-chat", draft: "old draft" };
+    savedState = {
+      schemaVersion: 5,
+      mode: "persistent",
+      conversationId: "old-chat",
+      draft: "old draft",
+    };
 
     clearSavedChatState();
 

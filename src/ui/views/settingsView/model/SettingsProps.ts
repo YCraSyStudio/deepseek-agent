@@ -17,7 +17,10 @@ export type ApiSectionProps = {
   onApiKeyChange: (value: string) => void;
   onApiKeyBlur: (value: string) => void;
   modelOptions: Array<{ value: string; label: string }>;
-  reasoningEffortOptions: ReadonlyArray<{ value: NonNullable<SettingsConfig["reasoningEffort"]>; label: TranslationKey }>;
+  reasoningEffortOptions: ReadonlyArray<{
+    value: NonNullable<SettingsConfig["reasoningEffort"]>;
+    label: TranslationKey;
+  }>;
   children?: ReactNode;
 };
 
@@ -29,13 +32,26 @@ export type AdvancedSectionProps = {
 
 export type GeneralSectionProps = {
   children?: ReactNode;
-  config: Pick<SettingsConfig, "interfaceLanguage" | "maxConcurrentGenerations" | "historyEnabled" | "historyRetentionDays" | "snapshotStorageLimitMb" | "privacyMinimizeData" | "usageBreakdown" | "usageCostCurrency">;
+  config: Pick<
+    SettingsConfig,
+    | "interfaceLanguage"
+    | "maxConcurrentGenerations"
+    | "historyEnabled"
+    | "historyRetentionDays"
+    | "snapshotStorageLimitMb"
+    | "privacyMinimizeData"
+    | "usageBreakdown"
+    | "usageCostCurrency"
+  >;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
 };
 
 export type ToolsSectionProps = {
-  config: Pick<SettingsConfig, "permissionMode" | "webSearchEnabled" | "webSearchRegion" | "capturePermission">;
+  config: Pick<
+    SettingsConfig,
+    "permissionMode" | "webSearchEnabled" | "webSearchRegion" | "capturePermission"
+  >;
   updateConfig: UpdateConfigFn;
   saveOnBlur: SaveOnBlurFn;
   permissionUpdatePending?: boolean;

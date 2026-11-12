@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import * as contracts from "@/contracts";
-import { DEFAULT_CONFIG, isReasoningEffort, mapReasoningEffort, normalizeReasoningEffort } from "@/contracts";
+import {
+  DEFAULT_CONFIG,
+  isReasoningEffort,
+  mapReasoningEffort,
+  normalizeReasoningEffort,
+} from "@/contracts";
 
 suite("contracts barrel", () => {
   test("exposes the runtime configuration and protocol values", () => {

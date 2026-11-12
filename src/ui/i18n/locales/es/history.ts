@@ -2,7 +2,8 @@ import type { TranslationCatalog } from "../Types";
 
 export const history = {
   history: {
-    incognitoActive: "El historial no está disponible mientras el modo incógnito está activo. Las conversaciones existentes siguen guardadas y reaparecerán al salir.",
+    incognitoActive:
+      "El historial no está disponible mientras el modo incógnito está activo. Las conversaciones existentes siguen guardadas y reaparecerán al salir.",
     historyControls: "Controles del historial",
     searchLabel: "Buscar en el historial",
     searchPlaceholder: "Buscar en el historial…",
@@ -31,9 +32,10 @@ export const history = {
     countMessages: "{count} mensajes",
     workspaceMismatch: {
       title: "¿Abrir en este workspace?",
-      description: "Esta conversación pertenece a \"{workspace}\", que no es el workspace abierto actualmente. ¿Quieres abrirla aquí en su lugar? Las generaciones pendientes, los mensajes en cola y las referencias a archivos se eliminarán.",
+      description:
+        'Esta conversación pertenece a "{workspace}", que no es el workspace abierto actualmente. ¿Quieres abrirla aquí en su lugar? Las generaciones pendientes, los mensajes en cola y las referencias a archivos se eliminarán.',
       confirm: "Abrir aquí",
       cancel: "Cancelar",
-    }
-  }
+    },
+  },
 } satisfies TranslationCatalog;

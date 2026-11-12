@@ -5,8 +5,15 @@ export interface ChatDraftData {
   referencedFiles: ReferencedFile[];
   imageAttachments: ImageAttachment[];
 }
-export interface DraftImageData { name: string; mediaType: string; dataBase64: string }
-export interface DraftAttachmentsData { images: DraftImageData[]; references: ReferencedFile[] }
+export interface DraftImageData {
+  name: string;
+  mediaType: string;
+  dataBase64: string;
+}
+export interface DraftAttachmentsData {
+  images: DraftImageData[];
+  references: ReferencedFile[];
+}
 export interface ChatDraftRequest {
   type: "chatDraft";
   requestId: string;

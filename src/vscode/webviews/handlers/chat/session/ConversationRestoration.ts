@@ -5,7 +5,9 @@ export async function restoreRequestedConversation(
   conversationId: string | undefined,
   state: ConversationState,
   historyManager: HistoryManager,
-  loadConversation: (conversation: NonNullable<ReturnType<ConversationState["getConversation"]>>) => void,
+  loadConversation: (
+    conversation: NonNullable<ReturnType<ConversationState["getConversation"]>>,
+  ) => void,
 ): Promise<void> {
   if (!conversationId) {
     state.reset();

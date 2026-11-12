@@ -6,11 +6,19 @@ import { ensureWorkspaceInstructionsFile } from "@/infrastructure/persistence/Wo
 
 suite("workspace customization instructions", () => {
   let root: string;
-  setup(async () => {root = await mkdtemp(path.join(os.tmpdir(), "deepseek-workspace-instructions-"));});
-  teardown(async () => {await rm(root, { recursive: true, force: true });});
+  setup(async () => {
+    root = await mkdtemp(path.join(os.tmpdir(), "deepseek-workspace-instructions-"));
+  });
+  teardown(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
 
   test("creates an editable template in the selected workspace and language", async () => {
-    for (const [locale, heading] of [["es-ES", "Descripción del proyecto"], ["en", "Project overview"], ["zh-CN", "项目概述"]]) {
+    for (const [locale, heading] of [
+      ["es-ES", "Descripción del proyecto"],
+      ["en", "Project overview"],
+      ["zh-CN", "项目概述"],
+    ]) {
       const folder = path.join(root, locale);
       await mkdir(folder);
       const file = await ensureWorkspaceInstructionsFile(folder, locale);
@@ -26,7 +34,10 @@ suite("workspace customization instructions", () => {
     const file = path.join(root, "AGENTS.md");
     const content = "# Custom instructions\r\nKeep my content.\r\n";
     await writeFile(file, content);
-    await Promise.all([ensureWorkspaceInstructionsFile(root, "es"), ensureWorkspaceInstructionsFile(root, "zh")]);
+    await Promise.all([
+      ensureWorkspaceInstructionsFile(root, "es"),
+      ensureWorkspaceInstructionsFile(root, "zh"),
+    ]);
     assert.equal(await readFile(file, "utf8"), content);
   });
 

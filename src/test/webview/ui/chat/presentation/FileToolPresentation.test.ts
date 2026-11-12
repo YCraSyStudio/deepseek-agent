@@ -50,8 +50,17 @@ suite("file tool presentation", () => {
       diffTruncated: true,
       summary: "Edited",
     });
-    assert.strictEqual(getToolCallFileChange({ toolName: "edit_file", status: "completed", result }), undefined);
-    assert.strictEqual(getToolCallFileChange({ toolName: "apply_patch", status: "completed", result }), undefined);
-    assert.strictEqual(getToolCallFileChange({ toolName: "edit_file", status: "error", result }), undefined);
+    assert.strictEqual(
+      getToolCallFileChange({ toolName: "edit_file", status: "completed", result }),
+      undefined,
+    );
+    assert.strictEqual(
+      getToolCallFileChange({ toolName: "apply_patch", status: "completed", result }),
+      undefined,
+    );
+    assert.strictEqual(
+      getToolCallFileChange({ toolName: "edit_file", status: "error", result }),
+      undefined,
+    );
   });
 });

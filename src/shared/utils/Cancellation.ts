@@ -11,6 +11,8 @@ export function throwIfAborted(signal?: AbortSignal, message?: string): void {
 }
 
 export function isCancellationError(error: unknown, signal?: AbortSignal): boolean {
-  return signal?.aborted === true ||
-    (error instanceof Error && (error.name === "AbortError" || error.name === "Canceled"));
+  return (
+    signal?.aborted === true ||
+    (error instanceof Error && (error.name === "AbortError" || error.name === "Canceled"))
+  );
 }

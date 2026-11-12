@@ -1,6 +1,11 @@
 import type { ToolCall } from "@/contracts";
 import { ToolRegistry } from "./ToolRegistry";
-import type { DangerLevel, ExecutionResult, ConfirmationRequiredResult, ToolHandlerContext } from "./Types";
+import type {
+  DangerLevel,
+  ExecutionResult,
+  ConfirmationRequiredResult,
+  ToolHandlerContext,
+} from "./Types";
 import type { ToolExecutionOutcome } from "@/domain/tools/ToolExecutionOutcome";
 import { isCancellationError, throwIfAborted } from "@/shared/utils/Cancellation";
 import { getErrorMessage } from "@/shared/utils/Errors";
@@ -20,12 +25,17 @@ export class ToolExecutor {
   async execute(toolCall: ToolCall, context: ToolHandlerContext = {}): Promise<ExecutionResult> {
     throwIfAborted(context.signal);
     if (this.shouldSerializeWorkspaceMutation(toolCall.function.name)) {
-      return runWorkspaceMutation(this.mutationScopeKey(), context.signal, () => this.executeInternal(toolCall, context));
+      return runWorkspaceMutation(this.mutationScopeKey(), context.signal, () =>
+        this.executeInternal(toolCall, context),
+      );
     }
     return this.executeInternal(toolCall, context);
   }
 
-  private async executeInternal(toolCall: ToolCall, context: ToolHandlerContext): Promise<ExecutionResult> {
+  private async executeInternal(
+    toolCall: ToolCall,
+    context: ToolHandlerContext,
+  ): Promise<ExecutionResult> {
     throwIfAborted(context.signal);
     const validation = this.registry.validate(toolCall);
 
@@ -84,10 +94,15 @@ export class ToolExecutor {
     }
   }
 
-  async executeForced(toolCall: ToolCall, context: ToolHandlerContext = {}): Promise<ExecutionResult> {
+  async executeForced(
+    toolCall: ToolCall,
+    context: ToolHandlerContext = {},
+  ): Promise<ExecutionResult> {
     throwIfAborted(context.signal);
     if (this.shouldSerializeWorkspaceMutation(toolCall.function.name)) {
-      return runWorkspaceMutation(this.mutationScopeKey(), context.signal, () => this.executeForcedInternal(toolCall, context));
+      return runWorkspaceMutation(this.mutationScopeKey(), context.signal, () =>
+        this.executeForcedInternal(toolCall, context),
+      );
     }
     return this.executeForcedInternal(toolCall, context);
   }
@@ -97,7 +112,10 @@ export class ToolExecutor {
     return metadata?.scope !== "global" && metadata?.effect !== "read-only";
   }
 
-  private async executeForcedInternal(toolCall: ToolCall, context: ToolHandlerContext): Promise<ExecutionResult> {
+  private async executeForcedInternal(
+    toolCall: ToolCall,
+    context: ToolHandlerContext,
+  ): Promise<ExecutionResult> {
     throwIfAborted(context.signal);
     const validation = this.registry.validate(toolCall);
 
@@ -146,15 +164,16 @@ export function createExecutionResult(
   toolCall: Pick<ToolCall, "id" | "function">,
   outcome: ToolExecutionOutcome,
 ): ExecutionResult {
-  const status = outcome.kind === "confirmation_required"
-    ? "confirmation_required"
-    : outcome.kind === "rejected"
-      ? "rejected"
-      : outcome.kind === "cancelled"
-        ? "cancelled"
-        : outcome.kind === "error"
-          ? "error"
-          : "completed";
+  const status =
+    outcome.kind === "confirmation_required"
+      ? "confirmation_required"
+      : outcome.kind === "rejected"
+        ? "rejected"
+        : outcome.kind === "cancelled"
+          ? "cancelled"
+          : outcome.kind === "error"
+            ? "error"
+            : "completed";
   return {
     toolCallId: toolCall.id,
     toolName: toolCall.function.name,
@@ -163,12 +182,21 @@ export function createExecutionResult(
   };
 }
 
-async function runWorkspaceMutation<T>(key: string, signal: AbortSignal | undefined, operation: () => Promise<T>): Promise<T> {
+async function runWorkspaceMutation<T>(
+  key: string,
+  signal: AbortSignal | undefined,
+  operation: () => Promise<T>,
+): Promise<T> {
   throwIfAborted(signal);
   const previous = workspaceMutationQueues.get(key) ?? Promise.resolve();
   let release!: () => void;
-  const current = new Promise<void>((resolve) => { release = resolve; });
-  const tail = previous.then(() => current, () => current);
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.then(
+    () => current,
+    () => current,
+  );
   workspaceMutationQueues.set(key, tail);
   await previous.catch(() => undefined);
   throwIfAborted(signal);
@@ -187,24 +215,43 @@ function isConfirmationRequiredResult(value: unknown): value is ConfirmationRequ
     return false;
   }
   const result = value as Partial<ConfirmationRequiredResult>;
-  return result.requiresConfirmation === true && isDangerLevel(result.dangerLevel) && typeof result.warningMessage === "string";
+  return (
+    result.requiresConfirmation === true &&
+    isDangerLevel(result.dangerLevel) &&
+    typeof result.warningMessage === "string"
+  );
 }
 
 function isDangerLevel(value: unknown): value is DangerLevel {
-  return value === "safe" || value === "caution" || value === "dangerous" || value === "destructive";
+  return (
+    value === "safe" || value === "caution" || value === "dangerous" || value === "destructive"
+  );
 }
 
 function parseJson(value: string): unknown {
-  try { return JSON.parse(value); } catch { return null; }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 function isStructuredCommandError(value: unknown): boolean {
-  if (!value || typeof value !== "object") {return false;}
-  const result = value as { kind?: unknown; exitCode?: unknown; timedOut?: unknown; cancelled?: unknown };
-  return result.kind === "command_result" && (result.exitCode !== 0 || result.timedOut === true || result.cancelled === true);
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const result = value as {
+    kind?: unknown;
+    exitCode?: unknown;
+    timedOut?: unknown;
+    cancelled?: unknown;
+  };
+  return (
+    result.kind === "command_result" &&
+    (result.exitCode !== 0 || result.timedOut === true || result.cancelled === true)
+  );
 }
 
 function isToolErrorResult(result: string, parsedResult: unknown = parseJson(result)): boolean {
   return isStructuredCommandError(parsedResult) || /^\s*Error(?:\s|:)/i.test(result);
 }
-

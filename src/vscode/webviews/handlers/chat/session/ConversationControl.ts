@@ -1,6 +1,9 @@
 import type * as vscode from "vscode";
 import type { ConversationState } from "@/application/chat/ConversationState";
-import type { GenerationCoordinator, GenerationStopReason } from "@/application/chat/GenerationCoordinator";
+import type {
+  GenerationCoordinator,
+  GenerationStopReason,
+} from "@/application/chat/GenerationCoordinator";
 import type { ToolRegistry } from "@/application/tools";
 import type { WebviewToHandlerMessage } from "@/contracts";
 import type { SendMessagePayload } from "../Types";
@@ -54,7 +57,9 @@ export function steerGeneration(
     referencedFiles: message.referencedFiles,
     imageAttachments: message.imageAttachments,
     steering: { sourceGenerationId: message.generationId },
-  }).then(() => cancelGeneration(message.generationId, message.conversationId, coordinator, runs, "steered"));
+  }).then(() =>
+    cancelGeneration(message.generationId, message.conversationId, coordinator, runs, "steered"),
+  );
 }
 
 export function postAvailableTools(

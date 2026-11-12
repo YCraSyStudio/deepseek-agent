@@ -1,7 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { GenerationSnapshot, StoredToolCall, ToolCall } from "@/contracts";
 import type { VsCodeApi } from "@webview/VsCodeApi";
-import type { ChatMessage, ToolCallAction, ToolCallGroup, ToolCallState } from "../../views/chatView/ChatViewTypes";
+import type {
+  ChatMessage,
+  ToolCallAction,
+  ToolCallGroup,
+  ToolCallState,
+} from "../../views/chatView/ChatViewTypes";
 import type { MessageDispatcher } from "../../views/chatView/hooks";
 
 interface ToolCallControllerOptions {
@@ -12,7 +17,13 @@ interface ToolCallControllerOptions {
   actionsDisabled?: boolean;
 }
 
-export function useToolCallController({ conversationId, messages, isProcessing, vscode, actionsDisabled = false }: ToolCallControllerOptions) {
+export function useToolCallController({
+  conversationId,
+  messages,
+  isProcessing,
+  vscode,
+  actionsDisabled = false,
+}: ToolCallControllerOptions) {
   const [toolCallGroups, setToolCallGroups] = useState<ToolCallGroup[]>([]);
   const generationIdRef = useRef<string | undefined>(undefined);
 
@@ -64,16 +75,21 @@ export function useToolCallController({ conversationId, messages, isProcessing, 
       setToolCallGroups((previous) => markToolCallAccepted(previous, data.toolCallId, data.status));
     }, []),
 
-    onGenerationSnapshot: useCallback((message) => {
-      const generation = message.generations.find((candidate) => candidate.conversationId === conversationId);
-      if (!generation) {
-        return;
-      }
-      generationIdRef.current = generation.generationId;
-      if (generation.toolCalls.length > 0) {
-        setToolCallGroups(createSnapshotToolCallGroups(generation));
-      }
-    }, [conversationId]),
+    onGenerationSnapshot: useCallback(
+      (message) => {
+        const generation = message.generations.find(
+          (candidate) => candidate.conversationId === conversationId,
+        );
+        if (!generation) {
+          return;
+        }
+        generationIdRef.current = generation.generationId;
+        if (generation.toolCalls.length > 0) {
+          setToolCallGroups(createSnapshotToolCallGroups(generation));
+        }
+      },
+      [conversationId],
+    ),
 
     onStreamDone: useCallback((info) => {
       if (info.status !== "completed") {
@@ -86,17 +102,27 @@ export function useToolCallController({ conversationId, messages, isProcessing, 
     }, []),
   };
 
-  const activeTimelineGroups = useMemo(() => getVisibleActiveGroups(messages, toolCallGroups), [messages, toolCallGroups]);
+  const activeTimelineGroups = useMemo(
+    () => getVisibleActiveGroups(messages, toolCallGroups),
+    [messages, toolCallGroups],
+  );
 
   const timelineMetrics = useMemo(
     () =>
       activeTimelineGroups.reduce(
-        (sum, group) => sum + group.toolCalls.filter((toolCall) => toolCall.status === "completed" || toolCall.status === "error").length,
+        (sum, group) =>
+          sum +
+          group.toolCalls.filter(
+            (toolCall) => toolCall.status === "completed" || toolCall.status === "error",
+          ).length,
         0,
       ),
     [activeTimelineGroups],
   );
-  const pendingToolCalls = useMemo(() => getPendingUserDecisionToolCalls(activeTimelineGroups), [activeTimelineGroups]);
+  const pendingToolCalls = useMemo(
+    () => getPendingUserDecisionToolCalls(activeTimelineGroups),
+    [activeTimelineGroups],
+  );
 
   const postToolCallAction = useCallback(
     (toolCallId: string, action: ToolCallAction) => {
@@ -112,12 +138,19 @@ export function useToolCallController({ conversationId, messages, isProcessing, 
     (toolCallId: string) => postToolCallAction(toolCallId, "execute"),
     [postToolCallAction],
   );
-  const handleReject = useCallback((toolCallId: string) => postToolCallAction(toolCallId, "reject"), [postToolCallAction]);
+  const handleReject = useCallback(
+    (toolCallId: string) => postToolCallAction(toolCallId, "reject"),
+    [postToolCallAction],
+  );
   const handleExecuteAll = useCallback(() => {
-    getPendingToolCalls(toolCallGroups).forEach((toolCall) => postToolCallAction(toolCall.toolCallId, "execute"));
+    getPendingToolCalls(toolCallGroups).forEach((toolCall) =>
+      postToolCallAction(toolCall.toolCallId, "execute"),
+    );
   }, [postToolCallAction, toolCallGroups]);
   const handleRejectAll = useCallback(() => {
-    getPendingToolCalls(toolCallGroups).forEach((toolCall) => postToolCallAction(toolCall.toolCallId, "reject"));
+    getPendingToolCalls(toolCallGroups).forEach((toolCall) =>
+      postToolCallAction(toolCall.toolCallId, "reject"),
+    );
   }, [postToolCallAction, toolCallGroups]);
   return {
     dispatcher,
@@ -166,7 +199,9 @@ interface CreateToolCallGroupOptions {
   round: number;
   status: "running" | "awaiting_confirmation";
   requiresConfirmation?: boolean;
-  dangerConfirmation?: Parameters<NonNullable<MessageDispatcher["onToolCallConfirmationRequired"]>>[0]["dangerConfirmation"];
+  dangerConfirmation?: Parameters<
+    NonNullable<MessageDispatcher["onToolCallConfirmationRequired"]>
+  >[0]["dangerConfirmation"];
 }
 
 function createToolCallGroup(options: CreateToolCallGroupOptions): ToolCallGroup {
@@ -190,7 +225,9 @@ function createToolCallGroup(options: CreateToolCallGroupOptions): ToolCallGroup
 
 function upsertToolCallGroup(groups: ToolCallGroup[], newGroup: ToolCallGroup): ToolCallGroup[] {
   const existingIndex = groups.findIndex((group) => group.round === newGroup.round);
-  if (existingIndex < 0) {return [...groups, newGroup];}
+  if (existingIndex < 0) {
+    return [...groups, newGroup];
+  }
 
   const updated = [...groups];
   updated[existingIndex] = newGroup;
@@ -199,36 +236,49 @@ function upsertToolCallGroup(groups: ToolCallGroup[], newGroup: ToolCallGroup): 
 
 function mergeConfirmationGroup(groups: ToolCallGroup[], newGroup: ToolCallGroup): ToolCallGroup[] {
   const existingIndex = groups.findIndex((group) => group.round === newGroup.round);
-  if (existingIndex < 0) {return [...groups, newGroup];}
+  if (existingIndex < 0) {
+    return [...groups, newGroup];
+  }
 
   const updated = [...groups];
   const existingGroup = updated[existingIndex];
   updated[existingIndex] = {
     ...existingGroup,
     toolCalls: existingGroup.toolCalls.map((existingToolCall) => {
-      const nextToolCall = newGroup.toolCalls.find((toolCall) => toolCall.toolCallId === existingToolCall.toolCallId);
+      const nextToolCall = newGroup.toolCalls.find(
+        (toolCall) => toolCall.toolCallId === existingToolCall.toolCallId,
+      );
       return nextToolCall ? { ...existingToolCall, ...nextToolCall } : existingToolCall;
     }),
   };
   return updated;
 }
 
-export function getVisibleActiveGroups(messages: ChatMessage[], activeGroups: ToolCallGroup[]): ToolCallGroup[] {
-  const terminalStoredToolCallIds = new Set(messages.flatMap((message) =>
-    message.toolCalls
-      ?.filter((toolCall) =>
-        toolCall.status === "completed" ||
-        toolCall.status === "error" ||
-        toolCall.status === "rejected" ||
-        toolCall.status === "cancelled"
-      )
-      .map((toolCall) => toolCall.toolCallId) ?? []
-  ));
+export function getVisibleActiveGroups(
+  messages: ChatMessage[],
+  activeGroups: ToolCallGroup[],
+): ToolCallGroup[] {
+  const terminalStoredToolCallIds = new Set(
+    messages.flatMap(
+      (message) =>
+        message.toolCalls
+          ?.filter(
+            (toolCall) =>
+              toolCall.status === "completed" ||
+              toolCall.status === "error" ||
+              toolCall.status === "rejected" ||
+              toolCall.status === "cancelled",
+          )
+          .map((toolCall) => toolCall.toolCallId) ?? [],
+    ),
+  );
 
   return activeGroups
     .map((group) => ({
       ...group,
-      toolCalls: group.toolCalls.filter((toolCall) => !terminalStoredToolCallIds.has(toolCall.toolCallId)),
+      toolCalls: group.toolCalls.filter(
+        (toolCall) => !terminalStoredToolCallIds.has(toolCall.toolCallId),
+      ),
     }))
     .filter((group) => group.toolCalls.length > 0);
 }
@@ -236,16 +286,29 @@ export function getVisibleActiveGroups(messages: ChatMessage[], activeGroups: To
 function getPendingToolCalls(groups: ToolCallGroup[]) {
   return groups
     .flatMap((group) => group.toolCalls)
-    .filter((toolCall) => toolCall.requiresConfirmation && toolCall.status === "awaiting_confirmation" && !toolCall.dangerConfirmation);
+    .filter(
+      (toolCall) =>
+        toolCall.requiresConfirmation &&
+        toolCall.status === "awaiting_confirmation" &&
+        !toolCall.dangerConfirmation,
+    );
 }
 
 function getPendingUserDecisionToolCalls(groups: ToolCallGroup[]): ToolCallState[] {
   return groups
     .flatMap((group) => group.toolCalls)
-    .filter((toolCall) => toolCall.status === "awaiting_confirmation" && (toolCall.requiresConfirmation || toolCall.dangerConfirmation));
+    .filter(
+      (toolCall) =>
+        toolCall.status === "awaiting_confirmation" &&
+        (toolCall.requiresConfirmation || toolCall.dangerConfirmation),
+    );
 }
 
-function markToolCallAccepted(groups: ToolCallGroup[], toolCallId: string, status: "running" | "rejected"): ToolCallGroup[] {
+function markToolCallAccepted(
+  groups: ToolCallGroup[],
+  toolCallId: string,
+  status: "running" | "rejected",
+): ToolCallGroup[] {
   return groups.map((group) => ({
     ...group,
     toolCalls: group.toolCalls.map((toolCall) =>

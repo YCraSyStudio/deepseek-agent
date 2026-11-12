@@ -1,7 +1,12 @@
 import { MAX_OUTPUT_TOKENS } from "@/contracts";
 import { getApiOrigin, isLoopbackApiBaseUrl } from "@/shared/security/ApiOrigin";
 import type { AdvancedSectionProps } from "../model";
-import { NumberInput, SettingsField, SettingsGroup, Slider } from "@webview/components/settingsView";
+import {
+  NumberInput,
+  SettingsField,
+  SettingsGroup,
+  Slider,
+} from "@webview/components/settingsView";
 import { t } from "@webview/i18n";
 
 function AdvancedSection({ config, updateConfig, saveOnBlur }: AdvancedSectionProps) {
@@ -16,8 +21,12 @@ function AdvancedSection({ config, updateConfig, saveOnBlur }: AdvancedSectionPr
           onChange={(event) => updateConfig("baseUrl", event.target.value)}
           onBlur={(event) => saveOnBlur("baseUrl", event.target.value)}
         />
-        {config.baseUrl.startsWith("http://") && isLoopbackApiBaseUrl(config.baseUrl) ? <small className="settingWarning">{t("settings.api.httpWarning")}</small> : null}
-        {!isDeepSeekOrigin(config.baseUrl) ? <small className="settingWarning">{t("settings.api.customHostWarning")}</small> : null}
+        {config.baseUrl.startsWith("http://") && isLoopbackApiBaseUrl(config.baseUrl) ? (
+          <small className="settingWarning">{t("settings.api.httpWarning")}</small>
+        ) : null}
+        {!isDeepSeekOrigin(config.baseUrl) ? (
+          <small className="settingWarning">{t("settings.api.customHostWarning")}</small>
+        ) : null}
       </SettingsField>
 
       {!config.thinkingMode && (
@@ -45,16 +54,27 @@ function AdvancedSection({ config, updateConfig, saveOnBlur }: AdvancedSectionPr
         </>
       )}
 
-      <SettingsField htmlFor="maxTokensInput" label={t("settings.limits.maxTokens")}
-        tooltip={t("settings.limits.maxTokensDescription")}>
+      <SettingsField
+        htmlFor="maxTokensInput"
+        label={t("settings.limits.maxTokens")}
+        tooltip={t("settings.limits.maxTokensDescription")}
+      >
         <NumberInput
           id="maxTokensInput"
           min={1}
           max={MAX_OUTPUT_TOKENS}
           step={1}
           value={config.maxTokens}
-          onChange={(event) => updateBoundedInteger(event.currentTarget, 1, MAX_OUTPUT_TOKENS, (value) => updateConfig("maxTokens", value))}
-          onBlur={(event) => updateBoundedInteger(event.currentTarget, 1, MAX_OUTPUT_TOKENS, (value) => saveOnBlur("maxTokens", value))}
+          onChange={(event) =>
+            updateBoundedInteger(event.currentTarget, 1, MAX_OUTPUT_TOKENS, (value) =>
+              updateConfig("maxTokens", value),
+            )
+          }
+          onBlur={(event) =>
+            updateBoundedInteger(event.currentTarget, 1, MAX_OUTPUT_TOKENS, (value) =>
+              saveOnBlur("maxTokens", value),
+            )
+          }
         />
       </SettingsField>
     </SettingsGroup>
@@ -63,9 +83,16 @@ function AdvancedSection({ config, updateConfig, saveOnBlur }: AdvancedSectionPr
 
 export default AdvancedSection;
 
-function updateBoundedInteger(input: HTMLInputElement, min: number, max: number, update: (value: number) => void): void {
+function updateBoundedInteger(
+  input: HTMLInputElement,
+  min: number,
+  max: number,
+  update: (value: number) => void,
+): void {
   const value = input.valueAsNumber;
-  if (Number.isInteger(value) && value >= min && value <= max) {update(value);}
+  if (Number.isInteger(value) && value >= min && value <= max) {
+    update(value);
+  }
 }
 
 function isDeepSeekOrigin(value: string): boolean {

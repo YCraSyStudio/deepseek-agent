@@ -16,7 +16,10 @@ const MAX_AUXILIARY_SOURCE_BYTES = 192 * 1024;
 const MAX_COMPACTED_FILE_BYTES = 96 * 1024;
 
 export interface ContextCompactionProvider {
-  chatCompletion(request: ChatCompletionRequest, signal?: AbortSignal): Promise<ChatCompletionResponse>;
+  chatCompletion(
+    request: ChatCompletionRequest,
+    signal?: AbortSignal,
+  ): Promise<ChatCompletionResponse>;
 }
 
 export class ContextCompactor {
@@ -27,8 +30,15 @@ export class ContextCompactor {
     private readonly model: string,
     private readonly signal: AbortSignal,
     private readonly maxCalls = 4,
-    private readonly onUsage?: (phase: UsagePhase, usage: ProviderUsage | undefined, model: string) => void,
-    private readonly onPromptUsage?: (messages: ChatCompletionRequest["messages"], usage?: ProviderUsage) => void,
+    private readonly onUsage?: (
+      phase: UsagePhase,
+      usage: ProviderUsage | undefined,
+      model: string,
+    ) => void,
+    private readonly onPromptUsage?: (
+      messages: ChatCompletionRequest["messages"],
+      usage?: ProviderUsage,
+    ) => void,
   ) {}
 
   async summarize(
@@ -37,7 +47,9 @@ export class ContextCompactor {
   ): Promise<ConversationContextSummary> {
     const sourceParts = [
       previousSummary?.content ? `Previous summary:\n${previousSummary.content}` : "",
-      ...units.map((unit) => `<generation id="${unit.generationId}">\n${unit.visibleText}\n</generation>`),
+      ...units.map(
+        (unit) => `<generation id="${unit.generationId}">\n${unit.visibleText}\n</generation>`,
+      ),
     ].filter(Boolean);
     const source = sourceParts.join("\n\n");
     const newlyCoveredGenerationIds = units.map((unit) => unit.generationId);
@@ -54,21 +66,38 @@ export class ContextCompactor {
           partials.push(truncateUtf8(chunk, MAX_SUMMARY_BYTES));
           continue;
         }
-        partials.push(await this.complete("context_summary", summaryMessages(chunk), SUMMARY_MAX_TOKENS));
+        partials.push(
+          await this.complete("context_summary", summaryMessages(chunk), SUMMARY_MAX_TOKENS),
+        );
       }
       const combined = partials.join("\n\n");
-      const content = partials.length > 1 && this.calls < this.maxCalls
-        ? await this.complete("context_summary", summaryMessages(combined), SUMMARY_MAX_TOKENS)
-        : combined;
+      const content =
+        partials.length > 1 && this.calls < this.maxCalls
+          ? await this.complete("context_summary", summaryMessages(combined), SUMMARY_MAX_TOKENS)
+          : combined;
       if (!content.trim()) {
         throw new Error("Empty compaction response");
       }
-      return createSummary("deepseek", truncateUtf8(content.trim(), MAX_SUMMARY_BYTES), coveredGenerationIds, newlyCoveredGenerationIds, source, previousSummary);
+      return createSummary(
+        "deepseek",
+        truncateUtf8(content.trim(), MAX_SUMMARY_BYTES),
+        coveredGenerationIds,
+        newlyCoveredGenerationIds,
+        source,
+        previousSummary,
+      );
     } catch (error) {
       if (this.signal.aborted) {
         throw createAbortError();
       }
-      return createSummary("local", buildLocalSummary(units, previousSummary), coveredGenerationIds, newlyCoveredGenerationIds, source, previousSummary);
+      return createSummary(
+        "local",
+        buildLocalSummary(units, previousSummary),
+        coveredGenerationIds,
+        newlyCoveredGenerationIds,
+        source,
+        previousSummary,
+      );
     }
   }
 
@@ -89,9 +118,15 @@ export class ContextCompactor {
     return compacted;
   }
 
-  private async selectRanges(phase: UsagePhase, path: string, lines: string[], prompt: string): Promise<LineRange[]> {
+  private async selectRanges(
+    phase: UsagePhase,
+    path: string,
+    lines: string[],
+    prompt: string,
+  ): Promise<LineRange[]> {
     const estimatedNumberedBytes = lines.reduce(
-      (total, line, index) => total + Buffer.byteLength(line, "utf8") + String(index + 1).length + 3,
+      (total, line, index) =>
+        total + Buffer.byteLength(line, "utf8") + String(index + 1).length + 3,
       0,
     );
     if (estimatedNumberedBytes > MAX_AUXILIARY_SOURCE_BYTES) {
@@ -99,16 +134,20 @@ export class ContextCompactor {
     }
     const numbered = lines.map((line, index) => `${index + 1}: ${line}`).join("\n");
     try {
-      const raw = await this.complete(phase, [
-        {
-          role: "system",
-          content: `Select only line ranges relevant to the user's coding request. Return strict JSON as {"ranges":[{"start":1,"end":20}]}. Use 1-based inclusive lines, at most ${MAX_RANGE_COUNT} ranges. Do not reproduce or rewrite source code.`,
-        },
-        {
-          role: "user",
-          content: `Request:\n${prompt}\n\nFile: ${path}\n\n${numbered}`,
-        },
-      ], RANGE_SELECTION_MAX_TOKENS);
+      const raw = await this.complete(
+        phase,
+        [
+          {
+            role: "system",
+            content: `Select only line ranges relevant to the user's coding request. Return strict JSON as {"ranges":[{"start":1,"end":20}]}. Use 1-based inclusive lines, at most ${MAX_RANGE_COUNT} ranges. Do not reproduce or rewrite source code.`,
+          },
+          {
+            role: "user",
+            content: `Request:\n${prompt}\n\nFile: ${path}\n\n${numbered}`,
+          },
+        ],
+        RANGE_SELECTION_MAX_TOKENS,
+      );
       return parseRanges(raw, lines.length);
     } catch (error) {
       if (this.signal.aborted) {
@@ -136,13 +175,16 @@ export class ContextCompactor {
     }
     let usage: ProviderUsage | undefined;
     try {
-      const response = await this.provider.chatCompletion({
-        model: this.model,
-        messages,
-        thinking: { type: "disabled" },
-        tool_choice: "none",
-        max_tokens: maxTokens,
-      }, this.signal);
+      const response = await this.provider.chatCompletion(
+        {
+          model: this.model,
+          messages,
+          thinking: { type: "disabled" },
+          tool_choice: "none",
+          max_tokens: maxTokens,
+        },
+        this.signal,
+      );
       usage = response.usage;
       if (this.signal.aborted) {
         throw createAbortError();
@@ -155,10 +197,16 @@ export class ContextCompactor {
   }
 }
 
-export function referencedFileNeedsCompaction(file: ReferencedFile): file is ReferencedFile & { content: string } {
-  if (!file.content || file.type === "directory") {return false;}
-  return file.content.split(/\r?\n/).length > 400 ||
-    Buffer.byteLength(file.content, "utf8") > MAX_COMPACTED_FILE_BYTES;
+export function referencedFileNeedsCompaction(
+  file: ReferencedFile,
+): file is ReferencedFile & { content: string } {
+  if (!file.content || file.type === "directory") {
+    return false;
+  }
+  return (
+    file.content.split(/\r?\n/).length > 400 ||
+    Buffer.byteLength(file.content, "utf8") > MAX_COMPACTED_FILE_BYTES
+  );
 }
 
 function createAbortError(): Error {
@@ -173,7 +221,10 @@ interface LineRange {
 }
 
 function parseRanges(raw: string, lineCount: number): LineRange[] {
-  const json = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const json = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "");
   const parsed = JSON.parse(json) as { ranges?: unknown };
   if (!Array.isArray(parsed.ranges)) {
     throw new Error("Invalid line range response");
@@ -184,7 +235,13 @@ function parseRanges(raw: string, lineCount: number): LineRange[] {
     }
     const start = Math.trunc(Number((value as { start?: unknown }).start));
     const end = Math.trunc(Number((value as { end?: unknown }).end));
-    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start || end > lineCount) {
+    if (
+      !Number.isSafeInteger(start) ||
+      !Number.isSafeInteger(end) ||
+      start < 1 ||
+      end < start ||
+      end > lineCount
+    ) {
       throw new Error("Line range outside source");
     }
     return { start, end };
@@ -196,7 +253,9 @@ function parseRanges(raw: string, lineCount: number): LineRange[] {
 }
 
 function normalizeLineRanges(ranges: LineRange[]): LineRange[] {
-  const sorted = [...ranges].sort((left, right) => left.start - right.start || left.end - right.end);
+  const sorted = [...ranges].sort(
+    (left, right) => left.start - right.start || left.end - right.end,
+  );
   const normalized: LineRange[] = [];
   for (const range of sorted) {
     const previous = normalized.at(-1);
@@ -211,22 +270,35 @@ function normalizeLineRanges(ranges: LineRange[]): LineRange[] {
 
 function extractLiteralRanges(lines: string[], ranges: LineRange[]): string {
   return ranges
-    .map(({ start, end }) => `/* lines ${start}-${end}; omitted regions are unchanged */\n${lines.slice(start - 1, end).join("\n")}`)
+    .map(
+      ({ start, end }) =>
+        `/* lines ${start}-${end}; omitted regions are unchanged */\n${lines.slice(start - 1, end).join("\n")}`,
+    )
     .join("\n\n/* … omitted … */\n\n");
 }
 
 function selectLocalRanges(lines: string[], prompt: string): LineRange[] {
   const terms = new Set(
-    prompt.toLowerCase().match(/[a-z_][a-z0-9_.-]{2,}/g)?.slice(0, 40) ?? [],
+    prompt
+      .toLowerCase()
+      .match(/[a-z_][a-z0-9_.-]{2,}/g)
+      ?.slice(0, 40) ?? [],
   );
   const hits = lines
-    .map((line, index) => ({ index, score: [...terms].filter((term) => line.toLowerCase().includes(term)).length }))
+    .map((line, index) => ({
+      index,
+      score: [...terms].filter((term) => line.toLowerCase().includes(term)).length,
+    }))
     .filter(({ score }) => score > 0)
     .sort((left, right) => right.score - left.score)
     .slice(0, MAX_RANGE_COUNT);
-  const centers = hits.length > 0 ? hits.map(({ index }) => index) : [0, Math.max(0, lines.length - 1)];
+  const centers =
+    hits.length > 0 ? hits.map(({ index }) => index) : [0, Math.max(0, lines.length - 1)];
   return normalizeLineRanges(
-    centers.map((index) => ({ start: Math.max(1, index - 20), end: Math.min(lines.length, index + 21) })),
+    centers.map((index) => ({
+      start: Math.max(1, index - 20),
+      end: Math.min(lines.length, index + 21),
+    })),
   );
 }
 
@@ -239,9 +311,14 @@ function buildLocalSummary(
     ...units.map((unit) => unit.visibleText),
   ].filter(Boolean);
   const combined = sections.join("\n\n");
-  if (Buffer.byteLength(combined, "utf8") <= MAX_SUMMARY_BYTES) {return combined;}
+  if (Buffer.byteLength(combined, "utf8") <= MAX_SUMMARY_BYTES) {
+    return combined;
+  }
   const marker = "\n\n[older detail compacted locally]\n\n";
-  const sideBytes = Math.max(0, Math.floor((MAX_SUMMARY_BYTES - Buffer.byteLength(marker, "utf8")) / 2));
+  const sideBytes = Math.max(
+    0,
+    Math.floor((MAX_SUMMARY_BYTES - Buffer.byteLength(marker, "utf8")) / 2),
+  );
   return `${takeUtf8Head(combined, sideBytes)}${marker}${takeUtf8Tail(combined, sideBytes)}`;
 }
 
@@ -249,7 +326,8 @@ function summaryMessages(source: string): ChatCompletionRequest["messages"] {
   return [
     {
       role: "system",
-      content: "Summarize coding conversation context faithfully and compactly. Preserve decisions, constraints, unresolved work, errors, file names, symbols and exact user requirements. Never invent facts. Return only the summary.",
+      content:
+        "Summarize coding conversation context faithfully and compactly. Preserve decisions, constraints, unresolved work, errors, file names, symbols and exact user requirements. Never invent facts. Return only the summary.",
     },
     { role: "user", content: source },
   ];
@@ -261,25 +339,34 @@ function chunkStringsByUtf8(parts: string[], maxBytes: number): string[] {
   for (const rawPart of parts) {
     let part = rawPart;
     while (Buffer.byteLength(part, "utf8") > maxBytes) {
-      if (current) {chunks.push(current); current = "";}
+      if (current) {
+        chunks.push(current);
+        current = "";
+      }
       const head = truncateUtf8(part, maxBytes);
       chunks.push(head);
       part = part.slice(head.length);
     }
     const candidate = current ? `${current}\n\n${part}` : part;
     if (Buffer.byteLength(candidate, "utf8") > maxBytes) {
-      if (current) {chunks.push(current);}
+      if (current) {
+        chunks.push(current);
+      }
       current = part;
     } else {
       current = candidate;
     }
   }
-  if (current) {chunks.push(current);}
+  if (current) {
+    chunks.push(current);
+  }
   return chunks.length > 0 ? chunks : [""];
 }
 
 function truncateUtf8(value: string, maxBytes: number): string {
-  if (Buffer.byteLength(value, "utf8") <= maxBytes) {return value;}
+  if (Buffer.byteLength(value, "utf8") <= maxBytes) {
+    return value;
+  }
   return takeUtf8Head(value, maxBytes);
 }
 

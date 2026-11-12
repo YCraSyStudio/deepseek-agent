@@ -1,17 +1,16 @@
 import { memo, useMemo, useState } from "react";
 import type React from "react";
 import type { ChatMessage, ToolCallGroup } from "@webview/views/chatView/ChatViewTypes";
-import ImageLightbox, { type LightboxImage } from "@webview/components/shared/imageLightbox/ImageLightbox";
+import ImageLightbox, {
+  type LightboxImage,
+} from "@webview/components/shared/imageLightbox/ImageLightbox";
 import "../../shared/collapsiblePanel/CollapsiblePanel.css";
 import "./ChatMessages.css";
 import { AssistantActivity } from "./AssistantActivity";
 import EditedFilesSummary from "./EditedFilesSummary";
 import { PlainText } from "./MarkdownMessage";
 import { t } from "@webview/i18n";
-import {
-  buildMessageToolCallGroups,
-  mergeToolCallGroups,
-} from "./ToolCallReconciliation";
+import { buildMessageToolCallGroups, mergeToolCallGroups } from "./ToolCallReconciliation";
 
 interface ChatMessagesProps {
   conversationId?: string;
@@ -38,8 +37,7 @@ function ChatMessages({
     <>
       {messages.map((message, messageIndex) => {
         const isLastAssistant =
-          message.role === "assistant" &&
-          messageIndex === messages.length - 1;
+          message.role === "assistant" && messageIndex === messages.length - 1;
         return (
           <MessageRow
             key={message.id}
@@ -120,7 +118,11 @@ function MessageBody({
     return <div className="errorMessage">{message.content}</div>;
   }
   if (message.role === "context") {
-    return <div className="contextCompactionMarker"><span aria-hidden="true">⇄</span> {t("chat.contextAutomaticallyCompacted")}</div>;
+    return (
+      <div className="contextCompactionMarker">
+        <span aria-hidden="true">⇄</span> {t("chat.contextAutomaticallyCompacted")}
+      </div>
+    );
   }
   if (message.role === "assistant") {
     return (
@@ -133,7 +135,13 @@ function MessageBody({
           generationStatus={message.generationStatus}
           generationStopReason={message.generationStopReason}
         />
-        {isActive ? null : <EditedFilesSummary toolCallGroups={toolCallGroups} conversationId={conversationId} generationId={message.generationId} />}
+        {isActive ? null : (
+          <EditedFilesSummary
+            toolCallGroups={toolCallGroups}
+            conversationId={conversationId}
+            generationId={message.generationId}
+          />
+        )}
       </>
     );
   }
@@ -144,15 +152,20 @@ function MessageBody({
           <div className="messageImages">
             {message.imageAttachments.map((attachment) => {
               const previewUri = attachment.previewUri;
-              return previewUri
-                ? (
-                  <div key={attachment.id} className="messageImage">
+              return previewUri ? (
+                <div key={attachment.id} className="messageImage">
                   <button
                     type="button"
                     className="messageImageButton"
-                    title={attachment.imageNumber ? `#${attachment.imageNumber} · ${attachment.name}` : attachment.name}
+                    title={
+                      attachment.imageNumber
+                        ? `#${attachment.imageNumber} · ${attachment.name}`
+                        : attachment.name
+                    }
                     aria-label={t("chat.enlargeImage", { name: attachment.name })}
-                    onClick={() => onEnlargeImage({ id: attachment.id, src: previewUri, name: attachment.name })}
+                    onClick={() =>
+                      onEnlargeImage({ id: attachment.id, src: previewUri, name: attachment.name })
+                    }
                   >
                     <img src={previewUri} alt={attachment.name} />
                   </button>
@@ -161,14 +174,23 @@ function MessageBody({
                       type="button"
                       className="messageImageNumber"
                       title={t("chat.insertImageReference", { number: attachment.imageNumber })}
-                      aria-label={t("chat.insertImageReference", { number: attachment.imageNumber })}
+                      aria-label={t("chat.insertImageReference", {
+                        number: attachment.imageNumber,
+                      })}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => onReferenceImage?.(attachment.imageNumber!)}
-                    >#{attachment.imageNumber}</button>
+                    >
+                      #{attachment.imageNumber}
+                    </button>
                   ) : null}
-                  </div>
-                )
-                : <span key={attachment.id} className="messageImageFallback"><span className="codicon codicon-file-media" /> {attachment.imageNumber ? `#${attachment.imageNumber} · ` : ""}{attachment.name}</span>;
+                </div>
+              ) : (
+                <span key={attachment.id} className="messageImageFallback">
+                  <span className="codicon codicon-file-media" />{" "}
+                  {attachment.imageNumber ? `#${attachment.imageNumber} · ` : ""}
+                  {attachment.name}
+                </span>
+              );
             })}
           </div>
         ) : null}

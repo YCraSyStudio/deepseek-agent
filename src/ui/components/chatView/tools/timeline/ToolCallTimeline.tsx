@@ -3,10 +3,7 @@ import { screenshotReferences } from "../results/ScreenshotReferences";
 import type { VsCodeApi } from "@webview/VsCodeApi";
 import type { ToolCallGroup, ToolCallState } from "@webview/views/chatView/ChatViewTypes";
 import CollapsiblePanel from "../../../shared/collapsiblePanel/CollapsiblePanel";
-import {
-  getToolCallFileChange,
-  getToolCallFilePath,
-} from "../results/FileToolPresentation";
+import { getToolCallFileChange, getToolCallFilePath } from "../results/FileToolPresentation";
 import { renderToolCallResultPreview } from "../results/ToolCallResultPreview";
 import { renderToolCallArgumentsPreview } from "../results/ToolCallResultRenderers";
 import "../results/ToolCallResultPreview.css";
@@ -55,7 +52,11 @@ function ToolCallItem({ toolCall, vscode, conversationId }: ToolCallItemProps) {
   return (
     <CollapsiblePanel
       title={<span className="toolCallName">{toolCall.toolName}</span>}
-      meta={<span className={`toolCallStatus ${toolCall.status}`} role="status" aria-live="polite">{formatStatus(toolCall.status)}</span>}
+      meta={
+        <span className={`toolCallStatus ${toolCall.status}`} role="status" aria-live="polite">
+          {formatStatus(toolCall.status)}
+        </span>
+      }
       className={`toolCallItem ${toolCall.status}`}
       bodyClassName="toolCallItemBody"
     >
@@ -70,22 +71,32 @@ function ToolCallItem({ toolCall, vscode, conversationId }: ToolCallItemProps) {
           {fileChange ? (
             <button
               type="button"
-              onClick={() => vscode.postMessage({
-                type: "openFileDiff",
-                path: fileChange.path,
-                diff: fileChange.diff,
-                beforeHash: fileChange.beforeHash,
-                afterHash: fileChange.afterHash,
-                conversationId,
-              })}
+              onClick={() =>
+                vscode.postMessage({
+                  type: "openFileDiff",
+                  path: fileChange.path,
+                  diff: fileChange.diff,
+                  beforeHash: fileChange.beforeHash,
+                  afterHash: fileChange.afterHash,
+                  conversationId,
+                })
+              }
             >
               {t("tools.viewChange")}
             </button>
           ) : null}
         </div>
       ) : null}
-      {toolCall.arguments ? <div className="toolCallArgs">{renderToolCallArgumentsPreview(toolCall.toolName, toolCall.arguments)}</div> : null}
-      {conversationId && vscode ? screenshotReferences(toolCall.toolName, toolCall.result).map((id) => <ScreenshotPreview key={id} id={id} conversationId={conversationId} vscode={vscode} />) : null}
+      {toolCall.arguments ? (
+        <div className="toolCallArgs">
+          {renderToolCallArgumentsPreview(toolCall.toolName, toolCall.arguments)}
+        </div>
+      ) : null}
+      {conversationId && vscode
+        ? screenshotReferences(toolCall.toolName, toolCall.result).map((id) => (
+            <ScreenshotPreview key={id} id={id} conversationId={conversationId} vscode={vscode} />
+          ))
+        : null}
       {renderToolCallResultPreview({ toolCall, vscode })}
     </CollapsiblePanel>
   );

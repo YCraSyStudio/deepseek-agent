@@ -1,4 +1,3 @@
-
 const MIN_IMAGE_ZOOM = 10;
 const MAX_IMAGE_ZOOM = 800;
 

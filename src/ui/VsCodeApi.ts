@@ -7,12 +7,18 @@ export type VsCodeApi = {
 let instance: VsCodeApi | null = null;
 
 export function getVsCodeApi(): VsCodeApi | null {
-  if (instance) {return instance;}
+  if (instance) {
+    return instance;
+  }
 
-  if (typeof window === "undefined") {return null;}
+  if (typeof window === "undefined") {
+    return null;
+  }
 
   const acquire = (window as Window & { acquireVsCodeApi?: () => VsCodeApi }).acquireVsCodeApi;
-  if (typeof acquire !== "function") {return null;}
+  if (typeof acquire !== "function") {
+    return null;
+  }
 
   instance = acquire();
   return instance;

@@ -22,12 +22,16 @@ export class WebviewCommandDispatcher {
     types: readonly TType[],
     handler: CommandHandler<TType>,
   ): void {
-    for (const type of types) {this.register(type, handler);}
+    for (const type of types) {
+      this.register(type, handler);
+    }
   }
 
   dispatch(message: WebviewToHandlerMessage, webviewView: vscode.WebviewView): boolean {
     const handler = this.handlers.get(message.type);
-    if (!handler) {return false;}
+    if (!handler) {
+      return false;
+    }
     handler(message, webviewView);
     return true;
   }

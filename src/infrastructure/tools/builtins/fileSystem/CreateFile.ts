@@ -2,7 +2,12 @@ import type { ToolDefinition } from "@/contracts";
 import type { RegisteredTool, ToolMetadata } from "@/application/tools/Types";
 import { getToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
 import { getErrorMessage } from "@/shared/utils/Errors";
-import { bufferLooksBinary, createStructuredResult, createUnifiedDiff, isMissingFileError } from "./StructuredResult";
+import {
+  bufferLooksBinary,
+  createStructuredResult,
+  createUnifiedDiff,
+  isMissingFileError,
+} from "./StructuredResult";
 import { createHash } from "crypto";
 
 async function handleCreateFile(args: Record<string, unknown>): Promise<string> {
@@ -58,7 +63,11 @@ async function handleCreateFileForced(args: Record<string, unknown>): Promise<st
     if (expectedBeforeHash === "missing" && before !== undefined) {
       return `Error creating file '${filePath}': a file appeared after approval.`;
     }
-    if (expectedBeforeHash && expectedBeforeHash !== "missing" && before?.hash !== expectedBeforeHash) {
+    if (
+      expectedBeforeHash &&
+      expectedBeforeHash !== "missing" &&
+      before?.hash !== expectedBeforeHash
+    ) {
       return `Error overwriting file '${filePath}': file changed after confirmation.`;
     }
 
@@ -69,7 +78,9 @@ async function handleCreateFileForced(args: Record<string, unknown>): Promise<st
     }
 
     await workspace.writeFile(filePath, Buffer.from(content, "utf-8"));
-    const diff = before?.binary ? undefined : createUnifiedDiff({ filePath, before: before?.content || "", after: content });
+    const diff = before?.binary
+      ? undefined
+      : createUnifiedDiff({ filePath, before: before?.content || "", after: content });
     return createStructuredResult("fileWrite", {
       path: filePath,
       overwritten: before !== undefined,
@@ -88,7 +99,9 @@ async function handleCreateFileForced(args: Record<string, unknown>): Promise<st
   }
 }
 
-async function readExistingFile(filePath: string): Promise<{ content: string; size: number; binary: boolean; hash: string } | undefined> {
+async function readExistingFile(
+  filePath: string,
+): Promise<{ content: string; size: number; binary: boolean; hash: string } | undefined> {
   try {
     const buffer = await getToolWorkspaceHost().readFile(filePath);
     const binary = bufferLooksBinary(buffer);
@@ -119,7 +132,8 @@ export const createFileDefinition: ToolDefinition = {
       properties: {
         path: {
           type: "string",
-          description: "Workspace-relative path of the file to create. Use an absolute path only for explicitly requested external access.",
+          description:
+            "Workspace-relative path of the file to create. Use an absolute path only for explicitly requested external access.",
         },
         content: {
           type: "string",

@@ -7,7 +7,11 @@
   border: 1px solid var(--vscode-editorHoverWidget-border, var(--border-color));
   border-radius: 3px;
   background: var(--vscode-editorHoverWidget-background, #252526);
-  background: color-mix(in srgb, var(--vscode-editorHoverWidget-background, #252526) var(--floating-surface-opacity), transparent);
+  background: color-mix(
+    in srgb,
+    var(--vscode-editorHoverWidget-background, #252526) var(--floating-surface-opacity),
+    transparent
+  );
   backdrop-filter: var(--floating-surface-filter);
   box-shadow: 0 2px 6px #0003;
   color: var(--vscode-editorHoverWidget-foreground, var(--text-primary));
@@ -27,8 +31,12 @@
   overflow-wrap: anywhere;
   transition: opacity 80ms;
 
-  p { margin: 0; }
-  strong { font-weight: 700; }
+  p {
+    margin: 0;
+  }
+  strong {
+    font-weight: 700;
+  }
 
   &[data-visible="true"] {
     opacity: 1;

@@ -9,7 +9,9 @@ export class LruCache<K, V> {
 
   get(key: K, now = Date.now()): V | undefined {
     const entry = this.values.get(key);
-    if (!entry) {return undefined;}
+    if (!entry) {
+      return undefined;
+    }
     if (entry.expiresAt !== undefined && entry.expiresAt <= now) {
       this.delete(key);
       return undefined;
@@ -30,24 +32,32 @@ export class LruCache<K, V> {
     this.totalSize += boundedSize;
     while (this.values.size > this.maxEntries || this.totalSize > this.maxTotalSize) {
       const oldest = this.values.keys().next().value as K | undefined;
-      if (oldest === undefined) {break;}
+      if (oldest === undefined) {
+        break;
+      }
       this.delete(oldest);
     }
   }
 
   delete(key: K): boolean {
     const entry = this.values.get(key);
-    if (!entry) {return false;}
+    if (!entry) {
+      return false;
+    }
     this.totalSize -= entry.size;
     return this.values.delete(key);
   }
 
   valuesNewestFirst(now = Date.now()): V[] {
     for (const [key, entry] of this.values) {
-      if (entry.expiresAt !== undefined && entry.expiresAt <= now) {this.delete(key);}
+      if (entry.expiresAt !== undefined && entry.expiresAt <= now) {
+        this.delete(key);
+      }
     }
     return [...this.values.values()].reverse().map((entry) => entry.value);
   }
 
-  get size(): number {return this.values.size;}
+  get size(): number {
+    return this.values.size;
+  }
 }

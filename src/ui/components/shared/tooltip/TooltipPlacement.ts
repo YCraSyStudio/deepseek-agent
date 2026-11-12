@@ -1,4 +1,3 @@
-
 export type TooltipSide = "top" | "bottom" | "left" | "right";
 
 export type TooltipAlign = "start" | "center" | "end";
@@ -55,9 +54,10 @@ export function resolveTooltipPlacement({
   side,
   align,
 }: TooltipPlacementRequest): TooltipPlacement {
-  const resolvedSide = fits(anchor, tooltip, viewport, side) || !fits(anchor, tooltip, viewport, OPPOSITE_SIDE[side])
-    ? side
-    : OPPOSITE_SIDE[side];
+  const resolvedSide =
+    fits(anchor, tooltip, viewport, side) || !fits(anchor, tooltip, viewport, OPPOSITE_SIDE[side])
+      ? side
+      : OPPOSITE_SIDE[side];
   const position = sideCoordinates(resolvedSide, anchor, tooltip, align);
   return {
     side: resolvedSide,
@@ -66,7 +66,12 @@ export function resolveTooltipPlacement({
   };
 }
 
-function fits(anchor: TooltipAnchorRect, tooltip: TooltipSize, viewport: TooltipSize, side: TooltipSide): boolean {
+function fits(
+  anchor: TooltipAnchorRect,
+  tooltip: TooltipSize,
+  viewport: TooltipSize,
+  side: TooltipSide,
+): boolean {
   switch (side) {
     case "top":
       return anchor.top >= tooltip.height + TOOLTIP_OFFSET;
@@ -109,7 +114,12 @@ function sideCoordinates(
   }
 }
 
-function alignedOffset(align: TooltipAlign, start: number, anchorSize: number, tooltipSize: number): number {
+function alignedOffset(
+  align: TooltipAlign,
+  start: number,
+  anchorSize: number,
+  tooltipSize: number,
+): number {
   switch (align) {
     case "start":
       return start;

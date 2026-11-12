@@ -4,11 +4,7 @@ import { t } from "@webview/i18n";
 
 type SearchResult = { file: string; line: number; text: string };
 
-export function renderSearchPreview(
-  result: string,
-  status: string,
-  vscode: VsCodeApi | null,
-) {
+export function renderSearchPreview(result: string, status: string, vscode: VsCodeApi | null) {
   const results = parseSearchResults(result);
   if (results.length === 0) {
     const isError = status === "error";

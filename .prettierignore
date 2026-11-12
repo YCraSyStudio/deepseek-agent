@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+artifacts
+coverage
+.nyc_output
+docs
+.vscode
+.vscode-test
+.tmp
+package-lock.json
+*.vsix
+*.md
+web-doc/**/*.astro
+web-doc/dist
+web-doc/.astro

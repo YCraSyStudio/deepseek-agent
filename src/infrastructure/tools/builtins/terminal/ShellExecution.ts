@@ -2,7 +2,10 @@ import { spawn, type ChildProcess } from "child_process";
 import { StringDecoder } from "node:string_decoder";
 import { boundUtf8HeadTail, takeUtf8Head, takeUtf8Tail } from "@/shared/utils/BoundedText";
 import { realpath } from "fs/promises";
-import { getToolWorkspaceHost, resolveWorkspacePathSecure } from "@/infrastructure/tools/ToolWorkspace";
+import {
+  getToolWorkspaceHost,
+  resolveWorkspacePathSecure,
+} from "@/infrastructure/tools/ToolWorkspace";
 
 const DEFAULT_COMMAND_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 1024 * 1024;
@@ -61,7 +64,9 @@ export async function resolveCommandEnvironment(cwd?: string): Promise<CommandEn
   if (!rootPath) {
     throw new Error("No workspace folder open");
   }
-  const workDir = cwd ? (await resolveWorkspacePathSecure(cwd, rootPath, realpath)).absolutePath : rootPath;
+  const workDir = cwd
+    ? (await resolveWorkspacePathSecure(cwd, rootPath, realpath)).absolutePath
+    : rootPath;
   return {
     cwd: workDir,
     shell,
@@ -69,10 +74,23 @@ export async function resolveCommandEnvironment(cwd?: string): Promise<CommandEn
   };
 }
 
-export async function executeWorkspaceCommand(command: string, options: WorkspaceCommandOptions = {}): Promise<WorkspaceCommandResult> {
+export async function executeWorkspaceCommand(
+  command: string,
+  options: WorkspaceCommandOptions = {},
+): Promise<WorkspaceCommandResult> {
   const environment = await resolveCommandEnvironment(options.cwd);
-  const timeoutMs = clampInteger(options.timeoutMs, MIN_COMMAND_TIMEOUT_MS, MAX_COMMAND_TIMEOUT_MS, DEFAULT_COMMAND_TIMEOUT_MS);
-  const maxOutputBytes = clampInteger(options.maxOutputBytes, MIN_OUTPUT_BYTES, MAX_OUTPUT_BYTES, DEFAULT_MAX_OUTPUT_BYTES);
+  const timeoutMs = clampInteger(
+    options.timeoutMs,
+    MIN_COMMAND_TIMEOUT_MS,
+    MAX_COMMAND_TIMEOUT_MS,
+    DEFAULT_COMMAND_TIMEOUT_MS,
+  );
+  const maxOutputBytes = clampInteger(
+    options.maxOutputBytes,
+    MIN_OUTPUT_BYTES,
+    MAX_OUTPUT_BYTES,
+    DEFAULT_MAX_OUTPUT_BYTES,
+  );
 
   if (options.signal?.aborted) {
     throw createAbortError();
@@ -108,14 +126,33 @@ export async function executeWorkspaceCommand(command: string, options: Workspac
 }
 
 export function getSystemCommandShell(): string {
-  return process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : process.env.SHELL ?? "/bin/sh";
+  return process.platform === "win32"
+    ? (process.env.ComSpec ?? "cmd.exe")
+    : (process.env.SHELL ?? "/bin/sh");
 }
 
 /** Execute on the extension host with pipes, never a VS Code terminal or shell integration. */
-export async function executeShellCommand(command: string, environment: CommandEnvironment, options: WorkspaceCommandOptions = {}, conversationId?: string): Promise<WorkspaceCommandResult> {
-  if (options.signal?.aborted) {throw createAbortError();}
-  const timeoutMs = clampInteger(options.timeoutMs, MIN_COMMAND_TIMEOUT_MS, MAX_COMMAND_TIMEOUT_MS, DEFAULT_COMMAND_TIMEOUT_MS);
-  const maxOutputBytes = clampInteger(options.maxOutputBytes, MIN_OUTPUT_BYTES, MAX_OUTPUT_BYTES, DEFAULT_MAX_OUTPUT_BYTES);
+export async function executeShellCommand(
+  command: string,
+  environment: CommandEnvironment,
+  options: WorkspaceCommandOptions = {},
+  conversationId?: string,
+): Promise<WorkspaceCommandResult> {
+  if (options.signal?.aborted) {
+    throw createAbortError();
+  }
+  const timeoutMs = clampInteger(
+    options.timeoutMs,
+    MIN_COMMAND_TIMEOUT_MS,
+    MAX_COMMAND_TIMEOUT_MS,
+    DEFAULT_COMMAND_TIMEOUT_MS,
+  );
+  const maxOutputBytes = clampInteger(
+    options.maxOutputBytes,
+    MIN_OUTPUT_BYTES,
+    MAX_OUTPUT_BYTES,
+    DEFAULT_MAX_OUTPUT_BYTES,
+  );
   const startedAt = performance.now();
 
   return new Promise<WorkspaceCommandResult>((resolve, reject) => {
@@ -125,8 +162,14 @@ export async function executeShellCommand(command: string, environment: CommandE
       windowsHide: true,
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, GIT_PAGER: "cat", PAGER: "cat", DOTNET_CLI_USE_MSBUILD_SERVER: "0",
-        MSBUILDDISABLENODEREUSE: "1", UseSharedCompilation: "false" },
+      env: {
+        ...process.env,
+        GIT_PAGER: "cat",
+        PAGER: "cat",
+        DOTNET_CLI_USE_MSBUILD_SERVER: "0",
+        MSBUILDDISABLENODEREUSE: "1",
+        UseSharedCompilation: "false",
+      },
     });
     activeChildren.set(child, conversationId);
     const stdout = new BoundedOutput(maxOutputBytes);
@@ -144,33 +187,42 @@ export async function executeShellCommand(command: string, environment: CommandE
 
     const cleanup = () => {
       clearTimeout(timeout);
-      if (drainTimer) {clearTimeout(drainTimer);}
+      if (drainTimer) {
+        clearTimeout(drainTimer);
+      }
       options.signal?.removeEventListener("abort", onAbort);
       activeChildren.delete(child);
     };
     const finish = (callback: () => void) => {
-      if (settled) {return;}
+      if (settled) {
+        return;
+      }
       settled = true;
       cleanup();
       callback();
     };
-    const resolveResult = () => finish(() => resolve({
-      kind: "command_result",
-      command,
-      cwd: environment.cwd,
-      shell: environment.shell,
-      stdout: stdout.toString(),
-      stderr: stderr.toString(),
-      exitCode,
-      signal: exitSignal,
-      timedOut,
-      cancelled: false,
-      durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
-      truncated: { stdout: stdout.truncated, stderr: stderr.truncated },
-      terminationConfirmed,
-    }));
+    const resolveResult = () =>
+      finish(() =>
+        resolve({
+          kind: "command_result",
+          command,
+          cwd: environment.cwd,
+          shell: environment.shell,
+          stdout: stdout.toString(),
+          stderr: stderr.toString(),
+          exitCode,
+          signal: exitSignal,
+          timedOut,
+          cancelled: false,
+          durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+          truncated: { stdout: stdout.truncated, stderr: stderr.truncated },
+          terminationConfirmed,
+        }),
+      );
     const terminateAndBoundSettlement = (after: () => void) => {
-      if (terminationStarted || settled) {return;}
+      if (terminationStarted || settled) {
+        return;
+      }
       terminationStarted = true;
       void terminateProcessTree(child).then((confirmed) => {
         terminationConfirmed = confirmed;
@@ -180,7 +232,9 @@ export async function executeShellCommand(command: string, environment: CommandE
       });
     };
     const onAbort = () => {
-      terminateAndBoundSettlement(() => finish(() => reject(createAbortError(terminationConfirmed))));
+      terminateAndBoundSettlement(() =>
+        finish(() => reject(createAbortError(terminationConfirmed))),
+      );
     };
     const timeout = setTimeout(() => {
       timedOut = true;
@@ -192,7 +246,9 @@ export async function executeShellCommand(command: string, environment: CommandE
     child.once("exit", (code, signal) => {
       exitCode = code;
       exitSignal = signal;
-      if (terminationStarted) {return;}
+      if (terminationStarted) {
+        return;
+      }
       drainTimer = setTimeout(() => {
         terminateAndBoundSettlement(resolveResult);
       }, OUTPUT_DRAIN_GRACE_MS);
@@ -200,10 +256,14 @@ export async function executeShellCommand(command: string, environment: CommandE
     child.once("close", (code, signal) => {
       exitCode = code;
       exitSignal = signal;
-      if (terminationStarted) {return;}
+      if (terminationStarted) {
+        return;
+      }
       resolveResult();
     });
-    if (options.signal?.aborted) {onAbort();}
+    if (options.signal?.aborted) {
+      onAbort();
+    }
   });
 }
 
@@ -230,8 +290,11 @@ export class BoundedOutput {
       this.headBytes += take;
       chunk = chunk.subarray(take);
     }
-    if (chunk.byteLength === 0) {return;}
-    this.truncated = this.truncated || this.headBytes + this.tailBytes + chunk.byteLength > this.limit;
+    if (chunk.byteLength === 0) {
+      return;
+    }
+    this.truncated =
+      this.truncated || this.headBytes + this.tailBytes + chunk.byteLength > this.limit;
     this.tail.push(chunk);
     this.tailBytes += chunk.byteLength;
     while (this.tailBytes > this.limit - this.half && this.tail.length > 0) {
@@ -248,17 +311,27 @@ export class BoundedOutput {
   }
 
   toString(): string {
-    if (!this.truncated) {return Buffer.concat([...this.head, ...this.tail]).toString("utf8");}
+    if (!this.truncated) {
+      return Buffer.concat([...this.head, ...this.tail]).toString("utf8");
+    }
     const diagnostics = this.isDiagnostic(this.pendingLine)
       ? this.boundDiagnostics(this.diagnostics + this.pendingLine)
       : this.diagnostics;
     const marker = "\n...[output truncated; middle omitted]...\n";
-    const evidence = diagnostics ? `\n...[retained diagnostic excerpts; bounded]...\n${diagnostics}\n` : "";
+    const evidence = diagnostics
+      ? `\n...[retained diagnostic excerpts; bounded]...\n${diagnostics}\n`
+      : "";
     const reserved = Buffer.byteLength(marker + evidence, "utf8");
-    if (reserved >= this.limit) {return takeUtf8Head(marker + evidence, this.limit);}
+    if (reserved >= this.limit) {
+      return takeUtf8Head(marker + evidence, this.limit);
+    }
     const remaining = this.limit - reserved;
-    return takeUtf8Head(Buffer.concat(this.head).toString("utf8"), Math.floor(remaining / 2)) +
-      marker + evidence + takeUtf8Tail(Buffer.concat(this.tail).toString("utf8"), Math.ceil(remaining / 2));
+    return (
+      takeUtf8Head(Buffer.concat(this.head).toString("utf8"), Math.floor(remaining / 2)) +
+      marker +
+      evidence +
+      takeUtf8Tail(Buffer.concat(this.tail).toString("utf8"), Math.ceil(remaining / 2))
+    );
   }
 
   private collectDiagnostics(text: string): void {
@@ -271,7 +344,9 @@ export class BoundedOutput {
       while ((newline = this.pendingLine.search(/[\r\n]/)) >= 0) {
         const line = this.pendingLine.slice(0, newline);
         this.pendingLine = this.pendingLine.slice(newline + 1);
-        if (this.isDiagnostic(line)) {this.diagnostics = this.boundDiagnostics(this.diagnostics + line + "\n");}
+        if (this.isDiagnostic(line)) {
+          this.diagnostics = this.boundDiagnostics(this.diagnostics + line + "\n");
+        }
       }
       if (this.pendingLine.length > 8192) {
         if (this.isDiagnostic(this.pendingLine)) {
@@ -284,7 +359,9 @@ export class BoundedOutput {
 
   private isDiagnostic(line: string): boolean {
     const plain = line.replace(/\u001b\[[0-9;]*m/g, "");
-    return /\b(error|failed|failure|exception|fatal|traceback)\b|\b(?:TS|CS)\d{4}\b|^\s*(?:at\s+\S+|[×✖])/i.test(plain);
+    return /\b(error|failed|failure|exception|fatal|traceback)\b|\b(?:TS|CS)\d{4}\b|^\s*(?:at\s+\S+|[×✖])/i.test(
+      plain,
+    );
   }
 
   private boundDiagnostics(value: string): string {
@@ -292,7 +369,12 @@ export class BoundedOutput {
   }
 }
 
-function clampInteger(value: number | undefined, min: number, max: number, fallback: number): number {
+function clampInteger(
+  value: number | undefined,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
   return Number.isInteger(value) ? Math.min(max, Math.max(min, value!)) : fallback;
 }
 
@@ -301,26 +383,47 @@ export async function shutdownOwnedProcesses(): Promise<void> {
 }
 
 export async function shutdownConversationCommands(conversationId: string): Promise<void> {
-  await Promise.allSettled([...activeChildren].filter(([, owner]) => owner === conversationId).map(([child]) => terminateProcessTree(child)));
+  await Promise.allSettled(
+    [...activeChildren]
+      .filter(([, owner]) => owner === conversationId)
+      .map(([child]) => terminateProcessTree(child)),
+  );
 }
 
 async function terminateProcessTree(child: ChildProcess): Promise<boolean> {
-  if (!child.pid || hasExited(child)) {return true;}
+  if (!child.pid || hasExited(child)) {
+    return true;
+  }
   if (process.platform === "win32") {
     return runBoundedTaskkill(child);
   }
-  try { process.kill(-child.pid, "SIGTERM"); } catch { child.kill("SIGTERM"); }
-  if (await waitForExit(child, TERMINATION_GRACE_MS / 2)) {return true;}
-  try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch {
+    child.kill("SIGTERM");
+  }
+  if (await waitForExit(child, TERMINATION_GRACE_MS / 2)) {
+    return true;
+  }
+  try {
+    process.kill(-child.pid, "SIGKILL");
+  } catch {
+    child.kill("SIGKILL");
+  }
   return waitForExit(child, TERMINATION_GRACE_MS / 2);
 }
 
 function runBoundedTaskkill(child: ChildProcess): Promise<boolean> {
   return new Promise((resolve) => {
-    const cleanup = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
+    const cleanup = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
+      windowsHide: true,
+      stdio: "ignore",
+    });
     let settled = false;
     const finish = (confirmed: boolean) => {
-      if (settled) {return;}
+      if (settled) {
+        return;
+      }
       settled = true;
       clearTimeout(timer);
       resolve(confirmed);
@@ -335,7 +438,9 @@ function runBoundedTaskkill(child: ChildProcess): Promise<boolean> {
 }
 
 function waitForExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
-  if (hasExited(child)) {return Promise.resolve(true);}
+  if (hasExited(child)) {
+    return Promise.resolve(true);
+  }
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       child.removeListener("exit", onExit);

@@ -1,10 +1,25 @@
 import assert from "node:assert/strict";
-import { lstat, mkdir, mkdtemp, readFile, readlink, readdir, rm, symlink, truncate, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readlink,
+  readdir,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import { writeFileSync } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { WorkspaceRestoreStore } from "@/infrastructure/workspace/WorkspaceRestoreStore";
-import { captureWorkspaceSnapshot, workspaceChangeNotice, type SnapshotRoot } from "@/infrastructure/workspace/WorkspaceSnapshot";
+import {
+  captureWorkspaceSnapshot,
+  workspaceChangeNotice,
+  type SnapshotRoot,
+} from "@/infrastructure/workspace/WorkspaceSnapshot";
 import { assertSnapshotCapacity } from "@/infrastructure/workspace/SnapshotCapacity";
 
 suite("recoverable workspace copies", () => {
@@ -25,19 +40,28 @@ suite("recoverable workspace copies", () => {
     store = new WorkspaceRestoreStore("chat-1", data);
     snapshot = path.join(data, "snapshoots", "chat-1");
   });
-  teardown(async () => {await rm(temporary, { recursive: true, force: true });});
+  teardown(async () => {
+    await rm(temporary, { recursive: true, force: true });
+  });
   const begin = async (id = "turn-1") => store.begin(id, roots, new Map());
   const finish = async (id = "turn-1") => store.finish(id, roots, new Map());
   test("rejects duplicate and unsafe turn identifiers without overwriting an existing recovery copy", async () => {
-    await writeFile(path.join(workspace, "file.txt"), "Before"); await begin();
+    await writeFile(path.join(workspace, "file.txt"), "Before");
+    await begin();
     await writeFile(path.join(workspace, "file.txt"), "Current");
     await assert.rejects(begin(), /already exists for this turn/);
-    assert.equal(await readFile(path.join(snapshot, ".snapshot/turns/turn-1/before/file.txt"), "utf8"), "Before");
-    for (const id of ["", "../escape", "a".repeat(201)]) { await assert.rejects(begin(id), /Invalid recovery turn id/); }
+    assert.equal(
+      await readFile(path.join(snapshot, ".snapshot/turns/turn-1/before/file.txt"), "utf8"),
+      "Before",
+    );
+    for (const id of ["", "../escape", "a".repeat(201)]) {
+      await assert.rejects(begin(id), /Invalid recovery turn id/);
+    }
     assert.equal(await readFile(path.join(workspace, "file.txt"), "utf8"), "Current");
   });
   test("refuses unfinished turns and ignores unrelated entries when selecting the latest completed change", async () => {
-    await writeFile(path.join(workspace, "file.txt"), "Before"); await begin();
+    await writeFile(path.join(workspace, "file.txt"), "Before");
+    await begin();
     await assert.rejects(store.review(roots, "turn-1"), /not finished capturing/);
     await assert.rejects(store.revert(roots, "turn-1"), /no completed recovery snapshot/);
     await assert.rejects(store.diff(roots, "turn-1", "project/file.txt"), /No saved change/);
@@ -47,77 +71,155 @@ suite("recoverable workspace copies", () => {
   });
   for (const invalid of ["directory", "oversized"] as const) {
     test(`rejects a ${invalid} recovery manifest before applying changes`, async () => {
-      await writeFile(path.join(workspace, "file.txt"), "Before"); await begin();
-      const manifest = path.join(snapshot, ".snapshot/turns/turn-1/turn.json"); await rm(manifest);
-      if (invalid === "directory") { await mkdir(manifest); } else { await writeFile(manifest, ""); await truncate(manifest, 64 * 1024 * 1024 + 1); }
+      await writeFile(path.join(workspace, "file.txt"), "Before");
+      await begin();
+      const manifest = path.join(snapshot, ".snapshot/turns/turn-1/turn.json");
+      await rm(manifest);
+      if (invalid === "directory") {
+        await mkdir(manifest);
+      } else {
+        await writeFile(manifest, "");
+        await truncate(manifest, 64 * 1024 * 1024 + 1);
+      }
       await assert.rejects(store.review(roots, "turn-1"), /Invalid recovery manifest/);
       assert.equal(await readFile(path.join(workspace, "file.txt"), "utf8"), "Before");
     });
   }
   test("shows empty diff sides for newly created or deleted files and rejects unchanged paths", async () => {
-    await writeFile(path.join(workspace, "deleted.txt"), "Deleted content"); await writeFile(path.join(workspace, "unchanged.txt"), "Same"); await begin();
-    await rm(path.join(workspace, "deleted.txt")); await writeFile(path.join(workspace, "created.txt"), "Created content"); await finish();
-    assert.deepEqual(await store.diff(roots, "turn-1", "project/deleted.txt"), { before: "Deleted content", after: "" });
-    assert.deepEqual(await store.diff(roots, "turn-1", "project/created.txt"), { before: "", after: "Created content" });
+    await writeFile(path.join(workspace, "deleted.txt"), "Deleted content");
+    await writeFile(path.join(workspace, "unchanged.txt"), "Same");
+    await begin();
+    await rm(path.join(workspace, "deleted.txt"));
+    await writeFile(path.join(workspace, "created.txt"), "Created content");
+    await finish();
+    assert.deepEqual(await store.diff(roots, "turn-1", "project/deleted.txt"), {
+      before: "Deleted content",
+      after: "",
+    });
+    assert.deepEqual(await store.diff(roots, "turn-1", "project/created.txt"), {
+      before: "",
+      after: "Created content",
+    });
     await assert.rejects(store.diff(roots, "turn-1", "project/unchanged.txt"), /No saved change/);
   });
   test("refuses a changed review copy without modifying the current workspace", async () => {
-    await writeFile(path.join(workspace, "file.txt"), "Before"); await begin(); await writeFile(path.join(workspace, "file.txt"), "After"); await finish();
+    await writeFile(path.join(workspace, "file.txt"), "Before");
+    await begin();
+    await writeFile(path.join(workspace, "file.txt"), "After");
+    await finish();
     await writeFile(path.join(snapshot, ".snapshot/turns/turn-1/before/file.txt"), "Tampered");
-    await assert.rejects(store.diff(roots, "turn-1", "project/file.txt"), /recovery copy is missing or has changed/);
+    await assert.rejects(
+      store.diff(roots, "turn-1", "project/file.txt"),
+      /recovery copy is missing or has changed/,
+    );
     assert.equal(await readFile(path.join(workspace, "file.txt"), "utf8"), "After");
   });
   for (const large of [false, true]) {
     test(`retains recovery while refusing unsupported text review, oversized=${large}`, async () => {
       const before = large ? Buffer.alloc(2 * 1024 * 1024 + 1, 65) : Buffer.from([0, 1, 255]);
-      await writeFile(path.join(workspace, "file.bin"), before); await begin(); await writeFile(path.join(workspace, "file.bin"), "After"); await finish();
-      await assert.rejects(store.diff(roots, "turn-1", "project/file.bin"), /binary or too large for a text review/);
-      await store.revert(roots, "turn-1"); assert.deepEqual(await readFile(path.join(workspace, "file.bin")), before);
+      await writeFile(path.join(workspace, "file.bin"), before);
+      await begin();
+      await writeFile(path.join(workspace, "file.bin"), "After");
+      await finish();
+      await assert.rejects(
+        store.diff(roots, "turn-1", "project/file.bin"),
+        /binary or too large for a text review/,
+      );
+      await store.revert(roots, "turn-1");
+      assert.deepEqual(await readFile(path.join(workspace, "file.bin")), before);
     });
   }
   test("reviews and restores symbolic link targets without reading or replacing their destination files", async () => {
-    await writeFile(path.join(workspace, "first.txt"), "First"); await writeFile(path.join(workspace, "second.txt"), "Second");
-    const link = path.join(workspace, "link.txt"); await symlink("first.txt", link); await begin();
-    await rm(link); await symlink("second.txt", link); await finish();
-    assert.deepEqual(await store.diff(roots, "turn-1", "project/link.txt"), { before: "Symlink: first.txt", after: "Symlink: second.txt" });
-    await store.revert(roots, "turn-1"); assert.equal(await readlink(link), "first.txt");
-    assert.equal(await readFile(path.join(workspace, "first.txt"), "utf8"), "First"); assert.equal(await readFile(path.join(workspace, "second.txt"), "utf8"), "Second");
+    await writeFile(path.join(workspace, "first.txt"), "First");
+    await writeFile(path.join(workspace, "second.txt"), "Second");
+    const link = path.join(workspace, "link.txt");
+    await symlink("first.txt", link);
+    await begin();
+    await rm(link);
+    await symlink("second.txt", link);
+    await finish();
+    assert.deepEqual(await store.diff(roots, "turn-1", "project/link.txt"), {
+      before: "Symlink: first.txt",
+      after: "Symlink: second.txt",
+    });
+    await store.revert(roots, "turn-1");
+    assert.equal(await readlink(link), "first.txt");
+    assert.equal(await readFile(path.join(workspace, "first.txt"), "utf8"), "First");
+    assert.equal(await readFile(path.join(workspace, "second.txt"), "utf8"), "Second");
   });
   test("does not overwrite a directory that replaced a changed file", async () => {
-    const file = path.join(workspace, "file.txt"); await writeFile(file, "Before"); await begin(); await writeFile(file, "After"); await finish();
-    await rm(file); await mkdir(file);
+    const file = path.join(workspace, "file.txt");
+    await writeFile(file, "Before");
+    await begin();
+    await writeFile(file, "After");
+    await finish();
+    await rm(file);
+    await mkdir(file);
     await assert.rejects(store.revert(roots, "turn-1"), /Cannot restore over a directory/);
     assert.equal((await lstat(file)).isDirectory(), true);
   });
   test("detects writes made between restoration preflight and applying a file", async () => {
-    const file = path.join(workspace, "file.txt"); await writeFile(file, "Before"); await begin(); await writeFile(file, "After"); await finish();
-    await assert.rejects(store.revert(roots, "turn-1", () => { writeFileSync(file, "Concurrent user edit"); }), /changed during restoration/);
-    assert.equal(await readFile(file, "utf8"), "Concurrent user edit"); assert.equal((await store.review(roots, "turn-1")).reverted, false);
+    const file = path.join(workspace, "file.txt");
+    await writeFile(file, "Before");
+    await begin();
+    await writeFile(file, "After");
+    await finish();
+    await assert.rejects(
+      store.revert(roots, "turn-1", () => {
+        writeFileSync(file, "Concurrent user edit");
+      }),
+      /changed during restoration/,
+    );
+    assert.equal(await readFile(file, "utf8"), "Concurrent user edit");
+    assert.equal((await store.review(roots, "turn-1")).reverted, false);
   });
 
   test("replaces the live mirror after rebinding to a different root while retaining old turn copies", async () => {
-    await writeFile(path.join(workspace, "old.txt"), "Original root"); await begin();
-    await writeFile(path.join(workspace, "old.txt"), "Changed root"); await finish();
-    const next = path.join(temporary, "next-project"); await mkdir(next); await writeFile(path.join(next, "new.txt"), "New root");
+    await writeFile(path.join(workspace, "old.txt"), "Original root");
+    await begin();
+    await writeFile(path.join(workspace, "old.txt"), "Changed root");
+    await finish();
+    const next = path.join(temporary, "next-project");
+    await mkdir(next);
+    await writeFile(path.join(next, "new.txt"), "New root");
     const nextRoots = [{ alias: "next", uri: `file://${next}`, localPath: next }];
     await store.begin("turn-2", nextRoots, new Map());
     await assert.rejects(readFile(path.join(snapshot, "old.txt")), { code: "ENOENT" });
     assert.equal(await readFile(path.join(snapshot, "new.txt"), "utf8"), "New root");
-    assert.equal(await readFile(path.join(snapshot, ".snapshot/turns/turn-1/before/old.txt"), "utf8"), "Original root");
+    assert.equal(
+      await readFile(path.join(snapshot, ".snapshot/turns/turn-1/before/old.txt"), "utf8"),
+      "Original root",
+    );
     assert.equal((await store.review(roots, "turn-1")).reverted, false);
   });
   test("rolls already restored files forward when a later restoration is rejected", async () => {
-    for (const name of ["a.txt", "b.txt"]) { await writeFile(path.join(workspace, name), `before ${name}`); }
+    for (const name of ["a.txt", "b.txt"]) {
+      await writeFile(path.join(workspace, name), `before ${name}`);
+    }
     await begin();
-    for (const name of ["a.txt", "b.txt"]) { await writeFile(path.join(workspace, name), `after ${name}`); }
-    await finish(); let restoredFirst = false;
-    await assert.rejects(store.revert(roots, "turn-1", paths => {
-      if (paths.length !== 1) { return; }
-      if (path.basename(paths[0]) === "a.txt") { restoredFirst = true; }
-      if (path.basename(paths[0]) === "b.txt") { throw new Error("Second file became read-only"); }
-    }), /Second file became read-only/);
+    for (const name of ["a.txt", "b.txt"]) {
+      await writeFile(path.join(workspace, name), `after ${name}`);
+    }
+    await finish();
+    let restoredFirst = false;
+    await assert.rejects(
+      store.revert(roots, "turn-1", (paths) => {
+        if (paths.length !== 1) {
+          return;
+        }
+        if (path.basename(paths[0]) === "a.txt") {
+          restoredFirst = true;
+        }
+        if (path.basename(paths[0]) === "b.txt") {
+          throw new Error("Second file became read-only");
+        }
+      }),
+      /Second file became read-only/,
+    );
     assert.equal(restoredFirst, true);
-    for (const name of ["a.txt", "b.txt"]) { assert.equal(await readFile(path.join(workspace, name), "utf8"), `after ${name}`); }
+    for (const name of ["a.txt", "b.txt"]) {
+      assert.equal(await readFile(path.join(workspace, name), "utf8"), `after ${name}`);
+    }
     assert.equal((await store.review(roots, "turn-1")).reverted, false);
   });
 
@@ -125,7 +227,7 @@ suite("recoverable workspace copies", () => {
     await writeFile(path.join(workspace, "auth.ts"), "pre-existing user edits");
     await begin();
     assert.equal(await readFile(path.join(snapshot, "auth.ts"), "utf8"), "pre-existing user edits");
-    assert.ok(!((await readdir(snapshot)).includes("workspace")));
+    assert.ok(!(await readdir(snapshot)).includes("workspace"));
     await writeFile(path.join(workspace, "auth.ts"), "agent change");
     await finish();
     assert.equal(await readFile(path.join(snapshot, "auth.ts"), "utf8"), "agent change");
@@ -133,7 +235,10 @@ suite("recoverable workspace copies", () => {
     assert.equal(await readFile(backup, "utf8"), "pre-existing user edits");
     assert.notEqual((await lstat(backup)).ino, (await lstat(path.join(workspace, "auth.ts"))).ino);
     await store.revert(roots, "turn-1");
-    assert.equal(await readFile(path.join(workspace, "auth.ts"), "utf8"), "pre-existing user edits");
+    assert.equal(
+      await readFile(path.join(workspace, "auth.ts"), "utf8"),
+      "pre-existing user edits",
+    );
   });
 
   test("recovers the pre-tool unsaved buffer from independent copies after reopening the store", async () => {
@@ -143,11 +248,24 @@ suite("recoverable workspace copies", () => {
     await writeFile(file, "saved\n");
     await store.begin("turn-1", roots, new Map([[file, before]]));
     await store.finish("turn-1", roots, new Map([[file, after]]));
-    assert.equal(await readFile(file, "utf8"), "saved\n", "capturing dirty buffers must not save them");
-    assert.equal(await readFile(path.join(snapshot, ".snapshot", "turns", "turn-1", "before", "open-buffer.txt"), "utf8"), before);
+    assert.equal(
+      await readFile(file, "utf8"),
+      "saved\n",
+      "capturing dirty buffers must not save them",
+    );
+    assert.equal(
+      await readFile(
+        path.join(snapshot, ".snapshot", "turns", "turn-1", "before", "open-buffer.txt"),
+        "utf8",
+      ),
+      before,
+    );
 
     const reopened = new WorkspaceRestoreStore("chat-1", data);
-    assert.deepEqual(await reopened.diff(roots, "turn-1", "project/open-buffer.txt"), { before, after });
+    assert.deepEqual(await reopened.diff(roots, "turn-1", "project/open-buffer.txt"), {
+      before,
+      after,
+    });
     // Once the user saves the tool result, recovery must restore the dirty
     // pre-tool version rather than the older contents originally on disk.
     await writeFile(file, after);
@@ -194,8 +312,14 @@ suite("recoverable workspace copies", () => {
     await begin();
     await writeFile(path.join(workspace, "file.txt"), "after\n");
     await finish();
-    assert.deepEqual(await store.diff(roots, "turn-1", "project/file.txt"), { before: "before\n", after: "after\n" });
-    await writeFile(path.join(snapshot, ".snapshot", "turns", "turn-1", "before", "file.txt"), "tampered");
+    assert.deepEqual(await store.diff(roots, "turn-1", "project/file.txt"), {
+      before: "before\n",
+      after: "after\n",
+    });
+    await writeFile(
+      path.join(snapshot, ".snapshot", "turns", "turn-1", "before", "file.txt"),
+      "tampered",
+    );
     await assert.rejects(() => store.revert(roots), /missing or corrupt/);
     assert.equal(await readFile(path.join(workspace, "file.txt"), "utf8"), "after\n");
   });
@@ -233,7 +357,10 @@ suite("recoverable workspace copies", () => {
     await begin();
     await writeFile(path.join(workspace, "src", "file.txt"), "after");
     await finish();
-    await assert.rejects(() => store.revert([{ ...roots[0], uri: "file:///other" }]), /different workspace/);
+    await assert.rejects(
+      () => store.revert([{ ...roots[0], uri: "file:///other" }]),
+      /different workspace/,
+    );
     const outside = path.join(temporary, "outside");
     await mkdir(outside);
     await writeFile(path.join(outside, "file.txt"), "after");
@@ -248,7 +375,13 @@ suite("recoverable workspace copies", () => {
     await begin();
     await writeFile(path.join(workspace, "file.txt"), "after");
     await finish();
-    await assert.rejects(() => store.revert(roots, undefined, () => {throw new Error("Unsaved editor changes");}), /Unsaved/);
+    await assert.rejects(
+      () =>
+        store.revert(roots, undefined, () => {
+          throw new Error("Unsaved editor changes");
+        }),
+      /Unsaved/,
+    );
     assert.equal(await readFile(path.join(workspace, "file.txt"), "utf8"), "after");
   });
 
@@ -293,6 +426,8 @@ suite("recoverable workspace copies", () => {
     const limited = new WorkspaceRestoreStore("chat-1", data, 0);
     await assert.rejects(() => limited.begin("turn-2", roots, new Map()), /storage limit/);
     assert.ok((await store.review(roots, "turn-1")).paths.length);
-    assert.ok(!(await readdir(path.join(data, "snapshoots"))).some((name) => name.startsWith(".pending-")));
+    assert.ok(
+      !(await readdir(path.join(data, "snapshoots"))).some((name) => name.startsWith(".pending-")),
+    );
   });
 });

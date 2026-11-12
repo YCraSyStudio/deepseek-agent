@@ -13,10 +13,7 @@ import { BUILT_IN_TOOLS } from "@/infrastructure/tools/builtins";
 import { configureWebRuntimeDiagnostics } from "@/vscode/tools/browser/Diagnostics";
 import { DeepSeekWebClient } from "@/infrastructure/deepseek/web/DeepSeekWebClient";
 import { HistoryManager } from "@/vscode/storage";
-import {
-  VsCodeSecretStore,
-  VsCodeSettingsRepository,
-} from "@/vscode/storage/RepositoryAdapters";
+import { VsCodeSecretStore, VsCodeSettingsRepository } from "@/vscode/storage/RepositoryAdapters";
 import { WebviewProvider } from "@/vscode/webviews/WebviewProvider";
 import { DeepSeekModelProviderFactory } from "@/infrastructure/deepseek/provider/DeepSeekModelProviderFactory";
 import { captureChatSuggestionContext } from "@/vscode/completions/ChatSuggestionContext";
@@ -40,59 +37,115 @@ export class ExtensionCompositionRoot implements vscode.Disposable {
     const completionStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 15);
     completionStatus.text = "$(sparkle) DeepSeek";
     completionStatus.command = "deepseek-agent.openChat";
-    this.completions = new CompletionService(this.settings, this.secrets, new DeepSeekModelProviderFactory(),
-      () => vscode.workspace.isTrusted, (usage) => {
-        const cost = formatUsageCost(usage.costUsd, { currency: "usd", locale: vscode.env.language, unavailable: "—" });
+    this.completions = new CompletionService(
+      this.settings,
+      this.secrets,
+      new DeepSeekModelProviderFactory(),
+      () => vscode.workspace.isTrusted,
+      (usage) => {
+        const cost = formatUsageCost(usage.costUsd, {
+          currency: "usd",
+          locale: vscode.env.language,
+          unavailable: "—",
+        });
         completionStatus.tooltip = `DeepSeek · ${usage.count} requests · ${usage.totalTokens ?? "—"} tokens · ${cost}\nEditor/chat suggestions and editor actions (this session).`;
         completionStatus.show();
-      }, undefined, (signal) => captureChatSuggestionContext(vscode.workspace, signal));
+      },
+      undefined,
+      (signal) => captureChatSuggestionContext(vscode.workspace, signal),
+    );
     const unsubscribe = SettingsManager.onDidChange(() => {
       this.completions.invalidate();
-      if (!this.settings.load().betaFeaturesEnabled) {completionStatus.hide();}
+      if (!this.settings.load().betaFeaturesEnabled) {
+        completionStatus.hide();
+      }
     });
-    context.subscriptions.push(completionStatus, { dispose: unsubscribe },
+    context.subscriptions.push(
+      completionStatus,
+      { dispose: unsubscribe },
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.completions.invalidate()),
-      { dispose: () => this.completions.invalidate() });
+      { dispose: () => this.completions.invalidate() },
+    );
     registerEditorFeatures(context, this.completions);
-    const browsers = new ChromiumProvider(vscode.Uri.joinPath(context.globalStorageUri, "chromium").fsPath,
-      async (task) => vscode.window.withProgress({ location: vscode.ProgressLocation.Notification,
-        title: "Preparing Chromium for web reads and screenshots (first download may take several minutes)" }, task));
+    const browsers = new ChromiumProvider(
+      vscode.Uri.joinPath(context.globalStorageUri, "chromium").fsPath,
+      async (task) =>
+        vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title:
+              "Preparing Chromium for web reads and screenshots (first download may take several minutes)",
+          },
+          task,
+        ),
+    );
     const debugAnchor = new NativeDebugAnchor();
     context.subscriptions.push(debugAnchor);
     const capturePermissions = new CapturePermissions({
       mode: () => this.settings.load().capturePermission,
       read: () => context.globalState.get("capturePermissions"),
-      save: state => context.globalState.update("capturePermissions", state),
-      confirm: async view => await vscode.window.showInformationMessage(`Allow YCraSy Agent to capture ${view}?`, { modal: true }, "Allow") === "Allow",
-      systemChooser: request => request.target !== "web" && usesWaylandPortal(),
+      save: (state) => context.globalState.update("capturePermissions", state),
+      confirm: async (view) =>
+        (await vscode.window.showInformationMessage(
+          `Allow YCraSy Agent to capture ${view}?`,
+          { modal: true },
+          "Allow",
+        )) === "Allow",
+      systemChooser: (request) => request.target !== "web" && usesWaylandPortal(),
       debugPid: () => debugAnchor.pid(),
     });
     registerCaptureBackend("web", capturePermissions.wrap(new SystemBrowserCapture(browsers)));
-    const nativeCapture = new NativeCaptureBackend(() => debugAnchor.pid(), undefined, undefined, undefined, request => capturePermissions.portalOptions(request));
-    const desktopCapture = { timeoutMs: nativeCapture.timeoutMs, capture: (request: Parameters<NativeCaptureBackend["capture"]>[0], signal: AbortSignal) => {
-      if (vscode.env.remoteName || vscode.env.uiKind !== vscode.UIKind.Desktop) {throw new Error("Native capture requires a local desktop extension host; remote workspaces cannot capture the UI machine");}
-      return nativeCapture.capture(request, signal);
-    }};
-    for (const target of ["window", "debug", "screen"] as const) {registerCaptureBackend(target, capturePermissions.wrap(desktopCapture));}
+    const nativeCapture = new NativeCaptureBackend(
+      () => debugAnchor.pid(),
+      undefined,
+      undefined,
+      undefined,
+      (request) => capturePermissions.portalOptions(request),
+    );
+    const desktopCapture = {
+      timeoutMs: nativeCapture.timeoutMs,
+      capture: (request: Parameters<NativeCaptureBackend["capture"]>[0], signal: AbortSignal) => {
+        if (vscode.env.remoteName || vscode.env.uiKind !== vscode.UIKind.Desktop) {
+          throw new Error(
+            "Native capture requires a local desktop extension host; remote workspaces cannot capture the UI machine",
+          );
+        }
+        return nativeCapture.capture(request, signal);
+      },
+    };
+    for (const target of ["window", "debug", "screen"] as const) {
+      registerCaptureBackend(target, capturePermissions.wrap(desktopCapture));
+    }
     const webClient = new DeepSeekWebClient(async () => {
       const config = this.settings.load();
-      if (!config.webSearchEnabled) {throw new Error("Web search is disabled in settings.");}
-      return { baseUrl: config.baseUrl, apiKey: await this.secrets.getApiKey(config.baseUrl) ?? "" };
+      if (!config.webSearchEnabled) {
+        throw new Error("Web search is disabled in settings.");
+      }
+      return {
+        baseUrl: config.baseUrl,
+        apiKey: (await this.secrets.getApiKey(config.baseUrl)) ?? "",
+      };
     });
     context.subscriptions.push({ dispose: () => webClient.dispose() });
     this.webRuntime = new HeadlessWebRuntime(browsers, () => {
       const config = this.settings.load();
-      if (!config.webSearchEnabled) {throw new Error("Web reading is disabled in settings");}
+      if (!config.webSearchEnabled) {
+        throw new Error("Web reading is disabled in settings");
+      }
     });
     configureWebRuntimeDiagnostics(this.webRuntime);
 
     this.toolRegistry = new ToolRegistry();
-    for (const tool of BUILT_IN_TOOLS) {this.toolRegistry.register(tool);}
+    for (const tool of BUILT_IN_TOOLS) {
+      this.toolRegistry.register(tool);
+    }
     for (const tool of createHeadlessWebTools(this.webRuntime, {
-      systemLocale: () => vscode.env.remoteName ? undefined : Intl.DateTimeFormat().resolvedOptions().locale,
+      systemLocale: () =>
+        vscode.env.remoteName ? undefined : Intl.DateTimeFormat().resolvedOptions().locale,
       vscodeLanguage: () => vscode.env.language,
       searchRegion: () => this.settings.load().webSearchRegion,
-      search: (query, _locale, limit, signal, options) => webClient.search(query, limit, signal, options),
+      search: (query, _locale, limit, signal, options) =>
+        webClient.search(query, limit, signal, options),
     })) {
       this.toolRegistry.register(tool);
     }

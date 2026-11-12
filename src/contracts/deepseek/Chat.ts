@@ -10,8 +10,10 @@ type ChatContentPart =
 type ChatMessageContent = string | ChatContentPart[];
 
 export function getTextContent(content: ChatMessageContent | null | undefined): string {
-  if (typeof content === "string") {return content;}
-  return content?.flatMap((part) => part.type === "text" ? [part.text] : []).join("\n") ?? "";
+  if (typeof content === "string") {
+    return content;
+  }
+  return content?.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n") ?? "";
 }
 
 export const SYSTEM_PROMPT_AGENT = `You are "YCraSy DeepSeek Agent" inside VS Code. Be concise and complete coding tasks with the available runtime tools.
@@ -28,8 +30,10 @@ Follow security-review results: re-plan a rejected operation using its guidance 
 
 Reply in the language of the user's latest message unless they request another. Never stop after merely announcing a future action: perform the tool call in that response or give the final answer. When work is complete, answer directly with only relevant results and no process narration.`;
 
-
-export function ensureSingleSystemPrompt(messages: ChatMessage[], createSystemMessageFn: () => ChatMessage): ChatMessage[] {
+export function ensureSingleSystemPrompt(
+  messages: ChatMessage[],
+  createSystemMessageFn: () => ChatMessage,
+): ChatMessage[] {
   const systemPrompts = messages.filter((msg) => msg.role === "system");
   const nonSystemMessages = messages.filter((msg) => msg.role !== "system");
 
@@ -74,7 +78,9 @@ export interface ChatMessage {
 
 export function createSystemMessage(): { role: "system"; content: string } {
   if (process.env.NODE_ENV === "development" && !SYSTEM_PROMPT_AGENT?.trim()) {
-    logWarning("[createSystemMessage] SYSTEM_PROMPT_AGENT is empty. Requests will not include system instructions.");
+    logWarning(
+      "[createSystemMessage] SYSTEM_PROMPT_AGENT is empty. Requests will not include system instructions.",
+    );
   }
 
   return {
@@ -88,7 +94,9 @@ export function appendCurrentTimeToUserTurn(
   now = new Date(),
   minimizeMetadata = false,
 ): ChatMessage["content"] {
-  const currentDateTime = minimizeMetadata ? `${now.toISOString().slice(0, 16)}Z` : formatLocalIsoDateTime(now);
+  const currentDateTime = minimizeMetadata
+    ? `${now.toISOString().slice(0, 16)}Z`
+    : formatLocalIsoDateTime(now);
   const timeZone = minimizeMetadata ? undefined : Intl.DateTimeFormat().resolvedOptions().timeZone;
   const notice =
     `<current_time>${currentDateTime}${timeZone ? ` (${timeZone})` : ""}</current_time>\n` +
@@ -153,7 +161,8 @@ export interface ChatCompletionResponse {
   choices: Array<{
     index: number;
     message: ChatMessage;
-    finish_reason: "stop" | "length" | "tool_calls" | "content_filter" | "insufficient_system_resource" | null;
+    finish_reason:
+      "stop" | "length" | "tool_calls" | "content_filter" | "insufficient_system_resource" | null;
     logprobs?: unknown;
   }>;
   usage?: ProviderUsage;

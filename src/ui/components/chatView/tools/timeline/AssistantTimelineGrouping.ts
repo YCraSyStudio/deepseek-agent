@@ -59,7 +59,9 @@ export function groupAssistantTimeline(
 }
 
 function groupCompletedCycle(timeline: AssistantTimelineEvent[]): AssistantTimelineBlock[] {
-  const visibleEvents = timeline.filter((event) => event.type === "tool-group" || Boolean(event.content));
+  const visibleEvents = timeline.filter(
+    (event) => event.type === "tool-group" || Boolean(event.content),
+  );
   let lastActivityIndex = -1;
   for (let index = visibleEvents.length - 1; index >= 0; index -= 1) {
     if (visibleEvents[index].type !== "content") {
@@ -69,13 +71,19 @@ function groupCompletedCycle(timeline: AssistantTimelineEvent[]): AssistantTimel
   }
 
   if (lastActivityIndex < 0) {
-    return visibleEvents.filter((event): event is Extract<AssistantTimelineEvent, { type: "content" }> => event.type === "content");
+    return visibleEvents.filter(
+      (event): event is Extract<AssistantTimelineEvent, { type: "content" }> =>
+        event.type === "content",
+    );
   }
 
   const activityEvents = visibleEvents.slice(0, lastActivityIndex + 1);
   let finalContent = visibleEvents
     .slice(lastActivityIndex + 1)
-    .filter((event): event is Extract<AssistantTimelineEvent, { type: "content" }> => event.type === "content");
+    .filter(
+      (event): event is Extract<AssistantTimelineEvent, { type: "content" }> =>
+        event.type === "content",
+    );
 
   if (finalContent.length === 1) {
     const split = splitFinalPreamble(finalContent[0]);
@@ -85,11 +93,14 @@ function groupCompletedCycle(timeline: AssistantTimelineEvent[]): AssistantTimel
     finalContent = [split.final];
   }
 
-  return [{
-    id: `activity-${activityEvents[0]!.id}`,
-    type: "activity",
-    rounds: groupActivityRounds(activityEvents),
-  }, ...finalContent];
+  return [
+    {
+      id: `activity-${activityEvents[0]!.id}`,
+      type: "activity",
+      rounds: groupActivityRounds(activityEvents),
+    },
+    ...finalContent,
+  ];
 }
 
 function groupActivityRounds(events: ActivityEvent[]): AssistantActivityRound[] {
@@ -98,7 +109,9 @@ function groupActivityRounds(events: ActivityEvent[]): AssistantActivityRound[] 
   let nextRound = 1;
 
   const flush = (round: number) => {
-    if (pending.length === 0) {return;}
+    if (pending.length === 0) {
+      return;
+    }
     rounds.push({
       id: `activity-round-${round}-${pending[0]!.id}`,
       round,
@@ -118,9 +131,7 @@ function groupActivityRounds(events: ActivityEvent[]): AssistantActivityRound[] 
   return rounds;
 }
 
-function splitFinalPreamble(
-  event: Extract<AssistantTimelineEvent, { type: "content" }>,
-): {
+function splitFinalPreamble(event: Extract<AssistantTimelineEvent, { type: "content" }>): {
   activity?: Extract<AssistantTimelineEvent, { type: "content" }>;
   final: Extract<AssistantTimelineEvent, { type: "content" }>;
 } {
@@ -145,7 +156,9 @@ function splitFinalPreamble(
 
 function isProcessPreamble(content: string): boolean {
   const ending = content.slice(-500);
-  return /(?:\bI (?:now )?have (?:everything|enough|all (?:the )?(?:context|information))|\b(?:Now I|I can now) (?:summarize|provide|present|answer)|\bLet me (?:summarize|provide|present)|\b(?:ya tengo|tengo ya) (?:todo|suficiente|toda la informaci[oó]n)|\b(?:ahora puedo|ya puedo) (?:resumir|presentar|responder)|\b(?:d[eé]jame|voy a) (?:resumir|presentar))(?:[^.!?]*)[.!?]?\s*$/i.test(ending);
+  return /(?:\bI (?:now )?have (?:everything|enough|all (?:the )?(?:context|information))|\b(?:Now I|I can now) (?:summarize|provide|present|answer)|\bLet me (?:summarize|provide|present)|\b(?:ya tengo|tengo ya) (?:todo|suficiente|toda la informaci[oó]n)|\b(?:ahora puedo|ya puedo) (?:resumir|presentar|responder)|\b(?:d[eé]jame|voy a) (?:resumir|presentar))(?:[^.!?]*)[.!?]?\s*$/i.test(
+    ending,
+  );
 }
 
 export function summarizeActivity(
@@ -169,7 +182,8 @@ export function summarizeActivity(
     }
   }
 
-  const activeStatus = statuses.find((status) => status === "awaiting_confirmation") ??
+  const activeStatus =
+    statuses.find((status) => status === "awaiting_confirmation") ??
     statuses.find((status) => status === "running") ??
     statuses.find((status) => status === "pending");
   return {

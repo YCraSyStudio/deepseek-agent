@@ -1,6 +1,16 @@
 import { useEffect, useRef } from "react";
 import type { VsCodeApi } from "@webview/VsCodeApi";
-import { WEBVIEW_PROTOCOL_VERSION, type AssistantTimelineEvent, type ContextWindowStatus, type ConversationMessage, type HandlerToWebviewMessage, type AppConfig, type ImageAttachment, type StoredToolCall, type ToolCall } from "@/contracts";
+import {
+  WEBVIEW_PROTOCOL_VERSION,
+  type AssistantTimelineEvent,
+  type ContextWindowStatus,
+  type ConversationMessage,
+  type HandlerToWebviewMessage,
+  type AppConfig,
+  type ImageAttachment,
+  type StoredToolCall,
+  type ToolCall,
+} from "@/contracts";
 import type { ConversationUsageSnapshot, UsageAggregate } from "@/shared/usage/Usage";
 import type { ApiKeyStatus, DangerConfirmationData, ToolCallStatus } from "../ChatViewTypes";
 import { setInterfaceLanguage } from "@webview/i18n";
@@ -26,28 +36,80 @@ export type MessageDispatcher = {
     generationId: string;
   }) => void;
   onShowTyping?: (generationId?: string) => void;
-  onStreamTimelineDelta?: (data: { generationId?: string; eventId: string; eventType: "reasoning" | "content"; content: string }) => void;
-  onStreamTimelineToolGroup?: (event: Extract<AssistantTimelineEvent, { type: "tool-group" }>, generationId?: string) => void;
+  onStreamTimelineDelta?: (data: {
+    generationId?: string;
+    eventId: string;
+    eventType: "reasoning" | "content";
+    content: string;
+  }) => void;
+  onStreamTimelineToolGroup?: (
+    event: Extract<AssistantTimelineEvent, { type: "tool-group" }>,
+    generationId?: string,
+  ) => void;
   onStreamDone?: (info: StreamDoneInfo & { generationId?: string }) => void;
   onStreamError?: (error: string, generationId?: string) => void;
   onClearChat?: () => void;
   onModelChanged?: (modelId: string) => void;
   onApiKeyStatus?: (status: ApiKeyStatus) => void;
   onConfigLoaded?: (config: Partial<AppConfig>, revision: number) => void;
-  onConfigUpdateResult?: (message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>) => void;
-  onToolCallStarted?: (data: { generationId?: string; toolCalls: ToolCall[]; round: number }) => void;
-  onToolCallResult?: (data: { generationId?: string; toolCallId: string; toolName: string; result: string; isError?: boolean; rejected?: boolean; status: ToolCallStatus }) => void;
-  onToolCallActionAccepted?: (data: { generationId?: string; toolCallId: string; status: "running" | "rejected" }) => void;
-  onToolCallConfirmationRequired?: (data: { generationId?: string; toolCalls: ToolCall[]; round: number; autoExecute: boolean; dangerConfirmation?: DangerConfirmationData }) => void;
-  onContextCompactionUpdated?: (data: { generationId: string; status: "compacting" | "completed" }) => void;
+  onConfigUpdateResult?: (
+    message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>,
+  ) => void;
+  onToolCallStarted?: (data: {
+    generationId?: string;
+    toolCalls: ToolCall[];
+    round: number;
+  }) => void;
+  onToolCallResult?: (data: {
+    generationId?: string;
+    toolCallId: string;
+    toolName: string;
+    result: string;
+    isError?: boolean;
+    rejected?: boolean;
+    status: ToolCallStatus;
+  }) => void;
+  onToolCallActionAccepted?: (data: {
+    generationId?: string;
+    toolCallId: string;
+    status: "running" | "rejected";
+  }) => void;
+  onToolCallConfirmationRequired?: (data: {
+    generationId?: string;
+    toolCalls: ToolCall[];
+    round: number;
+    autoExecute: boolean;
+    dangerConfirmation?: DangerConfirmationData;
+  }) => void;
+  onContextCompactionUpdated?: (data: {
+    generationId: string;
+    status: "compacting" | "completed";
+  }) => void;
   onContextCompacted?: (data: { generationId: string }) => void;
-  onContextWindowUpdated?: (data: { conversationId: string; contextWindow: ContextWindowStatus }) => void;
-  onContextCompactionResult?: (data: { requestId: string; status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }) => void;
+  onContextWindowUpdated?: (data: {
+    conversationId: string;
+    contextWindow: ContextWindowStatus;
+  }) => void;
+  onContextCompactionResult?: (data: {
+    requestId: string;
+    status: "compacted" | "empty" | "failed";
+    freedTokens?: number;
+    error?: string;
+  }) => void;
   onGenerationRecoveryStarted?: (data: { generationId?: string; message: string }) => void;
-  onResourceLimitReached?: (data: { generationId?: string; resource: string; error: string }) => void;
-  onGenerationSnapshot?: (message: Extract<HandlerToWebviewMessage, { type: "generationSnapshot" }>) => void;
+  onResourceLimitReached?: (data: {
+    generationId?: string;
+    resource: string;
+    error: string;
+  }) => void;
+  onGenerationSnapshot?: (
+    message: Extract<HandlerToWebviewMessage, { type: "generationSnapshot" }>,
+  ) => void;
   onAssistantUsageUpdated?: (data: { generationId?: string; usage: UsageAggregate }) => void;
-  onConversationUsageUpdated?: (data: { conversationId: string; usage: ConversationUsageSnapshot }) => void;
+  onConversationUsageUpdated?: (data: {
+    conversationId: string;
+    usage: ConversationUsageSnapshot;
+  }) => void;
 };
 
 export function useMessageHandler(
@@ -81,7 +143,12 @@ export function useMessageHandler(
           break;
 
         case "streamTimelineDelta":
-          dispatcherRef.current.onStreamTimelineDelta?.({ generationId: message.generationId, eventId: message.eventId, eventType: message.eventType, content: message.content });
+          dispatcherRef.current.onStreamTimelineDelta?.({
+            generationId: message.generationId,
+            eventId: message.eventId,
+            eventType: message.eventType,
+            content: message.content,
+          });
           break;
 
         case "streamTimelineToolGroup":
@@ -114,12 +181,16 @@ export function useMessageHandler(
           break;
 
         case "configLoaded":
-          if (message.config.interfaceLanguage) {setInterfaceLanguage(message.config.interfaceLanguage);}
+          if (message.config.interfaceLanguage) {
+            setInterfaceLanguage(message.config.interfaceLanguage);
+          }
           dispatcherRef.current.onConfigLoaded?.(message.config, message.revision);
           break;
 
         case "configUpdateResult":
-          if (message.config.interfaceLanguage) {setInterfaceLanguage(message.config.interfaceLanguage);}
+          if (message.config.interfaceLanguage) {
+            setInterfaceLanguage(message.config.interfaceLanguage);
+          }
           dispatcherRef.current.onConfigUpdateResult?.(message);
           break;
 
@@ -144,7 +215,11 @@ export function useMessageHandler(
           break;
 
         case "toolCallActionAccepted":
-          dispatcherRef.current.onToolCallActionAccepted?.({ generationId: message.generationId, toolCallId: message.toolCallId, status: message.status });
+          dispatcherRef.current.onToolCallActionAccepted?.({
+            generationId: message.generationId,
+            toolCallId: message.toolCallId,
+            status: message.status,
+          });
           break;
 
         case "toolCallConfirmationRequired":
@@ -158,7 +233,10 @@ export function useMessageHandler(
           break;
 
         case "contextCompactionUpdated":
-          dispatcherRef.current.onContextCompactionUpdated?.({ generationId: message.generationId, status: message.status });
+          dispatcherRef.current.onContextCompactionUpdated?.({
+            generationId: message.generationId,
+            status: message.status,
+          });
           break;
 
         case "contextCompacted":
@@ -166,11 +244,18 @@ export function useMessageHandler(
           break;
 
         case "generationRecoveryStarted":
-          dispatcherRef.current.onGenerationRecoveryStarted?.({ generationId: message.generationId, message: message.message });
+          dispatcherRef.current.onGenerationRecoveryStarted?.({
+            generationId: message.generationId,
+            message: message.message,
+          });
           break;
 
         case "resourceLimitReached":
-          dispatcherRef.current.onResourceLimitReached?.({ generationId: message.generationId, resource: message.resource, error: message.error });
+          dispatcherRef.current.onResourceLimitReached?.({
+            generationId: message.generationId,
+            resource: message.resource,
+            error: message.error,
+          });
           break;
 
         case "generationSnapshot":
@@ -178,11 +263,17 @@ export function useMessageHandler(
           break;
 
         case "assistantUsageUpdated":
-          dispatcherRef.current.onAssistantUsageUpdated?.({ generationId: message.generationId, usage: message.usage });
+          dispatcherRef.current.onAssistantUsageUpdated?.({
+            generationId: message.generationId,
+            usage: message.usage,
+          });
           break;
 
         case "conversationUsageUpdated":
-          dispatcherRef.current.onConversationUsageUpdated?.({ conversationId: message.conversationId, usage: message.usage });
+          dispatcherRef.current.onConversationUsageUpdated?.({
+            conversationId: message.conversationId,
+            usage: message.usage,
+          });
           break;
 
         case "contextWindowUpdated":

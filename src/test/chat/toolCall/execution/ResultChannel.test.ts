@@ -9,10 +9,13 @@ suite("tool result channel", () => {
     const { context, published, publishedResults } = createExecutionContext();
     const call = toolCall("run_terminal_command", { command: "npm test" });
     recordInitialToolCall(call, context);
-    postToolCallResult(context, createExecutionResult(call, {
-      kind: "completed",
-      content: JSON.stringify({ exitCode: 0, token: "private-value" }),
-    }));
+    postToolCallResult(
+      context,
+      createExecutionResult(call, {
+        kind: "completed",
+        content: JSON.stringify({ exitCode: 0, token: "private-value" }),
+      }),
+    );
 
     assert.strictEqual(published.length, 1);
     assert.strictEqual(published[0]?.type, "toolCallResult");
@@ -32,11 +35,18 @@ suite("tool result channel", () => {
     const { context, published } = createExecutionContext();
     const call = toolCall("edit_file", { path: "src/app.ts" });
     recordInitialToolCall(call, context);
-    postToolCallResult(context, createExecutionResult(call, {
-      kind: "confirmation_required",
-      content: JSON.stringify({ requiresConfirmation: true, dangerLevel: "caution", warningMessage: "Apply?" }),
-      dangerLevel: "caution",
-    }));
+    postToolCallResult(
+      context,
+      createExecutionResult(call, {
+        kind: "confirmation_required",
+        content: JSON.stringify({
+          requiresConfirmation: true,
+          dangerLevel: "caution",
+          warningMessage: "Apply?",
+        }),
+        dangerLevel: "caution",
+      }),
+    );
 
     assert.strictEqual(published[0]?.status, "awaiting_confirmation");
     assert.strictEqual(context.executedToolCalls.get(call.id)?.status, "awaiting_confirmation");
@@ -44,13 +54,22 @@ suite("tool result channel", () => {
 
   test("taints the generation after a successful web read but not after a failure", () => {
     const { context, webTainted } = createExecutionContext();
-    postToolCallResult(context, createExecutionResult(toolCall("run_terminal_command"), { kind: "completed", content: "ok" }));
+    postToolCallResult(
+      context,
+      createExecutionResult(toolCall("run_terminal_command"), { kind: "completed", content: "ok" }),
+    );
     assert.strictEqual(webTainted(), false);
 
-    postToolCallResult(context, createExecutionResult(toolCall("search_web"), { kind: "error", content: "no index" }));
+    postToolCallResult(
+      context,
+      createExecutionResult(toolCall("search_web"), { kind: "error", content: "no index" }),
+    );
     assert.strictEqual(webTainted(), false);
 
-    postToolCallResult(context, createExecutionResult(toolCall("search_web"), { kind: "completed", content: "results" }));
+    postToolCallResult(
+      context,
+      createExecutionResult(toolCall("search_web"), { kind: "completed", content: "results" }),
+    );
     assert.strictEqual(webTainted(), true);
   });
 });

@@ -110,8 +110,8 @@ export const chat = {
         contextSummary: "上下文摘要",
         fileCompaction: "文件压缩",
         visionAnalysis: "视觉分析",
-        codeCompletion: "Beta 代码补全"
-      }
-    }
-  }
+        codeCompletion: "Beta 代码补全",
+      },
+    },
+  },
 } satisfies TranslationCatalog;

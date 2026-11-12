@@ -7,7 +7,10 @@ import {
 
 suite("API origin security", () => {
   test("accepts HTTPS and normalizes only the base path", () => {
-    assert.strictEqual(normalizeApiBaseUrl("https://api.deepseek.com/v1///"), "https://api.deepseek.com/v1");
+    assert.strictEqual(
+      normalizeApiBaseUrl("https://api.deepseek.com/v1///"),
+      "https://api.deepseek.com/v1",
+    );
     assert.strictEqual(isAllowedApiBaseUrl("https://example.test:8443/v1"), true);
   });
 

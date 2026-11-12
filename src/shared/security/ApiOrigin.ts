@@ -36,7 +36,10 @@ export function normalizeApiBaseUrl(value: string): string {
   return url.toString().replace(/\/$/, "");
 }
 
-export function normalizeApiBaseUrlOrDefault(value: unknown, fallback = DEFAULT_API_BASE_URL): string {
+export function normalizeApiBaseUrlOrDefault(
+  value: unknown,
+  fallback = DEFAULT_API_BASE_URL,
+): string {
   if (typeof value !== "string") {
     return fallback;
   }
@@ -88,7 +91,9 @@ export function assertSameApiOrigin(baseUrl: string, candidateUrl: string): URL 
   const base = parseApiBaseUrl(baseUrl);
   const candidate = parseApiRequestUrl(candidateUrl);
   if (candidate.origin !== base.origin) {
-    throw new ApiOriginError(`Refusing to send API credentials to a different origin (${candidate.origin}).`);
+    throw new ApiOriginError(
+      `Refusing to send API credentials to a different origin (${candidate.origin}).`,
+    );
   }
   return candidate;
 }

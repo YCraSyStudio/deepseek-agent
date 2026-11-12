@@ -1,4 +1,9 @@
-import type { AppConfig, ChatCompletionRequest, ChatCompletionResponse, ChatMessage } from "@/contracts";
+import type {
+  AppConfig,
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ChatMessage,
+} from "@/contracts";
 import type {
   ProgressReviewContext,
   ProgressReviewResult,
@@ -40,11 +45,16 @@ Use high confidence only when the evidence clearly supports the decision. Do not
 export interface ReviewProgressOptions extends ProgressReviewContext {
   providerConfig: AppConfig;
   signal?: AbortSignal;
-  complete?: (signal: AbortSignal, request: ChatCompletionRequest) => Promise<ChatCompletionResponse>;
+  complete?: (
+    signal: AbortSignal,
+    request: ChatCompletionRequest,
+  ) => Promise<ChatCompletionResponse>;
   onUsage?: (usage?: ProviderUsage) => void;
 }
 
-export async function reviewProgress(options: ReviewProgressOptions): Promise<ProgressReviewResult> {
+export async function reviewProgress(
+  options: ReviewProgressOptions,
+): Promise<ProgressReviewResult> {
   const timeoutSignal = AbortSignal.timeout(REVIEW_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
   const request: ChatCompletionRequest = {
@@ -57,18 +67,27 @@ export async function reviewProgress(options: ReviewProgressOptions): Promise<Pr
     temperature: 0,
     thinking: { type: "disabled" },
     tool_choice: "none",
-    ...(options.providerConfig.privacyMinimizeData === false && options.providerConfig.userId ? { user_id: options.providerConfig.userId } : {}),
+    ...(options.providerConfig.privacyMinimizeData === false && options.providerConfig.userId
+      ? { user_id: options.providerConfig.userId }
+      : {}),
   };
 
   let usage: ProviderUsage | undefined;
   try {
     const response = options.complete
       ? await options.complete(signal, request)
-      : await chatCompletion(request, options.providerConfig.apiKey, options.providerConfig.baseUrl, signal);
+      : await chatCompletion(
+          request,
+          options.providerConfig.apiKey,
+          options.providerConfig.baseUrl,
+          signal,
+        );
     usage = response.usage;
     return parseProgressReview(getTextContent(response.choices[0]?.message.content));
   } catch (error: unknown) {
-    if (options.signal?.aborted) {throw error;}
+    if (options.signal?.aborted) {
+      throw error;
+    }
     logWarning("[ProgressReviewer] DeepSeek progress review was unavailable", error);
     return unknownProgressReview();
   } finally {
@@ -77,16 +96,28 @@ export async function reviewProgress(options: ReviewProgressOptions): Promise<Pr
 }
 
 export function parseProgressReview(content: string | null | undefined): ProgressReviewResult {
-  if (!content) {return unknownProgressReview();}
+  if (!content) {
+    return unknownProgressReview();
+  }
   try {
-    const normalized = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const normalized = content
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "");
     const value = JSON.parse(normalized) as unknown;
-    if (!isRecord(value) || !hasOnlyKeys(value, ["decision", "confidence", "reason", "nextAction"])) {
+    if (
+      !isRecord(value) ||
+      !hasOnlyKeys(value, ["decision", "confidence", "reason", "nextAction"])
+    ) {
       return unknownProgressReview();
     }
     if (
-      (value.decision !== "continue" && value.decision !== "finalize" && value.decision !== "blocked") ||
-      (value.confidence !== "high" && value.confidence !== "medium" && value.confidence !== "low") ||
+      (value.decision !== "continue" &&
+        value.decision !== "finalize" &&
+        value.decision !== "blocked") ||
+      (value.confidence !== "high" &&
+        value.confidence !== "medium" &&
+        value.confidence !== "low") ||
       typeof value.reason !== "string" ||
       value.reason.trim().length === 0 ||
       value.reason.length > MAX_REASON_LENGTH ||
@@ -107,7 +138,9 @@ export function parseProgressReview(content: string | null | undefined): Progres
 }
 
 function buildProgressEvidence(options: ProgressReviewContext): Record<string, unknown> {
-  const userMessages = options.messages.filter((message) => message.role === "user" && !isTurnGuidanceMessage(message));
+  const userMessages = options.messages.filter(
+    (message) => message.role === "user" && !isTurnGuidanceMessage(message),
+  );
   const originatingRequest = getTextContent(userMessages[0]?.content);
   const currentRequest = getTextContent(userMessages.at(-1)?.content);
   const toolCallCounts: Record<string, number> = {};
@@ -147,7 +180,9 @@ function buildActivityHistory(messages: ChatMessage[]): Array<Record<string, unk
       }
       continue;
     }
-    if (message.role !== "tool" || !message.tool_call_id) {continue;}
+    if (message.role !== "tool" || !message.tool_call_id) {
+      continue;
+    }
     const call = pending.get(message.tool_call_id) ?? { tool: message.name ?? "unknown" };
     const content = getTextContent(message.content);
     const commandResult = parseCommandResult(content);
@@ -158,7 +193,9 @@ function buildActivityHistory(messages: ChatMessage[]): Array<Record<string, unk
     });
     pending.delete(message.tool_call_id);
   }
-  if (history.length <= MAX_ACTIVITY_EVENTS) {return history;}
+  if (history.length <= MAX_ACTIVITY_EVENTS) {
+    return history;
+  }
   const headCount = Math.floor(MAX_ACTIVITY_EVENTS / 4);
   const tailCount = MAX_ACTIVITY_EVENTS - headCount;
   return [
@@ -171,9 +208,10 @@ function buildActivityHistory(messages: ChatMessage[]): Array<Record<string, unk
 function summarizeToolArguments(toolName: string, rawArguments: string): { detail?: string } {
   try {
     const args = JSON.parse(rawArguments) as Record<string, unknown>;
-    const detail = toolName === "run_terminal_command"
-      ? args.command
-      : args.path ?? args.query ?? args.filePattern;
+    const detail =
+      toolName === "run_terminal_command"
+        ? args.command
+        : (args.path ?? args.query ?? args.filePattern);
     return typeof detail === "string" && detail.trim()
       ? { detail: bound(detail, MAX_ACTIVITY_DETAIL_BYTES) }
       : {};
@@ -210,21 +248,38 @@ function classifyToolOutcome(content: string): "completed" | "error" | "rejected
       ? "completed"
       : "error";
   }
-  if (/"code"\s*:\s*"security_review_revise"|security reviewer rejected|rejected by user/i.test(content) || /^\s*(?:error:\s*)?cancelled\b/i.test(content)) {
+  if (
+    /"code"\s*:\s*"security_review_revise"|security reviewer rejected|rejected by user/i.test(
+      content,
+    ) ||
+    /^\s*(?:error:\s*)?cancelled\b/i.test(content)
+  ) {
     return "rejected";
   }
-  if (/^\s*skipped:/i.test(content)) {return "skipped";}
-  if (/^\s*(?:error\b|\{[^}]*"kind"\s*:\s*"error")/i.test(content)) {return "error";}
+  if (/^\s*skipped:/i.test(content)) {
+    return "skipped";
+  }
+  if (/^\s*(?:error\b|\{[^}]*"kind"\s*:\s*"error")/i.test(content)) {
+    return "error";
+  }
   return "completed";
 }
 
-function parseCommandResult(content: string): { exitCode?: number | null; timedOut?: boolean; cancelled?: boolean } | undefined {
-  if (!content.trimStart().startsWith("{")) {return undefined;}
+function parseCommandResult(
+  content: string,
+): { exitCode?: number | null; timedOut?: boolean; cancelled?: boolean } | undefined {
+  if (!content.trimStart().startsWith("{")) {
+    return undefined;
+  }
   try {
     const value = JSON.parse(content) as Record<string, unknown>;
-    if (value.kind !== "command_result") {return undefined;}
+    if (value.kind !== "command_result") {
+      return undefined;
+    }
     return {
-      ...(typeof value.exitCode === "number" || value.exitCode === null ? { exitCode: value.exitCode } : {}),
+      ...(typeof value.exitCode === "number" || value.exitCode === null
+        ? { exitCode: value.exitCode }
+        : {}),
       ...(typeof value.timedOut === "boolean" ? { timedOut: value.timedOut } : {}),
       ...(typeof value.cancelled === "boolean" ? { cancelled: value.cancelled } : {}),
     };
@@ -244,4 +299,3 @@ function unknownProgressReview(): ProgressReviewResult {
 function bound(value: string, maxBytes: number): string {
   return boundUtf8HeadTail(redactSensitiveText(value), maxBytes).text;
 }
-

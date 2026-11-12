@@ -5,7 +5,9 @@
   background: var(--input-bg);
   border-radius: 16px;
   padding: 5px;
-  transition: border-color .16s, box-shadow .16s;
+  transition:
+    border-color 0.16s,
+    box-shadow 0.16s;
 
   &:focus-within {
     border-color: var(--input-focus-border);
@@ -31,8 +33,12 @@
     overflow-wrap: break-word;
     font: inherit;
   }
-  .chatGhostPrefix { color: transparent; }
-  .chatGhostSuggestion { color: var(--vscode-editorGhostText-foreground, #888888); }
+  .chatGhostPrefix {
+    color: transparent;
+  }
+  .chatGhostSuggestion {
+    color: var(--vscode-editorGhostText-foreground, #888888);
+  }
 
   .Input {
     background: transparent;
@@ -80,7 +86,7 @@
       background-clip: padding-box;
     }
     &:disabled {
-      opacity: .65;
+      opacity: 0.65;
       cursor: default;
     }
   }
@@ -190,7 +196,7 @@
     }
     &:disabled {
       cursor: not-allowed;
-      opacity: .55;
+      opacity: 0.55;
     }
   }
 
@@ -204,7 +210,7 @@
     height: 30px;
     font-weight: 600;
     padding: 5px;
-    transition: background .15s;
+    transition: background 0.15s;
 
     &:hover {
       background: #e04848;
@@ -251,4 +257,9 @@
   border: 0;
 }
 
-.chatSuggestionNotice { display: block; color: var(--text-secondary); font-size: 11px; padding: 3px 9px; }
+.chatSuggestionNotice {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 3px 9px;
+}

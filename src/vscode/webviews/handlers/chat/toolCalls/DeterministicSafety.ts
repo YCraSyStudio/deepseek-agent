@@ -2,13 +2,19 @@ import { createHash } from "node:crypto";
 import * as path from "node:path";
 import type { ToolCall } from "@/contracts";
 import type { ConfirmationRequiredResult } from "@/application/tools/Types";
-import { getToolWorkspaceHost, isSensitiveWorkspacePath } from "@/infrastructure/tools/ToolWorkspace";
+import {
+  getToolWorkspaceHost,
+  isSensitiveWorkspacePath,
+} from "@/infrastructure/tools/ToolWorkspace";
 import {
   normalizeCommandForDecision,
   parseCommandFacts,
   type ScriptInvocation,
 } from "@/infrastructure/tools/safety/CommandFacts";
-import { analyzeScriptEffects, type ScriptEffectProfile } from "@/infrastructure/tools/safety/ScriptEffects";
+import {
+  analyzeScriptEffects,
+  type ScriptEffectProfile,
+} from "@/infrastructure/tools/safety/ScriptEffects";
 import {
   approveGitRecoverablePathChange,
   approveReadOnlyDiagnostic,
@@ -68,7 +74,9 @@ async function evaluatePathRecovery(
     return { verdict: { kind: "review", code: "path-unknown", facts: { toolName } } };
   }
 
-  const report = await probeGitRecovery(filePath, { workspaceRoot: input.confirmation.workspaceRoot });
+  const report = await probeGitRecovery(filePath, {
+    workspaceRoot: input.confirmation.workspaceRoot,
+  });
   return {
     verdict: approveGitRecoverablePathChange({
       toolName,
@@ -89,7 +97,12 @@ function fileMutationDecisionKey(
   beforeHash?: string,
 ): string | undefined {
   return isCacheableScope(scope)
-    ? createDecisionKey({ ...scope, toolName, subject: normalizePathSubject(filePath), contentHash: beforeHash })
+    ? createDecisionKey({
+        ...scope,
+        toolName,
+        subject: normalizePathSubject(filePath),
+        contentHash: beforeHash,
+      })
     : undefined;
 }
 
@@ -112,12 +125,16 @@ async function evaluate(input: DeterministicSafetyInput): Promise<DeterministicS
     });
     return {
       verdict,
-      key: filePath ? fileMutationDecisionKey(input.scope, toolName, filePath, input.confirmation.beforeHash) : undefined,
+      key: filePath
+        ? fileMutationDecisionKey(input.scope, toolName, filePath, input.confirmation.beforeHash)
+        : undefined,
     };
   }
 
   if (toolName !== "run_terminal_command") {
-    return { verdict: { kind: "review", code: "not-deterministically-classified", facts: { toolName } } };
+    return {
+      verdict: { kind: "review", code: "not-deterministically-classified", facts: { toolName } },
+    };
   }
 
   const command = input.confirmation.command ?? readCommandArgument(input.toolCall);
@@ -140,22 +157,31 @@ async function evaluate(input: DeterministicSafetyInput): Promise<DeterministicS
       profile: script.profile,
       hash: script.hash,
     });
-    const key = isCacheableScope(input.scope) && script.hash
-      ? createDecisionKey({
-          ...input.scope,
-          toolName,
-          subject: normalizeCommandForDecision(command),
-          contentHash: script.hash,
-          effectProfile: describeProfile(script.profile),
-        })
-      : undefined;
+    const key =
+      isCacheableScope(input.scope) && script.hash
+        ? createDecisionKey({
+            ...input.scope,
+            toolName,
+            subject: normalizeCommandForDecision(command),
+            contentHash: script.hash,
+            effectProfile: describeProfile(script.profile),
+          })
+        : undefined;
     return { verdict, key };
   }
 
   return {
-    verdict: { kind: "review", code: `command-${facts.classification}`, facts: { programs: facts.programs } },
+    verdict: {
+      kind: "review",
+      code: `command-${facts.classification}`,
+      facts: { programs: facts.programs },
+    },
     key: isCacheableScope(input.scope)
-      ? createDecisionKey({ ...input.scope, toolName, subject: normalizeCommandForDecision(command) })
+      ? createDecisionKey({
+          ...input.scope,
+          toolName,
+          subject: normalizeCommandForDecision(command),
+        })
       : undefined,
   };
 }
@@ -167,7 +193,10 @@ interface ScriptFacts {
   hash?: string;
 }
 
-async function collectScriptFacts(script: ScriptInvocation, cwd: string | undefined): Promise<ScriptFacts> {
+async function collectScriptFacts(
+  script: ScriptInvocation,
+  cwd: string | undefined,
+): Promise<ScriptFacts> {
   const unknown: ScriptFacts = {
     contained: false,
     provenance: "unknown",
@@ -185,11 +214,13 @@ async function collectScriptFacts(script: ScriptInvocation, cwd: string | undefi
   }
 
   const absoluteScript = resolveScriptPath(script.path, cwd, workspaceRoot);
-  const relativeScript = absoluteScript ? toWorkspaceRelativePath(absoluteScript, workspaceRoot) : undefined;
+  const relativeScript = absoluteScript
+    ? toWorkspaceRelativePath(absoluteScript, workspaceRoot)
+    : undefined;
   if (!absoluteScript || !relativeScript) {
     return unknown;
   }
-  if (!await host.isPathInsideWorkspace?.(absoluteScript)) {
+  if (!(await host.isPathInsideWorkspace?.(absoluteScript))) {
     return { ...unknown, contained: false };
   }
 
@@ -207,22 +238,37 @@ async function collectScriptFacts(script: ScriptInvocation, cwd: string | undefi
   const hash = createHash("sha256").update(content).digest("hex");
   return {
     contained: true,
-    provenance: fileChangeRegistry.find(relativeScript, undefined, hash) ? "agent-authored" : "changed",
-    profile: analyzeScriptEffects(text.slice(0, MAX_SCRIPT_CHARACTERS), script.language, { workspaceRoot }),
+    provenance: fileChangeRegistry.find(relativeScript, undefined, hash)
+      ? "agent-authored"
+      : "changed",
+    profile: analyzeScriptEffects(text.slice(0, MAX_SCRIPT_CHARACTERS), script.language, {
+      workspaceRoot,
+    }),
     hash,
   };
 }
 
-function resolveScriptPath(operand: string, cwd: string | undefined, workspaceRoot: string): string | undefined {
-  const absolute = path.isAbsolute(operand) || path.win32.isAbsolute(operand)
-    ? path.resolve(operand)
-    : path.resolve(cwd ?? workspaceRoot, operand);
+function resolveScriptPath(
+  operand: string,
+  cwd: string | undefined,
+  workspaceRoot: string,
+): string | undefined {
+  const absolute =
+    path.isAbsolute(operand) || path.win32.isAbsolute(operand)
+      ? path.resolve(operand)
+      : path.resolve(cwd ?? workspaceRoot, operand);
   return absolute || undefined;
 }
 
 function toWorkspaceRelativePath(absolutePath: string, workspaceRoot: string): string | undefined {
   const relative = path.relative(path.resolve(workspaceRoot), absolutePath);
-  if (!relative || relative === "." || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  if (
+    !relative ||
+    relative === "." ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  ) {
     return undefined;
   }
   return relative.replace(/\\/g, "/");

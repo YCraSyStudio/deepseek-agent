@@ -3,11 +3,18 @@ import { stat } from "node:fs/promises";
 import * as path from "node:path";
 
 /** A human-editable template, without model requests or guessed project commands. */
-export async function ensureWorkspaceInstructionsFile(directory: string, locale = "en"): Promise<string> {
-  if (!(await stat(directory)).isDirectory()) {throw new Error("Open an existing workspace directory first.");}
+export async function ensureWorkspaceInstructionsFile(
+  directory: string,
+  locale = "en",
+): Promise<string> {
+  if (!(await stat(directory)).isDirectory()) {
+    throw new Error("Open an existing workspace directory first.");
+  }
   const file = path.join(directory, "AGENTS.md");
   await createFileIfMissing(file, template(locale), 0o644);
-  if (!(await stat(file)).isFile()) {throw new Error("Workspace AGENTS.md must be a file.");}
+  if (!(await stat(file)).isFile()) {
+    throw new Error("Workspace AGENTS.md must be a file.");
+  }
   return file;
 }
 

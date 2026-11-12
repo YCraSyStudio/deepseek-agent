@@ -20,7 +20,10 @@ suite("Chat flow", () => {
     assert.equal(terminal.status, "completed");
     assert.equal(chat.transport.remaining, 0, "every scripted provider round must be consumed");
     assert.match(
-      chat.messagesOfType("streamTimelineDelta").map((post) => String(post.content)).join(""),
+      chat
+        .messagesOfType("streamTimelineDelta")
+        .map((post) => String(post.content))
+        .join(""),
       /The endpoint is ready\./,
     );
 
@@ -28,7 +31,10 @@ suite("Chat flow", () => {
     assert.ok(conversationId);
     const stored = await chat.history.getById(conversationId);
     assert.ok(stored, "the completed turn must be persisted");
-    assert.equal(stored.messages.find((message) => message.role === "user")?.content, "Describe the endpoint");
+    assert.equal(
+      stored.messages.find((message) => message.role === "user")?.content,
+      "Describe the endpoint",
+    );
     assert.match(
       stored.messages.find((message) => message.role === "assistant")?.content ?? "",
       /The endpoint is ready\./,
@@ -81,11 +87,14 @@ suite("Chat flow", () => {
     const stored = await chat.history.getById(conversationId);
     assert.ok(stored);
     assert.deepEqual(
-      stored.messages.filter((message) => message.role === "user").map((message) => message.content),
+      stored.messages
+        .filter((message) => message.role === "user")
+        .map((message) => message.content),
       ["First question", "Second question"],
     );
     assert.deepEqual(
-      chat.messagesOfType("generationActivityChanged")
+      chat
+        .messagesOfType("generationActivityChanged")
         .filter((post) => post.conversationId === conversationId)
         .map((post) => post.status),
       ["queued", "running", "queued", "settled", "running", "settled"],
@@ -133,7 +142,10 @@ suite("Chat flow", () => {
     await chat.runTurn("/status");
 
     const sent = chat.transport.lastUserMessage();
-    assert.ok(sent?.startsWith("/status"), `the command must reach the model as text, got: ${sent ?? "<none>"}`);
+    assert.ok(
+      sent?.startsWith("/status"),
+      `the command must reach the model as text, got: ${sent ?? "<none>"}`,
+    );
     assert.equal(chat.transport.streamedRequests().length, 1);
   });
 
@@ -147,7 +159,9 @@ suite("Chat flow", () => {
     assert.notEqual(chat.conversationIdFor(first), chat.conversationIdFor(second));
     const stored = await chat.history.getById(chat.conversationIdFor(second)!);
     assert.deepEqual(
-      stored?.messages.filter((message) => message.role === "user").map((message) => message.content),
+      stored?.messages
+        .filter((message) => message.role === "user")
+        .map((message) => message.content),
       ["Second question"],
     );
   });
@@ -172,7 +186,9 @@ suite("Chat flow", () => {
 
   test("surfaces a provider failure once without a hidden retry", async () => {
     chat = await ChatE2e.create();
-    chat.transport.respond({ failure: { status: 404, message: "Model not found", code: "model_not_found" } });
+    chat.transport.respond({
+      failure: { status: 404, message: "Model not found", code: "model_not_found" },
+    });
 
     const generationId = await chat.startTurn("Use the missing model");
     const terminal = await chat.waitForTerminal(generationId);

@@ -1,5 +1,8 @@
 import * as assert from "node:assert";
-import { GenerationCoordinator, getGenerationStopReason } from "@/application/chat/GenerationCoordinator";
+import {
+  GenerationCoordinator,
+  getGenerationStopReason,
+} from "@/application/chat/GenerationCoordinator";
 import { ResourceGovernor } from "@/application/chat/ResourceGovernor";
 
 suite("GenerationCoordinator", () => {
@@ -9,10 +12,11 @@ suite("GenerationCoordinator", () => {
     const coordinator = new GenerationCoordinator<string>({
       idGenerator: sequentialIds(),
       getLimit: () => 8,
-      run: async (_generationId, item) => new Promise<void>((resolve) => {
-        started.push(item.payload);
-        releases.push(resolve);
-      }),
+      run: async (_generationId, item) =>
+        new Promise<void>((resolve) => {
+          started.push(item.payload);
+          releases.push(resolve);
+        }),
     });
     for (let index = 0; index < 9; index += 1) {
       coordinator.enqueue(task(`conversation-${index}`, `run-${index}`, index));
@@ -31,10 +35,11 @@ suite("GenerationCoordinator", () => {
     const coordinator = new GenerationCoordinator<string>({
       idGenerator: sequentialIds(),
       getLimit: () => 2,
-      run: async (_generationId, task) => new Promise<void>((resolve) => {
-        started.push(task.payload);
-        releases.set(task.payload, resolve);
-      }),
+      run: async (_generationId, task) =>
+        new Promise<void>((resolve) => {
+          started.push(task.payload);
+          releases.set(task.payload, resolve);
+        }),
     });
 
     coordinator.enqueue(task("a", "a1", 1));
@@ -55,7 +60,10 @@ suite("GenerationCoordinator", () => {
     const coordinator = new GenerationCoordinator<string>({
       idGenerator: sequentialIds(),
       getLimit: () => 1,
-      run: async () => new Promise<void>((resolve) => { release = resolve; }),
+      run: async () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
     });
     coordinator.enqueue(task("a", "first", 1));
     await tick();
@@ -92,12 +100,17 @@ suite("GenerationCoordinator", () => {
     const coordinator = new GenerationCoordinator<string>({
       idGenerator: sequentialIds(),
       getLimit: () => 1,
-      run: async (_generationId, _task, signal) => new Promise<void>((resolve) => {
-        signal.addEventListener("abort", () => {
-          observedReason = getGenerationStopReason(signal);
-          resolve();
-        }, { once: true });
-      }),
+      run: async (_generationId, _task, signal) =>
+        new Promise<void>((resolve) => {
+          signal.addEventListener(
+            "abort",
+            () => {
+              observedReason = getGenerationStopReason(signal);
+              resolve();
+            },
+            { once: true },
+          );
+        }),
     });
     coordinator.enqueue(task("a", "first", 1));
     const active = coordinator.getActiveForConversation("a");
@@ -115,7 +128,10 @@ suite("GenerationCoordinator", () => {
     const coordinator = new GenerationCoordinator<string>({
       idGenerator: sequentialIds(),
       getLimit: () => 1,
-      run: async () => new Promise<void>((resolve) => {release = resolve;}),
+      run: async () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
     });
     coordinator.enqueue(task("a", "active", 0));
     for (let index = 0; index < 32; index += 1) {

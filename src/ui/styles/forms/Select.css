@@ -5,18 +5,25 @@ select {
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  background-image: linear-gradient(45deg, #0000 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, #0000 50%);
+  background-image:
+    linear-gradient(45deg, #0000 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, #0000 50%);
   background-position: calc(100% - 14px), calc(100% - 9px);
   background-repeat: no-repeat;
-  background-size: 5px 5px, 5px 5px;
+  background-size:
+    5px 5px,
+    5px 5px;
   border-radius: var(--control-radius);
   outline: none;
   width: 100%;
   min-width: 100px;
   min-height: var(--control-min-height);
-  padding: var(--control-padding-block) 34px var(--control-padding-block) var(--control-padding-inline);
+  padding: var(--control-padding-block) 34px var(--control-padding-block)
+    var(--control-padding-inline);
   font: inherit;
-  transition: border-color .16s, box-shadow .16s;
+  transition:
+    border-color 0.16s,
+    box-shadow 0.16s;
 
   &:hover:not(:disabled) {
     background-color: var(--control-hover-bg);
@@ -54,7 +61,10 @@ select {
       margin-inline-start: auto;
     }
 
-    &:disabled { opacity: .5; cursor: not-allowed; }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
     /* The picker replaces the visible field, so no second box sits underneath. */
     &:open {
@@ -63,7 +73,9 @@ select {
       border-color: transparent;
       box-shadow: none;
 
-      &::picker-icon { visibility: hidden; }
+      &::picker-icon {
+        visibility: hidden;
+      }
     }
 
     &::picker(select) {
@@ -75,13 +87,20 @@ select {
       min-width: anchor-size(width);
       max-width: calc(100vw - 16px);
       max-height: min(320px, calc(100vh - 16px));
-      position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+      position-try-fallbacks:
+        flip-block,
+        flip-inline,
+        flip-block flip-inline;
       margin: 0;
       padding: 4px;
       border: 1px solid var(--input-focus-border);
       border-radius: var(--control-radius);
       background: var(--vscode-menu-background, var(--bg-secondary));
-      background: color-mix(in srgb, var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity), transparent);
+      background: color-mix(
+        in srgb,
+        var(--vscode-menu-background, var(--bg-secondary)) var(--floating-surface-opacity),
+        transparent
+      );
       backdrop-filter: var(--floating-surface-filter);
       box-shadow: 0 5px 14px #0003;
       color: var(--vscode-menu-foreground, var(--text-primary));
@@ -105,12 +124,18 @@ select {
       &:checked,
       &:hover,
       &:focus-visible {
-        background: var(--vscode-menu-selectionBackground, color-mix(in srgb, var(--accent-color) 24%, transparent));
+        background: var(
+          --vscode-menu-selectionBackground,
+          color-mix(in srgb, var(--accent-color) 24%, transparent)
+        );
         color: var(--vscode-menu-selectionForeground, var(--text-primary));
         outline: none;
       }
 
-      &:disabled { opacity: .5; cursor: not-allowed; }
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
 
       &::checkmark {
         order: 1;

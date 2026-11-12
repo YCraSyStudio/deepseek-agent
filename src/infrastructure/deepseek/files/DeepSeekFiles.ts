@@ -1,6 +1,9 @@
 import { deepseekFetch } from "@/infrastructure/deepseek/client/DeepSeekFetch";
 import { buildApiUrl } from "@/infrastructure/deepseek/client/DeepSeekFetch";
-import { MAX_CHAT_RESPONSE_BYTES, readBoundedJson } from "@/infrastructure/deepseek/client/BoundedResponseJson";
+import {
+  MAX_CHAT_RESPONSE_BYTES,
+  readBoundedJson,
+} from "@/infrastructure/deepseek/client/BoundedResponseJson";
 
 const FILE_UPLOAD_TIMEOUT_MS = 10 * 60 * 1_000;
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
@@ -27,8 +30,19 @@ export async function uploadDeepSeekImage(options: {
   if (options.bytes.byteLength === 0 || options.bytes.byteLength > MAX_FILE_BYTES) {
     throw new Error("Images uploaded to DeepSeek must be between 1 byte and 64 MiB.");
   }
-  const extension = ({ "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" } as Record<string, string>)[options.mediaType] ?? "bin";
-  const filename = options.minimizeMetadata !== false ? `image.${extension}` : options.filename.slice(0, MAX_FILENAME_LENGTH);
+  const extension =
+    (
+      {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/gif": "gif",
+        "image/webp": "webp",
+      } as Record<string, string>
+    )[options.mediaType] ?? "bin";
+  const filename =
+    options.minimizeMetadata !== false
+      ? `image.${extension}`
+      : options.filename.slice(0, MAX_FILENAME_LENGTH);
   const form = new FormData();
   form.append("purpose", "user_data");
   if (options.expiresAfterSeconds !== undefined) {
@@ -64,12 +78,18 @@ export async function deleteDeepSeekFile(options: {
 }
 
 function parseFile(value: unknown): DeepSeekFile {
-  if (!value || typeof value !== "object") {throw new Error("DeepSeek returned an invalid file response.");}
+  if (!value || typeof value !== "object") {
+    throw new Error("DeepSeek returned an invalid file response.");
+  }
   const file = value as Record<string, unknown>;
   assertFileId(file.id);
-  if (!Number.isSafeInteger(file.bytes) || (file.bytes as number) < 1 ||
-    !Number.isSafeInteger(file.created_at) || (file.created_at as number) < 0 ||
-    typeof file.filename !== "string") {
+  if (
+    !Number.isSafeInteger(file.bytes) ||
+    (file.bytes as number) < 1 ||
+    !Number.isSafeInteger(file.created_at) ||
+    (file.created_at as number) < 0 ||
+    typeof file.filename !== "string"
+  ) {
     throw new Error("DeepSeek returned incomplete file metadata.");
   }
   return {

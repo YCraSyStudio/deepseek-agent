@@ -8,7 +8,10 @@ import {
 } from "./KeepAliveTerminals";
 import * as path from "node:path";
 
-async function handleTerminalCommand(args: Record<string, unknown>, context?: ToolHandlerContext): Promise<string> {
+async function handleTerminalCommand(
+  args: Record<string, unknown>,
+  context?: ToolHandlerContext,
+): Promise<string> {
   const keepAliveAction = readKeepAliveAction(args);
   if (keepAliveAction) {
     return controlKeepAliveTerminal(keepAliveAction, args, context);
@@ -40,9 +43,10 @@ async function handleTerminalCommand(args: Record<string, unknown>, context?: To
   return JSON.stringify({
     requiresConfirmation: true,
     dangerLevel: "caution",
-    warningMessage: args.keepAlive === true
-      ? "Launch an isolated keep-alive terminal that outlives this turn until it is stopped, the chat is deleted, the extension shuts down, or four hours pass. It requires an independent DeepSeek safety review."
-      : "This terminal command requires an independent DeepSeek safety review.",
+    warningMessage:
+      args.keepAlive === true
+        ? "Launch an isolated keep-alive terminal that outlives this turn until it is stopped, the chat is deleted, the extension shuts down, or four hours pass. It requires an independent DeepSeek safety review."
+        : "This terminal command requires an independent DeepSeek safety review.",
     command,
     keepAlive: args.keepAlive === true,
     cwd: environment.cwd,
@@ -52,7 +56,10 @@ async function handleTerminalCommand(args: Record<string, unknown>, context?: To
   });
 }
 
-async function handleTerminalCommandForced(args: Record<string, unknown>, context?: ToolHandlerContext): Promise<string> {
+async function handleTerminalCommandForced(
+  args: Record<string, unknown>,
+  context?: ToolHandlerContext,
+): Promise<string> {
   const keepAliveAction = readKeepAliveAction(args);
   if (keepAliveAction) {
     return controlKeepAliveTerminal(keepAliveAction, args, context);
@@ -84,9 +91,18 @@ async function handleTerminalCommandForced(args: Record<string, unknown>, contex
 
   if (args.keepAlive === true) {
     const environment = await resolveCommandEnvironment(cwd);
-    return JSON.stringify(startKeepAliveTerminal({ command, environment, conversationId: context?.conversationId }));
+    return JSON.stringify(
+      startKeepAliveTerminal({ command, environment, conversationId: context?.conversationId }),
+    );
   }
-  return JSON.stringify(await executeWorkspaceCommand(command, { cwd, signal: context?.signal, timeoutMs, maxOutputBytes }));
+  return JSON.stringify(
+    await executeWorkspaceCommand(command, {
+      cwd,
+      signal: context?.signal,
+      timeoutMs,
+      maxOutputBytes,
+    }),
+  );
 }
 
 type KeepAliveAction = "status" | "stop";
@@ -123,11 +139,16 @@ function controlKeepAliveTerminal(
   context?: ToolHandlerContext,
 ): Promise<string> {
   if (args.keepAlive === true) {
-    return Promise.resolve(`Error: keepAlive and keepAliveAction are mutually exclusive; omit keepAlive for the "${action}" control action`);
+    return Promise.resolve(
+      `Error: keepAlive and keepAliveAction are mutually exclusive; omit keepAlive for the "${action}" control action`,
+    );
   }
-  const sessionId = typeof args.keepAliveSessionId === "string" ? args.keepAliveSessionId.trim() : "";
+  const sessionId =
+    typeof args.keepAliveSessionId === "string" ? args.keepAliveSessionId.trim() : "";
   if (!sessionId) {
-    return Promise.resolve(`Error: keepAliveAction "${action}" requires the keepAliveSessionId returned by the keepAlive start call`);
+    return Promise.resolve(
+      `Error: keepAliveAction "${action}" requires the keepAliveSessionId returned by the keepAlive start call`,
+    );
   }
   const conversationId = context?.conversationId;
   try {
@@ -139,8 +160,10 @@ function controlKeepAliveTerminal(
   }
 }
 
-const TERMINAL_REQUEST = /\b(?:use|run|execute|via|from|in|usa|usar|utiliza|ejecuta|mediante|desde|en)\b.{0,24}\b(?:terminal|shell|powershell|pwsh|cmd(?:\.exe)?|bash|zsh)\b/i;
-const TERMINAL_REJECTION = /\b(?:without|no|do not|don't|sin)\b.{0,16}\b(?:terminal|shell|powershell|pwsh|cmd(?:\.exe)?|bash|zsh)\b/i;
+const TERMINAL_REQUEST =
+  /\b(?:use|run|execute|via|from|in|usa|usar|utiliza|ejecuta|mediante|desde|en)\b.{0,24}\b(?:terminal|shell|powershell|pwsh|cmd(?:\.exe)?|bash|zsh)\b/i;
+const TERMINAL_REJECTION =
+  /\b(?:without|no|do not|don't|sin)\b.{0,16}\b(?:terminal|shell|powershell|pwsh|cmd(?:\.exe)?|bash|zsh)\b/i;
 
 const DETACHED_PROCESS_PATTERNS = [
   /[ \t]&[ \t]*(?:\r?\n|$)/,
@@ -152,11 +175,16 @@ const DETACHED_PROCESS_PATTERNS = [
 ];
 
 export function getTerminalLifecycleError(command: string): string | undefined {
-  if (!DETACHED_PROCESS_PATTERNS.some((pattern) => pattern.test(command))) {return undefined;}
+  if (!DETACHED_PROCESS_PATTERNS.some((pattern) => pattern.test(command))) {
+    return undefined;
+  }
   return "Error: background process launch rejected. run_terminal_command owns one finite foreground process tree; do not use Start-Process, start, jobs, nohup, disown, or similar detachment. For a GUI/server that must stay alive during a capture, use application_session action=start with its foreground command, capture_screenshot, then action=stop. For a user-requested process that must outlive the turn, run the foreground command again with keepAlive=true.";
 }
 
-export function getTerminalRoutingError(command: string, context?: ToolHandlerContext): string | undefined {
+export function getTerminalRoutingError(
+  command: string,
+  context?: ToolHandlerContext,
+): string | undefined {
   const available = new Set(context?.availableToolNames ?? []);
   if (available.size === 0 || explicitlyRequestsTerminal(context?.trustedUserRequest)) {
     return undefined;
@@ -180,13 +208,17 @@ export function getTerminalRoutingError(command: string, context?: ToolHandlerCo
       purpose: "searching workspace content",
     },
   ];
-  const route = routes.find((candidate) => available.has(candidate.tool) && candidate.pattern.test(command));
+  const route = routes.find(
+    (candidate) => available.has(candidate.tool) && candidate.pattern.test(command),
+  );
   if (route) {
     return `Error: terminal routing rejected. Use ${route.tool} for ${route.purpose}; reserve run_terminal_command for builds, tests, Git, package managers, and other executable workflows.`;
   }
 
   if (/\b(?:readallbytes|dos2unix|unix2dos)\b|\bcrlf\s*=|line[ -]?endings?/i.test(command)) {
-    const editingTool = ["edit_file", "apply_patch", "read_file"].find((name) => available.has(name));
+    const editingTool = ["edit_file", "apply_patch", "read_file"].find((name) =>
+      available.has(name),
+    );
     if (editingTool) {
       return `Error: terminal routing rejected. ${editingTool} handles workspace text without line-ending probes; do not inspect or convert LF/CRLF.`;
     }
@@ -216,9 +248,7 @@ export function normalizeLeadingDirectoryChange(
   if (!target || !remainingCommand) {
     return { command, cwd };
   }
-  const normalizedCwd = cwd && !path.isAbsolute(target)
-    ? path.join(cwd, target)
-    : target;
+  const normalizedCwd = cwd && !path.isAbsolute(target) ? path.join(cwd, target) : target;
   return { command: remainingCommand, cwd: normalizedCwd };
 }
 
@@ -234,15 +264,18 @@ export const terminalCommandDefinition: ToolDefinition = {
       properties: {
         command: {
           type: "string",
-          description: "Executable workflow to run; not a substitute for dedicated workspace file tools. Required unless keepAliveAction is status or stop.",
+          description:
+            "Executable workflow to run; not a substitute for dedicated workspace file tools. Required unless keepAliveAction is status or stop.",
         },
         cwd: {
           type: "string",
-          description: "Working directory relative to the workspace. Use an absolute path only for explicitly requested external access. Prefer this argument over cd.",
+          description:
+            "Working directory relative to the workspace. Use an absolute path only for explicitly requested external access. Prefer this argument over cd.",
         },
         timeoutMs: {
           type: "integer",
-          description: "Timeout in milliseconds (1000-120000). Defaults to 30000. Ignored by keep-alive sessions, which are bounded to four hours.",
+          description:
+            "Timeout in milliseconds (1000-120000). Defaults to 30000. Ignored by keep-alive sessions, which are bounded to four hours.",
           minimum: 1000,
           maximum: 120000,
         },
@@ -254,16 +287,19 @@ export const terminalCommandDefinition: ToolDefinition = {
         },
         keepAlive: {
           type: "boolean",
-          description: "Start an isolated terminal that survives this turn. Only when the user explicitly asks to keep the process or tool running; it returns a sessionId immediately and is stopped by keepAliveAction=stop, chat deletion, extension shutdown, or four hours.",
+          description:
+            "Start an isolated terminal that survives this turn. Only when the user explicitly asks to keep the process or tool running; it returns a sessionId immediately and is stopped by keepAliveAction=stop, chat deletion, extension shutdown, or four hours.",
         },
         keepAliveAction: {
           type: "string",
           enum: ["status", "stop"],
-          description: "Control an existing keep-alive terminal: status returns its retained output, stop terminates its process tree. Requires keepAliveSessionId and no command.",
+          description:
+            "Control an existing keep-alive terminal: status returns its retained output, stop terminates its process tree. Requires keepAliveSessionId and no command.",
         },
         keepAliveSessionId: {
           type: "string",
-          description: "SessionId returned by a keepAlive start; only valid for keepAliveAction status or stop in the same chat.",
+          description:
+            "SessionId returned by a keepAlive start; only valid for keepAliveAction status or stop in the same chat.",
         },
       },
       required: [],
@@ -277,6 +313,7 @@ export const terminalCommandHandlerForced: RegisteredTool["handler"] = handleTer
 
 export const terminalCommandMetadata: ToolMetadata = {
   dangerLevel: "dangerous",
-  warningMessage: "Shell commands can modify, delete, or damage files. Review the command carefully before executing.",
+  warningMessage:
+    "Shell commands can modify, delete, or damage files. Review the command carefully before executing.",
   requiresConfirmation: true,
 };

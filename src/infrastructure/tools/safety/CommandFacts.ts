@@ -1,6 +1,5 @@
 import * as path from "node:path";
 
-
 type CommandClassification = "read-only-diagnostic" | "script-execution" | "unknown";
 export type ScriptLanguage = "powershell" | "shell" | "javascript" | "python";
 
@@ -21,30 +20,79 @@ export interface CommandFacts {
   escalatesPrivileges: boolean;
 }
 
-const DIAGNOSTIC_FLAGS = new Set([
-  "--version",
-  "-version",
-  "-v",
-  "-V",
-  "--help",
-  "-h",
-  "-?",
-  "/?",
-]);
+const DIAGNOSTIC_FLAGS = new Set(["--version", "-version", "-v", "-V", "--help", "-h", "-?", "/?"]);
 
 const DIAGNOSTIC_PROGRAMS = new Set([
-  "node", "npm", "npx", "pnpm", "yarn", "bun", "deno", "corepack",
-  "dotnet", "msbuild", "nuget",
-  "python", "python3", "py", "pip", "pip3", "uv", "poetry", "pytest",
-  "java", "javac", "mvn", "gradle",
-  "go", "rustc", "cargo",
-  "git", "gh", "svn",
-  "docker", "podman", "kubectl", "helm", "terraform", "az", "gcloud", "aws",
-  "code", "tsc", "mocha", "eslint", "prettier", "vite", "vitest", "jest",
-  "composer", "ruby", "gem", "bundle", "php", "make", "cmake", "ninja",
-  "gcc", "g++", "clang", "clang++", "ld",
-  "sw_vers", "uname", "lsb_release", "openssl", "ffmpeg", "convert", "magick",
-  "tar", "unzip", "zip", "7z", "git-lfs",
+  "node",
+  "npm",
+  "npx",
+  "pnpm",
+  "yarn",
+  "bun",
+  "deno",
+  "corepack",
+  "dotnet",
+  "msbuild",
+  "nuget",
+  "python",
+  "python3",
+  "py",
+  "pip",
+  "pip3",
+  "uv",
+  "poetry",
+  "pytest",
+  "java",
+  "javac",
+  "mvn",
+  "gradle",
+  "go",
+  "rustc",
+  "cargo",
+  "git",
+  "gh",
+  "svn",
+  "docker",
+  "podman",
+  "kubectl",
+  "helm",
+  "terraform",
+  "az",
+  "gcloud",
+  "aws",
+  "code",
+  "tsc",
+  "mocha",
+  "eslint",
+  "prettier",
+  "vite",
+  "vitest",
+  "jest",
+  "composer",
+  "ruby",
+  "gem",
+  "bundle",
+  "php",
+  "make",
+  "cmake",
+  "ninja",
+  "gcc",
+  "g++",
+  "clang",
+  "clang++",
+  "ld",
+  "sw_vers",
+  "uname",
+  "lsb_release",
+  "openssl",
+  "ffmpeg",
+  "convert",
+  "magick",
+  "tar",
+  "unzip",
+  "zip",
+  "7z",
+  "git-lfs",
 ]);
 
 const AVAILABILITY_PROGRAMS = new Set(["where", "which"]);
@@ -66,7 +114,17 @@ const INTERPRETERS = new Map<string, InterpreterSpec>([
   ["python3", { language: "python" }],
 ]);
 
-const INLINE_CODE_FLAGS = new Set(["-c", "-e", "--eval", "-p", "--print", "-i", "--interactive", "-command", "-encodedcommand"]);
+const INLINE_CODE_FLAGS = new Set([
+  "-c",
+  "-e",
+  "--eval",
+  "-p",
+  "--print",
+  "-i",
+  "--interactive",
+  "-command",
+  "-encodedcommand",
+]);
 
 const SCRIPT_LANGUAGES = new Map<string, ScriptLanguage>([
   [".ps1", "powershell"],
@@ -194,7 +252,9 @@ export function detectScriptInvocation(tokens: string[]): ScriptInvocation | und
     };
   }
 
-  const scriptIndex = args.findIndex((arg) => !arg.startsWith("-") && looksLikeScriptPath(arg, spec.language));
+  const scriptIndex = args.findIndex(
+    (arg) => !arg.startsWith("-") && looksLikeScriptPath(arg, spec.language),
+  );
   if (scriptIndex < 0) {
     return undefined;
   }
@@ -248,7 +308,10 @@ function escalatesPrivileges(command: string, programs: string[]): boolean {
 }
 
 function programName(token: string): string {
-  return path.win32.basename(token).replace(/\.(?:exe|cmd|bat)$/i, "").toLowerCase();
+  return path.win32
+    .basename(token)
+    .replace(/\.(?:exe|cmd|bat)$/i, "")
+    .toLowerCase();
 }
 
 function splitShellSegments(command: string): string[] {

@@ -10,9 +10,13 @@ import {
 export function normalizeConversation(conversation: StoredConversation): StoredConversation {
   const messages = conversation.messages.map((message) => {
     const providerTranscript = sanitizeStoredTranscript(message.providerTranscript);
-    const completedContext = message.role === "assistant" && providerTranscript?.status === "complete"
-      ? message.contextContent ?? getFinalAssistantContent(providerTranscript) ?? message.content ?? ""
-      : message.contextContent;
+    const completedContext =
+      message.role === "assistant" && providerTranscript?.status === "complete"
+        ? (message.contextContent ??
+          getFinalAssistantContent(providerTranscript) ??
+          message.content ??
+          "")
+        : message.contextContent;
     return {
       ...message,
       content: message.content,
@@ -50,8 +54,14 @@ export function toConversationSummary(
   };
 }
 
-function normalizeToolCall<T extends NonNullable<Conversation["messages"][number]["toolCalls"]>[number]>(toolCall: T): T {
-  if (toolCall.status === "pending" || toolCall.status === "awaiting_confirmation" || toolCall.status === "running") {
+function normalizeToolCall<
+  T extends NonNullable<Conversation["messages"][number]["toolCalls"]>[number],
+>(toolCall: T): T {
+  if (
+    toolCall.status === "pending" ||
+    toolCall.status === "awaiting_confirmation" ||
+    toolCall.status === "running"
+  ) {
     return {
       ...toolCall,
       status: "cancelled",

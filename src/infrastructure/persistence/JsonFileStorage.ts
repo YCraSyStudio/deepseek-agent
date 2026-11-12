@@ -8,11 +8,16 @@ export async function writeJsonFileAtomic(targetPath: string, value: unknown): P
   const temporaryPath = path.join(directory, `.${path.basename(targetPath)}.${randomUUID()}.tmp`);
 
   try {
-    await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
     try {
       await rename(temporaryPath, targetPath);
     } catch (error) {
-      if (!isReplaceConflict(error)) {throw error;}
+      if (!isReplaceConflict(error)) {
+        throw error;
+      }
       await replaceWithRecoverableBackup(temporaryPath, targetPath);
     }
   } catch (error) {
@@ -30,7 +35,9 @@ export async function withFileLock<T>(targetPath: string, operation: () => Promi
       await mkdir(lockPath);
       break;
     } catch (error) {
-      if (!isAlreadyExists(error)) {throw error;}
+      if (!isAlreadyExists(error)) {
+        throw error;
+      }
       if (await isStaleLock(lockPath)) {
         await rm(lockPath, { recursive: true, force: true });
         continue;
@@ -48,7 +55,10 @@ export async function withFileLock<T>(targetPath: string, operation: () => Promi
   }
 }
 
-async function replaceWithRecoverableBackup(temporaryPath: string, targetPath: string): Promise<void> {
+async function replaceWithRecoverableBackup(
+  temporaryPath: string,
+  targetPath: string,
+): Promise<void> {
   const backupPath = `${targetPath}.${randomUUID()}.bak`;
   let backupCreated = false;
   try {
@@ -73,11 +83,18 @@ async function isStaleLock(lockPath: string): Promise<boolean> {
 }
 
 function isReplaceConflict(error: unknown): boolean {
-  if (!error || typeof error !== "object" || !("code" in error)) {return false;}
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return false;
+  }
   const code = String((error as { code?: unknown }).code);
   return code === "EEXIST" || code === "EPERM";
 }
 
 function isAlreadyExists(error: unknown): boolean {
-  return !!error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === "EEXIST";
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "EEXIST"
+  );
 }

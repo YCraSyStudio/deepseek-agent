@@ -15,13 +15,29 @@ export const markdownFixture = {
 };
 export const refractor = {
   highlight(code: string) {
-    if (markdownFixture.fail) { throw new Error("Upstream highlighter unavailable"); }
+    if (markdownFixture.fail) {
+      throw new Error("Upstream highlighter unavailable");
+    }
     return markdownFixture.tree ?? { type: "root", children: [{ type: "text", value: code }] };
   },
 };
 
-export default function MarkdownBoundary({ components }: {
-  components: { code: (props: { children: ReactNode; className?: string }) => ReactNode; pre: (props: { children: ReactNode }) => ReactNode };
+export default function MarkdownBoundary({
+  components,
+}: {
+  components: {
+    code: (props: { children: ReactNode; className?: string }) => ReactNode;
+    pre: (props: { children: ReactNode }) => ReactNode;
+  };
 }) {
-  return createElement("div", null, components.pre({ children: components.code({ children: markdownFixture.children, className: markdownFixture.className }) }));
+  return createElement(
+    "div",
+    null,
+    components.pre({
+      children: components.code({
+        children: markdownFixture.children,
+        className: markdownFixture.className,
+      }),
+    }),
+  );
 }

@@ -5,7 +5,9 @@ suite("bounded terminal diagnostic capture", () => {
   test("preserves middle diagnostics across chunks and streams of ordinary output", () => {
     const output = new BoundedOutput(4096);
     output.append(Buffer.from("HEAD\n" + "ordinary output\n".repeat(1000)));
-    for (const byte of Buffer.from("\u001b[31merror TS1234: tipo inválido 界\u001b[0m\r\n    at compile (app.ts:7)\n")) {
+    for (const byte of Buffer.from(
+      "\u001b[31merror TS1234: tipo inválido 界\u001b[0m\r\n    at compile (app.ts:7)\n",
+    )) {
       output.append(Buffer.from([byte]));
     }
     output.append(Buffer.from("ordinary output\n".repeat(1000) + "TAIL"));

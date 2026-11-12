@@ -8,7 +8,9 @@ const packageJson = JSON.parse(readFileSync(join(projectRoot, "package.json"), "
 const expectedFileName = `deepseek-agent-${packageJson.version}.vsix`;
 const vsixPath = resolve(process.argv[2] ?? join(projectRoot, "artifacts", expectedFileName));
 if (basename(vsixPath) !== expectedFileName) {
-  throw new Error(`Unexpected VSIX filename: expected ${expectedFileName}, received ${basename(vsixPath)}`);
+  throw new Error(
+    `Unexpected VSIX filename: expected ${expectedFileName}, received ${basename(vsixPath)}`,
+  );
 }
 if (!existsSync(vsixPath)) {
   throw new Error(`VSIX not found: ${vsixPath}`);
@@ -36,10 +38,11 @@ const allowedExact = new Set([
   "extension/package.json",
   "extension/readme.md",
 ]);
-const unexpected = [...entries].filter((file) =>
-  !allowedExact.has(file) &&
-  !file.startsWith("extension/dist/") &&
-  !file.startsWith("extension/src/assets/"),
+const unexpected = [...entries].filter(
+  (file) =>
+    !allowedExact.has(file) &&
+    !file.startsWith("extension/dist/") &&
+    !file.startsWith("extension/src/assets/"),
 );
 if (unexpected.length > 0) {
   throw new Error(`Unexpected files outside the VSIX allowlist:\n${unexpected.join("\n")}`);
@@ -51,7 +54,9 @@ if (!/<GalleryFlags>\s*Public Preview\s*<\/GalleryFlags>/i.test(manifest)) {
   throw new Error("The VSIX must retain the Public Preview gallery flag from package.json.");
 }
 
-console.log(`Verified ${entries.size} intentional VSIX entries and the normal-release/Public-Preview channel.`);
+console.log(
+  `Verified ${entries.size} intentional VSIX entries and the normal-release/Public-Preview channel.`,
+);
 
 function listEntries(file) {
   return new Promise((resolveList, reject) => {
@@ -104,7 +109,9 @@ function readTextEntry(file, entryName) {
       });
       zip.once("error", reject);
       zip.once("end", () => {
-        if (!found) {reject(new Error(`VSIX entry is missing: ${entryName}`));}
+        if (!found) {
+          reject(new Error(`VSIX entry is missing: ${entryName}`));
+        }
       });
       zip.readEntry();
     });

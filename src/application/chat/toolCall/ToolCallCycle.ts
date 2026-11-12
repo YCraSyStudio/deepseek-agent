@@ -6,7 +6,10 @@ import type {
   ToolCallCycleOptions,
   ToolCallCycleResult,
 } from "./ToolCallTypes";
-import { createCompletionRecoveryMessage, createProgressReviewCheckpointMessage } from "./TurnGuidance";
+import {
+  createCompletionRecoveryMessage,
+  createProgressReviewCheckpointMessage,
+} from "./TurnGuidance";
 import { fitToolResultForModel } from "./ToolResultFit";
 import { logWarning } from "@/shared/logging/Logger";
 import { redactToolOutput } from "@/shared/security/ToolOutputRedaction";
@@ -14,8 +17,17 @@ import { redactToolOutput } from "@/shared/security/ToolOutputRedaction";
 const DEFAULT_PROGRESS_REVIEW_INTERVAL = 20;
 const DEFAULT_PROGRESS_REVIEW_FOLLOW_UP_INTERVAL = 5;
 
-export async function runToolCallCycle(options: RunToolCallCycleOptions): Promise<ToolCallCycleResult> {
-  const { initialMessages, tools, model, modelClient, executeToolCall, cycleOptions = {} } = options;
+export async function runToolCallCycle(
+  options: RunToolCallCycleOptions,
+): Promise<ToolCallCycleResult> {
+  const {
+    initialMessages,
+    tools,
+    model,
+    modelClient,
+    executeToolCall,
+    cycleOptions = {},
+  } = options;
 
   let messages = ensureSingleSystemPrompt(initialMessages, createSystemMessage);
   const transcript: ChatMessage[] = [];
@@ -31,16 +43,27 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
       throw createAbortError();
     }
 
-    const reasoningTools = await cycleOptions.getToolsForRound?.("reasoning", round + 1) ?? tools;
+    const reasoningTools = (await cycleOptions.getToolsForRound?.("reasoning", round + 1)) ?? tools;
     messages = await prepareRequestContext(messages, reasoningTools, round + 1, cycleOptions);
     cycleOptions.validateRequestBudget?.(messages, reasoningTools);
     cycleOptions.budgetManager?.resetOutput();
     const shouldStream = cycleOptions.streamFinalResponse === true;
     let response;
     if (shouldStream) {
-      response = await modelClient.streamRound({ messages, tools: reasoningTools, model, cycleOptions, emitStreamEvents: true });
+      response = await modelClient.streamRound({
+        messages,
+        tools: reasoningTools,
+        model,
+        cycleOptions,
+        emitStreamEvents: true,
+      });
     } else {
-      response = await modelClient.completeRound({ messages, tools: reasoningTools, model, cycleOptions });
+      response = await modelClient.completeRound({
+        messages,
+        tools: reasoningTools,
+        model,
+        cycleOptions,
+      });
     }
     const message = response.choices[0].message;
     const finishReason = response.choices[0].finish_reason;
@@ -66,7 +89,9 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
             cycleOptions.onStreamChunk?.("\n\n");
             continue;
           }
-          logWarning("[ToolCallCycle] Completion review still reported an incomplete answer after recovery; keeping the delivered response.");
+          logWarning(
+            "[ToolCallCycle] Completion review still reported an incomplete answer after recovery; keeping the delivered response.",
+          );
         }
       }
       transcript.push(structuredClone(message));
@@ -81,12 +106,16 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
     }
 
     assertUniqueToolCallIds(message.tool_calls, seenProviderToolCallIds);
-    for (const toolCall of message.tool_calls) {seenProviderToolCallIds.add(toolCall.id);}
+    for (const toolCall of message.tool_calls) {
+      seenProviderToolCallIds.add(toolCall.id);
+    }
     assertValidToolArguments(message);
-    const toolRoundTools = await cycleOptions.getToolsForRound?.("tools", round + 1) ?? reasoningTools;
+    const toolRoundTools =
+      (await cycleOptions.getToolsForRound?.("tools", round + 1)) ?? reasoningTools;
     const availableTools = new Map(toolRoundTools.map((tool) => [tool.function.name, tool]));
     const executableToolCalls = message.tool_calls.filter(
-      (toolCall) => validateToolCall(toolCall, availableTools).valid &&
+      (toolCall) =>
+        validateToolCall(toolCall, availableTools).valid &&
         executedSignatures.get(createToolSignature(toolCall)) !== mutationEpoch,
     );
     if (executableToolCalls.length > 0) {
@@ -103,7 +132,11 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
 
       const validation = validateToolCall(toolCall, availableTools);
       if (!validation.valid) {
-        const invalidResult = createToolResultMessage(toolCall.id, toolCall.function.name, fitToolResultForModel(`Error: ${validation.error}`));
+        const invalidResult = createToolResultMessage(
+          toolCall.id,
+          toolCall.function.name,
+          fitToolResultForModel(`Error: ${validation.error}`),
+        );
         messages.push(invalidResult);
         transcript.push(structuredClone(invalidResult));
         cycleOptions.onTranscriptUpdate?.(structuredClone(transcript), "incomplete");
@@ -112,7 +145,11 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
 
       const signature = createToolSignature(toolCall);
       if (executedSignatures.get(signature) === mutationEpoch) {
-        const duplicateResult = createToolResultMessage(toolCall.id, toolCall.function.name, fitToolResultForModel("Skipped: identical tool call already executed in this cycle."));
+        const duplicateResult = createToolResultMessage(
+          toolCall.id,
+          toolCall.function.name,
+          fitToolResultForModel("Skipped: identical tool call already executed in this cycle."),
+        );
         messages.push(duplicateResult);
         transcript.push(structuredClone(duplicateResult));
         cycleOptions.onTranscriptUpdate?.(structuredClone(transcript), "incomplete");
@@ -121,14 +158,20 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
       const result = redactToolOutput(await executeToolCall(toolCall));
       toolCallsExecuted++;
       if (shouldRememberToolSignature(toolCall, result)) {
-        if (invalidatesPriorToolSignatures(toolCall)) {mutationEpoch++;}
+        if (invalidatesPriorToolSignatures(toolCall)) {
+          mutationEpoch++;
+        }
         executedSignatures.set(signature, mutationEpoch);
       } else if (toolCall.function.name === "application_session") {
         // Process state and its UI evolve between calls, including identical polls.
         mutationEpoch++;
       }
       cycleOptions.onToolResult?.(toolCall.id, result);
-      const toolResult = createToolResultMessage(toolCall.id, toolCall.function.name, fitToolResultForModel(result));
+      const toolResult = createToolResultMessage(
+        toolCall.id,
+        toolCall.function.name,
+        fitToolResultForModel(result),
+      );
       messages.push(toolResult);
       transcript.push(structuredClone(toolResult));
       cycleOptions.onTranscriptUpdate?.(structuredClone(transcript), "incomplete");
@@ -142,7 +185,9 @@ export async function runToolCallCycle(options: RunToolCallCycleOptions): Promis
     }
 
     const completedRounds = round + 1;
-    const progressReviewInterval = normalizeProgressReviewInterval(cycleOptions.progressReviewInterval);
+    const progressReviewInterval = normalizeProgressReviewInterval(
+      cycleOptions.progressReviewInterval,
+    );
     if (
       cycleOptions.reviewProgress &&
       shouldReviewProgress(completedRounds, progressReviewInterval)
@@ -167,7 +212,9 @@ function assertValidToolArguments(message: ChatMessage): void {
     try {
       JSON.parse(toolCall.function.arguments);
     } catch {
-      throw new Error(`DeepSeek returned invalid JSON arguments for tool "${toolCall.function.name}".`);
+      throw new Error(
+        `DeepSeek returned invalid JSON arguments for tool "${toolCall.function.name}".`,
+      );
     }
   }
 }
@@ -202,11 +249,16 @@ function normalizeProgressReviewInterval(value: number | undefined): number {
 }
 
 function shouldReviewProgress(completedRounds: number, initialInterval: number): boolean {
-  if (completedRounds === initialInterval) {return true;}
-  if (completedRounds < initialInterval) {return false;}
-  const followUpInterval = initialInterval === DEFAULT_PROGRESS_REVIEW_INTERVAL
-    ? DEFAULT_PROGRESS_REVIEW_FOLLOW_UP_INTERVAL
-    : initialInterval;
+  if (completedRounds === initialInterval) {
+    return true;
+  }
+  if (completedRounds < initialInterval) {
+    return false;
+  }
+  const followUpInterval =
+    initialInterval === DEFAULT_PROGRESS_REVIEW_INTERVAL
+      ? DEFAULT_PROGRESS_REVIEW_FOLLOW_UP_INTERVAL
+      : initialInterval;
   return (completedRounds - initialInterval) % followUpInterval === 0;
 }
 
@@ -214,8 +266,12 @@ function createToolSignature(toolCall: { function: { name: string; arguments: st
   try {
     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
     if (toolCall.function.name === "edit_file") {
-      if (typeof args.search === "string") {args.search = normalizeSignatureLineEndings(args.search);}
-      if (typeof args.replace === "string") {args.replace = normalizeSignatureLineEndings(args.replace);}
+      if (typeof args.search === "string") {
+        args.search = normalizeSignatureLineEndings(args.search);
+      }
+      if (typeof args.replace === "string") {
+        args.replace = normalizeSignatureLineEndings(args.replace);
+      }
     }
     if (toolCall.function.name === "apply_patch" && typeof args.diff === "string") {
       args.diff = normalizeSignatureLineEndings(args.diff);
@@ -226,22 +282,41 @@ function createToolSignature(toolCall: { function: { name: string; arguments: st
   }
 }
 
-function normalizeSignatureLineEndings(value: string): string {return value.replace(/\r\n|\r/g, "\n");}
+function normalizeSignatureLineEndings(value: string): string {
+  return value.replace(/\r\n|\r/g, "\n");
+}
 
-function shouldRememberToolSignature(toolCall: { function: { name: string } }, result: string): boolean {
-  if (["read_file", "application_session"].includes(toolCall.function.name)) {return false;}
+function shouldRememberToolSignature(
+  toolCall: { function: { name: string } },
+  result: string,
+): boolean {
+  if (["read_file", "application_session"].includes(toolCall.function.name)) {
+    return false;
+  }
   return !/^\s*(?:Error\b|Skipped:)/i.test(result);
 }
 
 function invalidatesPriorToolSignatures(toolCall: { function: { name: string } }): boolean {
-  return ["create_file", "edit_file", "apply_patch", "move_path", "delete_path", "run_terminal_command"].includes(toolCall.function.name);
+  return [
+    "create_file",
+    "edit_file",
+    "apply_patch",
+    "move_path",
+    "delete_path",
+    "run_terminal_command",
+  ].includes(toolCall.function.name);
 }
 
 function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {return `[${value.map(stableStringify).join(",")}]`;}
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+      .join(",")}}`;
   }
   return JSON.stringify(value);
 }

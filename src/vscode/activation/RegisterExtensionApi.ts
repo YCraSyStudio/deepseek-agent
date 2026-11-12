@@ -2,7 +2,11 @@ import * as vscode from "vscode";
 import { SIDEBAR_VIEW_ID } from "@/shared/constants";
 import { registerChatCommands } from "@/vscode/commands/ChatCommands";
 import { WebviewProvider } from "@/vscode/webviews/WebviewProvider";
-import { clearDiagnostics, createSanitizedSupportReport, showDiagnostics } from "@/shared/logging/Logger";
+import {
+  clearDiagnostics,
+  createSanitizedSupportReport,
+  showDiagnostics,
+} from "@/shared/logging/Logger";
 import { getWebRuntimeDiagnostics } from "@/vscode/tools/browser";
 import type { SettingsRepository } from "@/application/ports";
 

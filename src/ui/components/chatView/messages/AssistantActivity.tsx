@@ -30,7 +30,8 @@ export function AssistantActivity({
   generationStatus?: ChatMessage["generationStatus"];
   generationStopReason?: ChatMessage["generationStopReason"];
 }) {
-  const compactCompletedCycle = generationStatus === "completed" || (!isActive && generationStatus === undefined);
+  const compactCompletedCycle =
+    generationStatus === "completed" || (!isActive && generationStatus === undefined);
   const blocks = groupAssistantTimeline(timeline, { compactCompletedCycle });
   return (
     <div className="chronologicalAssistant">
@@ -48,10 +49,18 @@ export function AssistantActivity({
           <MarkdownMessage key={block.id} content={block.content} role="assistant" />
         ),
       )}
-      {(generationStatus === "cancelled" || generationStatus === "interrupted") && generationStopReason !== "steered" ? (
+      {(generationStatus === "cancelled" || generationStatus === "interrupted") &&
+      generationStopReason !== "steered" ? (
         <div className={`generationTerminalStatus ${generationStatus}`} role="status">
-          <span className={`codicon codicon-${generationStatus === "cancelled" ? "debug-stop" : "warning"}`} aria-hidden="true" />
-          {t(generationStatus === "cancelled" ? "chat.responseCancelled" : "chat.responseInterrupted")}
+          <span
+            className={`codicon codicon-${generationStatus === "cancelled" ? "debug-stop" : "warning"}`}
+            aria-hidden="true"
+          />
+          {t(
+            generationStatus === "cancelled"
+              ? "chat.responseCancelled"
+              : "chat.responseInterrupted",
+          )}
         </div>
       ) : null}
     </div>
@@ -72,7 +81,11 @@ function ActivityPanel({
   isLive: boolean;
 }) {
   const [open, setOpen] = useAutoCollapsePanel(isLive);
-  const summary = summarizeActivity(block.rounds.flatMap((round) => round.events), toolCallGroups, missingToolStatus);
+  const summary = summarizeActivity(
+    block.rounds.flatMap((round) => round.events),
+    toolCallGroups,
+    missingToolStatus,
+  );
 
   return (
     <details
@@ -200,9 +213,15 @@ function getMissingToolStatus(
   isActive: boolean,
   generationStatus: ChatMessage["generationStatus"],
 ): ToolCallStatus {
-  if (generationStatus === "completed") {return "completed";}
-  if (blocks.slice(blockIndex + 1).some((block) => block.type === "content")) {return "completed";}
-  if (isActive) {return "pending";}
+  if (generationStatus === "completed") {
+    return "completed";
+  }
+  if (blocks.slice(blockIndex + 1).some((block) => block.type === "content")) {
+    return "completed";
+  }
+  if (isActive) {
+    return "pending";
+  }
   return generationStatus === "error" ? "error" : "cancelled";
 }
 

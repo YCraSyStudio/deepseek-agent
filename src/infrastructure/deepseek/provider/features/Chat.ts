@@ -1,11 +1,20 @@
 import { HistoricalFileRecovery } from "./MissingHistoricalFiles";
 import { buildApiUrl, deepseekFetch } from "@/infrastructure/deepseek/client/DeepSeekFetch";
 import { readSSEStream } from "@/infrastructure/deepseek/streaming/ReadSSEStream";
-import { DEFAULT_CONFIG, type AppConfig, type ChatCompletionRequest, type ChatCompletionResponse, type StreamChunk } from "@/contracts";
+import {
+  DEFAULT_CONFIG,
+  type AppConfig,
+  type ChatCompletionRequest,
+  type ChatCompletionResponse,
+  type StreamChunk,
+} from "@/contracts";
 import { parseChatCompletionResponse, parseStreamToolCalls } from "./ChatResponseValidation";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import { isOfficialDeepSeekEndpoint, parseProviderUsage } from "@/shared/usage/Usage";
-import { MAX_CHAT_RESPONSE_BYTES, readBoundedJson } from "@/infrastructure/deepseek/client/BoundedResponseJson";
+import {
+  MAX_CHAT_RESPONSE_BYTES,
+  readBoundedJson,
+} from "@/infrastructure/deepseek/client/BoundedResponseJson";
 import { resolveDeepSeekApiBaseUrl } from "@/infrastructure/deepseek/client/BetaFeatures";
 import { prepareProviderTools } from "./StrictTools";
 
@@ -19,7 +28,10 @@ type ChatStreamChunk = StreamChunk;
 const MAX_STREAM_CONTENT_BYTES = 8 * 1024 * 1024;
 const MAX_STREAM_REASONING_BYTES = 8 * 1024 * 1024;
 
-export function buildChatBody(request: Partial<ChatRequest>, config: AppConfig): Partial<ChatRequest> {
+export function buildChatBody(
+  request: Partial<ChatRequest>,
+  config: AppConfig,
+): Partial<ChatRequest> {
   const body: Partial<ChatRequest> = {
     model: request.model || config.model || DEFAULT_CONFIG.model,
     stream: request.stream ?? true,
@@ -71,11 +83,24 @@ export function buildChatBody(request: Partial<ChatRequest>, config: AppConfig):
   return body;
 }
 
-export async function chatCompletion(request: ChatRequest, apiKey: string, baseUrl: string, signal?: AbortSignal, betaFeaturesEnabled = false, historicalFiles?: HistoricalFileRecovery): Promise<ChatResponse> {
+export async function chatCompletion(
+  request: ChatRequest,
+  apiKey: string,
+  baseUrl: string,
+  signal?: AbortSignal,
+  betaFeaturesEnabled = false,
+  historicalFiles?: HistoricalFileRecovery,
+): Promise<ChatResponse> {
   validatePrefixRequest(request, betaFeaturesEnabled);
   request = prepareTransportRequest(request, betaFeaturesEnabled);
   baseUrl = resolveDeepSeekApiBaseUrl(baseUrl, betaFeaturesEnabled);
-  const response = await fetchChatResponse({ ...request, stream: false }, apiKey, baseUrl, signal, historicalFiles);
+  const response = await fetchChatResponse(
+    { ...request, stream: false },
+    apiKey,
+    baseUrl,
+    signal,
+    historicalFiles,
+  );
   return parseChatCompletionResponse(await readBoundedJson(response, MAX_CHAT_RESPONSE_BYTES));
 }
 
@@ -107,9 +132,17 @@ export async function chatCompletionStream(options: ChatCompletionStreamOptions)
     onChunk({ type: "done", finish_reason: finishReason });
   };
 
-  const response = await fetchChatResponse({ ...request, stream: true,
-    ...(isOfficialDeepSeekEndpoint(baseUrl) ? { stream_options: { include_usage: true } } : {}),
-  }, apiKey, baseUrl, signal, options.historicalFiles);
+  const response = await fetchChatResponse(
+    {
+      ...request,
+      stream: true,
+      ...(isOfficialDeepSeekEndpoint(baseUrl) ? { stream_options: { include_usage: true } } : {}),
+    },
+    apiKey,
+    baseUrl,
+    signal,
+    options.historicalFiles,
+  );
 
   const reader = response.body?.getReader();
   if (!reader) {
@@ -141,12 +174,16 @@ export async function chatCompletionStream(options: ChatCompletionStreamOptions)
 
       if (typeof delta.reasoning_content === "string") {
         reasoningBytes += Buffer.byteLength(delta.reasoning_content, "utf8");
-        if (reasoningBytes > MAX_STREAM_REASONING_BYTES) {throw new Error("DeepSeek reasoning stream exceeded its size limit");}
+        if (reasoningBytes > MAX_STREAM_REASONING_BYTES) {
+          throw new Error("DeepSeek reasoning stream exceeded its size limit");
+        }
         onChunk({ type: "reasoning", reasoning_content: delta.reasoning_content });
       }
       if (typeof delta.content === "string") {
         contentBytes += Buffer.byteLength(delta.content, "utf8");
-        if (contentBytes > MAX_STREAM_CONTENT_BYTES) {throw new Error("DeepSeek content stream exceeded its size limit");}
+        if (contentBytes > MAX_STREAM_CONTENT_BYTES) {
+          throw new Error("DeepSeek content stream exceeded its size limit");
+        }
         onChunk({ type: "content", content: delta.content });
       }
       if (Array.isArray(delta.tool_calls)) {
@@ -159,34 +196,61 @@ export async function chatCompletionStream(options: ChatCompletionStreamOptions)
 }
 
 /** Retry only an HTTP rejection before any stream data or tool execution, at most once. */
-async function fetchChatResponse(request: ChatRequest, apiKey: string, baseUrl: string, signal?: AbortSignal, recovery = new HistoricalFileRecovery(request.messages)): Promise<Response> {
+async function fetchChatResponse(
+  request: ChatRequest,
+  apiKey: string,
+  baseUrl: string,
+  signal?: AbortSignal,
+  recovery = new HistoricalFileRecovery(request.messages),
+): Promise<Response> {
   const prepared = recovery.prepare(request);
-  const send = (candidate: ChatRequest) => deepseekFetch({ pathOrUrl: buildApiUrl(baseUrl, "chat/completions"), apiKey, baseUrl,
-    requestInit: { method: "POST", body: JSON.stringify(candidate), signal } });
-  try {return await send(prepared);}
-  catch (error) {
+  const send = (candidate: ChatRequest) =>
+    deepseekFetch({
+      pathOrUrl: buildApiUrl(baseUrl, "chat/completions"),
+      apiKey,
+      baseUrl,
+      requestInit: { method: "POST", body: JSON.stringify(candidate), signal },
+    });
+  try {
+    return await send(prepared);
+  } catch (error) {
     const recovered = !signal?.aborted && recovery.recover(prepared, error);
-    if (!recovered) {throw error;}
+    if (!recovered) {
+      throw error;
+    }
     return send(recovered);
   }
 }
 
 function validatePrefixRequest(request: ChatRequest, betaEnabled: boolean): void {
   for (const [index, message] of request.messages.entries()) {
-    if (!message.prefix) {continue;}
-    if (!betaEnabled) {throw new Error("DeepSeek beta features are disabled.");}
-    if (index !== request.messages.length - 1 || message.role !== "assistant" || typeof message.content !== "string") {
+    if (!message.prefix) {
+      continue;
+    }
+    if (!betaEnabled) {
+      throw new Error("DeepSeek beta features are disabled.");
+    }
+    if (
+      index !== request.messages.length - 1 ||
+      message.role !== "assistant" ||
+      typeof message.content !== "string"
+    ) {
       throw new Error("Chat prefix completion requires a final assistant text message.");
     }
-    if (message.reasoning_content && request.thinking?.type !== "enabled") {throw new Error("A reasoning prefix requires thinking mode.");}
+    if (message.reasoning_content && request.thinking?.type !== "enabled") {
+      throw new Error("A reasoning prefix requires thinking mode.");
+    }
   }
 }
 
 function prepareTransportRequest(request: ChatRequest, betaEnabled: boolean): ChatRequest {
   const normalized = normalizeThinkingToolCallMessages(request);
-  if (betaEnabled) {return normalized;}
+  if (betaEnabled) {
+    return normalized;
+  }
   validatePrefixRequest(normalized, false);
-  return { ...normalized,
+  return {
+    ...normalized,
     messages: normalized.messages.map(({ prefix: _prefix, ...message }) => message),
     ...(normalized.tools ? { tools: prepareProviderTools(normalized.tools, false) } : {}),
   };
@@ -198,7 +262,9 @@ function prepareTransportRequest(request: ChatRequest, betaEnabled: boolean): Ch
  * use an empty string only for legacy/synthetic messages that have none.
  */
 function normalizeThinkingToolCallMessages(request: ChatRequest): ChatRequest {
-  if (request.thinking?.type !== "enabled") {return request;}
+  if (request.thinking?.type !== "enabled") {
+    return request;
+  }
   let changed = false;
   const messages = request.messages.map((message) => {
     if (message.role !== "assistant" || typeof message.reasoning_content === "string") {

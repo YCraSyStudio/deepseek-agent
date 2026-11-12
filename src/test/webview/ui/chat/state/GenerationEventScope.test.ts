@@ -21,7 +21,10 @@ suite("generation event scope", () => {
   test("accepts the first user message immediately after admission, before a render", () => {
     const conversationId = { current: undefined as string | undefined };
     const generationId = { current: undefined as string | undefined };
-    const getScope = () => ({ conversationId: conversationId.current, activeGenerationId: generationId.current });
+    const getScope = () => ({
+      conversationId: conversationId.current,
+      activeGenerationId: generationId.current,
+    });
     const firstMessage: HandlerToWebviewMessage = {
       ...lateMessage,
       message: { role: "user", content: "First message", generationId: "generation-a" },
@@ -31,9 +34,17 @@ suite("generation event scope", () => {
     conversationId.current = "conversation-a";
     generationId.current = "generation-a";
     assert.strictEqual(acceptMessageForScope(firstMessage, getScope), true);
-    assert.strictEqual(acceptMessageForScope({
-      type: "showTyping", conversationId: "conversation-a", generationId: "generation-a",
-    }, getScope), true);
+    assert.strictEqual(
+      acceptMessageForScope(
+        {
+          type: "showTyping",
+          conversationId: "conversation-a",
+          generationId: "generation-a",
+        },
+        getScope,
+      ),
+      true,
+    );
 
     generationId.current = "generation-b";
     assert.strictEqual(acceptMessageForScope(firstMessage, getScope), false);
@@ -43,25 +54,40 @@ suite("generation event scope", () => {
   });
 
   test("rejects another conversation and another generation", () => {
-    assert.strictEqual(acceptMessageForScope(lateMessage, {
-      conversationId: "conversation-b",
-      activeGenerationId: "generation-b",
-    }), false);
-    assert.strictEqual(acceptMessageForScope(lateMessage, {
-      conversationId: "conversation-a",
-      activeGenerationId: "generation-b",
-    }), false);
+    assert.strictEqual(
+      acceptMessageForScope(lateMessage, {
+        conversationId: "conversation-b",
+        activeGenerationId: "generation-b",
+      }),
+      false,
+    );
+    assert.strictEqual(
+      acceptMessageForScope(lateMessage, {
+        conversationId: "conversation-a",
+        activeGenerationId: "generation-b",
+      }),
+      false,
+    );
   });
 
   test("accepts only the selected generation and allows global snapshots", () => {
-    assert.strictEqual(acceptMessageForScope(lateMessage, {
-      conversationId: "conversation-a",
-      activeGenerationId: "generation-a",
-    }), true);
-    assert.strictEqual(acceptMessageForScope({
-      type: "generationSnapshot",
-      generations: [],
-      recoveredDrafts: [],
-    }, {}), true);
+    assert.strictEqual(
+      acceptMessageForScope(lateMessage, {
+        conversationId: "conversation-a",
+        activeGenerationId: "generation-a",
+      }),
+      true,
+    );
+    assert.strictEqual(
+      acceptMessageForScope(
+        {
+          type: "generationSnapshot",
+          generations: [],
+          recoveredDrafts: [],
+        },
+        {},
+      ),
+      true,
+    );
   });
 });

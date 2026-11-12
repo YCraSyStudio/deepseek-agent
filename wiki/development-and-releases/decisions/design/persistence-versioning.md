@@ -16,7 +16,7 @@ Each conversation lives in `history/<id>/`. Its `manifest.json` holds versioned 
 
 Activation validates each conversation directory before use. It permanently deletes unsupported, malformed, oversized, incomplete or index-inconsistent conversation data, along with legacy flat `history/*.json` files and the obsolete `.segments` directory. It also deletes unsupported checkpoints and obsolete quarantine directories.
 
-The application rejects invalid in-memory values before saving and does not silently repair invalid records. The legacy conversation parser, activation-time migration of legacy conversations, workspace-state import, legacy workspace fallback and checkpoint permission-mode rewrite have been removed. See [settings, secrets, and history](../settings-and-data/settings-secrets-and-history.md) for the storage layout.
+The application rejects invalid in-memory values before saving and does not silently repair invalid records. The legacy conversation parser, activation-time migration of legacy conversations, workspace-state import, legacy workspace fallback and checkpoint permission-mode rewrite have been removed. See [settings, history, and privacy](../../../settings-and-data/settings-history-and-privacy.md) for the storage layout.
 
 [Back](2.INDEX.MD)
 

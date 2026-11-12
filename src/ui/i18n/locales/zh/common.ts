@@ -7,6 +7,6 @@ export const common = {
     newChat: "新建聊天",
     settings: "设置",
     enableIncognito: "启用无痕模式",
-    disableIncognito: "关闭无痕模式"
-  }
+    disableIncognito: "关闭无痕模式",
+  },
 } satisfies TranslationCatalog;

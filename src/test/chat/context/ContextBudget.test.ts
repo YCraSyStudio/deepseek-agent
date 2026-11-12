@@ -20,10 +20,15 @@ suite("Context budget and compaction", () => {
 
     const messages = [{ role: "user" as const, content: "hello" }];
     const withoutTools = estimateRequestTokens(messages);
-    const withTools = estimateRequestTokens(messages, [{
-      type: "function",
-      function: { name: "read_file", parameters: { type: "object", properties: { path: { type: "string" } } } },
-    }]);
+    const withTools = estimateRequestTokens(messages, [
+      {
+        type: "function",
+        function: {
+          name: "read_file",
+          parameters: { type: "object", properties: { path: { type: "string" } } },
+        },
+      },
+    ]);
     assert.ok(withTools > withoutTools);
     assert.doesNotThrow(() => assertRequestFitsContext(messages, [], "deepseek-flash", 8_192));
   });
@@ -96,7 +101,10 @@ suite("Context budget and compaction", () => {
     const manager = new GenerationBudgetManager("deepseek-flash", 8_192);
     const compacted = compactToolCycleContext(
       manager,
-      [{ role: "system", content: "s".repeat(2_300_000) }, { role: "user", content: "x" }],
+      [
+        { role: "system", content: "s".repeat(2_300_000) },
+        { role: "user", content: "x" },
+      ],
       [],
       "x",
       [],
@@ -111,11 +119,16 @@ suite("Context budget and compaction", () => {
     const lines = Array.from({ length: 500 }, (_, index) => `literal line ${index + 1}`);
     const signal = new AbortController().signal;
     const compactor = new ContextCompactor(provider, "deepseek-flash", signal);
-    const [file] = await compactor.compactFiles([{
-      path: "src/large.ts",
-      type: "file",
-      content: lines.join("\n"),
-    }], "inspect the relevant code");
+    const [file] = await compactor.compactFiles(
+      [
+        {
+          path: "src/large.ts",
+          type: "file",
+          content: lines.join("\n"),
+        },
+      ],
+      "inspect the relevant code",
+    );
 
     assert.strictEqual(provider.requests.length, 1);
     assert.deepStrictEqual(provider.requests[0].thinking, { type: "disabled" });
@@ -129,12 +142,18 @@ suite("Context budget and compaction", () => {
 
   test("reserves a wider ceiling for prose summaries than for range selection", async () => {
     const provider = new StubProvider("summary");
-    const compactor = new ContextCompactor(provider, "deepseek-flash", new AbortController().signal);
-    await compactor.summarize([{
-      generationId: "generation-1",
-      visibleText: "context",
-      messages: [{ role: "user", content: "context" }],
-    }]);
+    const compactor = new ContextCompactor(
+      provider,
+      "deepseek-flash",
+      new AbortController().signal,
+    );
+    await compactor.summarize([
+      {
+        generationId: "generation-1",
+        visibleText: "context",
+        messages: [{ role: "user", content: "context" }],
+      },
+    ]);
 
     assert.deepStrictEqual(provider.requests[0].thinking, { type: "disabled" });
     assert.strictEqual(provider.requests[0].max_tokens, 2_048);
@@ -146,11 +165,16 @@ suite("Context budget and compaction", () => {
       provider,
       "deepseek-flash",
       new AbortController().signal,
-    ).compactFiles([{
-      path: "dist/minified.js",
-      type: "file",
-      content: `const marker=true;${"x".repeat(300 * 1024)}`,
-    }], "find marker");
+    ).compactFiles(
+      [
+        {
+          path: "dist/minified.js",
+          type: "file",
+          content: `const marker=true;${"x".repeat(300 * 1024)}`,
+        },
+      ],
+      "find marker",
+    );
 
     assert.strictEqual(provider.requests.length, 0);
     assert.ok(Buffer.byteLength(file.content ?? "", "utf8") <= 96 * 1024);
@@ -158,7 +182,9 @@ suite("Context budget and compaction", () => {
   });
 
   test("sorts and merges overlapping selected ranges without duplicating source", async () => {
-    const provider = new StubProvider('{"ranges":[{"start":20,"end":30},{"start":10,"end":22},{"start":40,"end":42}]}');
+    const provider = new StubProvider(
+      '{"ranges":[{"start":20,"end":30},{"start":10,"end":22},{"start":40,"end":42}]}',
+    );
     const lines = Array.from({ length: 500 }, (_, index) => `unique line ${index + 1}`);
     const [file] = await new ContextCompactor(
       provider,
@@ -166,24 +192,38 @@ suite("Context budget and compaction", () => {
       new AbortController().signal,
     ).compactFiles([{ path: "src/large.ts", type: "file", content: lines.join("\n") }], "inspect");
 
-    assert.ok((file.content?.indexOf("unique line 10") ?? -1) < (file.content?.indexOf("unique line 40") ?? -1));
+    assert.ok(
+      (file.content?.indexOf("unique line 10") ?? -1) <
+        (file.content?.indexOf("unique line 40") ?? -1),
+    );
     assert.strictEqual(file.content?.match(/unique line 20(?:\n|$)/g)?.length, 1);
     assert.strictEqual(file.content?.match(/\/\* lines /g)?.length, 2);
   });
 
   test("keeps cumulative summary coverage but stores only the new boundary delta", async () => {
     const provider = new StubProvider("summary");
-    const compactor = new ContextCompactor(provider, "deepseek-flash", new AbortController().signal);
-    const first = await compactor.summarize([{
-      generationId: "generation-1",
-      visibleText: "first",
-      messages: [{ role: "user", content: "first" }],
-    }]);
-    const second = await compactor.summarize([{
-      generationId: "generation-2",
-      visibleText: "second",
-      messages: [{ role: "user", content: "second" }],
-    }], first);
+    const compactor = new ContextCompactor(
+      provider,
+      "deepseek-flash",
+      new AbortController().signal,
+    );
+    const first = await compactor.summarize([
+      {
+        generationId: "generation-1",
+        visibleText: "first",
+        messages: [{ role: "user", content: "first" }],
+      },
+    ]);
+    const second = await compactor.summarize(
+      [
+        {
+          generationId: "generation-2",
+          visibleText: "second",
+          messages: [{ role: "user", content: "second" }],
+        },
+      ],
+      first,
+    );
 
     assert.deepStrictEqual(second.coveredGenerationIds, ["generation-1", "generation-2"]);
     assert.deepStrictEqual(second.boundaries?.at(-1)?.coveredGenerationIds, ["generation-2"]);
@@ -195,11 +235,13 @@ suite("Context budget and compaction", () => {
     controller.abort();
 
     await assert.rejects(
-      new ContextCompactor(provider, "deepseek-flash", controller.signal).summarize([{
-        generationId: "cancelled-generation",
-        visibleText: "cancelled",
-        messages: [{ role: "user", content: "cancelled" }],
-      }]),
+      new ContextCompactor(provider, "deepseek-flash", controller.signal).summarize([
+        {
+          generationId: "cancelled-generation",
+          visibleText: "cancelled",
+          messages: [{ role: "user", content: "cancelled" }],
+        },
+      ]),
       (error: unknown) => error instanceof Error && error.name === "AbortError",
     );
     assert.strictEqual(provider.requests.length, 0);
@@ -214,12 +256,22 @@ suite("Context budget and compaction", () => {
         throw new Error("model unavailable");
       },
     };
-    const summary = await new ContextCompactor(provider, "unavailable-model", new AbortController().signal, 4,
-      (phase, usage, model) => {observed.push({ phase, usage, model });},
-    ).summarize([{ generationId: "g", visibleText: "Required verification remains pending.", messages: [] }]);
+    const summary = await new ContextCompactor(
+      provider,
+      "unavailable-model",
+      new AbortController().signal,
+      4,
+      (phase, usage, model) => {
+        observed.push({ phase, usage, model });
+      },
+    ).summarize([
+      { generationId: "g", visibleText: "Required verification remains pending.", messages: [] },
+    ]);
     assert.strictEqual(summary.provider, "local");
     assert.match(summary.content, /Required verification remains pending/);
-    assert.deepStrictEqual(observed, [{ phase: "context_summary", usage: undefined, model: "unavailable-model" }]);
+    assert.deepStrictEqual(observed, [
+      { phase: "context_summary", usage: undefined, model: "unavailable-model" },
+    ]);
   });
 });
 
@@ -229,9 +281,12 @@ class StubProvider implements ModelProvider {
   readonly requests: ChatCompletionRequest[] = [];
   readonly signals: Array<AbortSignal | undefined> = [];
 
-  constructor(private readonly responseContent = "{\"ranges\":[{\"start\":10,\"end\":12}]}") {}
+  constructor(private readonly responseContent = '{"ranges":[{"start":10,"end":12}]}') {}
 
-  async chatCompletion(request: ChatCompletionRequest, signal?: AbortSignal): Promise<ChatCompletionResponse> {
+  async chatCompletion(
+    request: ChatCompletionRequest,
+    signal?: AbortSignal,
+  ): Promise<ChatCompletionResponse> {
     this.requests.push(request);
     this.signals.push(signal);
     return {
@@ -239,11 +294,13 @@ class StubProvider implements ModelProvider {
       object: "chat.completion",
       created: 1,
       model: request.model,
-      choices: [{
-        index: 0,
-        message: { role: "assistant", content: this.responseContent },
-        finish_reason: "stop",
-      }],
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: this.responseContent },
+          finish_reason: "stop",
+        },
+      ],
     };
   }
 

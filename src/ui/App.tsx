@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import "./App.css";
-import { Header, HistoryTransitionPanel, TooltipLayer, type HistoryTransition } from "@webview/components/shared";
+import {
+  Header,
+  HistoryTransitionPanel,
+  TooltipLayer,
+  type HistoryTransition,
+} from "@webview/components/shared";
 import { ChatView, SettingsView, HistoryView } from "./views";
 import { VsCodeProvider } from "./views/chatView/contexts";
 import type { ContextWindowStatus, Conversation, HandlerToWebviewMessage } from "@/contracts";
 import type { ConversationUsageSnapshot } from "@/shared/usage/Usage";
 import { getVsCodeApi } from "./VsCodeApi";
 import { getUiLocale, subscribeUiLocale } from "./i18n";
-import { beginNavigationRequest, isLatestNavigationRequest, NAVIGATION_STARTED_EVENT } from "./NavigationRequests";
-import { clearSavedChatState, selectNewChatDraft } from "./views/chatView/model/PersistentChatState";
+import {
+  beginNavigationRequest,
+  isLatestNavigationRequest,
+  NAVIGATION_STARTED_EVENT,
+} from "./NavigationRequests";
+import {
+  clearSavedChatState,
+  selectNewChatDraft,
+} from "./views/chatView/model/PersistentChatState";
 
 type ViewType = "chat" | "settings" | "history";
 
@@ -17,7 +29,9 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewType>("chat");
   const [loadedConversation, setLoadedConversation] = useState<Conversation | null>(null);
   const loadedConversationIdRef = useRef<string | undefined>(undefined);
-  const [conversationUsage, setConversationUsage] = useState<ConversationUsageSnapshot | undefined>();
+  const [conversationUsage, setConversationUsage] = useState<
+    ConversationUsageSnapshot | undefined
+  >();
   const [contextWindow, setContextWindow] = useState<ContextWindowStatus | undefined>();
   const [chatRevision, setChatRevision] = useState(0);
   const [historyEnabled, setHistoryEnabled] = useState<boolean>();
@@ -55,7 +69,9 @@ function App() {
     const handleMessage = (event: MessageEvent<HandlerToWebviewMessage>) => {
       const message = event.data;
       if (message.type === "conversationLoaded") {
-        if (!isLatestNavigationRequest(message.requestId)) {return;}
+        if (!isLatestNavigationRequest(message.requestId)) {
+          return;
+        }
         setLoadedConversation(message.conversation);
         setConversationUsage(message.usage);
         setContextWindow(message.contextWindow);
@@ -64,16 +80,24 @@ function App() {
         setChatRevision((revision) => revision + 1);
         setCurrentView("chat");
       } else if (message.type === "conversationLoadRejected") {
-        if (!isLatestNavigationRequest(message.requestId)) {return;}
+        if (!isLatestNavigationRequest(message.requestId)) {
+          return;
+        }
         setNavigationPending(false);
       } else if (message.type === "conversationPageLoaded") {
-        if (!isLatestNavigationRequest(message.requestId)) {return;}
-        setLoadedConversation((current) => current?.id === message.id ? {
-          ...current,
-          messages: [...message.messages, ...current.messages],
-          hasEarlierMessages: message.hasEarlierMessages,
-          historyCursor: message.cursor,
-        } : current);
+        if (!isLatestNavigationRequest(message.requestId)) {
+          return;
+        }
+        setLoadedConversation((current) =>
+          current?.id === message.id
+            ? {
+                ...current,
+                messages: [...message.messages, ...current.messages],
+                hasEarlierMessages: message.hasEarlierMessages,
+                historyCursor: message.cursor,
+              }
+            : current,
+        );
         setEarlierMessagesLoaded((count) => count + message.messages.length);
         setNavigationPending(false);
         setChatRevision((revision) => revision + 1);
@@ -81,8 +105,12 @@ function App() {
         const deletedId = message.id;
         clearSavedChatState(deletedId);
         setLoadedConversation((current) => (current?.id === deletedId ? null : current));
-        setConversationUsage((current) => (loadedConversationIdRef.current === deletedId ? undefined : current));
-        setContextWindow((current) => (loadedConversationIdRef.current === deletedId ? undefined : current));
+        setConversationUsage((current) =>
+          loadedConversationIdRef.current === deletedId ? undefined : current,
+        );
+        setContextWindow((current) =>
+          loadedConversationIdRef.current === deletedId ? undefined : current,
+        );
       } else if (message.type === "clearChat") {
         // Clear persisted restoration data before ChatView is remounted.
         clearSavedChatState();
@@ -93,7 +121,9 @@ function App() {
         setNavigationPending(false);
         setChatRevision((revision) => revision + 1);
       } else if (message.type === "newConversationReady") {
-        if (!isLatestNavigationRequest(message.requestId)) {return;}
+        if (!isLatestNavigationRequest(message.requestId)) {
+          return;
+        }
         selectNewChatDraft();
         setLoadedConversation(null);
         setConversationUsage(undefined);
@@ -101,12 +131,20 @@ function App() {
         setEarlierMessagesLoaded(0);
         setNavigationPending(false);
         setChatRevision((revision) => revision + 1);
-      } else if (message.type === "historyError" && message.requestId && isLatestNavigationRequest(message.requestId)) {
+      } else if (
+        message.type === "historyError" &&
+        message.requestId &&
+        isLatestNavigationRequest(message.requestId)
+      ) {
         setNavigationPending(false);
       } else if (message.type === "configLoaded") {
-        if (message.config.historyEnabled !== undefined) {setHistoryEnabled(message.config.historyEnabled);}
+        if (message.config.historyEnabled !== undefined) {
+          setHistoryEnabled(message.config.historyEnabled);
+        }
       } else if (message.type === "configUpdateResult") {
-        if (message.config.historyEnabled !== undefined) {setHistoryEnabled(message.config.historyEnabled);}
+        if (message.config.historyEnabled !== undefined) {
+          setHistoryEnabled(message.config.historyEnabled);
+        }
         if (message.requestId === pendingHistoryRequestRef.current) {
           pendingHistoryRequestRef.current = undefined;
           setHistoryUpdatePending(false);
@@ -114,7 +152,9 @@ function App() {
         }
       } else if (message.type === "historyTransitionRequired") {
         const pendingRequestId = pendingHistoryRequestRef.current;
-        if (pendingRequestId && pendingRequestId !== message.requestId) {return;}
+        if (pendingRequestId && pendingRequestId !== message.requestId) {
+          return;
+        }
         pendingHistoryRequestRef.current = message.requestId;
         setHistoryUpdatePending(true);
         setHistoryTransition(message);
@@ -130,14 +170,19 @@ function App() {
     };
   }, []);
 
-  const handleIncognitoToggle = useCallback((incognito: boolean) => {
-    const vscode = getVsCodeApi();
-    if (!vscode || historyEnabled === undefined || historyUpdatePending) {return;}
-    const requestId = crypto.randomUUID();
-    pendingHistoryRequestRef.current = requestId;
-    setHistoryUpdatePending(true);
-    vscode.postMessage({ type: "saveConfig", requestId, config: { historyEnabled: !incognito } });
-  }, [historyEnabled, historyUpdatePending]);
+  const handleIncognitoToggle = useCallback(
+    (incognito: boolean) => {
+      const vscode = getVsCodeApi();
+      if (!vscode || historyEnabled === undefined || historyUpdatePending) {
+        return;
+      }
+      const requestId = crypto.randomUUID();
+      pendingHistoryRequestRef.current = requestId;
+      setHistoryUpdatePending(true);
+      vscode.postMessage({ type: "saveConfig", requestId, config: { historyEnabled: !incognito } });
+    },
+    [historyEnabled, historyUpdatePending],
+  );
 
   return (
     <VsCodeProvider>
@@ -150,7 +195,10 @@ function App() {
           incognitoUpdatePending={historyEnabled === undefined || historyUpdatePending}
           onIncognitoToggle={handleIncognitoToggle}
         />
-        <div className={`viewPane ${currentView === "chat" ? "active" : "hidden"}`} aria-hidden={currentView !== "chat"}>
+        <div
+          className={`viewPane ${currentView === "chat" ? "active" : "hidden"}`}
+          aria-hidden={currentView !== "chat"}
+        >
           <ChatView
             key={chatRevision}
             loadedConversation={loadedConversation}
@@ -174,7 +222,9 @@ function App() {
         <HistoryTransitionPanel
           transition={historyTransition}
           onDecision={(decision) => {
-            if (!historyTransition) {return;}
+            if (!historyTransition) {
+              return;
+            }
             getVsCodeApi()?.postMessage({
               type: "resolveHistoryTransition",
               requestId: historyTransition.requestId,

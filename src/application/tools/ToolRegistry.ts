@@ -30,9 +30,19 @@ export class ToolRegistry {
 
     try {
       const args: unknown = JSON.parse(toolCall.function.arguments);
-      const schemaValidation = validateAgainstToolSchema(args, toolDef.definition.function.parameters ?? { type: "object", properties: {}, additionalProperties: false });
+      const schemaValidation = validateAgainstToolSchema(
+        args,
+        toolDef.definition.function.parameters ?? {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      );
       if (!schemaValidation.valid) {
-        return { valid: false, error: `Invalid arguments for ${toolCall.function.name}: ${schemaValidation.error}` };
+        return {
+          valid: false,
+          error: `Invalid arguments for ${toolCall.function.name}: ${schemaValidation.error}`,
+        };
       }
       return { valid: true };
     } catch {
@@ -45,14 +55,19 @@ export class ToolRegistry {
   }
 }
 
-function validateAgainstToolSchema(args: unknown, schema: Record<string, unknown>): ValidationResult {
+function validateAgainstToolSchema(
+  args: unknown,
+  schema: Record<string, unknown>,
+): ValidationResult {
   if (!args || typeof args !== "object" || Array.isArray(args)) {
     return { valid: false, error: "arguments must be an object" };
   }
 
   const record = args as Record<string, unknown>;
   const properties = isRecord(schema.properties) ? schema.properties : {};
-  const required = Array.isArray(schema.required) ? schema.required.filter((value): value is string => typeof value === "string") : [];
+  const required = Array.isArray(schema.required)
+    ? schema.required.filter((value): value is string => typeof value === "string")
+    : [];
 
   for (const key of required) {
     if (!(key in record)) {

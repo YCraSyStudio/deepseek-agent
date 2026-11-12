@@ -16,7 +16,7 @@ VS Code handlers validate and dispatch commands, invoke use cases and translate 
 
 Each accepted generation emits exactly one terminal outcome after persistence reconciliation. The outcomes are `completed`, `cancelled`, `interrupted` and `error`. Explicit Stop preserves the current turn as `cancelled`. Steering and recoverable lifecycle interruption use `interrupted`. Repeated or stale cancellation is idempotent.
 
-Steering carries a verified source-generation link. Only a matching persisted `steered` terminal outcome lets the next provider request continue the previous generation with the new guidance. The UI hides that boundary and shows other interruptions. See the [runtime flow](../chat-and-models/runtime-flow.md#queue-steering-and-cancellation) for how steering and cancellation work.
+Steering carries a verified source-generation link. Only a matching persisted `steered` terminal outcome lets the next provider request continue the previous generation with the new guidance. The UI hides that boundary and shows other interruptions. See the [runtime flow](../../../chat-and-models/runtime-flow.md#queue-steering-and-cancellation) for how steering and cancellation work.
 
 [Back](2.INDEX.MD)
 

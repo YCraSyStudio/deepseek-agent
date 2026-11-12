@@ -6,7 +6,12 @@ import {
   type StreamChunk,
 } from "@/contracts";
 import type { ModelProvider } from "@/application/ports";
-import { chatCompletion, chatCompletionStream, buildChatBody, type ChatRequest } from "./features/Chat";
+import {
+  chatCompletion,
+  chatCompletionStream,
+  buildChatBody,
+  type ChatRequest,
+} from "./features/Chat";
 import { listModels } from "./Models";
 import { normalizeBetaToolMessages } from "./features/StrictTools";
 
@@ -16,19 +21,37 @@ export class DeepSeekModelProvider implements ModelProvider {
 
   constructor(private config: AppConfig) {}
 
-  async chatCompletion(request: ChatCompletionRequest, signal?: AbortSignal): Promise<ChatCompletionResponse> {
+  async chatCompletion(
+    request: ChatCompletionRequest,
+    signal?: AbortSignal,
+  ): Promise<ChatCompletionResponse> {
     assertCompatibleModel(request.model || this.config.model, this.config.baseUrl);
     const chatRequest = this._applyDefaults(request);
     const body = buildChatBody(chatRequest, this.config);
     const preparedRequest = { ...chatRequest, ...body } as ChatRequest;
-    const response = await chatCompletion(preparedRequest, this.config.apiKey, this.config.baseUrl, signal, this.usesBetaEndpoint(preparedRequest));
-    return !this.config.strictToolCallsEnabled || !request.tools ? response : {
-      ...response,
-      choices: response.choices.map((choice) => ({ ...choice, message: normalizeBetaToolMessages([choice.message], request.tools!)[0] })),
-    };
+    const response = await chatCompletion(
+      preparedRequest,
+      this.config.apiKey,
+      this.config.baseUrl,
+      signal,
+      this.usesBetaEndpoint(preparedRequest),
+    );
+    return !this.config.strictToolCallsEnabled || !request.tools
+      ? response
+      : {
+          ...response,
+          choices: response.choices.map((choice) => ({
+            ...choice,
+            message: normalizeBetaToolMessages([choice.message], request.tools!)[0],
+          })),
+        };
   }
 
-  async chatCompletionStream(request: ChatCompletionRequest, onChunk: (chunk: StreamChunk) => void, signal?: AbortSignal): Promise<void> {
+  async chatCompletionStream(
+    request: ChatCompletionRequest,
+    onChunk: (chunk: StreamChunk) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
     assertCompatibleModel(request.model || this.config.model, this.config.baseUrl);
     const chatRequest = this._applyDefaults(request);
     const body = buildChatBody(chatRequest, this.config);
@@ -61,7 +84,11 @@ export class DeepSeekModelProvider implements ModelProvider {
     this.config = { ...this.config, ...config };
   }
 
-  private async _stream(request: ChatRequest, onChunk: (chunk: StreamChunk) => void, signal?: AbortSignal): Promise<void> {
+  private async _stream(
+    request: ChatRequest,
+    onChunk: (chunk: StreamChunk) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
     await chatCompletionStream({
       request,
       apiKey: this.config.apiKey,
@@ -73,7 +100,9 @@ export class DeepSeekModelProvider implements ModelProvider {
   }
 
   private usesBetaEndpoint(request: ChatCompletionRequest): boolean {
-    if (request.messages.some(message => message.prefix === true)) {return this.config.betaFeaturesEnabled;}
+    if (request.messages.some((message) => message.prefix === true)) {
+      return this.config.betaFeaturesEnabled;
+    }
     return this.config.strictToolCallsEnabled && Boolean(request.tools?.length);
   }
 
@@ -103,6 +132,8 @@ export function assertCompatibleModel(model: string, baseUrl: string): void {
     return;
   }
   if (!MODEL_REGISTRY.some((entry) => entry.id === model)) {
-    throw new Error(`Model "${model}" is not supported by the official DeepSeek API configuration.`);
+    throw new Error(
+      `Model "${model}" is not supported by the official DeepSeek API configuration.`,
+    );
   }
 }

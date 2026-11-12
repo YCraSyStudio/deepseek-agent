@@ -1,10 +1,10 @@
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 const uiRoot = dirname(fileURLToPath(import.meta.url));
-const srcRoot = resolve(uiRoot, '..');
+const srcRoot = resolve(uiRoot, "..");
 const productionCsp = [
   "default-src 'none'",
   "connect-src {{CSP_SOURCE}}",
@@ -12,15 +12,15 @@ const productionCsp = [
   "font-src {{CSP_SOURCE}}",
   "style-src {{CSP_SOURCE}} 'nonce-{{NONCE}}' 'unsafe-inline'",
   "script-src {{CSP_SOURCE}} 'nonce-{{NONCE}}'",
-].join('; ');
+].join("; ");
 
 export default defineConfig({
   root: uiRoot,
   plugins: [
     react(),
     {
-      name: 'deepseek-production-csp',
-      apply: 'build',
+      name: "deepseek-production-csp",
+      apply: "build",
       transformIndexHtml(html) {
         return html.replace(
           /<meta name="viewport"/,
@@ -29,23 +29,23 @@ export default defineConfig({
       },
     },
   ],
-  base: './',
+  base: "./",
   server: {
     cors: true,
     hmr: {
-      host: 'localhost',
+      host: "localhost",
       port: 5175,
-      protocol: 'ws',
+      protocol: "ws",
     },
   },
   resolve: {
     alias: {
-      '@': srcRoot,
-      '@webview': uiRoot,
+      "@": srcRoot,
+      "@webview": uiRoot,
     },
   },
   build: {
-    outDir: '../../dist/webview',
+    outDir: "../../dist/webview",
     emptyOutDir: true,
     rolldownOptions: {
       output: {

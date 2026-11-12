@@ -44,11 +44,16 @@ export async function checkpointGeneration(
   }
   const config = dependencies.settings.load();
   const { apiKey: _apiKey, ...safeConfig } = config;
-  const binding = record.state.getConversation()?.workspaceBinding ?? dependencies.historyManager.getWorkspaceBinding();
+  const binding =
+    record.state.getConversation()?.workspaceBinding ??
+    dependencies.historyManager.getWorkspaceBinding();
   await dependencies.checkpointStore.save({
     conversationId: record.conversationId,
     generationId: record.generationId,
-    status: record.error && record.status !== "cancelling" && record.status !== "cancelled" ? "error" : record.status,
+    status:
+      record.error && record.status !== "cancelling" && record.status !== "cancelled"
+        ? "error"
+        : record.status,
     error: record.error,
     userMessage: record.userMessage,
     content: record.content,
@@ -61,7 +66,9 @@ export async function checkpointGeneration(
     })),
     config: safeConfig,
     permissionSnapshot: record.permissionSnapshot,
-    providerTranscript: record.providerTranscript ? structuredClone(record.providerTranscript) : undefined,
+    providerTranscript: record.providerTranscript
+      ? structuredClone(record.providerTranscript)
+      : undefined,
     workspaceUri: binding.uri,
     workspaceBinding: binding,
     updatedAt: Date.now(),
@@ -90,7 +97,8 @@ export async function checkpointQueuedGeneration(
     return;
   }
   const conversation = await dependencies.historyManager.getById(conversationId);
-  const binding = conversation?.workspaceBinding ?? dependencies.historyManager.getWorkspaceBinding();
+  const binding =
+    conversation?.workspaceBinding ?? dependencies.historyManager.getWorkspaceBinding();
   await dependencies.checkpointStore.save({
     conversationId,
     status: "queued",
@@ -98,7 +106,12 @@ export async function checkpointQueuedGeneration(
     timeline: [],
     toolCalls: [],
     queue: [
-      ...queue.map((task) => ({ clientRequestId: task.clientRequestId, text: task.payload.text, queuedAt: task.queuedAt, reason: "queued" as const })),
+      ...queue.map((task) => ({
+        clientRequestId: task.clientRequestId,
+        text: task.payload.text,
+        queuedAt: task.queuedAt,
+        reason: "queued" as const,
+      })),
       ...drafts.map(toPersistedDraft),
     ],
     workspaceUri: binding.uri,
@@ -121,40 +134,57 @@ export function buildGenerationSnapshot(
   recoveredDrafts: ReadonlyMap<string, QueuedGenerationMessage[]>,
   coordinator: GenerationCoordinator<SendMessagePayload>,
 ): Record<string, unknown> {
-  const starting: GenerationSnapshot[] = coordinator.getActiveGenerations()
+  const starting: GenerationSnapshot[] = coordinator
+    .getActiveGenerations()
     .filter((active) => !runs.has(active.generationId))
     .map((active) => ({
       generationId: active.generationId,
       conversationId: active.task.conversationId,
       status: active.controller.signal.aborted ? "cancelling" : "starting",
       userMessage: {
-        id: `starting-${active.generationId}`, role: "user", content: active.task.payload.text,
-        generationId: active.generationId, createdAt: active.task.queuedAt,
+        id: `starting-${active.generationId}`,
+        role: "user",
+        content: active.task.payload.text,
+        generationId: active.generationId,
+        createdAt: active.task.queuedAt,
         imageAttachments: structuredClone(active.task.payload.imageAttachments),
       },
-      content: "", timeline: [], toolCalls: [],
+      content: "",
+      timeline: [],
+      toolCalls: [],
       queue: coordinator.getQueue(active.task.conversationId).map((task) => ({
-        clientRequestId: task.clientRequestId, text: task.payload.text, queuedAt: task.queuedAt,
-      })),
-    }));
-  return {
-    type: "generationSnapshot",
-    generations: [...starting, ...[...runs.values()].map((record) => ({
-      generationId: record.generationId,
-      conversationId: record.conversationId,
-      status: record.error && record.status !== "cancelling" && record.status !== "cancelled" ? "error" : record.status,
-      error: record.error,
-      userMessage: record.userMessage ?? record.state.createMessage("user", ""),
-      content: record.content,
-      timeline: structuredClone(record.timeline),
-      toolCalls: structuredClone(record.toolCalls),
-      queue: coordinator.getQueue(record.conversationId).map((task) => ({
         clientRequestId: task.clientRequestId,
         text: task.payload.text,
         queuedAt: task.queuedAt,
       })),
-    }))],
-    recoveredDrafts: [...recoveredDrafts].map(([conversationId, messages]) => ({ conversationId, messages })),
+    }));
+  return {
+    type: "generationSnapshot",
+    generations: [
+      ...starting,
+      ...[...runs.values()].map((record) => ({
+        generationId: record.generationId,
+        conversationId: record.conversationId,
+        status:
+          record.error && record.status !== "cancelling" && record.status !== "cancelled"
+            ? "error"
+            : record.status,
+        error: record.error,
+        userMessage: record.userMessage ?? record.state.createMessage("user", ""),
+        content: record.content,
+        timeline: structuredClone(record.timeline),
+        toolCalls: structuredClone(record.toolCalls),
+        queue: coordinator.getQueue(record.conversationId).map((task) => ({
+          clientRequestId: task.clientRequestId,
+          text: task.payload.text,
+          queuedAt: task.queuedAt,
+        })),
+      })),
+    ],
+    recoveredDrafts: [...recoveredDrafts].map(([conversationId, messages]) => ({
+      conversationId,
+      messages,
+    })),
   };
 }
 

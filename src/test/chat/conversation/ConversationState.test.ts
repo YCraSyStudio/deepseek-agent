@@ -2,17 +2,26 @@ import { normalizeConversation } from "@/vscode/storage/ConversationNormalizatio
 import * as assert from "assert";
 import type { AssistantTimelineEvent, Conversation, ImageAttachment } from "@/contracts";
 import { ConversationState } from "@/application/chat/ConversationState";
-import { createProviderTranscript, toPresentationConversation, type StoredConversation } from "@/application/chat/ProviderTranscript";
+import {
+  createProviderTranscript,
+  toPresentationConversation,
+  type StoredConversation,
+} from "@/application/chat/ProviderTranscript";
 
 suite("ConversationState", () => {
   test("retains workspace change reminders in replay and compaction context without changing the displayed prompt", async () => {
     let saved: StoredConversation | undefined;
     let lastUpdatedAt = 0;
-    const state = new ConversationState({ save: async (conversation) => {
-      assert.ok(conversation.updatedAt > lastUpdatedAt, "Every changed save must advance the revision timestamp");
-      lastUpdatedAt = conversation.updatedAt;
-      saved = structuredClone(conversation);
-    } });
+    const state = new ConversationState({
+      save: async (conversation) => {
+        assert.ok(
+          conversation.updatedAt > lastUpdatedAt,
+          "Every changed save must advance the revision timestamp",
+        );
+        lastUpdatedAt = conversation.updatedAt;
+        saved = structuredClone(conversation);
+      },
+    });
     const user = state.createMessage("user", "Continue the task");
     await state.saveMessages({ messages: [user], model: "test-model" });
     const notice = 'Workspace changes: Modified: "project/auth.ts". Read the file again.';
@@ -28,13 +37,26 @@ suite("ConversationState", () => {
   });
   test("persists archive-assigned image numbers without duplicating the user message", async () => {
     const saves: Conversation[] = [];
-    const state = new ConversationState({ save: async (conversation) => {saves.push(structuredClone(conversation));} });
+    const state = new ConversationState({
+      save: async (conversation) => {
+        saves.push(structuredClone(conversation));
+      },
+    });
     const attachment: ImageAttachment = {
-      id: "attachment", fileId: "file-api-test", name: "image.png", mediaType: "image/png", size: 1,
-      source: "clipboard", uploadedAt: 1, expiresAt: Date.now() + 60_000,
-      apiBaseUrl: "https://api.deepseek.com", cacheFileName: "image.png",
+      id: "attachment",
+      fileId: "file-api-test",
+      name: "image.png",
+      mediaType: "image/png",
+      size: 1,
+      source: "clipboard",
+      uploadedAt: 1,
+      expiresAt: Date.now() + 60_000,
+      apiBaseUrl: "https://api.deepseek.com",
+      cacheFileName: "image.png",
     };
-    const message = state.createMessage("user", "Compare images 1 and 3", { imageAttachments: [attachment] });
+    const message = state.createMessage("user", "Compare images 1 and 3", {
+      imageAttachments: [attachment],
+    });
     await state.saveMessages({ messages: [message], model: "test-model" });
     attachment.imageNumber = 4;
     await state.updateMessageAttachments(message.id, [attachment]);
@@ -43,14 +65,21 @@ suite("ConversationState", () => {
     assert.ok(saves[1].updatedAt > saves[0].updatedAt);
     const restored = new ConversationState({ save: async () => undefined });
     restored.load(saves[1]);
-    assert.strictEqual(restored.getConversation()?.messages[0].imageAttachments?.[0].imageNumber, 4);
+    assert.strictEqual(
+      restored.getConversation()?.messages[0].imageAttachments?.[0].imageNumber,
+      4,
+    );
     attachment.imageNumber = 99;
     assert.strictEqual(state.getConversation()?.messages[0].imageAttachments?.[0].imageNumber, 4);
   });
   test("keeps incognito turns in memory until an explicit promotion", async () => {
     const saves: Conversation[] = [];
     const state = new ConversationState(
-      { save: async (conversation) => {saves.push(structuredClone(conversation));} },
+      {
+        save: async (conversation) => {
+          saves.push(structuredClone(conversation));
+        },
+      },
       "incognito",
     );
 
@@ -68,16 +97,26 @@ suite("ConversationState", () => {
     await state.promoteIncognito();
     assert.strictEqual(state.getPersistenceMode(), "persistent");
     assert.strictEqual(saves.length, 1);
-    assert.deepStrictEqual(saves[0].messages.map((message) => message.content), ["Private question", "Private answer"]);
+    assert.deepStrictEqual(
+      saves[0].messages.map((message) => message.content),
+      ["Private question", "Private answer"],
+    );
   });
 
   test("discards an incognito conversation without touching the store", async () => {
     let saveCount = 0;
     const state = new ConversationState(
-      { save: async () => {saveCount += 1;} },
+      {
+        save: async () => {
+          saveCount += 1;
+        },
+      },
       "incognito",
     );
-    await state.saveMessages({ messages: [state.createMessage("user", "Secret")], model: "test-model" });
+    await state.saveMessages({
+      messages: [state.createMessage("user", "Secret")],
+      model: "test-model",
+    });
 
     state.reset("incognito");
 
@@ -88,7 +127,11 @@ suite("ConversationState", () => {
 
   test("appends multiple turns to one conversation until explicitly reset", async () => {
     const saves: Conversation[] = [];
-    const state = new ConversationState({ save: async (conversation) => {saves.push(structuredClone(conversation));} });
+    const state = new ConversationState({
+      save: async (conversation) => {
+        saves.push(structuredClone(conversation));
+      },
+    });
 
     await state.saveTurn({
       userMessage: state.createMessage("user", "First"),
@@ -158,20 +201,25 @@ suite("ConversationState", () => {
 
   test("compacts completed tool payloads while preserving final assistant reasoning", async () => {
     const state = new ConversationState({ save: async () => undefined });
-    const transcript = createProviderTranscript([
-      {
-        role: "assistant",
-        content: null,
-        reasoning_content: "Need the file.",
-        tool_calls: [{
-          id: "call-1",
-          type: "function",
-          function: { name: "read_file", arguments: "{\"path\":\"src/a.ts\"}" },
-        }],
-      },
-      { role: "tool", tool_call_id: "call-1", name: "read_file", content: "literal result" },
-      { role: "assistant", content: "Done.", reasoning_content: "Use result." },
-    ], "complete");
+    const transcript = createProviderTranscript(
+      [
+        {
+          role: "assistant",
+          content: null,
+          reasoning_content: "Need the file.",
+          tool_calls: [
+            {
+              id: "call-1",
+              type: "function",
+              function: { name: "read_file", arguments: '{"path":"src/a.ts"}' },
+            },
+          ],
+        },
+        { role: "tool", tool_call_id: "call-1", name: "read_file", content: "literal result" },
+        { role: "assistant", content: "Done.", reasoning_content: "Use result." },
+      ],
+      "complete",
+    );
     state.load({
       schemaVersion: 2,
       id: "conversation",
@@ -220,11 +268,16 @@ suite("ConversationState", () => {
 
   test("keeps an incomplete recovery transcript stored but excludes it from future API context", () => {
     const state = new ConversationState({ save: async () => undefined });
-    const incomplete = createProviderTranscript([{
-      role: "assistant",
-      content: "Visible partial",
-      reasoning_content: "private recovery reasoning",
-    }], "incomplete");
+    const incomplete = createProviderTranscript(
+      [
+        {
+          role: "assistant",
+          content: "Visible partial",
+          reasoning_content: "private recovery reasoning",
+        },
+      ],
+      "incomplete",
+    );
     state.load({
       schemaVersion: 2,
       id: "recovery",
@@ -234,17 +287,24 @@ suite("ConversationState", () => {
       model: "model",
       workspaceUri: "file:///workspace",
       workspaceBinding: testWorkspaceBinding(),
-      messages: [{
-        id: "assistant",
-        role: "assistant",
-        content: "Visible partial",
-        generationStatus: "interrupted",
-        providerTranscript: incomplete,
-      }],
+      messages: [
+        {
+          id: "assistant",
+          role: "assistant",
+          content: "Visible partial",
+          generationStatus: "interrupted",
+          providerTranscript: incomplete,
+        },
+      ],
     });
 
-    assert.strictEqual(state.getConversation()?.messages[0]?.providerTranscript?.status, "incomplete");
-    assert.deepStrictEqual(state.getApiMessages(), [{ role: "assistant", content: "Visible partial" }]);
+    assert.strictEqual(
+      state.getConversation()?.messages[0]?.providerTranscript?.status,
+      "incomplete",
+    );
+    assert.deepStrictEqual(state.getApiMessages(), [
+      { role: "assistant", content: "Visible partial" },
+    ]);
   });
 
   test("keeps interrupted visible content but omits incomplete reasoning and tools from API context", async () => {
@@ -258,23 +318,29 @@ suite("ConversationState", () => {
       model: "model",
       workspaceUri: "file:///workspace",
       workspaceBinding: testWorkspaceBinding(),
-      messages: [{
-        id: "assistant",
-        role: "assistant",
-        content: "partial answer",
-        generationStatus: "interrupted",
-        timeline: [{ id: "reasoning", type: "reasoning", content: "private partial reasoning" }],
-        toolCalls: [{
-          toolCallId: "call",
-          toolName: "read_file",
-          arguments: "{}",
-          status: "cancelled",
-          result: "cancelled",
-        }],
-      }],
+      messages: [
+        {
+          id: "assistant",
+          role: "assistant",
+          content: "partial answer",
+          generationStatus: "interrupted",
+          timeline: [{ id: "reasoning", type: "reasoning", content: "private partial reasoning" }],
+          toolCalls: [
+            {
+              toolCallId: "call",
+              toolName: "read_file",
+              arguments: "{}",
+              status: "cancelled",
+              result: "cancelled",
+            },
+          ],
+        },
+      ],
     });
 
-    assert.deepStrictEqual(state.getApiMessages(), [{ role: "assistant", content: "partial answer" }]);
+    assert.deepStrictEqual(state.getApiMessages(), [
+      { role: "assistant", content: "partial answer" },
+    ]);
   });
 
   test("uses compact contextContent for an interrupted generation", () => {
@@ -288,21 +354,29 @@ suite("ConversationState", () => {
       model: "model",
       workspaceUri: "file:///workspace",
       workspaceBinding: testWorkspaceBinding(),
-      messages: [{
-        id: "assistant",
-        role: "assistant",
-        content: "visible partial",
-        contextContent: "machine execution ledger",
-        generationStatus: "interrupted",
-      }],
+      messages: [
+        {
+          id: "assistant",
+          role: "assistant",
+          content: "visible partial",
+          contextContent: "machine execution ledger",
+          generationStatus: "interrupted",
+        },
+      ],
     });
 
-    assert.deepStrictEqual(state.getApiMessages(), [{ role: "assistant", content: "machine execution ledger" }]);
+    assert.deepStrictEqual(state.getApiMessages(), [
+      { role: "assistant", content: "machine execution ledger" },
+    ]);
   });
 
   test("persists a cancelled turn and keeps it available as bounded context", async () => {
     const saves: Conversation[] = [];
-    const state = new ConversationState({ save: async (conversation) => {saves.push(structuredClone(conversation));} });
+    const state = new ConversationState({
+      save: async (conversation) => {
+        saves.push(structuredClone(conversation));
+      },
+    });
     state.load({
       schemaVersion: 2,
       id: "conversation",
@@ -322,23 +396,43 @@ suite("ConversationState", () => {
       },
       messages: [
         { id: "prior-user", role: "user", content: "Before", createdAt: 11, generationId: "prior" },
-        { id: "prior-assistant", role: "assistant", content: "Answer", createdAt: 12, generationId: "prior" },
-        { id: "cancel-user", role: "user", content: "Keep me", createdAt: 21, generationId: "cancelled" },
+        {
+          id: "prior-assistant",
+          role: "assistant",
+          content: "Answer",
+          createdAt: 12,
+          generationId: "prior",
+        },
+        {
+          id: "cancel-user",
+          role: "user",
+          content: "Keep me",
+          createdAt: 21,
+          generationId: "cancelled",
+        },
       ],
     });
     await state.saveMessages({
       model: "model",
-      messages: [state.createMessage("assistant", "Partial", {
-        generationId: "cancelled",
-        generationStatus: "cancelled",
-        generationStopReason: "user_cancelled",
-        contextContent: "Partial",
-      })],
+      messages: [
+        state.createMessage("assistant", "Partial", {
+          generationId: "cancelled",
+          generationStatus: "cancelled",
+          generationStopReason: "user_cancelled",
+          contextContent: "Partial",
+        }),
+      ],
     });
 
-    assert.deepStrictEqual(state.getConversation()?.messages.map((message) => message.id), [
-      "prior-user", "prior-assistant", "cancel-user", state.getConversation()?.messages.at(-1)?.id,
-    ]);
+    assert.deepStrictEqual(
+      state.getConversation()?.messages.map((message) => message.id),
+      [
+        "prior-user",
+        "prior-assistant",
+        "cancel-user",
+        state.getConversation()?.messages.at(-1)?.id,
+      ],
+    );
     assert.deepStrictEqual(state.getApiMessages().slice(-2), [
       { role: "user", content: "Keep me" },
       { role: "assistant", content: "Partial" },

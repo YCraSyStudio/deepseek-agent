@@ -11,8 +11,17 @@ import {
   type StoredSettings,
 } from "@/application/settings/ConfigurationSchema";
 import { withFileLock } from "@/infrastructure/persistence/JsonFileStorage";
-import { getDefaultUserDataDirectory, getSettingsFilePath, getUserDataDirectory } from "@/infrastructure/persistence/UserDataPaths";
-import { completeUserDataMigration, migrateUserDataDirectory, migrateGenerationCheckpoints, removeLegacyRuntimes } from "@/infrastructure/persistence/UserDataMigration";
+import {
+  getDefaultUserDataDirectory,
+  getSettingsFilePath,
+  getUserDataDirectory,
+} from "@/infrastructure/persistence/UserDataPaths";
+import {
+  completeUserDataMigration,
+  migrateUserDataDirectory,
+  migrateGenerationCheckpoints,
+  removeLegacyRuntimes,
+} from "@/infrastructure/persistence/UserDataMigration";
 import { logWarning } from "@/shared/logging/Logger";
 
 type SettingsChangeListener = (config: AppConfig) => void;
@@ -25,8 +34,8 @@ export class SettingsManager {
   private static persistenceError?: string;
   private static pendingPermissionUpdates = 0;
   private static readonly changeListeners = new Set<SettingsChangeListener>();
-  private static persistSettings: (settings: StoredSettings) => Promise<void> =
-    (settings) => new SplitSettingsStorage().write(settings);
+  private static persistSettings: (settings: StoredSettings) => Promise<void> = (settings) =>
+    new SplitSettingsStorage().write(settings);
 
   static async initialize(initialSettings: unknown = {}): Promise<void> {
     if (SettingsManager.initialized) {
@@ -35,29 +44,44 @@ export class SettingsManager {
     try {
       if (process.env.NODE_ENV !== "test") {
         const legacyDirectory = path.join(os.homedir(), ".deepseek-agent");
-        for (const directory of new Set([legacyDirectory, getDefaultUserDataDirectory(), getUserDataDirectory()])) {
+        for (const directory of new Set([
+          legacyDirectory,
+          getDefaultUserDataDirectory(),
+          getUserDataDirectory(),
+        ])) {
           await removeLegacyRuntimes(directory).catch((error: unknown) => {
-            logWarning("[Storage] Could not remove legacy runtime files; will retry next startup", error);
+            logWarning(
+              "[Storage] Could not remove legacy runtime files; will retry next startup",
+              error,
+            );
           });
         }
         await migrateUserDataDirectory(legacyDirectory, getUserDataDirectory());
         await migrateGenerationCheckpoints().catch((error: unknown) => {
-          logWarning("[Storage] Could not migrate generation checkpoints; originals preserved, will retry next startup", error);
+          logWarning(
+            "[Storage] Could not migrate generation checkpoints; originals preserved, will retry next startup",
+            error,
+          );
         });
       }
-      await SettingsManager.enqueueWrite(() => withFileLock(getSettingsFilePath(), async () => {
-        await new SplitSettingsStorage().recover();
-        if (existsSync(getSettingsFilePath())) {
-          const storedSettings = readStoredSettings();
-          const normalizedConfig = normalizeConfig(storedSettings);
-          await SettingsManager.persistSettings(toStoredSettings(normalizedConfig));
-          SettingsManager.currentConfig = normalizedConfig;
-          return;
-        }
-        const initialConfig = normalizeConfig({ ...normalizeConfig(initialSettings), ...(new SplitSettingsStorage().read() as object) });
-        await SettingsManager.persistSettings(toStoredSettings(initialConfig));
-        SettingsManager.currentConfig = initialConfig;
-      }));
+      await SettingsManager.enqueueWrite(() =>
+        withFileLock(getSettingsFilePath(), async () => {
+          await new SplitSettingsStorage().recover();
+          if (existsSync(getSettingsFilePath())) {
+            const storedSettings = readStoredSettings();
+            const normalizedConfig = normalizeConfig(storedSettings);
+            await SettingsManager.persistSettings(toStoredSettings(normalizedConfig));
+            SettingsManager.currentConfig = normalizedConfig;
+            return;
+          }
+          const initialConfig = normalizeConfig({
+            ...normalizeConfig(initialSettings),
+            ...(new SplitSettingsStorage().read() as object),
+          });
+          await SettingsManager.persistSettings(toStoredSettings(initialConfig));
+          SettingsManager.currentConfig = initialConfig;
+        }),
+      );
     } catch (error: unknown) {
       SettingsManager.currentConfig = { ...normalizeConfig({}), historyEnabled: false };
       SettingsManager.persistenceError = error instanceof Error ? error.message : String(error);
@@ -75,11 +99,19 @@ export class SettingsManager {
   }
 
   static async completeMigration(): Promise<string | undefined> {
-    if (!SettingsManager.initialized || SettingsManager.persistenceError) {return;}
+    if (!SettingsManager.initialized || SettingsManager.persistenceError) {
+      return;
+    }
     try {
-      await completeUserDataMigration(path.join(os.homedir(), ".deepseek-agent"), getUserDataDirectory());
+      await completeUserDataMigration(
+        path.join(os.homedir(), ".deepseek-agent"),
+        getUserDataDirectory(),
+      );
     } catch (error: unknown) {
-      logWarning("[Storage] Could not remove temporary migration backups; will retry next startup", error);
+      logWarning(
+        "[Storage] Could not remove temporary migration backups; will retry next startup",
+        error,
+      );
       return error instanceof Error ? error.message : String(error);
     }
   }
@@ -128,7 +160,9 @@ export class SettingsManager {
     if (SettingsManager.persistenceError) {
       const next = SettingsManager.load();
       for (const [key, value] of Object.entries(partial)) {
-        if (!isStoredSettingKey(key) || value === undefined || key === "historyEnabled") {continue;}
+        if (!isStoredSettingKey(key) || value === undefined || key === "historyEnabled") {
+          continue;
+        }
         Object.assign(next, { [key]: normalizeSettingValue(key, value) });
       }
       SettingsManager.currentConfig = { ...normalizeConfig(next), historyEnabled: false };
@@ -139,9 +173,13 @@ export class SettingsManager {
     return SettingsManager.enqueueMutation(isPermissionAffectingPatch(partial), async () => {
       await withFileLock(getSettingsFilePath(), async () => {
         await new SplitSettingsStorage().recover();
-        const next = existsSync(getSettingsFilePath()) ? normalizeConfig(readStoredSettings()) : SettingsManager.load();
+        const next = existsSync(getSettingsFilePath())
+          ? normalizeConfig(readStoredSettings())
+          : SettingsManager.load();
         for (const [key, value] of Object.entries(partial)) {
-          if (!isStoredSettingKey(key) || value === undefined) {continue;}
+          if (!isStoredSettingKey(key) || value === undefined) {
+            continue;
+          }
           Object.assign(next, { [key]: normalizeSettingValue(key, value) });
         }
         await SettingsManager.persistSettings(toStoredSettings(next));
@@ -183,17 +221,25 @@ export class SettingsManager {
   private static emitChange(): void {
     const snapshot = SettingsManager.load();
     for (const listener of SettingsManager.changeListeners) {
-      try {listener(snapshot);} catch { }
+      try {
+        listener(snapshot);
+      } catch {}
     }
   }
 
-  private static enqueueMutation(permissionAffecting: boolean, operation: () => Promise<void>): Promise<void> {
+  private static enqueueMutation(
+    permissionAffecting: boolean,
+    operation: () => Promise<void>,
+  ): Promise<void> {
     if (permissionAffecting) {
       SettingsManager.pendingPermissionUpdates += 1;
     }
     return SettingsManager.enqueueWrite(operation).finally(() => {
       if (permissionAffecting) {
-        SettingsManager.pendingPermissionUpdates = Math.max(0, SettingsManager.pendingPermissionUpdates - 1);
+        SettingsManager.pendingPermissionUpdates = Math.max(
+          0,
+          SettingsManager.pendingPermissionUpdates - 1,
+        );
       }
     });
   }

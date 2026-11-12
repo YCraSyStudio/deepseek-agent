@@ -10,7 +10,14 @@ interface CollapsiblePanelProps {
   bodyClassName?: string;
 }
 
-function CollapsiblePanel({ title, meta, children, defaultOpen, className = "", bodyClassName = "" }: CollapsiblePanelProps) {
+function CollapsiblePanel({
+  title,
+  meta,
+  children,
+  defaultOpen,
+  className = "",
+  bodyClassName = "",
+}: CollapsiblePanelProps) {
   return (
     <details className={`collapsiblePanel ${className}`.trim()} open={defaultOpen}>
       <summary className="collapsiblePanelSummary">

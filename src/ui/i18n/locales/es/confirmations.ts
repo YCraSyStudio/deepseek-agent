@@ -20,9 +20,10 @@ export const confirmations = {
     shell: "Shell:",
     cancel: "Cancelar",
     yesExecuteOnce: "Sí, ejecutar una vez",
-    destructiveOnceDescription: "Esta operación revisada solo se aprueba una vez. Las mutaciones posteriores reciben una nueva revisión independiente.",
+    destructiveOnceDescription:
+      "Esta operación revisada solo se aprueba una vez. Las mutaciones posteriores reciben una nueva revisión independiente.",
     destructiveAction: "Acción destructiva",
     potentiallyDangerousAction: "Acción potencialmente peligrosa",
-    cautionRequired: "Se requiere precaución"
-  }
+    cautionRequired: "Se requiere precaución",
+  },
 } satisfies TranslationCatalog;

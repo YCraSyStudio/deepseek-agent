@@ -7,6 +7,6 @@ export const common = {
     newChat: "Nuevo chat",
     settings: "Ajustes",
     enableIncognito: "Activar modo incógnito",
-    disableIncognito: "Desactivar modo incógnito"
-  }
+    disableIncognito: "Desactivar modo incógnito",
+  },
 } satisfies TranslationCatalog;

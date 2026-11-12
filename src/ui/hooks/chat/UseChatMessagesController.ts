@@ -2,8 +2,16 @@ import { useCallback, useRef, useState } from "react";
 import { upsertUserTurn } from "@/ui/views/chatView/model/UserTurnUpdates";
 import type { AppConfig, ContextWindowStatus, HandlerToWebviewMessage } from "@/contracts";
 import type { ConversationUsageSnapshot } from "@/shared/usage/Usage";
-import type { ChatMessage, InitialConfig, StoredToolCall } from "../../views/chatView/ChatViewTypes";
-import { reasoningFromConfig, useStreamHandler, type MessageDispatcher } from "../../views/chatView/hooks";
+import type {
+  ChatMessage,
+  InitialConfig,
+  StoredToolCall,
+} from "../../views/chatView/ChatViewTypes";
+import {
+  reasoningFromConfig,
+  useStreamHandler,
+  type MessageDispatcher,
+} from "../../views/chatView/hooks";
 
 interface ChatMessagesControllerOptions {
   externalMessages?: ChatMessage[];
@@ -13,12 +21,19 @@ interface ChatMessagesControllerOptions {
   conversationId?: string;
   onApiKeyStatusChange?: (status: "configured" | "missing") => void;
   onConfigLoaded?: (config: InitialConfig) => void;
-  onConfigUpdateResult?: (message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>) => void;
+  onConfigUpdateResult?: (
+    message: Extract<HandlerToWebviewMessage, { type: "configUpdateResult" }>,
+  ) => void;
   onModelChanged?: (modelId: string) => void;
   onProcessingChange?: (isProcessing: boolean) => void;
   onConversationUsageUpdated?: (usage: ConversationUsageSnapshot) => void;
   onContextWindowUpdated?: (contextWindow: ContextWindowStatus) => void;
-  onContextCompactionResult?: (result: { requestId: string; status: "compacted" | "empty" | "failed"; freedTokens?: number; error?: string }) => void;
+  onContextCompactionResult?: (result: {
+    requestId: string;
+    status: "compacted" | "empty" | "failed";
+    freedTokens?: number;
+    error?: string;
+  }) => void;
   focusInput: () => void;
 }
 
@@ -42,7 +57,14 @@ export function useChatMessagesController({
   const [internalIsProcessing, setInternalIsProcessing] = useState(false);
   const internalListRef = useRef<HTMLDivElement | null>(null);
   const activeGenerationIdRef = useRef<string | undefined>(undefined);
-  const { nextMessageId, streamingMessageIdRef, appendTimelineDelta, appendTimelineToolGroup, flushTimelineDeltas, resetStreaming } = useStreamHandler();
+  const {
+    nextMessageId,
+    streamingMessageIdRef,
+    appendTimelineDelta,
+    appendTimelineToolGroup,
+    flushTimelineDeltas,
+    resetStreaming,
+  } = useStreamHandler();
 
   const messages = externalMessages ?? internalMessages;
   const setMessages = externalSetMessages ?? setInternalMessages;
@@ -58,18 +80,29 @@ export function useChatMessagesController({
   );
 
   const dispatcher: MessageDispatcher = {
-    onGenerationSnapshot: useCallback((snapshot) => {
-      flushTimelineDeltas();
-      resetStreaming();
-      activeGenerationIdRef.current = snapshot.generations.find((generation) => generation.conversationId === conversationId)?.generationId;
-    }, [conversationId, flushTimelineDeltas, resetStreaming]),
+    onGenerationSnapshot: useCallback(
+      (snapshot) => {
+        flushTimelineDeltas();
+        resetStreaming();
+        activeGenerationIdRef.current = snapshot.generations.find(
+          (generation) => generation.conversationId === conversationId,
+        )?.generationId;
+      },
+      [conversationId, flushTimelineDeltas, resetStreaming],
+    ),
     onContextCompacted: useCallback(() => {
       setMessages((current) => [...current, { id: nextMessageId(), role: "context", content: "" }]);
     }, [nextMessageId, setMessages]),
 
-    onResourceLimitReached: useCallback(({ error }) => {
-      setMessages((current) => [...current, { id: nextMessageId(), role: "error", content: error }]);
-    }, [nextMessageId, setMessages]),
+    onResourceLimitReached: useCallback(
+      ({ error }) => {
+        setMessages((current) => [
+          ...current,
+          { id: nextMessageId(), role: "error", content: error },
+        ]);
+      },
+      [nextMessageId, setMessages],
+    ),
 
     onAddMessage: useCallback(
       (message) => {
@@ -81,17 +114,25 @@ export function useChatMessagesController({
           }
           if (wasStreamed && rest.role === "assistant") {
             if (!streamingMessageIdRef.current) {
-              return [...current, {
-                id: nextMessageId(),
-                role: "assistant",
-                content: rest.content,
-                toolCalls: rest.toolCalls as StoredToolCall[] | undefined,
-                timeline: rest.timeline,
-                usage: rest.usage,
-                generationId: rest.generationId,
-              }];
+              return [
+                ...current,
+                {
+                  id: nextMessageId(),
+                  role: "assistant",
+                  content: rest.content,
+                  toolCalls: rest.toolCalls as StoredToolCall[] | undefined,
+                  timeline: rest.timeline,
+                  usage: rest.usage,
+                  generationId: rest.generationId,
+                },
+              ];
             }
-            return updateStreamedAssistant(current, streamingMessageIdRef.current, rest.toolCalls, rest.timeline);
+            return updateStreamedAssistant(
+              current,
+              streamingMessageIdRef.current,
+              rest.toolCalls,
+              rest.timeline,
+            );
           }
 
           return [
@@ -112,15 +153,22 @@ export function useChatMessagesController({
       [nextMessageId, setMessages, streamingMessageIdRef, flushTimelineDeltas],
     ),
 
-    onShowTyping: useCallback((generationId?: string) => {
-      activeGenerationIdRef.current = generationId;
-      setProcessing(true);
-      resetStreaming();
-    }, [setProcessing, resetStreaming]),
+    onShowTyping: useCallback(
+      (generationId?: string) => {
+        activeGenerationIdRef.current = generationId;
+        setProcessing(true);
+        resetStreaming();
+      },
+      [setProcessing, resetStreaming],
+    ),
 
     onStreamTimelineDelta: useCallback(
       ({ generationId, eventId, eventType, content }) => {
-        if (activeGenerationIdRef.current && generationId && generationId !== activeGenerationIdRef.current) {
+        if (
+          activeGenerationIdRef.current &&
+          generationId &&
+          generationId !== activeGenerationIdRef.current
+        ) {
           return;
         }
         appendTimelineDelta(eventId, eventType, content, setMessages, generationId);
@@ -130,7 +178,11 @@ export function useChatMessagesController({
 
     onStreamTimelineToolGroup: useCallback(
       (event, generationId) => {
-        if (activeGenerationIdRef.current && generationId && generationId !== activeGenerationIdRef.current) {
+        if (
+          activeGenerationIdRef.current &&
+          generationId &&
+          generationId !== activeGenerationIdRef.current
+        ) {
           return;
         }
         appendTimelineToolGroup(event, setMessages, generationId);
@@ -140,7 +192,11 @@ export function useChatMessagesController({
 
     onStreamDone: useCallback(
       (info) => {
-        if (activeGenerationIdRef.current && info.generationId && info.generationId !== activeGenerationIdRef.current) {
+        if (
+          activeGenerationIdRef.current &&
+          info.generationId &&
+          info.generationId !== activeGenerationIdRef.current
+        ) {
           return;
         }
         activeGenerationIdRef.current = undefined;
@@ -148,19 +204,24 @@ export function useChatMessagesController({
         setProcessing(false);
 
         if (info.generationId) {
-          setMessages((current) => markGenerationTerminal(
-            current,
-            info.generationId!,
-            info.status,
-            info.generationStopReason,
-            nextMessageId,
-          ));
+          setMessages((current) =>
+            markGenerationTerminal(
+              current,
+              info.generationId!,
+              info.status,
+              info.generationStopReason,
+              nextMessageId,
+            ),
+          );
         }
         resetStreaming();
 
         const incompleteMessage = getIncompleteFinishMessage(info.finish_reason);
         if (incompleteMessage) {
-          setMessages((current) => [...current, { id: nextMessageId(), role: "error", content: incompleteMessage }]);
+          setMessages((current) => [
+            ...current,
+            { id: nextMessageId(), role: "error", content: incompleteMessage },
+          ]);
         }
 
         focusInput();
@@ -170,7 +231,11 @@ export function useChatMessagesController({
 
     onStreamError: useCallback(
       (error: string, generationId?: string) => {
-        if (activeGenerationIdRef.current && generationId && generationId !== activeGenerationIdRef.current) {
+        if (
+          activeGenerationIdRef.current &&
+          generationId &&
+          generationId !== activeGenerationIdRef.current
+        ) {
           return;
         }
         activeGenerationIdRef.current = undefined;
@@ -178,10 +243,31 @@ export function useChatMessagesController({
         flushTimelineDeltas();
         resetStreaming();
         setMessages((current) => {
-          const messages = current.map(message => message.role === "assistant" && generationId && message.generationId === generationId
-            ? { ...message, generationStatus: "error" as const } : message);
-          if (messages.some(message => message.role === "error" && message.generationId === generationId && message.content === error)) {return messages;}
-          return [...messages, { id: nextMessageId(), role: "error", content: error, generationId, generationStatus: "error" }];
+          const messages = current.map((message) =>
+            message.role === "assistant" && generationId && message.generationId === generationId
+              ? { ...message, generationStatus: "error" as const }
+              : message,
+          );
+          if (
+            messages.some(
+              (message) =>
+                message.role === "error" &&
+                message.generationId === generationId &&
+                message.content === error,
+            )
+          ) {
+            return messages;
+          }
+          return [
+            ...messages,
+            {
+              id: nextMessageId(),
+              role: "error",
+              content: error,
+              generationId,
+              generationStatus: "error",
+            },
+          ];
         });
         focusInput();
       },
@@ -217,13 +303,18 @@ export function useChatMessagesController({
           if (targetIndex < 0) {
             return current;
           }
-          return current.map((message, index) => (index === targetIndex ? { ...message, usage: data.usage } : message));
+          return current.map((message, index) =>
+            index === targetIndex ? { ...message, usage: data.usage } : message,
+          );
         });
       },
       [setMessages],
     ),
 
-    onConfigUpdateResult: useCallback((message) => onConfigUpdateResult?.(message), [onConfigUpdateResult]),
+    onConfigUpdateResult: useCallback(
+      (message) => onConfigUpdateResult?.(message),
+      [onConfigUpdateResult],
+    ),
 
     onConversationUsageUpdated: useCallback(
       (data) => {
@@ -271,17 +362,32 @@ function markGenerationTerminal(
   if (assistantIndex < 0) {
     return status === "completed"
       ? messages
-      : [...messages, { id: nextMessageId(), role: "assistant", content: "", generationId, generationStatus: status, generationStopReason }];
+      : [
+          ...messages,
+          {
+            id: nextMessageId(),
+            role: "assistant",
+            content: "",
+            generationId,
+            generationStatus: status,
+            generationStopReason,
+          },
+        ];
   }
-  return messages.map((message, index) => index === assistantIndex
-    ? { ...message, generationStatus: status, generationStopReason }
-    : message);
+  return messages.map((message, index) =>
+    index === assistantIndex
+      ? { ...message, generationStatus: status, generationStopReason }
+      : message,
+  );
 }
 
 function findAssistantIndex(messages: ChatMessage[], generationId: string | undefined): number {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
-    if (message.role === "assistant" && (generationId === undefined || message.generationId === generationId)) {
+    if (
+      message.role === "assistant" &&
+      (generationId === undefined || message.generationId === generationId)
+    ) {
       return index;
     }
   }
@@ -289,9 +395,15 @@ function findAssistantIndex(messages: ChatMessage[], generationId: string | unde
 }
 
 function getIncompleteFinishMessage(finishReason: string | undefined): string | undefined {
-  if (finishReason === "length") {return "DeepSeek reached the output limit. The visible response is incomplete.";}
-  if (finishReason === "content_filter") {return "DeepSeek stopped because content was filtered. The visible response is incomplete.";}
-  if (finishReason === "insufficient_system_resource") {return "DeepSeek stopped because provider resources were insufficient. You can retry the request.";}
+  if (finishReason === "length") {
+    return "DeepSeek reached the output limit. The visible response is incomplete.";
+  }
+  if (finishReason === "content_filter") {
+    return "DeepSeek stopped because content was filtered. The visible response is incomplete.";
+  }
+  if (finishReason === "insufficient_system_resource") {
+    return "DeepSeek stopped because provider resources were insufficient. You can retry the request.";
+  }
   if (finishReason && finishReason !== "stop" && finishReason !== "tool_calls") {
     return `DeepSeek stopped with finish reason "${finishReason}". The visible response may be incomplete.`;
   }
@@ -313,7 +425,9 @@ function updateStreamedAssistant(
   if (streamingId) {
     const index = current.findIndex((message) => message.id === streamingId);
     if (index >= 0) {
-      return current.map((message, messageIndex) => (messageIndex === index ? patch(message) : message));
+      return current.map((message, messageIndex) =>
+        messageIndex === index ? patch(message) : message,
+      );
     }
   }
 

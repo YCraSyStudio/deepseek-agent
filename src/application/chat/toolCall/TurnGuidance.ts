@@ -34,7 +34,9 @@ export function createCompletionRecoveryMessage(): ChatMessage {
 }
 
 export function isTurnGuidanceMessage(message: Pick<ChatMessage, "role" | "content">): boolean {
-  if (message.role !== "user") {return false;}
+  if (message.role !== "user") {
+    return false;
+  }
   const content = getTextContent(message.content).trimStart();
   return GUIDANCE_MARKERS.some((marker) => content.startsWith(marker));
 }

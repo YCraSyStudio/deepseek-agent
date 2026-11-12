@@ -3,8 +3,23 @@ import type { ConfirmationRequiredResult, ToolHandlerContext } from "@/applicati
 import { getToolWorkspaceHost, type ToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
 import type { ToolExecutionContext } from "../Types";
 
-const FILE_PATH_TOOLS = new Set(["read_file", "read_func", "list_directory", "create_file", "edit_file", "apply_patch", "move_path", "delete_path"]);
-const WORKSPACE_SCOPED_FILE_TOOLS = ["create_file", "edit_file", "apply_patch", "move_path", "delete_path"];
+const FILE_PATH_TOOLS = new Set([
+  "read_file",
+  "read_func",
+  "list_directory",
+  "create_file",
+  "edit_file",
+  "apply_patch",
+  "move_path",
+  "delete_path",
+]);
+const WORKSPACE_SCOPED_FILE_TOOLS = [
+  "create_file",
+  "edit_file",
+  "apply_patch",
+  "move_path",
+  "delete_path",
+];
 
 export function handlerContext(ctx: ToolExecutionContext): ToolHandlerContext {
   return {
@@ -20,7 +35,7 @@ export function handlerContext(ctx: ToolExecutionContext): ToolHandlerContext {
     captureScreenshot: ctx.captureScreenshot,
     applicationSession: ctx.applicationSession,
     readInstruction: ctx.readInstruction,
-      revertWorkspace: ctx.revertWorkspace,
+    revertWorkspace: ctx.revertWorkspace,
   };
 }
 
@@ -28,18 +43,26 @@ export function isAutomaticExecution(ctx: ToolExecutionContext): boolean {
   return ctx.fullAccessMode || ctx.autoApproveMode;
 }
 
-export function requiresWorkspaceMutationPolicy(ctx: ToolExecutionContext, toolCall: ToolCall): boolean {
+export function requiresWorkspaceMutationPolicy(
+  ctx: ToolExecutionContext,
+  toolCall: ToolCall,
+): boolean {
   const metadata = ctx.toolExecutor.getMetadata(toolCall.function.name);
   return metadata?.scope !== "global" && metadata?.effect !== "read-only";
 }
 
 export function getPathArgument(toolCall: ToolCall): string | undefined {
-  if (!FILE_PATH_TOOLS.has(toolCall.function.name) && !["run_terminal_command", "application_session"].includes(toolCall.function.name)) {
+  if (
+    !FILE_PATH_TOOLS.has(toolCall.function.name) &&
+    !["run_terminal_command", "application_session"].includes(toolCall.function.name)
+  ) {
     return undefined;
   }
   try {
     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
-    const value = ["run_terminal_command", "application_session"].includes(toolCall.function.name) ? args.cwd : args.path;
+    const value = ["run_terminal_command", "application_session"].includes(toolCall.function.name)
+      ? args.cwd
+      : args.path;
     return typeof value === "string" && value.trim() ? value : undefined;
   } catch {
     return undefined;
@@ -50,13 +73,16 @@ export async function addProvenFileScope(
   toolCall: ToolCall,
   confirmation: ConfirmationRequiredResult,
 ): Promise<ConfirmationRequiredResult> {
-  if (!WORKSPACE_SCOPED_FILE_TOOLS.includes(toolCall.function.name)) {return confirmation;}
+  if (!WORKSPACE_SCOPED_FILE_TOOLS.includes(toolCall.function.name)) {
+    return confirmation;
+  }
   const filePath = confirmation.filePath ?? getPathArgument(toolCall);
   const requiresDestination = toolCall.function.name === "move_path";
   const destination = requiresDestination ? getDestinationArgument(toolCall) : undefined;
   const workspace = getToolWorkspaceHost();
-  const contained = await isContainedInWorkspace(workspace, filePath)
-    && (!requiresDestination || await isContainedInWorkspace(workspace, destination));
+  const contained =
+    (await isContainedInWorkspace(workspace, filePath)) &&
+    (!requiresDestination || (await isContainedInWorkspace(workspace, destination)));
   return {
     ...confirmation,
     filePath,
@@ -66,7 +92,10 @@ export async function addProvenFileScope(
   };
 }
 
-async function isContainedInWorkspace(workspace: ToolWorkspaceHost, target: string | undefined): Promise<boolean> {
+async function isContainedInWorkspace(
+  workspace: ToolWorkspaceHost,
+  target: string | undefined,
+): Promise<boolean> {
   if (!target || !workspace.isPathInsideWorkspace) {
     return false;
   }
@@ -74,7 +103,9 @@ async function isContainedInWorkspace(workspace: ToolWorkspaceHost, target: stri
 }
 
 function getDestinationArgument(toolCall: ToolCall): string | undefined {
-  if (toolCall.function.name !== "move_path") {return undefined;}
+  if (toolCall.function.name !== "move_path") {
+    return undefined;
+  }
   try {
     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
     const value = args.destination;
@@ -83,9 +114,17 @@ function getDestinationArgument(toolCall: ToolCall): string | undefined {
     return undefined;
   }
 }
-export function requiresExplicitToolConfirmation(ctx: ToolExecutionContext, toolCall: ToolCall): boolean {
+export function requiresExplicitToolConfirmation(
+  ctx: ToolExecutionContext,
+  toolCall: ToolCall,
+): boolean {
   const rule = ctx.toolExecutor.getMetadata(toolCall.function.name)?.alwaysConfirmWhen;
-  if (!rule) {return false;}
-  try {return rule.values.includes(JSON.parse(toolCall.function.arguments)[rule.argument]);}
-  catch {return false;}
+  if (!rule) {
+    return false;
+  }
+  try {
+    return rule.values.includes(JSON.parse(toolCall.function.arguments)[rule.argument]);
+  } catch {
+    return false;
+  }
 }

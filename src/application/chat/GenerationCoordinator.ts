@@ -61,15 +61,22 @@ export class GenerationCoordinator<T> {
     const queue = this.queues.get(task.conversationId) ?? [];
     const taskBytes = this.getTaskBytes(task);
     const conversationBytes = queue.reduce((total, queued) => total + this.getTaskBytes(queued), 0);
-    const globalCount = [...this.queues.values()].reduce((total, queued) => total + queued.length, 0);
-    const globalBytes = [...this.queues.values()].flat().reduce((total, queued) => total + this.getTaskBytes(queued), 0);
+    const globalCount = [...this.queues.values()].reduce(
+      (total, queued) => total + queued.length,
+      0,
+    );
+    const globalBytes = [...this.queues.values()]
+      .flat()
+      .reduce((total, queued) => total + this.getTaskBytes(queued), 0);
     if (
       queue.length >= MAX_QUEUED_PER_CONVERSATION ||
       globalCount >= MAX_QUEUED_GLOBAL ||
       conversationBytes + taskBytes > MAX_QUEUED_BYTES_PER_CONVERSATION ||
       globalBytes + taskBytes > MAX_QUEUED_BYTES_GLOBAL
     ) {
-      throw new Error("Generation queue resource limit reached. Wait for pending messages to finish before adding another one.");
+      throw new Error(
+        "Generation queue resource limit reached. Wait for pending messages to finish before adding another one.",
+      );
     }
     if (front) {
       queue.unshift(task);
@@ -87,7 +94,10 @@ export class GenerationCoordinator<T> {
       return false;
     }
     active.stopReason ??= reason;
-    active.controller.abort({ kind: "generation_abort", reason: active.stopReason } satisfies GenerationAbortReason);
+    active.controller.abort({
+      kind: "generation_abort",
+      reason: active.stopReason,
+    } satisfies GenerationAbortReason);
     return true;
   }
 
@@ -122,10 +132,18 @@ export class GenerationCoordinator<T> {
     this.shuttingDown = true;
     for (const active of this.activeById.values()) {
       active.stopReason ??= "shutdown";
-      active.controller.abort({ kind: "generation_abort", reason: active.stopReason } satisfies GenerationAbortReason);
+      active.controller.abort({
+        kind: "generation_abort",
+        reason: active.stopReason,
+      } satisfies GenerationAbortReason);
     }
-    const completions = Promise.allSettled([...this.activeById.values()].map((active) => active.completion));
-    await Promise.race([completions, new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))]);
+    const completions = Promise.allSettled(
+      [...this.activeById.values()].map((active) => active.completion),
+    );
+    await Promise.race([
+      completions,
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
   }
 
   private schedule(): void {
@@ -170,10 +188,13 @@ export class GenerationCoordinator<T> {
 
   private start(task: GenerationTask<T>): boolean {
     const generationId = this.options.idGenerator.next();
-    if (this.options.resourceGovernor && !this.options.resourceGovernor.tryReserve(
-      generationId,
-      this.getTaskBytes(task) + ACTIVE_GENERATION_OVERHEAD_BYTES,
-    )) {
+    if (
+      this.options.resourceGovernor &&
+      !this.options.resourceGovernor.tryReserve(
+        generationId,
+        this.getTaskBytes(task) + ACTIVE_GENERATION_OVERHEAD_BYTES,
+      )
+    ) {
       return false;
     }
     const controller = new AbortController();
@@ -186,7 +207,8 @@ export class GenerationCoordinator<T> {
     this.activeById.set(generationId, active);
     this.activeByConversation.set(task.conversationId, generationId);
     this.options.onStarted?.(generationId, task);
-    active.completion = this.options.run(generationId, task, controller.signal)
+    active.completion = this.options
+      .run(generationId, task, controller.signal)
       .catch(() => undefined)
       .finally(() => {
         if (this.activeByConversation.get(task.conversationId) === generationId) {
@@ -201,7 +223,9 @@ export class GenerationCoordinator<T> {
   }
 
   private getTaskBytes(task: GenerationTask<T>): number {
-    if (this.options.estimateTaskBytes) {return Math.max(0, this.options.estimateTaskBytes(task));}
+    if (this.options.estimateTaskBytes) {
+      return Math.max(0, this.options.estimateTaskBytes(task));
+    }
     return Buffer.byteLength(JSON.stringify(task.payload), "utf8");
   }
 }

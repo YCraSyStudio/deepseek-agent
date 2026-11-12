@@ -152,7 +152,9 @@
   font-size: 11px;
   display: flex;
 
-  &.cancelled .codicon { color: var(--warning-color, #d9a441); }
+  &.cancelled .codicon {
+    color: var(--warning-color, #d9a441);
+  }
 }
 
 .activity-block {
@@ -306,7 +308,7 @@
 .lang-label {
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  letter-spacing: .05em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -324,7 +326,7 @@
   border-radius: 8px;
   padding: 5px 9px;
   font-size: 11px;
-  transition: all .15s;
+  transition: all 0.15s;
 
   &:hover {
     background: var(--button-secondary-hover);
@@ -372,7 +374,9 @@
     appearance: auto;
   }
 
-  :is(.markdownMessage, .reasoning-content) .task-list-item > input[type="checkbox"]:checked::after {
+  :is(.markdownMessage, .reasoning-content)
+    .task-list-item
+    > input[type="checkbox"]:checked::after {
     content: none;
   }
 }

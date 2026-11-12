@@ -29,7 +29,13 @@ export const languageLabels: Record<Language, string> = {
   zh: "中文",
 };
 
-export const pageSlugs = ["intro", "changelog", "references", "technical-decisions", "user-manual"] as const satisfies readonly PageSlug[];
+export const pageSlugs = [
+  "intro",
+  "changelog",
+  "references",
+  "technical-decisions",
+  "user-manual",
+] as const satisfies readonly PageSlug[];
 
 export const homeContent: Record<Language, OverviewContent> = {
   en: enOverview,
@@ -64,7 +70,10 @@ export const pageContent: Record<Language, Record<PageSlug, PageContent>> = {
 export const navLabels: Record<Language, Record<PageSlug, string>> = Object.fromEntries(
   languages.map((lang) => [
     lang,
-    Object.fromEntries(pageSlugs.map((slug) => [slug, pageContent[lang][slug].navTitle])) as Record<PageSlug, string>,
+    Object.fromEntries(pageSlugs.map((slug) => [slug, pageContent[lang][slug].navTitle])) as Record<
+      PageSlug,
+      string
+    >,
   ]),
 ) as Record<Language, Record<PageSlug, string>>;
 

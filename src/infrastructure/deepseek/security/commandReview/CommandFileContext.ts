@@ -45,21 +45,21 @@ export async function collectCommandFileContext(
       }
       const preview = workspace.readFilePreview
         ? await workspace.readFilePreview(relativePath, MAX_PREVIEW_BYTES)
-        : metadata.size <= MAX_PREVIEW_BYTES ? {
-            head: (await workspace.readFile(relativePath)).slice(0, MAX_PREVIEW_BYTES),
-            size: metadata.size,
-          } : { head: new Uint8Array(), size: metadata.size };
-      const content = preview.head.byteLength > 0
-        ? decodeTextPreview(preview.head, preview.tail)
-        : undefined;
+        : metadata.size <= MAX_PREVIEW_BYTES
+          ? {
+              head: (await workspace.readFile(relativePath)).slice(0, MAX_PREVIEW_BYTES),
+              size: metadata.size,
+            }
+          : { head: new Uint8Array(), size: metadata.size };
+      const content =
+        preview.head.byteLength > 0 ? decodeTextPreview(preview.head, preview.tail) : undefined;
       contexts.push({
         path: relativePath,
         size: preview.size,
         truncated: preview.size > preview.head.byteLength + (preview.tail?.byteLength ?? 0),
         ...(content === undefined ? {} : { content }),
       });
-    } catch {
-    }
+    } catch {}
   }
   return contexts;
 }
@@ -71,21 +71,26 @@ function extractExplicitFileOperands(command: string): string[] {
     if (tokens.length < 2) {
       continue;
     }
-    const program = path.win32.basename(tokens[0]!).replace(/\.exe$/i, "").toLowerCase();
+    const program = path.win32
+      .basename(tokens[0]!)
+      .replace(/\.exe$/i, "")
+      .toLowerCase();
     if (new Set(["del", "erase", "rm", "unlink", "rmdir"]).has(program)) {
       candidates.push(...tokens.slice(1).filter((token) => !isOption(program, token)));
-    } else if (new Set([
-      "copy",
-      "cp",
-      "move",
-      "mv",
-      "ren",
-      "rename",
-      "copy-item",
-      "move-item",
-      "rename-item",
-      "remove-item",
-    ]).has(program)) {
+    } else if (
+      new Set([
+        "copy",
+        "cp",
+        "move",
+        "mv",
+        "ren",
+        "rename",
+        "copy-item",
+        "move-item",
+        "rename-item",
+        "remove-item",
+      ]).has(program)
+    ) {
       candidates.push(...extractMutationOperands(tokens.slice(1)));
     } else {
       const script = detectScriptInvocation(tokens);
@@ -166,7 +171,12 @@ function extractMutationOperands(tokens: string[]): string[] {
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]!;
     const lower = token.toLowerCase();
-    if (lower === "-path" || lower === "-literalpath" || lower === "-destination" || lower === "-newname") {
+    if (
+      lower === "-path" ||
+      lower === "-literalpath" ||
+      lower === "-destination" ||
+      lower === "-newname"
+    ) {
       const value = tokens[++index];
       if (value) {
         operands.push(value);
@@ -179,24 +189,36 @@ function extractMutationOperands(tokens: string[]): string[] {
 }
 
 function isOption(program: string, token: string): boolean {
-  return token.startsWith("-") || ((program === "del" || program === "erase" || program === "rmdir") &&
-    /^\/[a-z]+$/i.test(token));
+  return (
+    token.startsWith("-") ||
+    ((program === "del" || program === "erase" || program === "rmdir") && /^\/[a-z]+$/i.test(token))
+  );
 }
 
 function isExplicitPath(candidate: string): boolean {
-  return !!candidate &&
+  return (
+    !!candidate &&
     !candidate.split(/[\\/]/).includes("..") &&
     !/[*?[\]{}%$!`]/.test(candidate) &&
-    !/^(?:~|[a-zA-Z][\w+.-]*:\/\/)/.test(candidate);
+    !/^(?:~|[a-zA-Z][\w+.-]*:\/\/)/.test(candidate)
+  );
 }
 
-function resolveCandidate(candidate: string, cwd: string, workspaceRoot: string): string | undefined {
+function resolveCandidate(
+  candidate: string,
+  cwd: string,
+  workspaceRoot: string,
+): string | undefined {
   const pathApi = path.win32.isAbsolute(workspaceRoot) ? path.win32 : path.posix;
   const absolute = pathApi.isAbsolute(candidate)
     ? pathApi.resolve(candidate)
     : pathApi.resolve(cwd, candidate);
   const relative = pathApi.relative(pathApi.resolve(workspaceRoot), absolute);
-  if (relative === ".." || relative.startsWith(`..${pathApi.sep}`) || pathApi.isAbsolute(relative)) {
+  if (
+    relative === ".." ||
+    relative.startsWith(`..${pathApi.sep}`) ||
+    pathApi.isAbsolute(relative)
+  ) {
     return undefined;
   }
   return (relative || ".").replace(/\\/g, "/");

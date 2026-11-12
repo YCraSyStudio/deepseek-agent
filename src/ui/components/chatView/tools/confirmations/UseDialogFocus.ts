@@ -10,7 +10,11 @@ const FOCUSABLE_SELECTOR = [
   "summary",
 ].join(",");
 
-export function useDialogFocus(onEscape: () => void, focusKey: string, isOpen: boolean): RefObject<HTMLElement | null> {
+export function useDialogFocus(
+  onEscape: () => void,
+  focusKey: string,
+  isOpen: boolean,
+): RefObject<HTMLElement | null> {
   const dialogRef = useRef<HTMLElement>(null);
   const onEscapeRef = useRef(onEscape);
 
@@ -19,12 +23,17 @@ export function useDialogFocus(onEscape: () => void, focusKey: string, isOpen: b
   }, [onEscape]);
 
   useEffect(() => {
-    if (!isOpen) {return;}
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!isOpen) {
+      return;
+    }
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const dialog = dialogRef.current;
-      if (!dialog) {return;}
+      if (!dialog) {
+        return;
+      }
 
       if (event.key === "Escape") {
         event.preventDefault();
@@ -33,7 +42,9 @@ export function useDialogFocus(onEscape: () => void, focusKey: string, isOpen: b
         return;
       }
 
-      if (event.key !== "Tab") {return;}
+      if (event.key !== "Tab") {
+        return;
+      }
       const focusable = getFocusableElements(dialog);
       if (focusable.length === 0) {
         event.preventDefault();
@@ -58,14 +69,20 @@ export function useDialogFocus(onEscape: () => void, focusKey: string, isOpen: b
     document.addEventListener("keydown", handleKeyDown, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
-      if (previouslyFocused?.isConnected) {previouslyFocused.focus();}
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+      }
     };
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) {return;}
+    if (!isOpen) {
+      return;
+    }
     const dialog = dialogRef.current;
-    if (!dialog) {return;}
+    if (!dialog) {
+      return;
+    }
     const initialFocus = dialog.querySelector<HTMLElement>("[data-dialog-initial-focus]");
     const firstFocusable = getFocusableElements(dialog)[0];
     (initialFocus || firstFocusable || dialog).focus();

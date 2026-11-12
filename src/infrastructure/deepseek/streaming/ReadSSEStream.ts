@@ -30,14 +30,20 @@ export async function readSSEStream({
       onDone();
     }
   };
-  const onAbort = () => { void reader.cancel(); };
+  const onAbort = () => {
+    void reader.cancel();
+  };
 
-  if (signal?.aborted) {throw createAbortError();}
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
   signal?.addEventListener("abort", onAbort, { once: true });
   try {
     while (!completed) {
       const { done, value } = await readWithInactivityTimeout(reader, inactivityTimeoutMs, signal);
-      if (signal?.aborted) {throw createAbortError();}
+      if (signal?.aborted) {
+        throw createAbortError();
+      }
       buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
       buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
       if (Buffer.byteLength(buffer, "utf8") > maxBufferBytes) {
@@ -62,13 +68,19 @@ export async function readSSEStream({
         if (buffer && Buffer.byteLength(buffer, "utf8") > maxEventBytes) {
           throw new Error(`SSE event exceeded ${maxEventBytes} bytes`);
         }
-        if (buffer && processEvent(buffer, onChunk)) {finish();}
-        if (!completed) {throw new Error("DeepSeek stream ended before the [DONE] marker");}
+        if (buffer && processEvent(buffer, onChunk)) {
+          finish();
+        }
+        if (!completed) {
+          throw new Error("DeepSeek stream ended before the [DONE] marker");
+        }
       }
     }
   } finally {
     signal?.removeEventListener("abort", onAbort);
-    if (!completed) {await reader.cancel().catch(() => undefined);}
+    if (!completed) {
+      await reader.cancel().catch(() => undefined);
+    }
   }
 }
 
@@ -87,31 +99,47 @@ async function readWithInactivityTimeout(
     }, timeoutMs);
   });
   try {
-    if (signal?.aborted) {throw createAbortError();}
+    if (signal?.aborted) {
+      throw createAbortError();
+    }
     return await Promise.race([reader.read(), stalled]);
   } finally {
-    if (timeout) {clearTimeout(timeout);}
+    if (timeout) {
+      clearTimeout(timeout);
+    }
   }
 }
 
 function processEvent(event: string, onChunk: (data: unknown) => void): boolean {
   const dataLines: string[] = [];
   for (const line of event.split("\n")) {
-    if (!line || line.startsWith(":")) {continue;}
+    if (!line || line.startsWith(":")) {
+      continue;
+    }
     const colon = line.indexOf(":");
     const field = colon < 0 ? line : line.slice(0, colon);
     let value = colon < 0 ? "" : line.slice(colon + 1);
-    if (value.startsWith(" ")) {value = value.slice(1);}
-    if (field === "data") {dataLines.push(value);}
+    if (value.startsWith(" ")) {
+      value = value.slice(1);
+    }
+    if (field === "data") {
+      dataLines.push(value);
+    }
   }
-  if (dataLines.length === 0) {return false;}
+  if (dataLines.length === 0) {
+    return false;
+  }
   const data = dataLines.join("\n");
-  if (data.trim() === "[DONE]") {return true;}
+  if (data.trim() === "[DONE]") {
+    return true;
+  }
   try {
     onChunk(JSON.parse(data));
   } catch (error) {
     const preview = data.replace(/[\r\n\t]+/g, " ").slice(0, 160);
-    throw new Error(`Malformed SSE JSON (${preview.length} chars shown): ${preview}`, { cause: error });
+    throw new Error(`Malformed SSE JSON (${preview.length} chars shown): ${preview}`, {
+      cause: error,
+    });
   }
   return false;
 }

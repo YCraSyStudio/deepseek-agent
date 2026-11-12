@@ -31,7 +31,11 @@ export function rememberPositiveDecision(decisionKey: string | undefined): void 
   }
 }
 
-export function rejectCommandForRevision(toolCall: ToolCall, guidance: string, ctx: ToolExecutionContext): string {
+export function rejectCommandForRevision(
+  toolCall: ToolCall,
+  guidance: string,
+  ctx: ToolExecutionContext,
+): string {
   const modelResult = JSON.stringify({
     code: SECURITY_REVISION_CODE,
     constraint: guidance,
@@ -50,7 +54,9 @@ export async function executeForcedAfterTrust(
   ctx: ToolExecutionContext,
   confirmation?: ConfirmationRequiredResult,
 ): Promise<string> {
-  const forcedToolCall = confirmation?.beforeHash ? withExpectedBeforeHash(toolCall, confirmation.beforeHash) : toolCall;
+  const forcedToolCall = confirmation?.beforeHash
+    ? withExpectedBeforeHash(toolCall, confirmation.beforeHash)
+    : toolCall;
   const forcedResult = await ctx.toolExecutor.executeForced(forcedToolCall, handlerContext(ctx));
   postToolCallResult(ctx, forcedResult);
   updateStoredToolCall(ctx, toolCall.id, { dangerConfirmed: true });
@@ -60,6 +66,14 @@ export async function executeForcedAfterTrust(
 function withExpectedBeforeHash(toolCall: ToolCall, beforeHash: string): ToolCall {
   try {
     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
-    return { ...toolCall, function: { ...toolCall.function, arguments: JSON.stringify({ ...args, expectedBeforeHash: beforeHash }) } };
-  } catch { return toolCall; }
+    return {
+      ...toolCall,
+      function: {
+        ...toolCall.function,
+        arguments: JSON.stringify({ ...args, expectedBeforeHash: beforeHash }),
+      },
+    };
+  } catch {
+    return toolCall;
+  }
 }

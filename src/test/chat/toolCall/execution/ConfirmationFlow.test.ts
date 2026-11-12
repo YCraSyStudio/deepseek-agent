@@ -9,7 +9,12 @@ import {
 } from "@/vscode/webviews/handlers/chat/toolCalls/execution/ConfirmationFlow";
 import { recordInitialToolCall } from "@/vscode/webviews/handlers/chat/toolCalls/execution/ToolCallLedger";
 import { runWithToolWorkspaceHost } from "@/infrastructure/tools/ToolWorkspace";
-import { createExecutionContext, createToolExecutorStub, createWorkspaceHost, toolCall } from "./executionHarness";
+import {
+  createExecutionContext,
+  createToolExecutorStub,
+  createWorkspaceHost,
+  toolCall,
+} from "./executionHarness";
 
 const CONFIRMATION_PAYLOAD: ConfirmationRequiredResult = {
   requiresConfirmation: true,
@@ -40,34 +45,44 @@ suite("tool confirmation flow", () => {
 
   test("cancels a dangerous call, clears the diff preview, and stores the rejection", async () => {
     const cleared: string[] = [];
-    await runWithToolWorkspaceHost(createWorkspaceHost({ onClearPreview: () => cleared.push("cleared") }), async () => {
-      const { context, publishedResults, confirmations } = createExecutionContext({ confirmDanger: false });
-      const call = toolCall("run_terminal_command", { command: "npm test" });
-      recordInitialToolCall(call, context);
+    await runWithToolWorkspaceHost(
+      createWorkspaceHost({ onClearPreview: () => cleared.push("cleared") }),
+      async () => {
+        const { context, publishedResults, confirmations } = createExecutionContext({
+          confirmDanger: false,
+        });
+        const call = toolCall("run_terminal_command", { command: "npm test" });
+        recordInitialToolCall(call, context);
 
-      const result = await handleExecutionResult({
-        toolCall: call,
-        result: confirmationResult(call),
-        ctx: context,
-        round: 2,
-      });
+        const result = await handleExecutionResult({
+          toolCall: call,
+          result: confirmationResult(call),
+          ctx: context,
+          round: 2,
+        });
 
-      assert.strictEqual(result, "Tool call cancelled by user (dangerous operation)");
-      assert.deepStrictEqual(publishedResults, ["Tool call cancelled by user (dangerous operation)"]);
-      assert.strictEqual(confirmations(), 1);
-      assert.deepStrictEqual(cleared, ["cleared"]);
+        assert.strictEqual(result, "Tool call cancelled by user (dangerous operation)");
+        assert.deepStrictEqual(publishedResults, [
+          "Tool call cancelled by user (dangerous operation)",
+        ]);
+        assert.strictEqual(confirmations(), 1);
+        assert.deepStrictEqual(cleared, ["cleared"]);
 
-      const stored = context.executedToolCalls.get(call.id);
-      assert.strictEqual(stored?.status, "rejected");
-      assert.strictEqual(stored?.rejected, true);
-      assert.strictEqual(stored?.isError, false);
-      assert.strictEqual(stored?.dangerLevel, "caution");
-    });
+        const stored = context.executedToolCalls.get(call.id);
+        assert.strictEqual(stored?.status, "rejected");
+        assert.strictEqual(stored?.rejected, true);
+        assert.strictEqual(stored?.isError, false);
+        assert.strictEqual(stored?.dangerLevel, "caution");
+      },
+    );
   });
 
   test("runs the tool once the user confirms the danger", async () => {
     const { executor, forcedCalls } = createToolExecutorStub({ forcedResult: "command output" });
-    const { context, publishedResults, confirmations } = createExecutionContext({ executor, confirmDanger: true });
+    const { context, publishedResults, confirmations } = createExecutionContext({
+      executor,
+      confirmDanger: true,
+    });
     const call = toolCall("run_terminal_command", { command: "npm test" });
     recordInitialToolCall(call, context);
 
@@ -95,12 +110,15 @@ suite("tool confirmation flow", () => {
       warningMessage: "DeepSeek classified this action as critical: irreversible delete",
     };
 
-    const result = await handleExecutionResult({
-      toolCall: call,
-      result: createExecutionResult(call, { kind: "completed", content: "completed" }),
-      ctx: context,
-      round: 1,
-    }, override);
+    const result = await handleExecutionResult(
+      {
+        toolCall: call,
+        result: createExecutionResult(call, { kind: "completed", content: "completed" }),
+        ctx: context,
+        round: 1,
+      },
+      override,
+    );
 
     assert.strictEqual(result, "Tool call cancelled by user (dangerous operation)");
     assert.strictEqual(confirmations(), 1);

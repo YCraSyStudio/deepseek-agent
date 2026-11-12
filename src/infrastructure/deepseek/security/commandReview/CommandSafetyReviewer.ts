@@ -1,6 +1,11 @@
 import * as path from "node:path";
 import type { ConfirmationRequiredResult } from "@/application/tools/Types";
-import type { AppConfig, ChatCompletionRequest, ChatCompletionResponse, ToolCall } from "@/contracts";
+import type {
+  AppConfig,
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ToolCall,
+} from "@/contracts";
 import { chatCompletion } from "@/infrastructure/deepseek/provider/features/Chat";
 import type { ProviderUsage } from "@/shared/usage/Usage";
 import { collectCommandFileContext } from "./CommandFileContext";
@@ -16,13 +21,7 @@ const MAX_REASON_LENGTH = 1_000;
 type CommandSafetyDecision = "approve" | "revise" | "manual_confirmation";
 export type CommandSafetyRisk = "routine" | "elevated" | "critical";
 export type CommandSafetyConfidence =
-  | "very_high"
-  | "high"
-  | "medium_high"
-  | "medium"
-  | "medium_low"
-  | "low"
-  | "very_low";
+  "very_high" | "high" | "medium_high" | "medium" | "medium_low" | "low" | "very_low";
 
 export interface CommandSafetyReview {
   decision: CommandSafetyDecision;
@@ -47,7 +46,10 @@ export interface CommandSafetyReviewOptions {
   originalUserRequest?: string;
   workspaceRoot?: string;
   signal?: AbortSignal;
-  complete?: (signal: AbortSignal, request: ChatCompletionRequest) => Promise<ChatCompletionResponse>;
+  complete?: (
+    signal: AbortSignal,
+    request: ChatCompletionRequest,
+  ) => Promise<ChatCompletionResponse>;
   onUsage?: (usage: ProviderUsage | undefined, model: string) => void;
 }
 
@@ -65,21 +67,28 @@ application_session starts an owned foreground application/preview that remains 
 run_terminal_command with keepAlive=true starts an isolated terminal owned by the chat that survives the turn until keepAliveAction=stop, chat deletion, extension shutdown, or four hours. Review the launch command with the same standards and treat the persistent lifetime as intended scope, not as an unmanaged detached process.
 Approve only when the full finite operation is understood and directly serves the request. Choose revise when a clear safer route can continue the task; describe the constraint, not a dangerous replacement command. Choose manual_confirmation for genuine ambiguity or a required user decision. Mechanical scope facts are context, not a safety verdict.`;
 
-export async function reviewCommandSafety(options: CommandSafetyReviewOptions): Promise<CommandSafetyReview> {
+export async function reviewCommandSafety(
+  options: CommandSafetyReviewOptions,
+): Promise<CommandSafetyReview> {
   const actionContext = options.actionContext;
   const action = getReviewedAction(options.toolCall, actionContext);
   if (!action) {
     return manualReview("The proposed action could not be extracted for review.");
   }
   if (containsSensitiveCommandData(action)) {
-    return manualReview("The action may contain credentials or other sensitive values and was not sent for remote review.", "elevated");
+    return manualReview(
+      "The action may contain credentials or other sensitive values and was not sent for remote review.",
+      "elevated",
+    );
   }
 
   const judgePersistenceIntent = actionContext.keepAlive === true;
   const timeoutSignal = AbortSignal.timeout(REVIEW_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
   try {
-    const workspaceFiles = ["run_terminal_command", "application_session"].includes(options.toolCall.function.name)
+    const workspaceFiles = ["run_terminal_command", "application_session"].includes(
+      options.toolCall.function.name,
+    )
       ? await collectCommandFileContext(action, actionContext.cwd, options.workspaceRoot)
       : [];
     const request: ChatCompletionRequest = {
@@ -89,14 +98,25 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
         {
           role: "user",
           content: JSON.stringify({
-            originalUserRequest: options.originalUserRequest?.slice(0, MAX_USER_INTENT_LENGTH) ||
+            originalUserRequest:
+              options.originalUserRequest?.slice(0, MAX_USER_INTENT_LENGTH) ||
               "No original user request was available.",
             toolName: options.toolCall.function.name,
             proposedAction: action,
-            workspaceRoot: options.providerConfig.privacyMinimizeData === false ? options.workspaceRoot || "Unknown" : undefined,
-            cwd: options.providerConfig.privacyMinimizeData === false ? actionContext.cwd || "Unknown" : undefined,
+            workspaceRoot:
+              options.providerConfig.privacyMinimizeData === false
+                ? options.workspaceRoot || "Unknown"
+                : undefined,
+            cwd:
+              options.providerConfig.privacyMinimizeData === false
+                ? actionContext.cwd || "Unknown"
+                : undefined,
             shell: actionContext.shell || "Unknown",
-            scopeFacts: getScopeFacts(actionContext.cwd, options.workspaceRoot, actionContext.workspaceContained),
+            scopeFacts: getScopeFacts(
+              actionContext.cwd,
+              options.workspaceRoot,
+              actionContext.workspaceContained,
+            ),
             workspaceFiles,
           }),
         },
@@ -109,7 +129,12 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
     try {
       const response = options.complete
         ? await options.complete(signal, request)
-        : await chatCompletion(request, options.providerConfig.apiKey, options.providerConfig.baseUrl, signal);
+        : await chatCompletion(
+            request,
+            options.providerConfig.apiKey,
+            options.providerConfig.baseUrl,
+            signal,
+          );
       usage = response.usage;
       return applyPersistenceIntent(
         parseCommandSafetyReview(getTextContent(response.choices[0]?.message.content), {
@@ -121,31 +146,51 @@ export async function reviewCommandSafety(options: CommandSafetyReviewOptions): 
       options.onUsage?.(usage, request.model);
     }
   } catch (error: unknown) {
-    if (options.signal?.aborted) {throw error;}
+    if (options.signal?.aborted) {
+      throw error;
+    }
     return manualReview("DeepSeek safety review was unavailable or returned an invalid response.");
   }
 }
 
-function getReviewedAction(toolCall: ToolCall, actionContext: ConfirmationRequiredResult): string | undefined {
-  const action = actionContext.command?.trim() || getCommand(toolCall) || getSanitizedFileMutation(toolCall);
+function getReviewedAction(
+  toolCall: ToolCall,
+  actionContext: ConfirmationRequiredResult,
+): string | undefined {
+  const action =
+    actionContext.command?.trim() || getCommand(toolCall) || getSanitizedFileMutation(toolCall);
   return action || undefined;
 }
 
-const REVIEWABLE_FILE_MUTATION_TOOLS = ["create_file", "edit_file", "apply_patch", "move_path", "delete_path"];
+const REVIEWABLE_FILE_MUTATION_TOOLS = [
+  "create_file",
+  "edit_file",
+  "apply_patch",
+  "move_path",
+  "delete_path",
+];
 
 function getSanitizedFileMutation(toolCall: ToolCall): string | undefined {
-  if (!REVIEWABLE_FILE_MUTATION_TOOLS.includes(toolCall.function.name)) {return undefined;}
+  if (!REVIEWABLE_FILE_MUTATION_TOOLS.includes(toolCall.function.name)) {
+    return undefined;
+  }
   try {
     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
-    if (typeof args.path !== "string" || !args.path.trim()) {return undefined;}
-    const destination = typeof args.destination === "string" && args.destination.trim()
-      ? ` destination=${JSON.stringify(args.destination.trim())}`
-      : "";
-    const options = toolCall.function.name === "delete_path"
-      ? ` recursive=${args.recursive === true} permanent=${args.permanent === true}`
-      : "";
+    if (typeof args.path !== "string" || !args.path.trim()) {
+      return undefined;
+    }
+    const destination =
+      typeof args.destination === "string" && args.destination.trim()
+        ? ` destination=${JSON.stringify(args.destination.trim())}`
+        : "";
+    const options =
+      toolCall.function.name === "delete_path"
+        ? ` recursive=${args.recursive === true} permanent=${args.permanent === true}`
+        : "";
     return `${toolCall.function.name} path=${JSON.stringify(args.path.trim())}${destination}${options}`;
-  } catch {return undefined;}
+  } catch {
+    return undefined;
+  }
 }
 
 function getScopeFacts(
@@ -157,8 +202,11 @@ function getScopeFacts(
     return { cwdInsideWorkspace: "unknown", pathInsideWorkspace: workspaceContained ?? "unknown" };
   }
   const relativeCwd = path.relative(path.resolve(workspaceRoot), path.resolve(cwd));
-  const cwdInsideWorkspace = relativeCwd === "" ||
-    (!relativeCwd.startsWith(`..${path.sep}`) && relativeCwd !== ".." && !path.isAbsolute(relativeCwd));
+  const cwdInsideWorkspace =
+    relativeCwd === "" ||
+    (!relativeCwd.startsWith(`..${path.sep}`) &&
+      relativeCwd !== ".." &&
+      !path.isAbsolute(relativeCwd));
   return {
     cwdInsideWorkspace,
     cwdRelativeToWorkspace: relativeCwd || ".",
@@ -170,7 +218,9 @@ export function parseCommandSafetyReview(
   content: string | null | undefined,
   options: { requirePersistenceIntent?: boolean } = {},
 ): CommandSafetyReview {
-  if (!content) {return manualReview("DeepSeek returned an empty safety review.");}
+  if (!content) {
+    return manualReview("DeepSeek returned an empty safety review.");
+  }
   try {
     const value = JSON.parse(content) as unknown;
     const allowedKeys = options.requirePersistenceIntent
@@ -180,7 +230,9 @@ export function parseCommandSafetyReview(
       return manualReview("DeepSeek returned a malformed safety review.");
     }
     if (
-      (value.decision !== "approve" && value.decision !== "revise" && value.decision !== "manual_confirmation") ||
+      (value.decision !== "approve" &&
+        value.decision !== "revise" &&
+        value.decision !== "manual_confirmation") ||
       (value.risk !== "routine" && value.risk !== "elevated" && value.risk !== "critical") ||
       !isCommandSafetyConfidence(value.confidence) ||
       typeof value.reason !== "string" ||
@@ -190,14 +242,18 @@ export function parseCommandSafetyReview(
       return manualReview("DeepSeek returned a malformed safety review.");
     }
     if (options.requirePersistenceIntent && typeof value[PERSISTENCE_KEY] !== "boolean") {
-      return manualReview("DeepSeek did not state whether the user asked to keep this process running.");
+      return manualReview(
+        "DeepSeek did not state whether the user asked to keep this process running.",
+      );
     }
     return {
       decision: value.decision,
       risk: value.risk,
       confidence: value.confidence,
       reason: value.reason.trim(),
-      ...(options.requirePersistenceIntent ? { userRequestedPersistence: value[PERSISTENCE_KEY] as boolean } : {}),
+      ...(options.requirePersistenceIntent
+        ? { userRequestedPersistence: value[PERSISTENCE_KEY] as boolean }
+        : {}),
     };
   } catch {
     return manualReview("DeepSeek returned a non-JSON safety review.");
@@ -205,15 +261,22 @@ export function parseCommandSafetyReview(
 }
 
 function buildSystemPrompt(judgePersistenceIntent: boolean): string {
-  if (!judgePersistenceIntent) {return REVIEW_SYSTEM_PROMPT;}
+  if (!judgePersistenceIntent) {
+    return REVIEW_SYSTEM_PROMPT;
+  }
   return REVIEW_SYSTEM_PROMPT.replace(
     '{"decision":"approve"|"revise"|"manual_confirmation","risk":"routine"|"elevated"|"critical","confidence":"very_high"|"high"|"medium_high"|"medium"|"medium_low"|"low"|"very_low","reason":"short explanation or replanning guidance"}',
     '{"decision":"approve"|"revise"|"manual_confirmation","risk":"routine"|"elevated"|"critical","confidence":"very_high"|"high"|"medium_high"|"medium"|"medium_low"|"low"|"very_low","reason":"short explanation or replanning guidance","userRequestedPersistence":true|false}',
   ).concat(KEEP_ALIVE_INTENT_PROMPT);
 }
 
-function applyPersistenceIntent(review: CommandSafetyReview, judgePersistenceIntent: boolean): CommandSafetyReview {
-  if (!judgePersistenceIntent || review.userRequestedPersistence !== false) {return review;}
+function applyPersistenceIntent(
+  review: CommandSafetyReview,
+  judgePersistenceIntent: boolean,
+): CommandSafetyReview {
+  if (!judgePersistenceIntent || review.userRequestedPersistence !== false) {
+    return review;
+  }
   return {
     ...review,
     decision: "manual_confirmation",
@@ -224,14 +287,20 @@ function applyPersistenceIntent(review: CommandSafetyReview, judgePersistenceInt
 function getCommand(toolCall: ToolCall): string | undefined {
   try {
     const args = JSON.parse(toolCall.function.arguments) as unknown;
-    return isRecord(args) && typeof args.command === "string" && args.command.trim() ? args.command : undefined;
-  } catch {return undefined;}
+    return isRecord(args) && typeof args.command === "string" && args.command.trim()
+      ? args.command
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function containsSensitiveCommandData(command: string): boolean {
-  return /\b(?:authorization|api[\s_-]?key|access[\s_-]?token|secret)\b\s*[:=]/i.test(command) ||
+  return (
+    /\b(?:authorization|api[\s_-]?key|access[\s_-]?token|secret)\b\s*[:=]/i.test(command) ||
     /\bbearer\s+[A-Za-z0-9._~+/-]{8,}/i.test(command) ||
-    /\bsk-[A-Za-z0-9._-]{8,}\b/.test(command);
+    /\bsk-[A-Za-z0-9._-]{8,}\b/.test(command)
+  );
 }
 
 function manualReview(reason: string, risk: CommandSafetyRisk = "critical"): CommandSafetyReview {
@@ -245,7 +314,13 @@ export function isAutomaticConfidence(
 }
 
 function isCommandSafetyConfidence(value: unknown): value is CommandSafetyConfidence {
-  return value === "very_high" || value === "high" || value === "medium_high" || value === "medium" ||
-    value === "medium_low" || value === "low" || value === "very_low";
+  return (
+    value === "very_high" ||
+    value === "high" ||
+    value === "medium_high" ||
+    value === "medium" ||
+    value === "medium_low" ||
+    value === "low" ||
+    value === "very_low"
+  );
 }
-

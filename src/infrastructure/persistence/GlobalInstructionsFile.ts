@@ -8,10 +8,14 @@ export function getGlobalInstructionsFilePath(directory = getUserDataDirectory()
 }
 
 /** Opening customization never replaces the user's existing instructions. */
-export async function ensureGlobalInstructionsFile(directory = getUserDataDirectory()): Promise<string> {
+export async function ensureGlobalInstructionsFile(
+  directory = getUserDataDirectory(),
+): Promise<string> {
   const file = getGlobalInstructionsFilePath(directory);
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await createFileIfMissing(file, "", 0o600);
-  if (!(await stat(file)).isFile()) {throw new Error("Global AGENTS.md must be a file.");}
+  if (!(await stat(file)).isFile()) {
+    throw new Error("Global AGENTS.md must be a file.");
+  }
   return file;
 }

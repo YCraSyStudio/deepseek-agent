@@ -28,13 +28,7 @@ export function PlainText({ content }: { content: string }) {
   );
 }
 
-export function MarkdownMessage({
-  content,
-  role,
-}: {
-  content: string;
-  role: ChatMessage["role"];
-}) {
+export function MarkdownMessage({ content, role }: { content: string; role: ChatMessage["role"] }) {
   return (
     <div className="markdownMessage">
       <ReactMarkdown
@@ -105,7 +99,11 @@ function RefractorCode({
   } catch {
     children = code;
   }
-  return <code className={className} {...codeProps}>{children}</code>;
+  return (
+    <code className={className} {...codeProps}>
+      {children}
+    </code>
+  );
 }
 
 function renderHastNode(node: HastNode, key: React.Key): React.ReactNode {

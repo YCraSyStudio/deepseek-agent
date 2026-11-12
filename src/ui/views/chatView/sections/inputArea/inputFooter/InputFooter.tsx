@@ -64,7 +64,9 @@ function InputFooter({
 
   useEffect(() => {
     const composer = footerRef.current?.closest(".inputComposer");
-    if (!composer) {return;}
+    if (!composer) {
+      return;
+    }
     const observer = new ResizeObserver(([entry]) => {
       setCompact(entry.contentRect.width <= 440);
     });
@@ -73,7 +75,12 @@ function InputFooter({
   }, []);
 
   const reasoningOptions = useMemo(() => {
-    return [{ value: "off", label: t("chat.off") }, { value: "low", label: t("chat.low") }, { value: "high", label: t("chat.high") }, { value: "max", label: t("chat.max") }];
+    return [
+      { value: "off", label: t("chat.off") },
+      { value: "low", label: t("chat.low") },
+      { value: "high", label: t("chat.high") },
+      { value: "max", label: t("chat.max") },
+    ];
   }, []);
 
   const modelOptions = useMemo(() => {
@@ -95,7 +102,10 @@ function InputFooter({
 
   return (
     <div className="inputFooter" ref={footerRef}>
-      <ReferencedFilesChips files={referencedFiles} onRemove={onRemoveReferencedFile ?? (() => undefined)} />
+      <ReferencedFilesChips
+        files={referencedFiles}
+        onRemove={onRemoveReferencedFile ?? (() => undefined)}
+      />
       <div className="inputFooterControls">
         <div className="inputFooterPrimaryControls">
           <button
@@ -104,11 +114,13 @@ function InputFooter({
             aria-label={t("chat.attach")}
             data-tooltip={t("chat.attach")}
             data-tooltip-align="start"
-            onClick={() => getVsCodeApi()?.postMessage({
-              type: "selectAttachments",
-              requestId: crypto.randomUUID(),
-              conversationId,
-            })}
+            onClick={() =>
+              getVsCodeApi()?.postMessage({
+                type: "selectAttachments",
+                requestId: crypto.randomUUID(),
+                conversationId,
+              })
+            }
           >
             <span className="codicon codicon-add" aria-hidden="true" />
           </button>
@@ -120,15 +132,21 @@ function InputFooter({
             onModelChange={onModelChange}
             onReasoningChange={onReasoningChange}
             compact={compact}
-            permission={compact ? {
-              value: permissionMode,
-              options: permissionOptions,
-              pending: permissionUpdatePending,
-              onChange: (value) => {
-                const mode = parsePermissionMode(value);
-                if (mode) {onPermissionModeChange(mode);}
-              },
-            } : undefined}
+            permission={
+              compact
+                ? {
+                    value: permissionMode,
+                    options: permissionOptions,
+                    pending: permissionUpdatePending,
+                    onChange: (value) => {
+                      const mode = parsePermissionMode(value);
+                      if (mode) {
+                        onPermissionModeChange(mode);
+                      }
+                    },
+                  }
+                : undefined
+            }
           >
             {compact && showUsage && usage && usage.count > 0 ? (
               <div className="compactComposerUsage">
@@ -145,13 +163,22 @@ function InputFooter({
         </div>
         <div className="inputFooterSecondaryControls">
           {suggestions?.visible ? (
-            <button type="button" className="chatSuggestionTrigger"
+            <button
+              type="button"
+              className="chatSuggestionTrigger"
               aria-label={t(suggestions.pending ? "chat.cancelSuggestion" : "chat.suggestMessage")}
-              data-tooltip={t(suggestions.pending ? "chat.cancelSuggestion" : "chat.suggestMessage")}
-              aria-busy={suggestions.pending} disabled={suggestions.disabled}
+              data-tooltip={t(
+                suggestions.pending ? "chat.cancelSuggestion" : "chat.suggestMessage",
+              )}
+              aria-busy={suggestions.pending}
+              disabled={suggestions.disabled}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={suggestions.pending ? suggestions.cancel : suggestions.request}>
-              <span className={`codicon ${suggestions.pending ? "codicon-loading codicon-modifier-spin" : "codicon-sparkle"}`} aria-hidden="true" />
+              onClick={suggestions.pending ? suggestions.cancel : suggestions.request}
+            >
+              <span
+                className={`codicon ${suggestions.pending ? "codicon-loading codicon-modifier-spin" : "codicon-sparkle"}`}
+                aria-hidden="true"
+              />
             </button>
           ) : null}
           {!compact && showUsage ? (
@@ -163,24 +190,34 @@ function InputFooter({
               compaction={compaction}
             />
           ) : null}
-          {!compact ? <span className="selectTooltipWrapper" data-tooltip={t("tools.permissionMode")} data-tooltip-align="end">
-            <select
-              name="PermissionMode"
-              id="PermissionMode"
-              aria-label={t("tools.permissionMode")}
-              aria-busy={permissionUpdatePending}
-              disabled={permissionUpdatePending}
-              value={permissionMode}
-              onChange={(event) => {
-                const nextPermissionMode = parsePermissionMode(event.target.value);
-                if (nextPermissionMode) { onPermissionModeChange(nextPermissionMode); }
-              }}
+          {!compact ? (
+            <span
+              className="selectTooltipWrapper"
+              data-tooltip={t("tools.permissionMode")}
+              data-tooltip-align="end"
             >
-              {permissionOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </span> : null}
+              <select
+                name="PermissionMode"
+                id="PermissionMode"
+                aria-label={t("tools.permissionMode")}
+                aria-busy={permissionUpdatePending}
+                disabled={permissionUpdatePending}
+                value={permissionMode}
+                onChange={(event) => {
+                  const nextPermissionMode = parsePermissionMode(event.target.value);
+                  if (nextPermissionMode) {
+                    onPermissionModeChange(nextPermissionMode);
+                  }
+                }}
+              >
+                {permissionOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </span>
+          ) : null}
         </div>
       </div>
     </div>

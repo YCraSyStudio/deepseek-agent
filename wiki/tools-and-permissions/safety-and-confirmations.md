@@ -72,11 +72,13 @@ Preparing a file mutation never interrupts the user. The inline change preview r
 
 ## Reviewing applied changes
 
-Every completed `create_file`, `edit_file`, or `apply_patch` records the exact before and after contents of the written file for the current session. `View change` on the tool call, each row of the end-of-turn edited-files summary, and the summary's `Review` action open the native VS Code diff from those snapshots, so a large change stays fully reviewable even though the diff inside a tool result is bounded for the model context.
+Every completed `create_file`, `edit_file`, or `apply_patch` records the exact before and after contents of the written file for the current session. `View change` on the tool call, each row of the end-of-turn edited-files summary, and the summary's `Review` action open the native VS Code diff from those records, so a large change stays fully reviewable even though the diff inside a tool result is bounded for the model context.
 
-Snapshots live in memory only: they are evicted oldest-first (32 changes of up to 512 KiB per document), are never written to disk, and disappear with the window. When no snapshot matches the recorded document hashes — for example after a conversation is reopened from history — the change view falls back to reconstructing the excerpts stored in the tool result, and a change whose recorded diff was truncated cannot be compared.
+Recovery snapshots are separate from the bounded tool-result diff. After each turn, including cancellation and errors, the extension writes real before/after copies for every changed path under `.snapshot/turns/<generation-id>/` in the chat's snapshot directory. These copies cover terminal changes too, persist across reloads, and are not memory-only. Their layout, quota and retention are in [Settings, History, and Privacy](../settings-and-data/settings-history-and-privacy.md#workspace-snapshots-and-revert); the restore flow is in [Workspace recovery](workspace-recovery.md).
 
-Reverting an applied change is not implemented yet.
+When no recovery copy matches the recorded document hashes — for example after retention removed it — the change view falls back to reconstructing the excerpts stored in the tool result, and a change whose recorded diff was truncated cannot be compared.
+
+Reverting an applied turn is available from the turn summary, the reviewed-change editor title and the `revert_workspace` tool. Restoration verifies the workspace binding, every recovery copy and the current files first; it refuses to overwrite later edits or dirty editors and leaves Git commits and the staging index untouched.
 
 A positive reviewer decision is cached only when every justifying fact is reproducible: conversation, workspace binding, permission fingerprint, tool, normalized command or path, content hash, and effect profile. Changing the permission mode, editing the script, or running a different command produces a different key and a fresh review. User confirmations are never cached.
 

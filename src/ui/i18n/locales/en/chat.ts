@@ -2,7 +2,8 @@ import type { TranslationCatalog } from "../Types";
 
 export const chat = {
   chat: {
-    draftAttachmentsSaveFailed: "Could not save or restore draft attachments locally. Keep this window open until storage is available.",
+    draftAttachmentsSaveFailed:
+      "Could not save or restore draft attachments locally. Keep this window open until storage is available.",
     completionFiles: "Files",
     completionInstructions: "Instructions",
     completionWorkspace: "Workspace",
@@ -17,7 +18,8 @@ export const chat = {
     apiKeyMissing: "API key missing",
     askAnythingAboutYourCode: "Ask anything about your code...",
     configureApiKey: "Configure your API key in settings first...",
-    emptyDescription: "Ask about code, generate snippets, or stream reasoning directly into the editor.",
+    emptyDescription:
+      "Ask about code, generate snippets, or stream reasoning directly into the editor.",
     send: "send",
     newLine: "new line",
     modelSelector: "Model Selector",
@@ -110,8 +112,8 @@ export const chat = {
         contextSummary: "Context summary",
         fileCompaction: "File compaction",
         visionAnalysis: "Vision analysis",
-        codeCompletion: "Beta code completion"
-      }
-    }
-  }
+        codeCompletion: "Beta code completion",
+      },
+    },
+  },
 } satisfies TranslationCatalog;

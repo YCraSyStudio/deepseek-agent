@@ -3,8 +3,17 @@ import "./MessagesSection.css";
 import { useVsCode } from "../../contexts";
 import type { MessagesSectionProps, ToolCallGroup } from "../../ChatViewTypes";
 import { useMessageHandler } from "../../hooks";
-import { ChatEmptyState, ChatMessages, ToolCallConfirmationModal, ToolCallTimeline } from "@webview/components/chatView";
-import { useChatMessagesController, useCodeActionHandler, useToolCallController } from "../../../../hooks/chat";
+import {
+  ChatEmptyState,
+  ChatMessages,
+  ToolCallConfirmationModal,
+  ToolCallTimeline,
+} from "@webview/components/chatView";
+import {
+  useChatMessagesController,
+  useCodeActionHandler,
+  useToolCallController,
+} from "../../../../hooks/chat";
 import { t } from "@webview/i18n";
 import { beginNavigationRequest } from "@webview/NavigationRequests";
 import { reconcileLatestAssistantToolCalls } from "@webview/components/chatView/messages/ToolCallReconciliation";
@@ -79,12 +88,14 @@ function MessagesSection({
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [isCompacting, setIsCompacting] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
-  const [visibleMessageCount, setVisibleMessageCount] = useState(
-    () => initialChatWindowSize(messages.length, earlierMessagesLoaded),
+  const [visibleMessageCount, setVisibleMessageCount] = useState(() =>
+    initialChatWindowSize(messages.length, earlierMessagesLoaded),
   );
   const hiddenMessageCount = hiddenChatMessageCount(messages.length, visibleMessageCount);
   useEffect(() => {
-    setVisibleMessageCount((count) => followChatWindowGrowth(count, messages.length, earlierMessagesLoaded));
+    setVisibleMessageCount((count) =>
+      followChatWindowGrowth(count, messages.length, earlierMessagesLoaded),
+    );
   }, [messages.length, earlierMessagesLoaded]);
   const canLoadEarlierHistoryPage = Boolean(conversationId && historyCursor);
   const visibleMessages = useMemo(
@@ -92,40 +103,50 @@ function MessagesSection({
     [messages, visibleMessageCount],
   );
   const timelineToolCallSignature = useMemo(
-    () => [...messages]
-      .reverse()
-      .find((message) => message.role === "assistant")
-      ?.timeline?.flatMap((event) => event.type === "tool-group" ? event.toolCallIds : [])
-      .join("\u0000") ?? "",
+    () =>
+      [...messages]
+        .reverse()
+        .find((message) => message.role === "assistant")
+        ?.timeline?.flatMap((event) => (event.type === "tool-group" ? event.toolCallIds : []))
+        .join("\u0000") ?? "",
     [messages],
   );
 
   useEffect(() => {
-    if (!onMessagesChange || tools.toolCallGroups.length === 0) {return;}
+    if (!onMessagesChange || tools.toolCallGroups.length === 0) {
+      return;
+    }
     onMessagesChange((current) => reconcileLatestAssistantToolCalls(current, tools.toolCallGroups));
   }, [onMessagesChange, timelineToolCallSignature, tools.toolCallGroups]);
 
-  useMessageHandler(vscode, {
-    ...dispatcher,
-    onContextCompactionUpdated: ({ status }) => setIsCompacting(status === "compacting"),
-    onGenerationRecoveryStarted: () => setIsRecovering(true),
-    onGenerationSnapshot: (message) => {
-      setIsCompacting(message.generations.some(
-        (generation) => generation.conversationId === conversationId && generation.status === "compacting",
-      ));
-      dispatcher.onGenerationSnapshot?.(message);
+  useMessageHandler(
+    vscode,
+    {
+      ...dispatcher,
+      onContextCompactionUpdated: ({ status }) => setIsCompacting(status === "compacting"),
+      onGenerationRecoveryStarted: () => setIsRecovering(true),
+      onGenerationSnapshot: (message) => {
+        setIsCompacting(
+          message.generations.some(
+            (generation) =>
+              generation.conversationId === conversationId && generation.status === "compacting",
+          ),
+        );
+        dispatcher.onGenerationSnapshot?.(message);
+      },
+      onStreamDone: (info) => {
+        setIsCompacting(false);
+        setIsRecovering(false);
+        dispatcher.onStreamDone?.(info);
+      },
+      onStreamError: (error, generationId) => {
+        setIsCompacting(false);
+        setIsRecovering(false);
+        dispatcher.onStreamError?.(error, generationId);
+      },
     },
-    onStreamDone: (info) => {
-      setIsCompacting(false);
-      setIsRecovering(false);
-      dispatcher.onStreamDone?.(info);
-    },
-    onStreamError: (error, generationId) => {
-      setIsCompacting(false);
-      setIsRecovering(false);
-      dispatcher.onStreamError?.(error, generationId);
-    },
-  }, getGenerationScope ?? { conversationId, activeGenerationId });
+    getGenerationScope ?? { conversationId, activeGenerationId },
+  );
 
   useEffect(() => {
     if (!followsLatestRef.current) {
@@ -192,7 +213,14 @@ function MessagesSection({
   return (
     <>
       <div className="messagesSection">
-        <div className="msgList" tabIndex={0} ref={listRef} onClick={handleCodeAction} onScroll={handleScroll} aria-busy={isProcessing}>
+        <div
+          className="msgList"
+          tabIndex={0}
+          ref={listRef}
+          onClick={handleCodeAction}
+          onScroll={handleScroll}
+          aria-busy={isProcessing}
+        >
           {emptyStateVisible ? (
             <ChatEmptyState />
           ) : (
@@ -202,7 +230,11 @@ function MessagesSection({
                   {t("chat.showEarlierMessages", { count: hiddenMessageCount })}
                 </button>
               ) : canLoadEarlierHistoryPage ? (
-                <button type="button" className="showEarlierMessages" onClick={loadEarlierHistoryPage}>
+                <button
+                  type="button"
+                  className="showEarlierMessages"
+                  onClick={loadEarlierHistoryPage}
+                >
                   {t("chat.loadEarlierMessages")}
                 </button>
               ) : null}
@@ -222,16 +254,25 @@ function MessagesSection({
               <div className="typingDots">
                 <span /> <span /> <span />
               </div>
-              <span className="typingLabel">{t(isCompacting
-                ? "chat.compactingContext"
-                : isRecovering
-                  ? "chat.recoveringConcise"
-                  : "chat.deepseekIsThinking")}</span>
+              <span className="typingLabel">
+                {t(
+                  isCompacting
+                    ? "chat.compactingContext"
+                    : isRecovering
+                      ? "chat.recoveringConcise"
+                      : "chat.deepseekIsThinking",
+                )}
+              </span>
             </div>
           ) : null}
         </div>
         {showJumpToLatest ? (
-          <button className="jumpToLatest" type="button" onClick={jumpToLatest} aria-label={t("chat.jumpToLatest")}>
+          <button
+            className="jumpToLatest"
+            type="button"
+            onClick={jumpToLatest}
+            aria-label={t("chat.jumpToLatest")}
+          >
             <span className="codicon codicon-arrow-down" aria-hidden="true" />
           </button>
         ) : null}

@@ -6,6 +6,8 @@ export async function run(): Promise<void> {
   mocha.addFile(path.resolve(__dirname, "PackagedSmoke.test.js"));
   await mocha.loadFilesAsync();
   await new Promise<void>((resolve, reject) => {
-    mocha.run((failures) => failures > 0 ? reject(new Error(`${failures} packaged smoke test(s) failed.`)) : resolve());
+    mocha.run((failures) =>
+      failures > 0 ? reject(new Error(`${failures} packaged smoke test(s) failed.`)) : resolve(),
+    );
   });
 }

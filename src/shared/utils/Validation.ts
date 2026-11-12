@@ -1,4 +1,7 @@
-export function hasOnlyKeys(value: Record<string, unknown>, allowedKeys: readonly string[]): boolean {
+export function hasOnlyKeys(
+  value: Record<string, unknown>,
+  allowedKeys: readonly string[],
+): boolean {
   const allowed = new Set(allowedKeys);
   return Object.keys(value).every((key) => allowed.has(key));
 }
@@ -20,7 +23,10 @@ export function isOptionalBoolean(value: unknown): boolean {
 }
 
 export function isOptionalNumberInRange(value: unknown, min: number, max: number): boolean {
-  return value === undefined || (typeof value === "number" && Number.isFinite(value) && value >= min && value <= max);
+  return (
+    value === undefined ||
+    (typeof value === "number" && Number.isFinite(value) && value >= min && value <= max)
+  );
 }
 
 export function isEnumOf<T extends string>(value: unknown, allowed: readonly T[]): value is T {

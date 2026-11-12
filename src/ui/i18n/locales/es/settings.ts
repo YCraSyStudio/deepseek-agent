@@ -3,18 +3,22 @@ export const settings = {
   settings: {
     number: { increase: "Aumentar valor", decrease: "Disminuir valor" },
     help: "Ayuda: {setting}",
-    snapshots: { storageLimit: "Límite de capturas (MiB)", storageHint: "Límite total para las copias de todos los chats. Si falta espacio, el mensaje continúa con un aviso y no se podrá revertir." },
+    snapshots: {
+      storageLimit: "Límite de capturas (MiB)",
+      storageHint:
+        "Límite total para las copias de todos los chats. Si falta espacio, el mensaje continúa con un aviso y no se podrá revertir.",
+    },
     tab: {
       customization: "Personalización",
       api: "API",
       tools: "Herramientas",
-      general: "General"
+      general: "General",
     },
     section: {
-      extension: "Extensión"
+      extension: "Extensión",
     },
     tabs: {
-      label: "Secciones de ajustes"
+      label: "Secciones de ajustes",
     },
     loading: "Cargando ajustes…",
     storage: {
@@ -29,24 +33,24 @@ export const settings = {
     retry: "Reintentar",
     reset: {
       label: "Restablecer valores predeterminados",
-      success: "Ajustes restablecidos. La API key se ha conservado."
+      success: "Ajustes restablecidos. La API key se ha conservado.",
     },
     notification: {
-      dismiss: "Cerrar notificación"
+      dismiss: "Cerrar notificación",
     },
     unavailable: "Los ajustes no están disponibles fuera de VS Code.",
     save: {
-      error: "No se pudieron guardar los ajustes. Inténtalo de nuevo."
+      error: "No se pudieron guardar los ajustes. Inténtalo de nuevo.",
     },
     load: {
-      error: "No se pudieron cargar los ajustes."
+      error: "No se pudieron cargar los ajustes.",
     },
     api: {
       title: "Configuración de la API",
       key: "API key",
       keyVisibility: {
         label: "Mostrar u ocultar la API key",
-        tooltip: "Mostrar/ocultar API key"
+        tooltip: "Mostrar/ocultar API key",
       },
       testConnection: "Probar conexión",
       removeCredential: "Eliminar API key",
@@ -56,38 +60,44 @@ export const settings = {
       notConfigured: "Sin configurar",
       connection: {
         ok: "Conexión correcta",
-        failed: "Conexión fallida"
+        failed: "Conexión fallida",
       },
       configured: "Configurada",
       httpWarning: "Advertencia: HTTP envía las credenciales de la API sin cifrado de transporte.",
       customHostWarning: "Host de API personalizado: verifica que confías en su operador.",
-      baseUrl: "URL base"
+      baseUrl: "URL base",
     },
     reasoning: {
       mode: "Modo de razonamiento",
-      effort: "Nivel de razonamiento"
+      effort: "Nivel de razonamiento",
     },
     advanced: {
-      title: "Avanzado"
+      title: "Avanzado",
     },
     beta: {
       title: "Funciones beta",
-      description: "Activa el completado y las sugerencias beta. Al desactivarlo también se desactivan las llamadas estrictas a herramientas. Desactivado por defecto.",
+      description:
+        "Activa el completado y las sugerencias beta. Al desactivarlo también se desactivan las llamadas estrictas a herramientas. Desactivado por defecto.",
       editorSuggestions: "Sugerencias en el editor",
       chatSuggestions: "Sugerencias en el chat",
-      editorSuggestionsHelp: "Tras una pausa de 800 ms al escribir, envía el código cercano a DeepSeek para completarlo. Consume API. Tab acepta; Escape descarta. Requiere funciones beta y un workspace de confianza.",
-      chatSuggestionsHelp: "Pulsa Sugerir mensaje junto al indicador de contexto para generar un mensaje o continuar el borrador con un resumen breve del proyecto. Escribir no solicita sugerencias. No envía código fuente ni historial. Consume API. Tab acepta; Escape descarta. Requiere funciones beta, una API key configurada y un workspace de confianza.",
+      editorSuggestionsHelp:
+        "Tras una pausa de 800 ms al escribir, envía el código cercano a DeepSeek para completarlo. Consume API. Tab acepta; Escape descarta. Requiere funciones beta y un workspace de confianza.",
+      chatSuggestionsHelp:
+        "Pulsa Sugerir mensaje junto al indicador de contexto para generar un mensaje o continuar el borrador con un resumen breve del proyecto. Escribir no solicita sugerencias. No envía código fuente ni historial. Consume API. Tab acepta; Escape descarta. Requiere funciones beta, una API key configurada y un workspace de confianza.",
     },
     strictTools: {
       title: "Validación de herramientas",
       enabled: "Llamadas estrictas a herramientas",
-      description: "Experimental y desactivado por defecto. Usa el endpoint beta de DeepSeek para validar los argumentos con esquemas estrictos. Requiere funciones beta.",
+      description:
+        "Experimental y desactivado por defecto. Usa el endpoint beta de DeepSeek para validar los argumentos con esquemas estrictos. Requiere funciones beta.",
     },
     privacy: {
       title: "Privacidad",
       minimize: "Minimizar metadatos",
-      description: "Omite rutas absolutas del contexto automático, nombres de imágenes e identificadores opcionales. Usa fechas UTC sin el nombre de tu zona horaria.",
-      limits: "Mejor esfuerzo: no modifica mensajes, código, salidas de herramientas, imágenes ni historial. No garantiza anonimato; el proveedor sigue viendo la IP de conexión.",
+      description:
+        "Omite rutas absolutas del contexto automático, nombres de imágenes e identificadores opcionales. Usa fechas UTC sin el nombre de tu zona horaria.",
+      limits:
+        "Mejor esfuerzo: no modifica mensajes, código, salidas de herramientas, imágenes ni historial. No garantiza anonimato; el proveedor sigue viendo la IP de conexión.",
     },
     browser: {
       access: "Capturas de pantalla",
@@ -98,14 +108,16 @@ export const settings = {
     },
     webSearch: {
       title: "Búsqueda web",
-      description: "Busca con tu API key de DeepSeek y lee páginas localmente con Chromium. Search tiene un coste adicional al de los tokens; la lectura local no usa DeepSeek Fetch.",
+      description:
+        "Busca con tu API key de DeepSeek y lee páginas localmente con Chromium. Search tiene un coste adicional al de los tokens; la lectura local no usa DeepSeek Fetch.",
       enabled: "Habilitar búsqueda web",
       region: "Región de búsqueda",
       global: "Global (por defecto)",
       auto: "Automática (sistema)",
       custom: "Elegir un país",
       countryCode: "Código de país de dos letras, como ES o US",
-      regionHint: "Global no prioriza ningún país. Automática usa el país del sistema local, sin consultar ni añadir tu IP como parámetro. Lo que pidas en el chat tiene prioridad y se mantienen las fuentes técnicas de otros idiomas.",
+      regionHint:
+        "Global no prioriza ningún país. Automática usa el país del sistema local, sin consultar ni añadir tu IP como parámetro. Lo que pidas en el chat tiene prioridad y se mantienen las fuentes técnicas de otros idiomas.",
     },
     toolCatalog: {
       label: "Lista de herramientas",
@@ -116,27 +128,30 @@ export const settings = {
     },
     sampling: {
       temperature: "Temperatura",
-      topP: "Top P"
+      topP: "Top P",
     },
     history: {
       incognito: "Modo incógnito",
-      incognitoDescription: "Los chats solo se conservan en memoria y se pierden al recargar la extensión o VS Code.",
+      incognitoDescription:
+        "Los chats solo se conservan en memoria y se pierden al recargar la extensión o VS Code.",
       transition: {
         workTitle: "¿Entrar en modo incógnito?",
         workDescription: "Hay {generations} generaciones activas y {queued} mensajes en cola.",
         workFinished: "El trabajo pendiente ha terminado. Ya puedes entrar en modo incógnito.",
         exitWorkTitle: "¿Parar el trabajo incógnito antes de salir?",
-        exitWorkFinished: "El trabajo incógnito pendiente ha terminado. Ya puedes continuar saliendo del modo incógnito.",
+        exitWorkFinished:
+          "El trabajo incógnito pendiente ha terminado. Ya puedes continuar saliendo del modo incógnito.",
         stopAndEnter: "Parar generaciones y entrar en incógnito",
         stopAndContinue: "Parar generaciones y continuar",
         enter: "Entrar en incógnito",
         continueExit: "Continuar",
         cancelAndWait: "Cancelar y esperar",
         exitTitle: "¿Salir del modo incógnito?",
-        exitDescription: "Elige si quieres guardar este chat incógnito como una conversación nueva o descartarlo.",
+        exitDescription:
+          "Elige si quieres guardar este chat incógnito como una conversación nueva o descartarlo.",
         saveAndExit: "Guardar y salir",
         discardAndExit: "Descartar y salir",
-        cancel: "Cancelar"
+        cancel: "Cancelar",
       },
       store: "Guardar historial del chat",
       retention: "Conservar historial (días)",
@@ -145,14 +160,16 @@ export const settings = {
     reusable: {
       title: "Instrucciones",
       template: "Plantilla",
-      templateHelp: "Blank.md inicia una instrucción vacía; git.md propone un flujo de Git; commit.md incluye convenciones del mensaje y comprobaciones. Elige una, ajusta el nombre y cuándo usarla, y edita su contenido en VS Code.",
+      templateHelp:
+        "Blank.md inicia una instrucción vacía; git.md propone un flujo de Git; commit.md incluye convenciones del mensaje y comprobaciones. Elige una, ajusta el nombre y cuándo usarla, y edita su contenido en VS Code.",
       create: "Crear instrucción",
       help: "DeepSeek recibe el nombre y la descripción. Lee el archivo completo solo cuando corresponde a la tarea, por ejemplo al preparar un commit. Las instrucciones globales se aplican a todos los proyectos; las del workspace solo a ese proyecto.",
       scope: "Guardar en",
       global: "Global",
       workspace: "Workspace",
       name: "Nombre del archivo",
-      nameHelp: "Escribe el nombre sin la extensión final, por ejemplo commit. La extensión .md es fija y se añade automáticamente. Otras extensiones forman parte del nombre: commit.txt se guarda como commit.txt.md. Puedes usar letras, números, puntos, guiones y guiones bajos. Los archivos existentes se abren sin sobrescribirlos.",
+      nameHelp:
+        "Escribe el nombre sin la extensión final, por ejemplo commit. La extensión .md es fija y se añade automáticamente. Otras extensiones forman parte del nombre: commit.txt se guarda como commit.txt.md. Puedes usar letras, números, puntos, guiones y guiones bajos. Los archivos existentes se abren sin sobrescribirlos.",
       description: "Cuándo utilizarla",
       descriptionPlaceholder: "Al crear o revisar un commit de Git",
       createAndEdit: "Crear y editar",
@@ -171,30 +188,32 @@ export const settings = {
       workspaceOpenError: "No se pudo abrir el AGENTS.md del workspace.",
 
       openGlobalAgents: "Editar AGENTS.md global",
-      globalAgentsHelp: "Aplica tus instrucciones personales a todos los workspaces. Guarda el archivo en VS Code; los cambios guardados se cargan antes de cada mensaje.",
+      globalAgentsHelp:
+        "Aplica tus instrucciones personales a todos los workspaces. Guarda el archivo en VS Code; los cambios guardados se cargan antes de cada mensaje.",
       openError: "No se pudo abrir el AGENTS.md global.",
     },
     instructions: {
-      globalAgents: "Usar las instrucciones globales de AGENTS.md"
+      globalAgents: "Usar las instrucciones globales de AGENTS.md",
     },
     language: {
       label: "Idioma de la interfaz",
-      auto: "Auto"
+      auto: "Auto",
     },
     model: {
-      label: "Modelo"
+      label: "Modelo",
     },
     usage: {
       title: "Uso y coste",
       breakdown: "Mostrar el consumo de tokens bajo las respuestas",
       currency: "Moneda del coste",
       currencyUsd: "Dólar estadounidense (USD)",
-      currencyCny: "Yuan chino (CNY)"
+      currencyCny: "Yuan chino (CNY)",
     },
     limits: {
       maxTokens: "Tokens máximos de salida",
-      maxTokensDescription: "Límite de salida por petición. El valor predeterminado (8.192 tokens) ayuda a controlar el consumo y el coste de la API.",
-      maxConcurrentGenerations: "Generaciones simultáneas"
-    }
-  }
+      maxTokensDescription:
+        "Límite de salida por petición. El valor predeterminado (8.192 tokens) ayuda a controlar el consumo y el coste de la API.",
+      maxConcurrentGenerations: "Generaciones simultáneas",
+    },
+  },
 } satisfies TranslationCatalog;

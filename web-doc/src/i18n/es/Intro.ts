@@ -4,7 +4,8 @@ export const intro: PageContent = {
   navTitle: "Introducción",
   title: "Introducción",
   seoTitle: "Extensión DeepSeek: introducción",
-  description: "Qué es YCraSy DeepSeek Agent, en qué canal de versiones se publica y qué incluye la pre-versión actual.",
+  description:
+    "Qué es YCraSy DeepSeek Agent, en qué canal de versiones se publica y qué incluye la pre-versión actual.",
   lead: "YCraSy DeepSeek Agent solo usa DeepSeek por diseño. Ofrece un asistente enfocado dentro de VS Code sin selector de proveedores.",
   sections: [
     {

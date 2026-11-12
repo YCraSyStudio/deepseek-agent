@@ -1,10 +1,27 @@
 export type ToolWorkspaceEntryType = "file" | "directory" | "unknown";
 
-export interface ToolWorkspaceStat { type: ToolWorkspaceEntryType; size: number; }
-export interface ToolWorkspaceFindOptions { includePattern: string; maxResults: number; signal?: AbortSignal; }
-export interface ToolWorkspaceFilePreview { head: Uint8Array; tail?: Uint8Array; size: number; }
-export interface ResolvedWorkspacePath { absolutePath: string; relativePath: string; workspaceRoot?: string; }
-export interface ResolveWorkspacePathOptions { allowSensitive?: boolean; }
+export interface ToolWorkspaceStat {
+  type: ToolWorkspaceEntryType;
+  size: number;
+}
+export interface ToolWorkspaceFindOptions {
+  includePattern: string;
+  maxResults: number;
+  signal?: AbortSignal;
+}
+export interface ToolWorkspaceFilePreview {
+  head: Uint8Array;
+  tail?: Uint8Array;
+  size: number;
+}
+export interface ResolvedWorkspacePath {
+  absolutePath: string;
+  relativePath: string;
+  workspaceRoot?: string;
+}
+export interface ResolveWorkspacePathOptions {
+  allowSensitive?: boolean;
+}
 export type RealPathResolver = (absolutePath: string) => Promise<string>;
 
 export interface MoveWorkspacePathOptions {

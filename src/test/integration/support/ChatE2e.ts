@@ -84,7 +84,9 @@ export class ChatE2e {
     const history = new HistoryManager(settings);
     await history.initialize();
     const registry = new ToolRegistry();
-    for (const tool of BUILT_IN_TOOLS) {registry.register(tool);}
+    for (const tool of BUILT_IN_TOOLS) {
+      registry.register(tool);
+    }
     const posts: PostedMessage[] = [];
     const view = createWebviewView(posts);
     const handler = new ChatHandler(
@@ -104,9 +106,8 @@ export class ChatE2e {
   }
 
   send(text: string, overrides: Record<string, unknown> = {}): string {
-    const clientRequestId = typeof overrides.clientRequestId === "string"
-      ? overrides.clientRequestId
-      : randomUUID();
+    const clientRequestId =
+      typeof overrides.clientRequestId === "string" ? overrides.clientRequestId : randomUUID();
     const message = {
       type: "sendMessage",
       text,
@@ -132,35 +133,54 @@ export class ChatE2e {
     return generationId;
   }
 
-  async acceptToolCall(toolCallId: string, generationId?: string, action: "execute" | "reject" = "execute"): Promise<void> {
+  async acceptToolCall(
+    toolCallId: string,
+    generationId?: string,
+    action: "execute" | "reject" = "execute",
+  ): Promise<void> {
     const id = generationId ?? this.lastGenerationId();
-    if (!id) {throw new Error("No generation has started yet.");}
-    this.handler.handle({
-      type: "executeToolCall",
-      generationId: id,
-      toolCallId,
-      action,
-    } as unknown as WebviewToHandlerMessage, this.view);
+    if (!id) {
+      throw new Error("No generation has started yet.");
+    }
+    this.handler.handle(
+      {
+        type: "executeToolCall",
+        generationId: id,
+        toolCallId,
+        action,
+      } as unknown as WebviewToHandlerMessage,
+      this.view,
+    );
   }
 
-  async settleToolCall(toolCallId: string, generationId: string, action: "execute" | "reject" = "execute"): Promise<PostedMessage> {
+  async settleToolCall(
+    toolCallId: string,
+    generationId: string,
+    action: "execute" | "reject" = "execute",
+  ): Promise<PostedMessage> {
     const deadline = Date.now() + 20_000;
     let answered = 0;
     while (Date.now() < deadline) {
       const confirmations = this.posts.filter(
-        (post) => post.type === "toolCallConfirmationRequired" && toolCallIncludes(post, toolCallId),
+        (post) =>
+          post.type === "toolCallConfirmationRequired" && toolCallIncludes(post, toolCallId),
       );
       while (answered < confirmations.length) {
         answered += 1;
         await this.acceptToolCall(toolCallId, generationId, action);
-        if (action === "reject") {break;}
+        if (action === "reject") {
+          break;
+        }
       }
       const result = this.posts.find(
-        (post) => post.type === "toolCallResult" &&
+        (post) =>
+          post.type === "toolCallResult" &&
           post.toolCallId === toolCallId &&
           post.status !== "awaiting_confirmation",
       );
-      if (result) {return result;}
+      if (result) {
+        return result;
+      }
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     throw new Error(
@@ -170,23 +190,39 @@ export class ChatE2e {
 
   async cancel(generationId?: string): Promise<void> {
     const id = generationId ?? this.lastGenerationId();
-    if (!id) {throw new Error("No generation has started yet.");}
-    this.handler.handle({
-      type: "cancelGeneration",
-      requestId: randomUUID(),
-      generationId: id,
-      conversationId: this.conversationIdFor(id),
-    } as unknown as WebviewToHandlerMessage, this.view);
+    if (!id) {
+      throw new Error("No generation has started yet.");
+    }
+    this.handler.handle(
+      {
+        type: "cancelGeneration",
+        requestId: randomUUID(),
+        generationId: id,
+        conversationId: this.conversationIdFor(id),
+      } as unknown as WebviewToHandlerMessage,
+      this.view,
+    );
   }
 
-  waitFor(predicate: (posts: readonly PostedMessage[]) => boolean, description: string, timeoutMs = 20_000): Promise<void> {
+  waitFor(
+    predicate: (posts: readonly PostedMessage[]) => boolean,
+    description: string,
+    timeoutMs = 20_000,
+  ): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     return new Promise((resolve, reject) => {
       const poll = (): void => {
-        if (predicate(this.posts)) {resolve(); return;}
+        if (predicate(this.posts)) {
+          resolve();
+          return;
+        }
         if (Date.now() > deadline) {
           const terminal = this.posts.filter((post) => TERMINAL_TYPES.has(post.type));
-          reject(new Error(`Timed out waiting for ${description}. Terminal events: ${JSON.stringify(terminal.slice(-3))}`));
+          reject(
+            new Error(
+              `Timed out waiting for ${description}. Terminal events: ${JSON.stringify(terminal.slice(-3))}`,
+            ),
+          );
           return;
         }
         setTimeout(poll, 10);
@@ -196,36 +232,48 @@ export class ChatE2e {
   }
 
   waitForPost(type: string, timeoutMs?: number): Promise<PostedMessage> {
-    return this.waitFor(
-      (posts) => posts.some((post) => post.type === type),
-      type,
-      timeoutMs,
-    ).then(() => {
-      const found = this.posts.find((post) => post.type === type);
-      if (!found) {throw new Error(`Missing ${type}`);}
-      return found;
-    });
+    return this.waitFor((posts) => posts.some((post) => post.type === type), type, timeoutMs).then(
+      () => {
+        const found = this.posts.find((post) => post.type === type);
+        if (!found) {
+          throw new Error(`Missing ${type}`);
+        }
+        return found;
+      },
+    );
   }
 
-  waitForPostMatching(type: string, match: (post: PostedMessage) => boolean, description = type, timeoutMs?: number): Promise<PostedMessage> {
+  waitForPostMatching(
+    type: string,
+    match: (post: PostedMessage) => boolean,
+    description = type,
+    timeoutMs?: number,
+  ): Promise<PostedMessage> {
     return this.waitFor(
       (posts) => posts.some((post) => post.type === type && match(post)),
       description,
       timeoutMs,
     ).then(() => {
       const found = [...this.posts].reverse().find((post) => post.type === type && match(post));
-      if (!found) {throw new Error(`Missing ${description}`);}
+      if (!found) {
+        throw new Error(`Missing ${description}`);
+      }
       return found;
     });
   }
 
   async waitForTerminal(generationId: string): Promise<PostedMessage> {
     await this.waitFor(
-      (posts) => posts.some((post) => TERMINAL_TYPES.has(post.type) && post.generationId === generationId),
+      (posts) =>
+        posts.some((post) => TERMINAL_TYPES.has(post.type) && post.generationId === generationId),
       `a terminal event for ${generationId}`,
     );
-    const terminal = this.posts.find((post) => TERMINAL_TYPES.has(post.type) && post.generationId === generationId);
-    if (!terminal) {throw new Error(`Missing terminal event for ${generationId}`);}
+    const terminal = this.posts.find(
+      (post) => TERMINAL_TYPES.has(post.type) && post.generationId === generationId,
+    );
+    if (!terminal) {
+      throw new Error(`Missing terminal event for ${generationId}`);
+    }
     return terminal;
   }
 
@@ -251,12 +299,16 @@ export class ChatE2e {
   }
 
   async dispose(): Promise<void> {
-    if (this.closed) {return;}
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
     try {
       for (const generationId of this.generationIds()) {
         const conversationId = this.conversationIdFor(generationId);
-        if (conversationId) {this.conversations.add(conversationId);}
+        if (conversationId) {
+          this.conversations.add(conversationId);
+        }
       }
       await this.handler.shutdown();
     } finally {
@@ -273,9 +325,13 @@ export class ChatE2e {
       "a generation to start",
     );
     const generationId = this.generationIds()[previousCount];
-    if (!generationId) {throw new Error("Generation was not accepted");}
+    if (!generationId) {
+      throw new Error("Generation was not accepted");
+    }
     const conversationId = this.conversationIdFor(generationId);
-    if (conversationId) {this.conversations.add(conversationId);}
+    if (conversationId) {
+      this.conversations.add(conversationId);
+    }
     return generationId;
   }
 }
@@ -333,44 +389,57 @@ class DeepSeekTransport {
   private toolCallSequence = 0;
 
   install(): this {
-    if (this.installed) {return this;}
+    if (this.installed) {
+      return this;
+    }
     this.originalFetch = globalThis.fetch;
     this.installed = true;
-    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-      const body = typeof init?.body === "string"
-        ? JSON.parse(init.body) as Record<string, unknown>
-        : {};
+    globalThis.fetch = (async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const body =
+        typeof init?.body === "string" ? (JSON.parse(init.body) as Record<string, unknown>) : {};
       this.requests.push(body);
       if (body.stream !== true) {
         return jsonResponse(body.model, REVIEW_DECISION);
       }
       const round = this.script.shift();
       if (!round) {
-        throw new Error("Unexpected provider round: the e2e script has no remaining scripted response.");
+        throw new Error(
+          "Unexpected provider round: the e2e script has no remaining scripted response.",
+        );
       }
       if ("failure" in round) {
-        return new Response(JSON.stringify({
-          error: {
-            message: round.failure.message,
-            ...(round.failure.code ? { code: round.failure.code } : {}),
-          },
-        }), { status: round.failure.status, headers: { "content-type": "application/json" } });
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: round.failure.message,
+              ...(round.failure.code ? { code: round.failure.code } : {}),
+            },
+          }),
+          { status: round.failure.status, headers: { "content-type": "application/json" } },
+        );
       }
-      return sseResponse("toolCalls" in round
-        ? {
-            ...round,
-            toolCalls: round.toolCalls.map((toolCall) => ({
-              ...toolCall,
-              id: toolCall.id ?? `call_${++this.toolCallSequence}`,
-            })),
-          }
-        : round);
+      return sseResponse(
+        "toolCalls" in round
+          ? {
+              ...round,
+              toolCalls: round.toolCalls.map((toolCall) => ({
+                ...toolCall,
+                id: toolCall.id ?? `call_${++this.toolCallSequence}`,
+              })),
+            }
+          : round,
+      );
     }) as typeof fetch;
     return this;
   }
 
   restore(): void {
-    if (this.originalFetch) {globalThis.fetch = this.originalFetch;}
+    if (this.originalFetch) {
+      globalThis.fetch = this.originalFetch;
+    }
     this.installed = false;
   }
 
@@ -389,13 +458,17 @@ class DeepSeekTransport {
 
   lastUserMessage(): string | undefined {
     const last = this.streamedRequests().at(-1);
-    const messages = Array.isArray(last?.messages) ? last.messages as Array<{ role?: string; content?: unknown }> : [];
+    const messages = Array.isArray(last?.messages)
+      ? (last.messages as Array<{ role?: string; content?: unknown }>)
+      : [];
     const user = [...messages].reverse().find((message) => message.role === "user");
     return typeof user?.content === "string" ? user.content : undefined;
   }
 
   allContent(): string {
-    return this.streamedRequests().map((request) => JSON.stringify(request)).join("\n");
+    return this.streamedRequests()
+      .map((request) => JSON.stringify(request))
+      .join("\n");
   }
 }
 
@@ -403,7 +476,11 @@ function createWebviewView(posts: PostedMessage[]): vscode.WebviewView {
   return {
     webview: {
       postMessage: async (message: unknown): Promise<boolean> => {
-        if (message && typeof message === "object" && typeof (message as { type?: unknown }).type === "string") {
+        if (
+          message &&
+          typeof message === "object" &&
+          typeof (message as { type?: unknown }).type === "string"
+        ) {
           posts.push(message as PostedMessage);
         }
         return true;
@@ -424,8 +501,10 @@ function createWebviewView(posts: PostedMessage[]): vscode.WebviewView {
 }
 
 function toolCallIncludes(post: PostedMessage, toolCallId: string): boolean {
-  return Array.isArray(post.toolCalls) &&
-    (post.toolCalls as Array<{ id?: unknown }>).some((toolCall) => toolCall.id === toolCallId);
+  return (
+    Array.isArray(post.toolCalls) &&
+    (post.toolCalls as Array<{ id?: unknown }>).some((toolCall) => toolCall.id === toolCallId)
+  );
 }
 
 function createSecretStore(): SecretStore {
@@ -447,10 +526,19 @@ function createProviderFactory(): ModelProviderFactory {
         object: "chat.completion",
         created: 1,
         model: request.model,
-        choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "Earlier work summary." } }],
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: { role: "assistant", content: "Earlier work summary." },
+          },
+        ],
       };
     },
-    async chatCompletionStream(_request: ChatCompletionRequest, onChunk: (chunk: StreamChunk) => void): Promise<void> {
+    async chatCompletionStream(
+      _request: ChatCompletionRequest,
+      onChunk: (chunk: StreamChunk) => void,
+    ): Promise<void> {
       onChunk({ type: "content", content: "Earlier work summary." });
       onChunk({ type: "done", finish_reason: "stop" });
     },
@@ -465,13 +553,16 @@ function createProviderFactory(): ModelProviderFactory {
 }
 
 function jsonResponse(model: unknown, content: string): Response {
-  return new Response(JSON.stringify({
-    id: "e2e-review",
-    object: "chat.completion",
-    created: 1,
-    model: typeof model === "string" ? model : "deepseek-flash",
-    choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
-  }), { status: 200, headers: { "content-type": "application/json" } });
+  return new Response(
+    JSON.stringify({
+      id: "e2e-review",
+      object: "chat.completion",
+      created: 1,
+      model: typeof model === "string" ? model : "deepseek-flash",
+      choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
+    }),
+    { status: 200, headers: { "content-type": "application/json" } },
+  );
 }
 
 function sseResponse(round: StreamRound): Response {
@@ -482,17 +573,21 @@ function sseResponse(round: StreamRound): Response {
   }
   for (const [index, toolCall] of toolCalls.entries()) {
     events.push({
-      choices: [{
-        delta: {
-          tool_calls: [{
-            index,
-            id: toolCall.id ?? `call_${index + 1}`,
-            type: "function",
-            function: { name: toolCall.name, arguments: JSON.stringify(toolCall.arguments) },
-          }],
+      choices: [
+        {
+          delta: {
+            tool_calls: [
+              {
+                index,
+                id: toolCall.id ?? `call_${index + 1}`,
+                type: "function",
+                function: { name: toolCall.name, arguments: JSON.stringify(toolCall.arguments) },
+              },
+            ],
+          },
+          finish_reason: null,
         },
-        finish_reason: null,
-      }],
+      ],
     });
   }
   const finishReason = toolCalls.length ? "tool_calls" : "stop";

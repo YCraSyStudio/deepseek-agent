@@ -16,11 +16,17 @@ suite("steering continuation", () => {
 
   test("ignores stale or non-steered continuation metadata", () => {
     assert.strictEqual(
-      buildSteeringContinuationInstruction({ sourceGenerationId: "missing" }, conversation("steered")),
+      buildSteeringContinuationInstruction(
+        { sourceGenerationId: "missing" },
+        conversation("steered"),
+      ),
       undefined,
     );
     assert.strictEqual(
-      buildSteeringContinuationInstruction({ sourceGenerationId: "generation-1" }, conversation("user_cancelled")),
+      buildSteeringContinuationInstruction(
+        { sourceGenerationId: "generation-1" },
+        conversation("user_cancelled"),
+      ),
       undefined,
     );
   });
