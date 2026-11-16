@@ -34,6 +34,41 @@ export class MobileWorkspace {
     }).sort();
   }
 
+  async changes() {
+    this.requireWorkspace();
+    const [prefix, status] = await Promise.all([
+      this.git(["rev-parse", "--show-prefix"]),
+      this.git(["--no-optional-locks", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all", "--", "."]),
+    ]);
+    const relativePrefix = prefix.replace(/\r?\n$/, "");
+    return status.split("\0").flatMap(entry => {
+      const file = entry.slice(3);
+      if (!file.startsWith(relativePrefix)) { return []; }
+      const localFile = file.slice(relativePrefix.length);
+      return allowedPath(localFile) ? [{ file: localFile, index: entry[0], worktree: entry[1] }] : [];
+    });
+  }
+
+  async diff(file: string) {
+    const change = (await this.changes()).find(entry => entry.file === file);
+    if (!change) { throw new MobileError(404, "El archivo no tiene cambios visibles."); }
+    if (change.index === "?") { return { staged: "", unstaged: "", untracked: true }; }
+
+    const options = ["--no-ext-diff", "--no-textconv", "--no-color", "--no-renames", "--submodule=short"];
+    const [staged, unstaged] = await Promise.all([
+      this.git(["--literal-pathspecs", "diff", "--cached", ...options, "--", file]),
+      this.git(["--literal-pathspecs", "diff", ...options, "--", file]),
+    ]);
+    return { staged, unstaged, untracked: false };
+  }
+
+  private async git(args: string[]): Promise<string> {
+    const { stdout } = await git("git", args, {
+      cwd: this.root.uri.fsPath, timeout: 5000, maxBuffer: 512 * 1024, windowsHide: true,
+    }).catch(() => { throw new MobileError(422, "Git no pudo leer los cambios o superan el límite de tamaño."); });
+    return stdout;
+  }
+
   async read(file: string) {
     const { text, revision } = await this.snapshot(file);
     return { text, revision };

@@ -11,6 +11,10 @@ const html = `<!doctype html>
   <main>
     <header><h1>IDE móvil</h1><p id="workspace">DeepSeek Agent</p></header>
     <form id="pair">
+      <div id="endpoint" hidden>
+        <label for="server">URL HTTPS del PC</label>
+        <input id="server" type="url" inputmode="url" autocomplete="url" placeholder="https://equipo.red.ts.net:43189">
+      </div>
       <label for="token">Código de VS Code</label>
       <input id="token" type="password" autocomplete="off" required>
       <button>Conectar</button>
@@ -20,6 +24,7 @@ const html = `<!doctype html>
       <nav aria-label="Vistas">
         <button id="show-files" type="button" aria-pressed="true">Archivos</button>
         <button id="show-chat" type="button" aria-pressed="false">Chat</button>
+        <button id="show-changes" type="button" aria-pressed="false">Cambios</button>
         <button id="disconnect" type="button">Desconectar</button>
       </nav>
       <section id="files">
@@ -32,6 +37,17 @@ const html = `<!doctype html>
           <label id="filename" for="editor"></label>
           <textarea id="editor" rows="17" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
           <button id="save" type="button" disabled>Guardar en el PC</button>
+        </div>
+      </section>
+      <section id="changes" hidden>
+        <button id="refresh-changes" type="button">Actualizar cambios</button>
+        <p id="change-summary"></p>
+        <ul id="change-list"></ul>
+        <div id="diff" hidden>
+          <h2 id="diff-title"></h2>
+          <p id="untracked" hidden>Archivo nuevo sin seguimiento de Git.</p>
+          <div id="staged" hidden><h3>Preparados</h3><pre id="staged-diff"></pre></div>
+          <div id="unstaged" hidden><h3>Sin preparar</h3><pre id="unstaged-diff"></pre></div>
         </div>
       </section>
       <section id="chat" hidden>
@@ -64,7 +80,14 @@ button { background: #263650; color: inherit; width: fit-content; }
 button[aria-pressed="true"], form button, #save { background: #b3d0ff; color: #14213a; }
 button:disabled { opacity: .55; }
 :focus-visible { outline: 2px solid #a7e3ff; outline-offset: 2px; }
-#filename { overflow-wrap: anywhere; }
+#filename, #diff-title { overflow-wrap: anywhere; }
+#endpoint { display: grid; gap: .5rem; }
+#change-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; }
+#change-list button { text-align: left; width: 100%; overflow-wrap: anywhere; }
+#diff { min-width: 0; }
+pre { overflow: auto; padding: .75rem; border: 1px solid #526684; border-radius: .4rem; }
+.addition { color: #a1e9b3; }
+.deletion { color: #ffb4b2; }
 #editor { font-family: ui-monospace, monospace; tab-size: 2; white-space: pre; }
 #status { min-height: 1.3em; color: #ffdc9b; overflow-wrap: anywhere; }
 #messages p { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #526684; border-radius: .4rem; padding: .75rem; }
@@ -80,6 +103,12 @@ const editor = byId("editor");
 const paths = byId("paths");
 const save = byId("save");
 const open = byId("open");
+const invoke = window.__TAURI__?.core?.invoke;
+const server = byId("server");
+if (invoke) {
+  byId("endpoint").hidden = false;
+  server.required = true;
+}
 let token = "";
 let files = [];
 let file;
@@ -88,6 +117,15 @@ let documentBusy = false;
 let chatPending = false;
 
 async function api(path, method = "GET", body) {
+  if (invoke) {
+    try {
+      const response = await invoke("mobile_request", { server: server.value.trim(), token, route: path, method, body: body ?? null });
+      if (response.error) { throw new Error(response.error); }
+      return response;
+    } catch (error) {
+      throw new Error(typeof error === "string" ? error : error.message);
+    }
+  }
   const headers = { Authorization: "Bearer " + token };
   if (body !== undefined) { headers["Content-Type"] = "application/json"; }
   const response = await fetch("/api/" + path, {
@@ -141,11 +179,72 @@ function setDocument(path, data) {
   byId("document").hidden = false;
 }
 
-function showView(showFiles) {
-  byId("files").hidden = !showFiles;
-  byId("chat").hidden = showFiles;
-  byId("show-files").setAttribute("aria-pressed", String(showFiles));
-  byId("show-chat").setAttribute("aria-pressed", String(!showFiles));
+function showView(view) {
+  for (const name of ["files", "chat", "changes"]) {
+    byId(name).hidden = name !== view;
+    byId("show-" + name).setAttribute("aria-pressed", String(name === view));
+  }
+}
+
+const gitStatusLabels = { A: "Añadido", M: "Modificado", D: "Eliminado", T: "Tipo cambiado", U: "Conflicto" };
+let changesPending = false;
+
+async function loadChanges() {
+  if (changesPending) { return; }
+  changesPending = true;
+  byId("refresh-changes").disabled = true;
+  byId("diff").hidden = true;
+  byId("change-list").replaceChildren();
+  byId("change-summary").textContent = "";
+  await run(async () => {
+    const { changes } = await api("changes");
+    byId("change-summary").textContent = changes.length === 0 ? "El proyecto no tiene cambios." : changes.length + " archivos con cambios";
+    for (const change of changes.slice(0, 250)) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      const labels = change.index === "?" ? ["Nuevo"] : [];
+      if (change.index !== " " && change.index !== "?") { labels.push((gitStatusLabels[change.index] || change.index) + " · preparado"); }
+      if (change.worktree !== " " && change.worktree !== "?") { labels.push((gitStatusLabels[change.worktree] || change.worktree) + " · sin preparar"); }
+      button.type = "button";
+      button.textContent = change.file + " · " + labels.join(", ");
+      button.addEventListener("click", () => loadDiff(change.file));
+      item.append(button);
+      byId("change-list").append(item);
+    }
+    if (changes.length > 250) { status.textContent = "Mostrando los primeros 250 archivos con cambios."; }
+  });
+  changesPending = false;
+  byId("refresh-changes").disabled = false;
+}
+
+function renderDiff(id, text) {
+  byId(id).hidden = !text;
+  const lines = document.createDocumentFragment();
+  for (const line of text.split("\n")) {
+    const row = document.createElement("span");
+    if (line.startsWith("+") && !line.startsWith("+++")) { row.className = "addition"; }
+    if (line.startsWith("-") && !line.startsWith("---")) { row.className = "deletion"; }
+    row.textContent = line + "\n";
+    lines.append(row);
+  }
+  byId(id + "-diff").replaceChildren(lines);
+}
+
+async function loadDiff(file) {
+  if (changesPending) { return; }
+  changesPending = true;
+  byId("refresh-changes").disabled = true;
+  byId("diff").hidden = true;
+  await run(async () => {
+    const change = await api("diff?path=" + encodeURIComponent(file));
+    byId("diff-title").textContent = file;
+    byId("untracked").hidden = !change.untracked;
+    renderDiff("staged", change.staged);
+    renderDiff("unstaged", change.unstaged);
+    byId("diff").hidden = false;
+  });
+  changesPending = false;
+  byId("refresh-changes").disabled = false;
 }
 
 byId("pair").addEventListener("submit", async event => {
@@ -165,7 +264,7 @@ byId("pair").addEventListener("submit", async event => {
     byId("pair").hidden = true;
     byId("ide").hidden = false;
     tokenInput.value = "";
-    showView(true);
+    showView(invoke ? "chat" : "files");
     renderFiles();
     byId("filter").focus();
   });
@@ -176,8 +275,8 @@ byId("pair").addEventListener("submit", async event => {
 byId("filter").addEventListener("input", renderFiles);
 paths.addEventListener("change", refreshButtons);
 editor.addEventListener("input", refreshButtons);
-byId("show-files").addEventListener("click", () => showView(true));
-byId("show-chat").addEventListener("click", () => showView(false));
+byId("show-files").addEventListener("click", () => showView("files"));
+byId("show-chat").addEventListener("click", () => showView("chat"));
 
 async function withDocument(action) {
   documentBusy = true;
@@ -214,6 +313,12 @@ function addMessage(author, content) {
   byId("messages").append(message);
 }
 
+byId("show-changes").addEventListener("click", () => {
+  showView("changes");
+  void loadChanges();
+});
+byId("refresh-changes").addEventListener("click", loadChanges);
+
 byId("compose").addEventListener("submit", async event => {
   event.preventDefault();
   const prompt = byId("prompt");
@@ -248,6 +353,11 @@ byId("disconnect").addEventListener("click", () => {
   byId("filename").textContent = "";
   byId("document").hidden = true;
   byId("messages").replaceChildren();
+  byId("change-list").replaceChildren();
+  byId("change-summary").textContent = "";
+  byId("diff").hidden = true;
+  byId("staged-diff").replaceChildren();
+  byId("unstaged-diff").replaceChildren();
   byId("prompt").value = "";
   byId("workspace").textContent = "DeepSeek Agent";
   byId("ide").hidden = true;

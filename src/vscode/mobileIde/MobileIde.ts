@@ -117,6 +117,14 @@ function createSession(workspace: MobileWorkspace, settings: SettingsRepository,
       return;
     }
     const file = url.searchParams.get("path") ?? "";
+    if (request.method === "GET" && url.pathname === "/api/changes") {
+      json(response, 200, { changes: await workspace.changes() });
+      return;
+    }
+    if (request.method === "GET" && url.pathname === "/api/diff") {
+      json(response, 200, await workspace.diff(file));
+      return;
+    }
     if (request.method === "GET" && url.pathname === "/api/file") {
       json(response, 200, await workspace.read(file));
       return;
