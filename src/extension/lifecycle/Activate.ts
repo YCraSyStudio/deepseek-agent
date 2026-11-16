@@ -8,6 +8,8 @@ import { SettingsManager, SecretsManager } from "@/vscode/storage";
 import { setActiveProvider } from "./ExtensionRuntime";
 import { initializeLogger, logInfo, logError, showDiagnostics } from "@/shared/logging/Logger";
 import { getWebRuntimeDiagnostics } from "@/vscode/tools/browser";
+import { registerMobileIde } from "@/vscode/mobileIde/MobileIde";
+import { DeepSeekModelProviderFactory } from "@/infrastructure/deepseek/provider/DeepSeekModelProviderFactory";
 import { ExtensionCompositionRoot } from "../CompositionRoot";
 
 type LegacySettingKey = Exclude<keyof AppConfig, "apiKey" | "userId" | "includeHomeAgents" | "interfaceLanguage" | "webSearchEnabled" | "capturePermission"> | "maxToolRounds" | "responseFormat" | "toolExecutionModes" | "autoContext";
@@ -44,6 +46,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   setActiveProvider(root.webviewProvider);
   await root.initialize();
   registerExtensionApi(context, root.webviewProvider, root.settings);
+  registerMobileIde(context, root.settings, root.secrets, new DeepSeekModelProviderFactory());
   const cleanupError = await SettingsManager.completeMigration();
   const persistenceError = SettingsManager.getPersistenceError();
   if (persistenceError || cleanupError) {

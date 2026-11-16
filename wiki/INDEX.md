@@ -15,6 +15,7 @@
 - [Activation and Contributions](vscode-extension/Activation-and-Contributions.md)
 - [Commands and Views](vscode-extension/Commands-and-Views.md)
 - [Message Contract](vscode-extension/Message-Contract.md)
+- [IDE móvil (MVP)](vscode-extension/Mobile-IDE.md)
 
 ## DeepSeek API
 

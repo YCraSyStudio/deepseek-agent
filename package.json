@@ -51,6 +51,16 @@
   "contributes": {
     "commands": [
       {
+        "command": "deepseek-agent.mobileIde.start",
+        "title": "Iniciar IDE móvil (MVP)",
+        "category": "YCraSy DeepSeek Agent"
+      },
+      {
+        "command": "deepseek-agent.mobileIde.stop",
+        "title": "Detener IDE móvil",
+        "category": "YCraSy DeepSeek Agent"
+      },
+      {
         "command": "deepseek-agent.openChat",
         "title": "YCraSy DeepSeek Agent: Open Chat",
         "category": "YCraSy DeepSeek Agent"
