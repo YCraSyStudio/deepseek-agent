@@ -33,3 +33,5 @@ temp-checklist.md
 dist/extension.meta.json
 **/*.ts
 **/.vscode-test.*
+
+AGENTS.md

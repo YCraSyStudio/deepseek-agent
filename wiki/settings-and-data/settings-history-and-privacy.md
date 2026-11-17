@@ -25,7 +25,7 @@ API keys are never part of settings.
 
 Settings → Customization owns `includeHomeAgents`, disabled by default. Enabling it reveals **Open global AGENTS.md**. The host waits for confirmed settings, creates an empty `AGENTS.md` only if absent in the active data directory, and opens it in the VS Code text editor. Existing user content is never overwritten. Instruction loading shares the same path resolver and rereads saved instructions before each message across workspaces. Changing the configured storage folder takes effect after reload, as with other data.
 
-Workspace instructions offers Generate AGENTS.md when the root file is missing, or Edit AGENTS.md when it already exists. Generation creates an editable template without contacting DeepSeek and opens it in VS Code; existing content is preserved. With multiple local folders, select the target workspace. The button updates when the file is created or deleted and works independently of global instructions. Instructions are reread from the saved workspace file before each message.
+**Workspace AGENTS.md** offers Generate AGENTS.md when the root file is missing, or Edit AGENTS.md when it already exists. Generation creates an editable template without contacting DeepSeek and opens it in VS Code; existing content is preserved. With multiple local folders, select the target workspace. The button updates when the file is created or deleted and works independently of global instructions. Instructions are reread from the saved workspace file before each message.
 
 ### Instructions
 

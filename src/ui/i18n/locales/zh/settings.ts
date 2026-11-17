@@ -174,7 +174,7 @@ export const settings = {
       edit: "编辑",
     },
     customization: {
-      workspaceTitle: "工作区指令",
+      workspaceTitle: "工作区 AGENTS.md",
       generateWorkspaceAgents: "生成 AGENTS.md",
       editWorkspaceAgents: "编辑 AGENTS.md",
       workspaceFolder: "工作区文件夹",

@@ -179,7 +179,7 @@ export const settings = {
       edit: "Editar",
     },
     customization: {
-      workspaceTitle: "Instrucciones del workspace",
+      workspaceTitle: "AGENTS.md del workspace",
       generateWorkspaceAgents: "Generar AGENTS.md",
       editWorkspaceAgents: "Editar AGENTS.md",
       workspaceFolder: "Carpeta del workspace",
