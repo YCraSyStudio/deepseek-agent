@@ -38,6 +38,7 @@ web-doc/node_modules/
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/tasks.json
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo

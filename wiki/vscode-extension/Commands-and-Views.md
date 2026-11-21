@@ -25,6 +25,6 @@
 
 ## Icons
 
-The public contribution icon lives at `src/assets/DeepSeekIcon.svg`.
+The public contribution icon lives at `apps/vscode/src/assets/DeepSeekIcon.svg`.
 
 [Back](INDEX.md)

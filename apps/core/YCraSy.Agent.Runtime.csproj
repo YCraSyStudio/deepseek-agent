@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>YCraSy.Agent.Runtime</RootNamespace>
+    <AssemblyName>YCraSy.Agent.Runtime</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="sshRelay/**" />
+    <Content Remove="sshRelay/**" />
+    <None Remove="sshRelay/**" />
+  </ItemGroup>
+</Project>

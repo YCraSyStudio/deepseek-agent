@@ -28,7 +28,7 @@ if (!heapCapConfigured && process.env.DEEPSEEK_AGENT_TEST_HEAP_GUARD !== "1") {
 }
 
 const outDir = resolve(".tmp/unit-tests");
-const testDir = resolve("src/test");
+const testDir = resolve("apps/vscode/src/test");
 const integrationDir = resolve(testDir, "integration");
 const entryPoints = collectTests(testDir)
   .filter((fileName) => !fileName.startsWith(`${integrationDir}\\`) && !fileName.startsWith(`${integrationDir}/`));

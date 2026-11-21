@@ -1,0 +1,10 @@
+[Unit]
+Description=YCraSy per-user backend socket
+
+[Socket]
+ListenStream=%t/ycrasy-agent.sock
+SocketMode=0600
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

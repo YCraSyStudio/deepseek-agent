@@ -2,7 +2,7 @@
 
 # Message Contract
 
-Protocol version 5 is defined in `src/contracts/messages/WebviewProtocol.ts` and split across `WebviewModels.ts`, `WebviewRequests.ts`, and `WebviewEvents.ts`. React communicates only through validated `postMessage` values.
+Protocol version 5 is defined in `apps/vscode/src/contracts/messages/WebviewProtocol.ts` and split across `WebviewModels.ts`, `WebviewRequests.ts`, and `WebviewEvents.ts`. React communicates only through validated `postMessage` values.
 
 ## Chat and generation requests
 

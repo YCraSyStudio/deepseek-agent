@@ -13,10 +13,10 @@ Use Node 26 LTS locally and npm 12.2.1. CI currently uses Node 24. Run `npm ci` 
 - `npm run build:webview`: bundle `dist/webview`.
 - `npm run dev:webview`: Vite server for UI.
 - `npm run lint`: ESLint over `src`.
-- `npm run test:unit`: recursively discovers unit tests under `src/test` while
-  excluding `src/test/integration`.
+- `npm run test:unit`: recursively discovers unit tests under `apps/vscode/src/test` while
+  excluding `apps/vscode/src/test/integration`.
 - `npm run test:integration`: builds and runs the VS Code Extension Development
-  Host tests from `src/test/integration`.
+  Host tests from `apps/vscode/src/test/integration`.
 - `npm test`: unit tests followed by integration tests.
 
 - `npm run test:coverage:full`: combined unit and VS Code integration coverage.

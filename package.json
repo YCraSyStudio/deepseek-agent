@@ -2,7 +2,7 @@
   "name": "deepseek-agent",
   "displayName": "YCraSy DeepSeek Agent",
   "description": "DeepSeek coding agent for VS Code: chat, tool calls, and autonomous workspace tasks powered by DeepSeek models.",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "packageManager": "npm@12.2.1",
   "preview": true,
   "publisher": "yarcrasy",
@@ -15,7 +15,7 @@
   "bugs": {
     "url": "https://github.com/YCraSyStudio/deepseek-agent/issues"
   },
-  "icon": "src/assets/DeepSeekIcon.png",
+  "icon": "apps/vscode/src/assets/DeepSeekIcon.png",
   "engines": {
     "vscode": "^1.131.0"
   },
@@ -37,7 +37,9 @@
     "theme": "dark"
   },
   "main": "./dist/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "capabilities": {
     "virtualWorkspaces": {
       "supported": false,
@@ -170,7 +172,7 @@
         {
           "id": "deepseek-agent-sidebar",
           "title": "YCraSy DeepSeek Agent",
-          "icon": "src/assets/DeepSeekIcon.svg"
+          "icon": "apps/vscode/src/assets/DeepSeekIcon.svg"
         }
       ]
     },
@@ -180,7 +182,7 @@
           "type": "webview",
           "id": "deepseek-agent.chatView",
           "name": "Chat",
-          "icon": "src/assets/DeepSeekIcon.svg",
+          "icon": "apps/vscode/src/assets/DeepSeekIcon.svg",
           "visibility": "visible"
         }
       ]
@@ -196,26 +198,30 @@
     "vscode:prepublish": "npm run build",
     "compile": "tsc -p ./ --noEmit",
     "watch": "tsc -watch -p ./ --noEmit",
-    "audit:dead-code": "knip --no-progress",
-    "build": "node esbuild.js --production && vite build --config src/ui/vite.config.mts",
-    "build:extension": "node esbuild.js --production",
-    "build:webview": "vite build --config src/ui/vite.config.mts",
-    "dev:webview": "vite --config src/ui/vite.config.mts --host 0.0.0.0 --port 5175 --strictPort",
+    "audit:dead-code": "knip --config scripts/config/knip.json --no-progress",
+    "build": "node scripts/build-extension.cjs --production && vite build --config apps/webview/vite.config.mts",
+    "build:extension": "node scripts/build-extension.cjs --production",
+    "build:webview": "vite build --config apps/webview/vite.config.mts",
+    "dev:webview": "vite --config apps/webview/vite.config.mts --host 0.0.0.0 --port 5175 --strictPort",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --max-warnings 0",
+    "lint": "eslint --config scripts/config/eslint.config.mjs apps/vscode/src apps/webview --max-warnings 0",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "node scripts/test-memory-safety.test.mjs && node scripts/run-unit-tests.mjs",
     "prepare:integration": "npm run build && node scripts/build-integration-tests.mjs",
-    "test:integration": "npm run prepare:integration && vscode-test",
+    "test:integration": "npm run prepare:integration && vscode-test --config scripts/config/vscode-test.mjs",
     "package:vsix": "node scripts/prepare-artifacts.mjs && vsce package --no-dependencies --out artifacts",
     "verify:vsix": "node scripts/assert-vsix-contents.mjs",
+    "package:apk": "bash ./build.sh apk",
     "test:coverage": "node scripts/run-coverage.mjs",
     "test:coverage:check": "node scripts/run-coverage.mjs --integration --check",
     "test:coverage:full": "node scripts/run-coverage.mjs --integration"
   },
   "dependencies": {
+    "@codemirror/language-data": "^6.5.2",
     "@puppeteer/browsers": "^3.2.6",
     "@vscode/codicons": "^0.0.45",
+    "codemirror": "^6.0.2",
+    "proxy-agent": "^8.0.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
@@ -223,7 +229,6 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "tldts": "^7.4.19",
-    "proxy-agent": "^8.0.2",
     "yauzl": "^3.4.0"
   },
   "devDependencies": {
@@ -250,19 +255,18 @@
   "overrides": {
     "diff": "9.0.0",
     "serialize-javascript": "7.1.4",
-    "mocha": {
-      "glob": "13.0.6"
-    },
+    "glob": "14.0.6",
+    "minimatch": "11.0.9",
     "@azure/identity": {
       "@azure/msal-node": "7.1.1"
     },
     "get-uri": {
-      "basic-ftp": "6.2.3"
+      "basic-ftp": "6.2.6"
     }
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "@vscode/vsce-sign@2.1.0": true
+    "@vscode/vsce-sign@2.1.1": true
   },
   "workspaces": [
     "web-doc"

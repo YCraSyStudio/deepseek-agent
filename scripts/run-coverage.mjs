@@ -20,8 +20,8 @@ if (process.argv.includes("--integration")) {
     DEEPSEEK_AGENT_COVERAGE_DIRECTORY: rawDirectory,
   };
   const builds = [
-    ["esbuild.js", "--production"],
-    [fileURLToPath(new URL("../../bin/vite.js", import.meta.resolve("vite"))), "build", "--config", "src/ui/vite.config.mts"],
+    ["scripts/build-extension.cjs", "--production"],
+    [fileURLToPath(new URL("../../bin/vite.js", import.meta.resolve("vite"))), "build", "--config", "apps/webview/vite.config.mts"],
     ["scripts/build-integration-tests.mjs"],
   ];
   let buildFailure = 0;
@@ -34,7 +34,7 @@ if (process.argv.includes("--integration")) {
   } else {
     const integrationArgs = process.argv.slice(2).filter((argument) => !["--integration", "--check"].includes(argument));
     const cli = fileURLToPath(new URL("./bin.mjs", import.meta.resolve("@vscode/test-cli")));
-    const integration = await run([cli, ...integrationArgs], env);
+    const integration = await run([cli, "--config", "scripts/config/vscode-test.mjs", ...integrationArgs], env);
     tests ||= integration;
   }
 }
@@ -73,7 +73,7 @@ function normalizeSourceMap(map, scriptPath) {
 }
 
 const inventory = collectCoverageSources();
-const configuration = JSON.parse(readFileSync(resolve(".c8rc.json"), "utf8"));
+const configuration = JSON.parse(readFileSync(resolve("scripts/config/coverage.json"), "utf8"));
 configuration.exclude = [...configuration.exclude, ...inventory.filter((source) => !source.executable).map((source) => source.path)];
 const reportConfiguration = resolve(rawDirectory, "report-config.json");
 writeFileSync(reportConfiguration, JSON.stringify(configuration));
@@ -95,7 +95,7 @@ if (mappingIssues.length) {
 }
 if (process.argv.includes("--integration") && !tests && !coverage) {
   const summary = JSON.parse(readFileSync(resolve("coverage/coverage-summary.json"), "utf8"));
-  for (const file of ["src/vscode/tools/VsCodeToolWorkspace.ts", "src/vscode/webviews/handlers/chat/generation/GenerationExecutor.ts"]) {
+  for (const file of ["apps/vscode/src/vscode/tools/VsCodeToolWorkspace.ts", "apps/vscode/src/vscode/webviews/handlers/chat/generation/GenerationExecutor.ts"]) {
     const measured = summary[resolve(file)];
     if (!measured || measured.functions.total === 0 || measured.functions.covered === 0) {
       console.error(`Missing real extension-host function coverage for ${file}`);

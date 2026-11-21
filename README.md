@@ -4,7 +4,23 @@ A DeepSeek-powered coding assistant for VS Code. Ask questions, explore your pro
 
 > **Preview:** This extension is under active development. Updates may introduce breaking changes and make previously saved chats or state incompatible. Back up anything you need to keep before updating.
 
-![Interface preview: compose a prompt and explore the extension settings](src/assets/readme-preview.gif)
+![Interface preview: compose a prompt and explore the extension settings](https://raw.githubusercontent.com/YCraSyStudio/deepseek-agent/a689511f84ebbf4da80cf1219377e1beaa2c641b/src/assets/readme-preview.gif)
+
+## Repository layout
+
+| Path | Component |
+| --- | --- |
+| `apps/vscode/` | VS Code extension and host adapters |
+| `apps/webview/` | React interface shared by the extension and ASP.NET |
+| `apps/core/` | ASP.NET host for the shared web interface |
+| `apps/android/` | Android client built with .NET MAUI |
+| `legacy/tauri/` | Previous Android client, kept for the transition |
+
+Run `./build.sh all` or build one component with `core`, `vsix`, or `apk`.
+Build and test configuration lives in `scripts/config/`. The VS Code Explorer
+hides generated output and dependencies by default.
+See [the service migration notes](apps/README.md) for the current status.
+
 
 ## Highlights
 

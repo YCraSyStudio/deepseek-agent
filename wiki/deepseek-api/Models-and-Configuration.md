@@ -4,11 +4,11 @@
 
 Sources of truth:
 
-- `src/contracts/deepseek/Models.ts`
-- `src/contracts/Config.ts`
-- `src/application/settings/ConfigurationSchema.ts`
-- `src/shared/usage/UsagePricing.ts`
-- `src/vscode/storage/SettingsManager.ts`
+- `apps/vscode/src/contracts/deepseek/Models.ts`
+- `apps/vscode/src/contracts/Config.ts`
+- `apps/vscode/src/application/settings/ConfigurationSchema.ts`
+- `apps/vscode/src/shared/usage/UsagePricing.ts`
+- `apps/vscode/src/vscode/storage/SettingsManager.ts`
 
 ## Product model
 

@@ -1,0 +1,35 @@
+{
+  "all": true,
+  "src": [
+    "apps/vscode/src",
+    "apps/webview"
+  ],
+  "extension": [
+    ".ts",
+    ".tsx",
+    ".mjs"
+  ],
+  "include": [
+    "apps/vscode/src/**/*.ts",
+    "apps/vscode/src/**/*.tsx",
+    "apps/webview/**/*.ts",
+    "apps/webview/**/*.tsx",
+    ".tmp/unit-tests/**/*.mjs"
+  ],
+  "exclude": [
+    "apps/vscode/src/test/**",
+    "apps/vscode/src/**/*.d.ts",
+    "apps/webview/**/*.d.ts",
+    "apps/webview/vite.config.mts"
+  ],
+  "exclude-after-remap": true,
+  "reporter": [
+    "text-summary",
+    "html",
+    "lcov",
+    "json-summary",
+    "json"
+  ],
+  "reports-dir": "coverage",
+  "temp-directory": ".tmp/coverage"
+}

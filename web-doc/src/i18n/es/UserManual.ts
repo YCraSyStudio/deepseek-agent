@@ -82,7 +82,7 @@ export const userManual: PageContent = {
       title: "Búsqueda de contenido del workspace",
       items: [
         "search_content busca texto literal sin distinguir mayúsculas y minúsculas mediante el sistema de archivos del workspace de VS Code; no ejecuta una shell ni interpreta la consulta como una expresión regular. La consulta debe contener texto y está limitada a 4.096 caracteres.",
-        "Su filePattern opcional es un glob relativo al workspace, como *.ts o src/**/*.md. Su valor predeterminado es **/*, admite hasta 1.024 caracteres y rechaza las rutas absolutas y el recorrido a directorios padre.",
+        "Su filePattern opcional es un glob relativo al workspace, como *.ts o apps/vscode/src/**/*.md. Su valor predeterminado es **/*, admite hasta 1.024 caracteres y rechaza las rutas absolutas y el recorrido a directorios padre.",
         "Se omiten las rutas sensibles, los archivos binarios y los archivos mayores de 2 MiB. Los archivos sensibles se filtran antes de leer su contenido.",
         "Cada búsqueda considera como máximo 10.000 archivos y devuelve hasta 50 coincidencias. Las líneas y la salida total están limitadas, y la respuesta indica archivos analizados, archivos omitidos y si se truncó.",
         "La búsqueda se detiene al cancelar la petición y expira después de 15 segundos.",

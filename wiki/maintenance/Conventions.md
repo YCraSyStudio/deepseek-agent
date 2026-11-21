@@ -18,7 +18,7 @@
   structure. Keep only the directives tooling requires: `eslint-disable*`,
   `@ts-expect-error`, `@vite-ignore`, coverage pragmas, and license banners.
 - Keep aliases consistent with `tsconfig.json`.
-- Use `src/contracts` for shared serializable messages.
+- Use `apps/vscode/src/contracts` for shared serializable messages.
 - Avoid duplicated strings for public ids.
 - Do not store secrets outside `SecretStorage`.
 - Do not reintroduce Ollama.

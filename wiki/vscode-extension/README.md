@@ -2,7 +2,7 @@
 
 # VS Code Extension
 
-The VS Code layer lives in `src/vscode`, lifecycle composition lives in `src/extension`, and the entry point is `src/Extension.ts`.
+The VS Code layer lives in `apps/vscode/src/vscode`, lifecycle composition lives in `apps/vscode/src/extension`, and the entry point is `apps/vscode/src/Extension.ts`.
 
 Responsibilities:
 

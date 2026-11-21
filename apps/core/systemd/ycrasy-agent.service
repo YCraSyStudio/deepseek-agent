@@ -1,0 +1,8 @@
+[Unit]
+Description=YCraSy .NET backend
+
+[Service]
+ExecStart=%h/.local/lib/ycrasy-agent/YCraSy.Agent.Runtime
+WorkingDirectory=%h/.local/lib/ycrasy-agent
+UMask=0077
+NoNewPrivileges=yes

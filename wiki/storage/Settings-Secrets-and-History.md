@@ -4,7 +4,7 @@
 
 ## Settings
 
-`src/vscode/storage/SettingsManager.ts` atomically stores normalized general settings in `~/.ycrasy-agent/settings.json` and provider settings in `~/.ycrasy-agent/deepseek/settings.json`. Runtime reads use the confirmed in-memory revision. The old `~/.deepseek-agent/` contents migrate automatically on the first activation of the new version, after which the old directory is removed. Later starts skip migration when that directory is absent. See [Provider Storage](Provider-Storage.md) for migration and conflict handling.
+`apps/vscode/src/vscode/storage/SettingsManager.ts` atomically stores normalized general settings in `~/.ycrasy-agent/settings.json` and provider settings in `~/.ycrasy-agent/deepseek/settings.json`. Runtime reads use the confirmed in-memory revision. The old `~/.deepseek-agent/` contents migrate automatically on the first activation of the new version, after which the old directory is removed. Later starts skip migration when that directory is absent. See [Provider Storage](Provider-Storage.md) for migration and conflict handling.
 
 `HistoryTransitionController` owns the two-phase persistent/incognito transition so configuration writes, pending-generation decisions, and save/discard outcomes remain ordered.
 

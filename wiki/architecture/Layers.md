@@ -2,7 +2,7 @@
 
 # Layers
 
-## `src/contracts`
+## `apps/vscode/src/contracts`
 
 Stable serializable contracts shared by the extension host and React webview:
 
@@ -10,7 +10,7 @@ Stable serializable contracts shared by the extension host and React webview:
 - protocol-v5 webview models, incoming requests, and outgoing events.
 - no React, VS Code, filesystem, or HTTP dependencies.
 
-## `src/application`
+## `apps/vscode/src/application`
 
 Framework-independent use cases and domain rules:
 
@@ -20,7 +20,7 @@ Framework-independent use cases and domain rules:
 
 Main rule: `application` must not import `vscode` or concrete DeepSeek clients.
 
-## `src/infrastructure`
+## `apps/vscode/src/infrastructure`
 
 Concrete external integrations:
 
@@ -31,7 +31,7 @@ Concrete external integrations:
 
 Image attachments are uploaded through the DeepSeek Files API, and generation context passes only trusted file IDs to the provider; vision needs no built-in tool.
 
-## `src/vscode`
+## `apps/vscode/src/vscode`
 
 VS Code-specific adapters:
 
@@ -41,7 +41,7 @@ VS Code-specific adapters:
 
 Host-side validation and permission decisions are authoritative; the webview never grants itself filesystem or tool access.
 
-## `src/ui`
+## `apps/webview`
 
 The React webview:
 

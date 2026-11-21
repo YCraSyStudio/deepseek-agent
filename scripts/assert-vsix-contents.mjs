@@ -39,7 +39,7 @@ const allowedExact = new Set([
 const unexpected = [...entries].filter((file) =>
   !allowedExact.has(file) &&
   !file.startsWith("extension/dist/") &&
-  !file.startsWith("extension/src/assets/"),
+  !file.startsWith("extension/apps/vscode/src/assets/"),
 );
 if (unexpected.length > 0) {
   throw new Error(`Unexpected files outside the VSIX allowlist:\n${unexpected.join("\n")}`);

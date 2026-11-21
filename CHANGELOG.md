@@ -2,6 +2,10 @@
 
 Each release links to its extended notes in the [documentation](https://ycrasystudio.github.io/deepseek-agent/en/changelog/).
 
+## [0.1.17] - 2026-11-21
+
+- Automatically migrate saved provider credentials to the per-user .NET backend on the first VS Code startup after installation or update. Credentials awaiting verification are retried on subsequent startups.
+
 ## [0.1.16] - 2026-11-03 [details](https://ycrasystudio.github.io/deepseek-agent/en/changelog/#v0-1-16)
 
 - Add per-turn change review and workspace recovery.

@@ -10,10 +10,10 @@ Official references:
 
 Key files:
 
-- `src/application/chat/toolCall/ToolCallCycle.ts`
-- `src/infrastructure/deepseek/provider/features/toolCall/ToolCallRequest.ts`
-- `src/infrastructure/deepseek/provider/features/toolCall/ToolCallStreaming.ts`
-- `src/vscode/webviews/handlers/chat/toolCalls/ToolCallSession.ts`
+- `apps/vscode/src/application/chat/toolCall/ToolCallCycle.ts`
+- `apps/vscode/src/infrastructure/deepseek/provider/features/toolCall/ToolCallRequest.ts`
+- `apps/vscode/src/infrastructure/deepseek/provider/features/toolCall/ToolCallStreaming.ts`
+- `apps/vscode/src/vscode/webviews/handlers/chat/toolCalls/ToolCallSession.ts`
 
 ## Cycle
 

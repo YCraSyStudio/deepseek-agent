@@ -2,7 +2,7 @@
 
 # State and Messaging
 
-The UI uses `src/ui/VsCodeApi.ts` and validated protocol-v5 `postMessage` contracts from `src/contracts/messages`.
+The UI uses `apps/webview/VsCodeApi.ts` and validated protocol-v5 `postMessage` contracts from `apps/vscode/src/contracts/messages`.
 
 ## Relevant state
 

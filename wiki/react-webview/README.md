@@ -2,7 +2,7 @@
 
 # React Webview
 
-The chat UI lives in `src/ui` and is built with Vite.
+The chat UI lives in `apps/webview` and is built with Vite.
 
 Responsibilities:
 

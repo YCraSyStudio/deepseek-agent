@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { crc32, deflateSync, inflateSync } from "node:zlib";
 
-const sourceUrl = new URL("../../src/assets/DeepSeekIcon.png", import.meta.url);
+const sourceUrl = new URL("../../apps/vscode/src/assets/DeepSeekIcon.png", import.meta.url);
 const targetUrl = new URL("../public/og-image.png", import.meta.url);
 
 const WIDTH = 1200;

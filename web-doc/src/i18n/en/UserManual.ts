@@ -82,7 +82,7 @@ export const userManual: PageContent = {
       title: "Workspace content search",
       items: [
         "search_content matches literal text case-insensitively through the VS Code workspace filesystem; it does not run a shell or treat the query as a regular expression. The query must contain text and is limited to 4,096 characters.",
-        "Its optional filePattern is a workspace-relative glob such as *.ts or src/**/*.md. It defaults to **/*, is limited to 1,024 characters, and rejects absolute paths and parent traversal.",
+        "Its optional filePattern is a workspace-relative glob such as *.ts or apps/vscode/src/**/*.md. It defaults to **/*, is limited to 1,024 characters, and rejects absolute paths and parent traversal.",
         "Sensitive paths, binary files, and files larger than 2 MiB are skipped. Sensitive files are filtered before their contents are read.",
         "A search considers at most 10,000 files and returns at most 50 matches. Result lines and total output are bounded, and the response reports scanned and skipped files plus whether it was truncated.",
         "Search stops when the request is cancelled and times out after 15 seconds.",

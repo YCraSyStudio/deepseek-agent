@@ -2,7 +2,7 @@
 
 # DeepSeek API
 
-The AI integration lives in `src/infrastructure/deepseek` and is exclusive to DeepSeek.
+The AI integration lives in `apps/vscode/src/infrastructure/deepseek` and is exclusive to DeepSeek.
 
 Responsibilities:
 

@@ -6,7 +6,7 @@
 
 - The extension compiles from `src`.
 - The main output is `dist/extension.js`.
-- The webview builds from `src/ui`.
+- The webview builds from `apps/webview`.
 - Public configuration is DeepSeek-only.
 - Human documentation lives in `web-doc` with Astro and has English, Spanish, and Chinese routes.
 - Technical documentation lives in the repository `wiki/` directory.

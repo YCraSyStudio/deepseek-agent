@@ -22,7 +22,7 @@ export function hasExecutableCode(fileName, source) {
 }
 
 export function collectCoverageSources(root = process.cwd()) {
-  const directory = resolve(root, "src");
+  const directory = resolve(root, "apps/vscode/src");
   const inventory = [];
   function visit(current) {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
@@ -34,5 +34,6 @@ export function collectCoverageSources(root = process.cwd()) {
     }
   }
   visit(directory);
+  visit(resolve(root, "apps/webview"));
   return inventory.sort((left, right) => left.path.localeCompare(right.path));
 }

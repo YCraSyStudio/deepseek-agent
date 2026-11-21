@@ -5,8 +5,8 @@ on:
     branches: [feat/mobile-ide-mvp]
     paths:
       - '.github/workflows/mobile-android-mvp.yml'
-      - 'mobile/**'
-      - 'src/vscode/mobileIde/**'
+      - 'legacy/tauri/**'
+      - 'apps/vscode/src/vscode/mobileIde/**'
   workflow_dispatch:
 
 permissions:
@@ -18,20 +18,22 @@ jobs:
     timeout-minutes: 35
     defaults:
       run:
-        working-directory: mobile
+        working-directory: legacy/tauri
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: legacy/tauri/package-lock.json
       - run: npm ci
       - run: rustup target add aarch64-linux-android
       - run: |
           export NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)}"
           test -x "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           npm run tauri -- android init --ci --skip-targets-install
+          cp android/MainActivity.kt \
+            src-tauri/gen/android/app/src/main/java/com/ycrasystudio/deepseekagent/mobile/MainActivity.kt
           npm run tauri -- android build --debug --apk --target aarch64
       - name: Verify Android signature
         run: |
@@ -42,5 +44,5 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: deepseek-agent-mobile-android-arm64
-          path: mobile/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: legacy/tauri/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error

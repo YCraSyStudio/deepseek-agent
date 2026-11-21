@@ -15,7 +15,7 @@ VS Code automatically generates activation events from those contributions. Do n
 
 ## `activate(context)`
 
-`src/Extension.ts` should:
+`apps/vscode/src/Extension.ts` should:
 
 - create `WebviewProvider`.
 - register it in `ExtensionRuntime` and await history/checkpoint initialization.

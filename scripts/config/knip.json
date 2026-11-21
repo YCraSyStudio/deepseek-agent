@@ -1,0 +1,25 @@
+{
+  "workspaces": {
+    ".": {
+      "entry": [
+        "apps/vscode/src/Extension.ts",
+        "apps/vscode/src/vscode/mobileIde/MobilePage.ts",
+        "apps/vscode/src/test/**/*.test.ts",
+        "apps/vscode/src/test/integration/PackagedRunner.ts",
+        "scripts/*.{mjs,cjs}",
+        "apps/vscode/src/test/support/VsCodeMock.ts",
+        "apps/vscode/src/test/support/MarkdownAdapterMock.ts",
+        "apps/vscode/src/test/support/StorageFsFaults.ts",
+        "apps/vscode/src/test/support/PuppeteerDistributionMock.ts"
+      ],
+      "project": [
+        "apps/vscode/src/**/*.{ts,tsx}",
+        "apps/webview/**/*.{ts,tsx}",
+        "scripts/*.{mjs,cjs}"
+      ]
+    },
+    "web-doc": {
+      "entry": ["scripts/*.mjs"]
+    }
+  }
+}

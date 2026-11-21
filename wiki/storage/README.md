@@ -2,7 +2,7 @@
 
 # Storage
 
-Persistence lives in `src/vscode/storage`.
+Persistence lives in `apps/vscode/src/vscode/storage`.
 
 Goal:
 

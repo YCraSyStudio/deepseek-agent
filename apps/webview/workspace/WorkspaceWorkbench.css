@@ -1,0 +1,117 @@
+.workspaceWorkbench {
+  height: 100%;
+  display: grid;
+  grid-template: auto minmax(0, 1fr) auto / minmax(0, 1fr);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+.workspaceNavigation, .workspaceToolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.workspaceWorkbench button {
+  min-height: 40px;
+}
+.workspaceToolbar strong {
+  flex: 1 1 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspaceFiles, .workspaceEditorPane, .workspaceChatPane {
+  min-height: 0;
+  min-width: 0;
+  grid-row: 2;
+}
+.workspaceFiles {
+  overflow: auto;
+}
+.workspaceFiles input {
+  width: calc(100% - 1rem);
+  margin: 0.5rem;
+}
+.workspaceTree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.workspaceTree .workspaceTree {
+  padding-inline-start: 0.75rem;
+}
+.workspaceTree li {
+  margin: 0;
+}
+.workspaceTree summary, .workspaceWorkbench .workspaceTree button {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspaceTree summary {
+  display: list-item;
+  list-style-position: inside;
+  cursor: pointer;
+}
+.workspaceTree button {
+  background: transparent;
+  color: inherit;
+}
+@media (pointer: coarse) {
+  .workspaceTree summary, .workspaceWorkbench .workspaceTree button {
+    min-height: 34px;
+  }
+}
+.workspaceTree button:hover, .workspaceTree button[aria-current="true"],
+.workspaceNavigation button[aria-pressed="true"] {
+  background: var(--control-hover-bg);
+  color: var(--text-primary);
+}
+.workspaceEditorPane {
+  display: flex;
+  flex-direction: column;
+}
+.workspaceEditor {
+  flex: 1;
+  min-height: 0;
+}
+.workspacePlaceholder, .workspaceFeedback {
+  padding: 0.5rem;
+}
+.workspaceFeedback {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  margin: 0;
+}
+@media (max-width: 959px) {
+  .workspaceWorkbench:not([data-tab="files"]) .workspaceFiles,
+  .workspaceWorkbench:not([data-tab="editor"]) .workspaceEditorPane,
+  .workspaceWorkbench:not([data-tab="chat"]) .workspaceChatPane {
+    display: none;
+  }
+}
+@media (min-width: 960px) {
+  .workspaceWorkbench {
+    grid-template: minmax(0, 1fr) auto / minmax(10rem, 18%) minmax(0, 1fr) minmax(18rem, 32%);
+  }
+  .workspaceNavigation {
+    display: none;
+  }
+  .workspaceFiles, .workspaceEditorPane, .workspaceChatPane {
+    grid-row: 1;
+  }
+  .workspaceFiles, .workspaceEditorPane {
+    border-inline-end: 1px solid var(--border-color);
+  }
+  .workspaceFeedback {
+    grid-row: 2;
+  }
+}

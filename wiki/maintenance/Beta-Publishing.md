@@ -51,7 +51,7 @@ Pre-release updates may change conversation and storage formats, making chats or
 - License: MIT
 - Categories: `AI`, `Chat`
 - Main entry: `dist/extension.js`
-- Activity bar icon: `src/assets/DeepSeekIcon.svg`
+- Activity bar icon: `apps/vscode/src/assets/DeepSeekIcon.svg`
 
 ## Required checks
 
