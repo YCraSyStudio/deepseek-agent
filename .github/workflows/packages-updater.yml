@@ -1,0 +1,38 @@
+name: Packages Updater
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: develop
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install --global npm@12.2.1
+      - name: Update dependencies within the declared version ranges
+        run: npm update --package-lock-only --ignore-scripts
+      - name: Verify the updated workspace lockfile
+        run: npm ci --ignore-scripts
+      - name: Export the update for review
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Dependencies are already up to date." >> "$GITHUB_STEP_SUMMARY"
+          else
+            git diff --binary -- package-lock.json > packages-update.patch
+            echo 'Review the artifact and apply it to develop with `git apply packages-update.patch`.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: hashFiles('packages-update.patch') != ''
+        with:
+          name: packages-update
+          path: packages-update.patch

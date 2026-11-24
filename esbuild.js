@@ -1,33 +1,7 @@
-const esbuild = require("esbuild");
-const path = require("path");
-const fs = require("fs");
+import { context, build as _build } from "esbuild";
 
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
-const coverage = process.env.DEEPSEEK_AGENT_TEST_COVERAGE === "1";
-
-const projectRoot = __dirname;
-
-function resolveWithExtensions(basePath) {
-  if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) { return basePath; }
-  for (const ext of [".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js"]) {
-    const withExt = basePath + ext;
-    if (fs.existsSync(withExt)) { return withExt; }
-  }
-  return basePath;
-}
-
-const aliasPlugin = {
-  name: "alias",
-  setup(build) {
-    build.onResolve({ filter: /^@\// }, (args) => {
-      return { path: resolveWithExtensions(path.resolve(projectRoot, "src", args.path.slice(2))) };
-    });
-    build.onResolve({ filter: /^@webview\// }, (args) => {
-      return { path: resolveWithExtensions(path.resolve(projectRoot, "src", "ui", args.path.slice(9))) };
-    });
-  },
-};
 
 const esbuildProblemMatcherPlugin = {
   name: "esbuild-problem-matcher",
@@ -39,7 +13,9 @@ const esbuildProblemMatcherPlugin = {
     build.onEnd((result) => {
       result.errors.forEach(({ text, location }) => {
         console.error(`✘ [ERROR] ${text}`);
-        console.error(`    ${location.file}:${location.line}:${location.column}:`);
+        if (location) {
+          console.error(`    ${location.file}:${location.line}:${location.column}:`);
+        }
       });
       console.log("[watch] build finished");
     });
@@ -47,25 +23,24 @@ const esbuildProblemMatcherPlugin = {
 };
 
 async function main() {
-  const ctx = await esbuild.context({
+  const options = {
     entryPoints: ["src/Extension.ts"],
     bundle: true,
     format: "cjs",
-    // v8-to-istanbul misattributes ranges when different sources share a minified line.
-    minify: production && !coverage,
-    sourcemap: !production || coverage,
+    minify: production,
+    sourcemap: !production,
     sourcesContent: false,
     platform: "node",
     outfile: "dist/extension.js",
     external: ["vscode"],
     logLevel: "silent",
-    plugins: [aliasPlugin, esbuildProblemMatcherPlugin],
-  });
+    plugins: [esbuildProblemMatcherPlugin],
+  };
   if (watch) {
+    const ctx = await context(options);
     await ctx.watch();
   } else {
-    await ctx.rebuild();
-    await ctx.dispose();
+    await _build(options);
   }
 }
 

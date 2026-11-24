@@ -14,8 +14,6 @@ build/
 artifacts/
 !docs/
 deepseek-agent.wiki/
-coverage/
-.nyc_output/
 
 # Vite / frontend
 web-doc/dist/

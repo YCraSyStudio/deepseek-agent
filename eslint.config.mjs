@@ -1,6 +1,6 @@
 import typescriptEslint from "typescript-eslint";
 
-export default [{
+const base = {
     plugins: {
         "@typescript-eslint": typescriptEslint.plugin,
     },
@@ -17,65 +17,50 @@ export default [{
         "no-throw-literal": "warn",
         semi: "warn",
     },
-}, {
-    files: ["src/contracts/**/*.{ts,tsx}"],
-    rules: {
-        "no-restricted-imports": ["error", {
-            patterns: [{
-                group: ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode", "node:*"],
-                message: "Contracts may depend only on other contracts and shared framework-free utilities.",
-            }],
-        }],
-    },
-}, {
-    files: ["src/domain/**/*.{ts,tsx}"],
-    rules: {
-        "no-restricted-imports": ["error", {
-            patterns: [{
-                group: ["@/application/**", "@/contracts/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode", "node:*"],
-                message: "Domain must remain independent from application, transports, providers, VS Code, Node, and React.",
-            }],
-        }],
-    },
-}, {
-    files: ["src/application/**/*.{ts,tsx}"],
-    rules: {
-        "no-restricted-imports": ["error", {
-            patterns: [{
-                group: ["@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode"],
-                message: "Application may depend only on domain, contracts, application modules, and shared utilities.",
-            }],
-        }],
-    },
-}, {
-    files: ["src/infrastructure/**/*.{ts,tsx}"],
-    rules: {
-        "no-restricted-imports": ["error", {
-            patterns: [{
-                group: ["@/extension/**", "@/vscode/**", "@webview/**", "react", "react/**", "vscode"],
-                message: "Infrastructure implements application ports and must not depend on VS Code, the extension shell, or React.",
-            }],
-        }],
-    },
-}, {
-    files: ["src/vscode/**/*.{ts,tsx}"],
-    rules: {
-        "no-restricted-imports": ["error", {
-            patterns: [{
-                group: ["@/extension/**", "@webview/**", "react", "react/**"],
-                message: "VS Code adapters must not depend on the composition root or the React webview.",
-            }],
-        }],
-    },
-}, {
-    files: ["src/ui/**/*.{ts,tsx}"],
-    ignores: ["src/ui/vite.config.mts"],
-    rules: {
-        "no-restricted-imports": ["error", {
-            patterns: [{
-                group: ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "vscode", "node:*"],
-                message: "The webview may depend only on contracts, shared browser-safe utilities, and UI modules.",
-            }],
-        }],
-    },
-}];
+};
+
+const reactImports = ["react", "react/**"];
+const hostImports = ["@/extension/**", "@/vscode/**", "@webview/**", ...reactImports, "vscode"];
+
+function restrictImports(layer, group, message) {
+    return {
+        files: [`src/${layer}/**/*.{ts,tsx}`],
+        rules: {
+            "no-restricted-imports": ["error", { patterns: [{ group, message }] }],
+        },
+    };
+}
+
+export default [
+    base,
+    restrictImports(
+        "contracts",
+        ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", ...reactImports, "vscode", "node:*"],
+        "Contracts may depend only on other contracts and shared framework-free utilities.",
+    ),
+    restrictImports(
+        "domain",
+        ["@/application/**", "@/contracts/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", ...reactImports, "vscode", "node:*"],
+        "Domain must remain independent from application, transports, providers, VS Code, Node, and React.",
+    ),
+    restrictImports(
+        "application",
+        ["@/extension/**", "@/infrastructure/**", "@/vscode/**", "@webview/**", ...reactImports, "vscode"],
+        "Application may depend only on domain, contracts, application modules, and shared utilities.",
+    ),
+    restrictImports(
+        "infrastructure",
+        hostImports,
+        "Infrastructure implements application ports and must not depend on VS Code, the extension shell, or React.",
+    ),
+    restrictImports(
+        "vscode",
+        ["@/extension/**", "@webview/**", ...reactImports],
+        "VS Code adapters must not depend on the composition root or the React webview.",
+    ),
+    restrictImports(
+        "ui",
+        ["@/application/**", "@/domain/**", "@/extension/**", "@/infrastructure/**", "@/vscode/**", "vscode", "node:*"],
+        "The webview may depend only on contracts, shared browser-safe utilities, and UI modules.",
+    ),
+];

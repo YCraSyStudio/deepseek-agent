@@ -43,15 +43,9 @@ export default defineConfig({
 	mocha: {
 		// Native editor startup and undo can exceed five seconds on shared runners.
 		timeout: 20_000,
-		require: process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY
-			? [join(workspaceFolder, 'scripts', 'integration-coverage.cjs')]
-			: [],
 	},
 	env: {
 		NODE_ENV: 'test',
-		...(process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY
-			? { DEEPSEEK_AGENT_COVERAGE_DIRECTORY: process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY }
-			: {}),
 		DEEPSEEK_AGENT_USER_DATA_DIR: testDataDirectory,
 		DEEPSEEK_AGENT_INTEGRATION_WORKSPACE: integrationWorkspace,
 	},

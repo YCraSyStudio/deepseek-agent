@@ -8,7 +8,6 @@ import "./HistoryFlow.test";
 import { createHash, randomUUID } from "node:crypto";
 import { access } from "node:fs/promises";
 import * as path from "node:path";
-import { pathToFileURL } from "node:url";
 import * as vscode from "vscode";
 import type { ChatCompletionRequest, ChatCompletionResponse, StreamChunk } from "@/contracts";
 import { DEFAULT_CONFIG } from "@/contracts/Config";
@@ -28,16 +27,6 @@ import { fitGenerationRequestContext } from "@/vscode/webviews/handlers/chat/gen
 import type { GenerationRunRecord } from "@/vscode/webviews/handlers/chat/generation/GenerationRun";
 
 const settingsRepository = new VsCodeSettingsRepository();
-
-// Root teardown runs even when an assertion fails; the CLI's global teardown
-// only runs after a successful suite. Keep failure reports measurable too.
-if (process.env.DEEPSEEK_AGENT_COVERAGE_DIRECTORY) {
-  suiteTeardown(async () => {
-    const hooks = await import(pathToFileURL(path.resolve(__dirname, "../../scripts/integration-coverage.cjs")).href);
-    await hooks.mochaGlobalTeardown();
-  });
-}
-
 
 suite("Extension integration", () => {
   test("runs snapshot and editor operations in an isolated temporary workspace", () => {

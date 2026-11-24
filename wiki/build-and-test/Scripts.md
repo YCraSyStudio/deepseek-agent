@@ -19,12 +19,10 @@ Use Node 26 LTS locally and npm 12.2.1. CI currently uses Node 24. Run `npm ci` 
   Host tests from `src/test/integration`.
 - `npm test`: unit tests followed by integration tests.
 
-- `npm run test:coverage:full`: combined unit and VS Code integration coverage.
-- `npm run test:coverage:check`: optional strict 100% diagnostic; not the essential-regression acceptance gate.
 - `npm run package:vsix`: build the release package under `artifacts/`.
 - `npm run verify:vsix`: verify package contents and release-channel metadata.
 
-Coverage reports remain outside the VSIX. See [regression coverage](REGRESSION_COVERAGE.md) for the agreed scope and verified results.
+See [regression tests](Regression-Tests.md) for the agreed scope.
 
 ## Web documentation
 
